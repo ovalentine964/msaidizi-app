@@ -41,4 +41,55 @@
     <string name="query_profit">Tuma "faida" kwa muhtasari wa faida</string>
     <string name="query_help">Tuma "msaada" kwa msaada</string>
     <string name="query_share">Tuma "shiriki" kushiriki na rafiki</string>
+
+    <!-- Model Download Management -->
+    <string name="models_title">📦 Msaidizi Models</string>
+    <string name="models_storage_used">Storage used: %1$s</string>
+    <string name="models_tier1_title">🎤 Voice Models</string>
+    <string name="models_tier1_subtitle">Required for voice input/output. ~65MB download.</string>
+    <string name="models_tier2_title">🧠 AI Intelligence</string>
+    <string name="models_tier2_subtitle">Answer any question. ~300MB — WiFi only.</string>
+    <string name="models_whisper_name">Speech-to-Text (Whisper)</string>
+    <string name="models_piper_name">Swahili Text-to-Speech (Piper)</string>
+    <string name="models_qwen_name">AI Brain (Qwen LLM)</string>
+    <string name="models_download_voice">📥 Download Voice Now</string>
+    <string name="models_download_ai">📥 Download AI (WiFi only)</string>
+    <string name="models_tier1_ready">✅ Voice ready</string>
+    <string name="models_tier2_ready">✅ AI ready</string>
+    <string name="models_wifi_only_notice">📶 Download on WiFi only — too large for mobile data.</string>
+    <string name="models_share_title">📤 Share with Friend</string>
+    <string name="models_share_subtitle">Send models via Bluetooth — no data cost!</string>
+    <string name="models_send_bluetooth">📤 Send via Bluetooth</string>
+    <string name="models_scan_sdcard">💾 Load from SD Card</string>
+    <string name="models_none_ready">No models ready to share.</string>
+    <string name="models_pick_send">Choose model to send</string>
+    <string name="models_transfer_complete">✅ %1$s sent!</string>
+    <string name="models_transferring">Sending… %1$d%%</string>
+    <string name="models_receiving">Receiving… %1$d%%</string>
+    <string name="models_verifying">Verifying…</string>
+    <string name="models_sdcard_found">%1$d models found on SD card</string>
+    <string name="models_sdcard_copying">Copying from SD card… %1$d%%</string>
+    <string name="models_sdcard_complete">%1$d models copied!</string>
+    <string name="cancel">Cancel</string>
+    <string name="nav_models">Models</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_header">⚙️ Settings</string>
+    <string name="settings_language">🌍 Language</string>
+    <string name="settings_voice_speed">🎤 Voice Speed</string>
+    <string name="settings_business_name">🏪 Business Name</string>
+    <string name="settings_business_name_hint">Your business name…</string>
+    <string name="settings_business_type">📋 Business Type</string>
+    <string name="settings_auto_sync">🔄 Auto Sync</string>
+    <string name="settings_wifi_only">📶 WiFi Only</string>
+    <string name="settings_sync_now">🔄 Sync Now</string>
+    <string name="settings_models">📦 Models</string>
+
+    <!-- Download error messages -->
+    <string name="error_download_not_found">Model not found on server. Please try again later.</string>
+    <string name="error_download_server">Server error. Please try again later.</string>
+    <string name="error_download_network">No internet connection. Please check your network.</string>
+    <string name="error_download_verification">Model verification failed. File removed for security.</string>
+    <string name="error_download_generic">Download failed: %1$s</string>
 </resources>

@@ -33,5 +33,15 @@
         android:id="@+id/settingsFragment"
         android:name="com.msaidizi.app.ui.settings.SettingsFragment"
         android:label="Mipangilio"
-        tools:layout="@layout/fragment_settings" />
+        tools:layout="@layout/fragment_settings">
+        <action
+            android:id="@+id/action_settings_to_models"
+            app:destination="@id/modelDownloadFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/modelDownloadFragment"
+        android:name="com.msaidizi.app.ui.models.ModelDownloadFragment"
+        android:label="Models"
+        tools:layout="@layout/fragment_model_download" />
 </navigation>

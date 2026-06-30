@@ -21,4 +21,7 @@
     <color name="whatsapp_teal">#FF128C7E</color>
     <color name="divider">#FFE0E0E0</color>
     <color name="transparent">#00000000</color>
+    <color name="accent">#FFFFC107</color>
+    <color name="accent_dark">#FFFFA000</color>
+    <color name="white">#FFFFFFFF</color>
 </resources>

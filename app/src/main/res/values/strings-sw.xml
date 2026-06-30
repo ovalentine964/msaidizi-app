@@ -43,13 +43,23 @@
 
     <!-- Settings -->
     <string name="settings_title">Mipangilio</string>
-    <string name="settings_language">Lugha</string>
-    <string name="settings_voice_speed">Speed ya Sauti</string>
-    <string name="settings_business_name">Jina la Biashara</string>
-    <string name="settings_business_type">Aina ya Biashara</string>
-    <string name="settings_auto_sync">Sync Otomatiki</string>
-    <string name="settings_wifi_only">WiFi Tu</string>
-    <string name="settings_sync_now">Sync Sasa</string>
+    <string name="settings_header">⚙️ Mipangilio</string>
+    <string name="settings_language">🌍 Lugha</string>
+    <string name="settings_voice_speed">🎤 Speed ya Sauti</string>
+    <string name="settings_business_name">🏪 Jina la Biashara</string>
+    <string name="settings_business_name_hint">Jina lako la biashara…</string>
+    <string name="settings_business_type">📋 Aina ya Biashara</string>
+    <string name="settings_auto_sync">🔄 Sync Otomatiki</string>
+    <string name="settings_wifi_only">📶 WiFi Tu</string>
+    <string name="settings_sync_now">🔄 Sync Sasa</string>
+    <string name="settings_models">📦 Models</string>
+
+    <!-- Download error messages -->
+    <string name="error_download_not_found">Model haipatikani kwenye server. Jaribu tena baadaye.</string>
+    <string name="error_download_server">Server ya models ina hitilafu. Jaribu tena baadaye.</string>
+    <string name="error_download_network">Hakuna mtandao. Tafadhali angalia muunganisho wako.</string>
+    <string name="error_download_verification">Uthibitisho wa model umeshindwa. Faili limeondolewa kwa usalama.</string>
+    <string name="error_download_generic">Kupakua kumeshindwa: %1$s</string>
 
     <!-- Transaction Types -->
     <string name="sale">Mauzo</string>
@@ -76,4 +86,35 @@
     <string name="error_recording">Hitilafu ya kurekodi</string>
     <string name="error_processing">Hitilafu ya kuchakata</string>
     <string name="error_network">Hakuna mtandao</string>
+
+    <!-- Model Download Management -->
+    <string name="models_title">📦 Models za Msaidizi</string>
+    <string name="models_storage_used">Nafasi iliyotumika: %1$s</string>
+    <string name="models_tier1_title">🎤 Sauti (Voice)</string>
+    <string name="models_tier1_subtitle">Inahitajika kwa sauti. ~65MB inapakuliwa.</string>
+    <string name="models_tier2_title">🧠 Akili ya AI</string>
+    <string name="models_tier2_subtitle">Jibu maswali yoyote. ~300MB — WiFi tu.</string>
+    <string name="models_whisper_name">Sauti ya Maandishi (Whisper)</string>
+    <string name="models_piper_name">Sauti ya Kiswahili (Piper)</string>
+    <string name="models_qwen_name">Akili ya AI (Qwen LLM)</string>
+    <string name="models_download_voice">📥 Pakua Sauti Sasa</string>
+    <string name="models_download_ai">📥 Pakua AI (WiFi tu)</string>
+    <string name="models_tier1_ready">✅ Sauti iko tayari</string>
+    <string name="models_tier2_ready">✅ AI iko tayari</string>
+    <string name="models_wifi_only_notice">📶 Pakua tu ukiwa na WiFi — ni kubwa sana kwa data.</string>
+    <string name="models_share_title">📤 Shiriki na Rafiki</string>
+    <string name="models_share_subtitle">Tuma models kupitia Bluetooth — bila gharama ya data!</string>
+    <string name="models_send_bluetooth">📤 Tuma kwa Bluetooth</string>
+    <string name="models_scan_sdcard">💾 Pakua kutoka SD Card</string>
+    <string name="models_none_ready">Hakuna models tayari za kutuma.</string>
+    <string name="models_pick_send">Chagua model ya kutuma</string>
+    <string name="models_transfer_complete">✅ %1$s imetumwa!</string>
+    <string name="models_transferring">Inatuma… %1$d%%</string>
+    <string name="models_receiving">Inapokea… %1$d%%</string>
+    <string name="models_verifying">Inathibitisha…</string>
+    <string name="models_sdcard_found">%1$d models zimepatikana kwenye SD card</string>
+    <string name="models_sdcard_copying">Inakopi kutoka SD card… %1$d%%</string>
+    <string name="models_sdcard_complete">%1$d models zimekopiwa!</string>
+    <string name="cancel">Ghairi</string>
+    <string name="nav_models">Models</string>
 </resources>

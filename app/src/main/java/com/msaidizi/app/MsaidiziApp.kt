@@ -4,8 +4,13 @@ import android.app.Application
 import android.app.ActivityManager
 import android.content.Context
 import android.os.Build
+import com.msaidizi.app.core.model.ModelTier
+import com.msaidizi.app.sync.NetworkMonitor
+import com.msaidizi.app.voice.ModelRegistry
+import com.msaidizi.app.voice.work.ModelDownloadWorker
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import androidx.work.ExistingWorkPolicy
 import androidx.work.WorkManager
 import com.msaidizi.app.core.util.DeviceTier
 import dagger.hilt.android.HiltAndroidApp
@@ -28,6 +33,12 @@ class MsaidiziApp : Application(), Configuration.Provider {
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
 
+    @Inject
+    lateinit var modelRegistry: ModelRegistry
+
+    @Inject
+    lateinit var networkMonitor: NetworkMonitor
+
     override fun onCreate() {
         super.onCreate()
 
@@ -42,6 +53,12 @@ class MsaidiziApp : Application(), Configuration.Provider {
         Timber.d("MsaidiziApp: Device tier = ${DeviceTier.current}")
         Timber.d("MsaidiziApp: Total RAM = ${getTotalRamMB()}MB")
         Timber.d("MsaidiziApp: Available cores = ${Runtime.getRuntime().availableProcessors()}")
+
+        // Start network monitoring
+        networkMonitor.startMonitoring()
+
+        // Schedule tiered model downloads
+        scheduleModelDownloads()
 
         // Register memory trim callback
         registerComponentCallbacks(object : android.content.ComponentCallbacks2 {
@@ -90,6 +107,33 @@ class MsaidiziApp : Application(), Configuration.Provider {
                 Timber.e("Memory pressure: COMPLETE — app may be killed soon")
                 // Save all state, prepare for process death
             }
+        }
+    }
+
+    /**
+     * Schedule tiered model downloads using WorkManager.
+     * Tier 1: Downloads immediately on any network.
+     * Tier 2: Downloads on WiFi only, battery not low.
+     */
+    private fun scheduleModelDownloads() {
+        // Check if Tier 1 models need downloading
+        if (!modelRegistry.isTierReady(ModelTier.FIRST_LAUNCH)) {
+            Timber.i("MsaidiziApp: Scheduling Tier 1 download")
+            WorkManager.getInstance(this).enqueueUniqueWork(
+                ModelDownloadWorker.WORK_NAME_TIER1,
+                ExistingWorkPolicy.KEEP,
+                ModelDownloadWorker.tier1Request()
+            )
+        }
+
+        // Schedule Tier 2 download (WiFi-only, will retry until WiFi available)
+        if (!modelRegistry.isTierReady(ModelTier.ON_DEMAND)) {
+            Timber.i("MsaidiziApp: Scheduling Tier 2 download (WiFi-only)")
+            WorkManager.getInstance(this).enqueueUniqueWork(
+                ModelDownloadWorker.WORK_NAME_TIER2,
+                ExistingWorkPolicy.KEEP,
+                ModelDownloadWorker.tier2Request()
+            )
         }
     }
 

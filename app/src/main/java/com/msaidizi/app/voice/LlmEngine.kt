@@ -95,11 +95,18 @@ class LlmEngine @Inject constructor(
     ): String  // Returns JSON
 
     companion object {
+        /** Whether llama_jni native library is available */
+        var isNativeAvailable = false
+            private set
+
         init {
             try {
                 System.loadLibrary("llama_jni")
+                isNativeAvailable = true
+                Timber.d("llama_jni native library loaded successfully")
             } catch (e: UnsatisfiedLinkError) {
-                Timber.e(e, "llama_jni native library not found")
+                isNativeAvailable = false
+                Timber.e(e, "llama_jni native library not found — LLM features disabled")
             }
         }
 
@@ -199,6 +206,11 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
      */
     suspend fun loadModel(): Boolean = withContext(Dispatchers.IO) {
         if (isLoaded) return@withContext true
+
+        if (!isNativeAvailable) {
+            Timber.w("Cannot load LLM: llama_jni native library is not available")
+            return@withContext false
+        }
 
         try {
             val modelPath = File(context.filesDir, "models/qwen-0.5b-q4_k_m.gguf")

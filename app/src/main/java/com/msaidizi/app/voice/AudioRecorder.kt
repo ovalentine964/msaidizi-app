@@ -45,6 +45,7 @@ class AudioRecorder @Inject constructor(
     private var audioRecord: AudioRecord? = null
     private val isRecording = AtomicBoolean(false)
     private val recordingStartTime = AtomicLong(0)
+    private var currentRecordingState: RecordingState = RecordingState.IDLE
 
     private val _audioChunks = MutableSharedFlow<ShortArray>(
         extraBufferCapacity = 16
@@ -102,6 +103,7 @@ class AudioRecorder @Inject constructor(
 
                 recorder.startRecording()
                 isRecording.set(true)
+                currentRecordingState = RecordingState.RECORDING
                 recordingStartTime.set(System.currentTimeMillis())
                 _recordingState.emit(RecordingState.RECORDING)
 
@@ -133,7 +135,7 @@ class AudioRecorder @Inject constructor(
 
         audioRecord?.let { recorder ->
             try {
-                if (recordingState == RecordingState.RECORDING) {
+                if (currentRecordingState == RecordingState.RECORDING) {
                     recorder.stop()
                 }
                 recorder.release()
@@ -142,6 +144,7 @@ class AudioRecorder @Inject constructor(
             }
         }
         audioRecord = null
+        currentRecordingState = RecordingState.STOPPED
 
         _recordingState.emit(RecordingState.STOPPED)
         Timber.d("Recording stopped")

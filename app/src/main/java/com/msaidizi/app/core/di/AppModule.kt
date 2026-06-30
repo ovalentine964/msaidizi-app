@@ -94,7 +94,7 @@ object AppModule {
             level = LogLevel.BODY
             logger = object : Logger {
                 override fun log(message: String) {
-                    com.timber.log.Timber.d("Ktor: %s", message)
+                    timber.log.Timber.d("Ktor: %s", message)
                 }
             }
         }

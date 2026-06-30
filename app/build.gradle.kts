@@ -139,8 +139,10 @@ dependencies {
     // DataStore (preferences)
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 
-    // WorkManager (background sync)
+    // WorkManager (background sync + model downloads)
     implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation("androidx.hilt:hilt-work:1.1.0")
+    kapt("androidx.hilt:hilt-compiler:1.1.0")
 
     // zstd compression for sync
     implementation("com.github.luben:zstd-jni:1.5.5-11@aar")
@@ -155,6 +157,9 @@ dependencies {
 
     // Timber logging
     implementation("com.jakewharton.timber:timber:5.0.1")
+
+    // SwipeRefreshLayout
+    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
 
     // MPAndroidChart for dashboard
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")

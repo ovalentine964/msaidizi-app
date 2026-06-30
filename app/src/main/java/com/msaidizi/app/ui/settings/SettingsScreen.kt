@@ -13,6 +13,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.slider.Slider
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.msaidizi.app.R
+import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -97,6 +98,12 @@ class SettingsFragment : Fragment() {
         syncButton.setOnClickListener {
             viewModel.triggerSync()
             syncStatus.text = "Syncing..."
+        }
+
+        // Models button — navigate to model download screen
+        val modelsButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.models_button)
+        modelsButton.setOnClickListener {
+            findNavController().navigate(R.id.action_settings_to_models)
         }
     }
 

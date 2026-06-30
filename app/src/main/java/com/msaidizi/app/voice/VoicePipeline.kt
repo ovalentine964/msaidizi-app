@@ -235,7 +235,7 @@ class VoicePipeline @Inject constructor(
      */
     fun getStatus(): Map<String, Any> = mapOf(
         "state" to _pipelineState.value.name,
-        "asrLoaded" to speechRecognizer.isLoaded(),
+        "asrLoaded" to speechRecognizer.isModelReady(),
         "ttsReady" to (ttsEngine.isSpeaking()),
         "deviceTier" to DeviceTier.current.name
     )
