@@ -465,7 +465,11 @@ class ModelTransfer @Inject constructor(
         val filter = IntentFilter().apply {
             addAction("android.bluetooth.adapter.action.CONNECTION_STATE_CHANGED")
         }
-        context.registerReceiver(bluetoothReceiver, filter)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(bluetoothReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            context.registerReceiver(bluetoothReceiver, filter)
+        }
     }
 
     /**

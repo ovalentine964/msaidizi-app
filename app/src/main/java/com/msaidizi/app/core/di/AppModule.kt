@@ -56,29 +56,29 @@ object AppModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
+        // Initialize SQLCipher for database encryption
+        net.zetetic.database.sqlcipher.SQLiteDatabase.loadLibs(context)
+        val passphrase = com.msaidizi.app.core.util.CryptoUtils.getOrCreateDatabaseKey(context)
+        val factory = SupportOpenHelperFactory(passphrase.toByteArray())
+
         return Room.databaseBuilder(
             context,
             AppDatabase::class.java,
             "msaidizi.db"
         )
-            // Enable WAL mode for better concurrent read performance
+            .openHelperFactory(factory)
             .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGING)
-            // Set busy timeout for WAL mode
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     super.onCreate(db)
-                    // Enable WAL mode and set busy timeout
                     db.execSQL("PRAGMA journal_mode=WAL")
                     db.execSQL("PRAGMA busy_timeout=5000")
                     db.execSQL("PRAGMA synchronous=NORMAL")
-                    db.execSQL("PRAGMA cache_size=-2000")  // 2MB cache
+                    db.execSQL("PRAGMA cache_size=-2000")
                 }
             })
-            // Migration from v1 to v2: Added UserVocabulary and UserCorrection
-            // tables for adaptive learning. Existing data is preserved.
             .addMigrations(object : androidx.room.migration.Migration(1, 2) {
                 override fun migrate(db: SupportSQLiteDatabase) {
-                    // Create user_vocabulary table
                     db.execSQL("""
                         CREATE TABLE IF NOT EXISTS `user_vocabulary` (
                             `spokenForm` TEXT NOT NULL,
@@ -98,14 +98,10 @@ object AppModule {
                             PRIMARY KEY(`spokenForm`)
                         )
                     """.trimIndent())
-
-                    // Create indices for user_vocabulary
                     db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_user_vocabulary_spokenForm` ON `user_vocabulary` (`spokenForm`)")
                     db.execSQL("CREATE INDEX IF NOT EXISTS `index_user_vocabulary_canonicalForm` ON `user_vocabulary` (`canonicalForm`)")
                     db.execSQL("CREATE INDEX IF NOT EXISTS `index_user_vocabulary_confidence` ON `user_vocabulary` (`confidence`)")
                     db.execSQL("CREATE INDEX IF NOT EXISTS `index_user_vocabulary_lastUsedAt` ON `user_vocabulary` (`lastUsedAt`)")
-
-                    // Create user_corrections table
                     db.execSQL("""
                         CREATE TABLE IF NOT EXISTS `user_corrections` (
                             `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -120,17 +116,13 @@ object AppModule {
                             `createdAt` INTEGER NOT NULL DEFAULT 0
                         )
                     """.trimIndent())
-
-                    // Create indices for user_corrections
                     db.execSQL("CREATE INDEX IF NOT EXISTS `index_user_corrections_originalTransactionId` ON `user_corrections` (`originalTransactionId`)")
                     db.execSQL("CREATE INDEX IF NOT EXISTS `index_user_corrections_correctionType` ON `user_corrections` (`correctionType`)")
                     db.execSQL("CREATE INDEX IF NOT EXISTS `index_user_corrections_createdAt` ON `user_corrections` (`createdAt`)")
-
-                    // Migrate existing vocabulary entries to the new table
                     db.execSQL("""
-                        INSERT OR IGNORE INTO `user_vocabulary` 
+                        INSERT OR IGNORE INTO `user_vocabulary`
                             (`spokenForm`, `canonicalForm`, `language`, `frequency`, `confidence`, `lastUsedAt`, `createdAt`)
-                        SELECT 
+                        SELECT
                             `spokenForm`, `canonicalForm`, `language`, `frequency`,
                             CASE WHEN `frequency` >= 10 THEN 0.7
                                  WHEN `frequency` >= 5 THEN 0.5
@@ -141,26 +133,24 @@ object AppModule {
                     """.trimIndent())
                 }
             })
-            // Migration from v2 to v3: Added LearnedWord table for dialect learning
+            // Migration v2 → v3: Added learned_words table (schema matches LearnedWord entity)
             .addMigrations(object : androidx.room.migration.Migration(2, 3) {
                 override fun migrate(db: SupportSQLiteDatabase) {
                     db.execSQL("""
                         CREATE TABLE IF NOT EXISTS `learned_words` (
-                            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                             `word` TEXT NOT NULL,
-                            `translation` TEXT NOT NULL DEFAULT '',
-                            `language` TEXT NOT NULL DEFAULT 'sw',
-                            `dialect` TEXT NOT NULL DEFAULT '',
-                            `context` TEXT NOT NULL DEFAULT '',
                             `frequency` INTEGER NOT NULL DEFAULT 1,
-                            `confidence` REAL NOT NULL DEFAULT 0.1,
-                            `isVerified` INTEGER NOT NULL DEFAULT 0,
-                            `createdAt` INTEGER NOT NULL DEFAULT 0,
-                            `lastUsedAt` INTEGER NOT NULL DEFAULT 0
+                            `dialectRegion` TEXT NOT NULL DEFAULT 'STANDARD',
+                            `canonicalForm` TEXT,
+                            `categoryHint` TEXT NOT NULL DEFAULT 'unknown',
+                            `firstSeenAt` INTEGER NOT NULL DEFAULT 0,
+                            `lastSeenAt` INTEGER NOT NULL DEFAULT 0,
+                            `mappedAt` INTEGER,
+                            PRIMARY KEY(`word`)
                         )
                     """.trimIndent())
-                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_learned_words_word` ON `learned_words` (`word`)")
-                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_learned_words_language` ON `learned_words` (`language`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_learned_words_frequency` ON `learned_words` (`frequency`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_learned_words_canonicalForm` ON `learned_words` (`canonicalForm`)")
                 }
             })
             .fallbackToDestructiveMigrationOnDowngrade()
@@ -211,7 +201,7 @@ object AppModule {
             json(json)
         }
         install(Loging) {
-            level = LogLevel.BODY
+            level = if (com.msaidizi.app.BuildConfig.DEBUG) LogLevel.BODY else LogLevel.NONE
             logger = object : Logger {
                 override fun log(message: String) {
                     timber.log.Timber.d("Ktor: %s", message)
@@ -316,4 +306,43 @@ object AppModule {
         httpClient: HttpClient,
         json: Json
     ): SyncManager = SyncManager(syncQueue, networkMonitor, httpClient, json)
+
+    // === ADAPTIVE ASR & LANGUAGE LEARNING ===
+
+    @Provides
+    @Singleton
+    fun provideConfidenceCalibrator(
+        userVocabularyDao: UserVocabularyDao
+    ): ConfidenceCalibrator = ConfidenceCalibrator(userVocabularyDao)
+
+    @Provides
+    @Singleton
+    fun providePhonemeMapper(): PhonemeMapper = PhonemeMapper()
+
+    @Provides
+    @Singleton
+    fun provideLanguageModelRegistry(
+        @ApplicationContext context: Context
+    ): LanguageModelRegistry = LanguageModelRegistry(context)
+
+    @Provides
+    @Singleton
+    fun provideAdaptiveAsrEngine(
+        speechRecognizer: com.msaidizi.app.voice.SpeechRecognizer,
+        confidenceCalibrator: ConfidenceCalibrator,
+        phonemeMapper: PhonemeMapper,
+        languageModelRegistry: LanguageModelRegistry,
+        userCorrectionDao: UserCorrectionDao,
+        userVocabularyDao: UserVocabularyDao
+    ): AdaptiveAsrEngine = AdaptiveAsrEngine(
+        speechRecognizer, confidenceCalibrator, phonemeMapper,
+        languageModelRegistry, userCorrectionDao, userVocabularyDao
+    )
+
+    @Provides
+    @Singleton
+    fun provideFederatedLearningClient(
+        @ApplicationContext context: Context,
+        pinnedHttpClient: PinnedHttpClient
+    ): FederatedLearningClient = FederatedLearningClient(context, pinnedHttpClient)
 }

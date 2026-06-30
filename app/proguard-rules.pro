@@ -43,6 +43,20 @@
     native <methods>;
 }
 
+# Keep new adaptive learning and language classes
+-keep class com.msaidizi.app.core.language.** { *; }
+-keep class com.msaidizi.app.core.dialect.** { *; }
+-keep class com.msaidizi.app.agent.AdaptiveLearningEngine { *; }
+-keep class com.msaidizi.app.agent.BusinessPatternTracker { *; }
+-keep class com.msaidizi.app.voice.VoicePipeline { *; }
+-keep class com.msaidizi.app.voice.WhisperTokenizer { *; }
+-keep class com.msaidizi.app.voice.transfer.ModelTransfer { *; }
+-keep class com.msaidizi.app.sync.** { *; }
+
+# Keep SQLCipher
+-keep class net.zetetic.** { *; }
+-dontwarn net.zetetic.**
+
 # Optimize
 -assumenosideeffects class android.util.Log {
     public static *** d(...);

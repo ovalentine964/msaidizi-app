@@ -97,4 +97,31 @@
     <string name="error_download_network">No internet connection. Please check your network.</string>
     <string name="error_download_verification">Model verification failed. File removed for security.</string>
     <string name="error_download_generic">Download failed: %1$s</string>
+
+    <!-- Adaptive ASR & Language Learning -->
+    <string name="asr_confirm_title">Je, ni sawa?</string>
+    <string name="asr_confirm_message">Niliskia: "%1$s"</string>
+    <string name="asr_confirm_yes">✅ Sawa!</string>
+    <string name="asr_confirm_no">❌ La, tena</string>
+    <string name="asr_reject_message">Sikuelewi vizuri. Tafadhali rudia.</string>
+    <string name="asr_correction_saved">Asante! Nimejifunza kutoka kwa marekebisho yako.</string>
+    <string name="asr_drift_detected">Mfumo umegundua mabadiliko ya usemi wako. Inaboresha…</string>
+
+    <!-- Federated Learning -->
+    <string name="federated_sync_title">🔄 Kujifunza kwa Pamoja</string>
+    <string name="federated_sync_description">Boresha utambuzi wa sauti bila kushiriki data yako</string>
+    <string name="federated_uploading">Inapakia maboresho…</string>
+    <string name="federated_downloading">Inapakua maboresho…</string>
+    <string name="federated_complete">✅ Imesasishwa!</string>
+    <string name="federated_error">Hitilafu ya usawazisho</string>
+    <string name="federated_privacy_note">Data yako inabaki kwenye kifaa chako. Mifumo tu ya maneno inashirikiwa.</string>
+
+    <!-- Dialect Settings -->
+    <string name="dialect_settings_title">Mipangilio ya Lahaja</string>
+    <string name="dialect_region">Eneo la Lahaja</string>
+    <string name="dialect_migori">Migori / Nyanza</string>
+    <string name="dialect_nairobi">Nairobi</string>
+    <string name="dialect_coast">Pwani</string>
+    <string name="dialect_standard">Kiswahili Sanifu</string>
+    <string name="dialect_auto_detect">Gundua Kiotomatiki</string>
 </resources>

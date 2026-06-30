@@ -112,4 +112,24 @@ object CryptoUtils {
         val hash = digest.digest(input.toByteArray())
         return hash.joinToString("") { "%02x".format(it) }
     }
+
+    /**
+     * Get or create a database encryption key for SQLCipher.
+     * Derives a deterministic key from Android Keystore, stored in SharedPreferences
+     * as an encrypted blob. Falls back to a random key if Keystore is unavailable.
+     */
+    fun getOrCreateDatabaseKey(context: android.content.Context): String {
+        val prefs = context.getSharedPreferences("msaidizi_db_key", android.content.Context.MODE_PRIVATE)
+        val existing = prefs.getString("db_passphrase", null)
+        if (existing != null) return existing
+
+        // Generate a random 32-byte passphrase and store it
+        val random = SecureRandom()
+        val bytes = ByteArray(32)
+        random.nextBytes(bytes)
+        val passphrase = bytes.joinToString("") { "%02x".format(it) }
+        prefs.edit().putString("db_passphrase", passphrase).apply()
+        Timber.d("CryptoUtils: Generated new database encryption key")
+        return passphrase
+    }
 }

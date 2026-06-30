@@ -39,6 +39,9 @@ class MsaidiziApp : Application(), Configuration.Provider {
     @Inject
     lateinit var networkMonitor: NetworkMonitor
 
+    @Inject
+    lateinit var federatedLearningClient: com.msaidizi.app.core.language.FederatedLearningClient
+
     override fun onCreate() {
         super.onCreate()
 
@@ -56,6 +59,12 @@ class MsaidiziApp : Application(), Configuration.Provider {
 
         // Start network monitoring
         networkMonitor.startMonitoring()
+
+        // Initialize federated learning with hashed device ID
+        val deviceId = android.provider.Settings.Secure.getString(
+            contentResolver, android.provider.Settings.Secure.ANDROID_ID
+        ) ?: "unknown"
+        federatedLearningClient.initialize(deviceId)
 
         // Schedule tiered model downloads
         scheduleModelDownloads()

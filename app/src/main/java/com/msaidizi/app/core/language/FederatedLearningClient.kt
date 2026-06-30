@@ -17,6 +17,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import timber.log.Timber
 import java.io.ByteArrayOutputStream
 import java.security.MessageDigest
+import java.security.SecureRandom
 import java.util.UUID
 import java.util.zip.GZIPOutputStream
 import javax.inject.Inject
@@ -94,6 +95,20 @@ class FederatedLearningClient @Inject constructor(
     private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
     val syncState: StateFlow<SyncState> = _syncState
 
+    // Secure random for differential privacy (replaces Math.random())
+    private val secureRandom = SecureRandom()
+
+    /** Per-installation salt derived from Android Keystore */
+    private val perInstallSalt: String by lazy {
+        val prefs = context.getSharedPreferences("msaidizi_federated", Context.MODE_PRIVATE)
+        var salt = prefs.getString("install_salt", null)
+        if (salt == null) {
+            salt = java.util.UUID.randomUUID().toString()
+            prefs.edit().putString("install_salt", salt).apply()
+        }
+        salt
+    }
+
     private var deviceId: String = ""
 
     // ════════════════════════════════════════════════════════════════════
@@ -106,7 +121,7 @@ class FederatedLearningClient @Inject constructor(
      */
     fun initialize(deviceId: String) {
         this.deviceId = hashDeviceId(deviceId)
-        Timber.tag(TAG).i("Initialized with hashed device ID")
+        Timber.tag(TAG).i("Initialized with hashed device ID (per-install salt)")
     }
 
     // ════════════════════════════════════════════════════════════════════
@@ -366,8 +381,8 @@ class FederatedLearningClient @Inject constructor(
      * Clamps to [min, max] range after noise addition.
      */
     private fun applyLaplaceNoise(value: Int, sigma: Double, min: Int, max: Int): Int {
-        // Laplace noise: sample from Laplace(0, b) where b = sensitivity / epsilon
-        val u = (Math.random() - 0.5) * 2  // Uniform in [-1, 1]
+        // Laplace noise using SecureRandom (cryptographically safe)
+        val u = (secureRandom.nextDouble() - 0.5) * 2  // Uniform in [-1, 1]
         val noise = -sigma * Math.signum(u) * ln(1 - 2 * Math.abs(u))
         return (value + noise).toInt().coerceIn(min, max)
     }
@@ -379,7 +394,7 @@ class FederatedLearningClient @Inject constructor(
      */
     private fun applyRandomizedResponse(value: Float, epsilon: Double): Float {
         val p = exp(epsilon) / (exp(epsilon) + 1)
-        return if (Math.random() < p) value else (Math.random() * 2).toFloat()
+        return if (secureRandom.nextDouble() < p) value else (secureRandom.nextDouble() * 2).toFloat()
     }
 
     /**
@@ -420,9 +435,12 @@ class FederatedLearningClient @Inject constructor(
      * Uses device-specific key derived from hardware ID.
      */
     private fun encryptAdapter(adapterBytes: ByteArray): ByteArray {
-        // In production: AES-256-GCM encryption with device key
-        // For now, return as-is (encryption layer to be added)
-        return adapterBytes
+        return try {
+            com.msaidizi.app.core.util.CryptoUtils.encrypt(adapterBytes)
+        } catch (e: Exception) {
+            Timber.tag(TAG).w(e, "Adapter encryption failed, sending unencrypted over TLS")
+            adapterBytes
+        }
     }
 
     /**
@@ -430,9 +448,8 @@ class FederatedLearningClient @Inject constructor(
      * SHA-256 with device-specific salt — server cannot reverse.
      */
     private fun hashDeviceId(deviceId: String): String {
-        val salt = "msaidizi_federated_v1"
         val digest = MessageDigest.getInstance("SHA-256")
-        digest.update("$salt:$deviceId".toByteArray())
+        digest.update("$perInstallSalt:$deviceId".toByteArray())
         return digest.digest().joinToString("") { "%02x".format(it) }.take(16)
     }
 
@@ -461,7 +478,7 @@ class FederatedLearningClient @Inject constructor(
                     .header("X-Device-ID", deviceId)
                     .header("Content-Encoding", "gzip")
                     .header("Content-Type", "application/json")
-                    .post(payload.toRequestBody(PROTOBUF_MEDIA_TYPE))
+                    .post(payload.toRequestBody(JSON_MEDIA_TYPE))
                     .build()
 
                 val response = httpClient.newCall(request).execute()

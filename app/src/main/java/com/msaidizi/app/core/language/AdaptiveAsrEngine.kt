@@ -93,6 +93,9 @@ class AdaptiveAsrEngine @Inject constructor(
     /** Whether the engine is initialized */
     private var initialized = false
 
+    /** Pre-loaded vocabulary set for fast confidence estimation (avoids runBlocking) */
+    private var knownVocabulary: Set<String> = emptySet()
+
     // ════════════════════════════════════════════════════════════════════
     // INITIALIZATION
     // ════════════════════════════════════════════════════════════════════
@@ -112,13 +115,20 @@ class AdaptiveAsrEngine @Inject constructor(
 
             // Load user vocabulary for n-gram priors
             val vocabulary = userVocabularyDao.getHighConfidence(0.5)
+            val vocabSet = mutableSetOf<String>()
             for (entry in vocabulary) {
                 updateNgramModel(entry.canonicalForm, languageModelRegistry.getActiveLanguage())
+                vocabSet.add(entry.canonicalForm.lowercase())
+                vocabSet.add(entry.spokenForm.lowercase())
             }
+            // Also add correction cache entries
+            vocabSet.addAll(correctionCache.keys)
+            vocabSet.addAll(correctionCache.values)
+            knownVocabulary = vocabSet
 
             Timber.tag(TAG).i(
-                "Initialized: %d corrections cached, %d vocabulary entries loaded",
-                correctionCache.size, vocabulary.size
+                "Initialized: %d corrections cached, %d vocabulary entries loaded, %d known words",
+                correctionCache.size, vocabulary.size, knownVocabulary.size
             )
             initialized = true
         } catch (e: Exception) {
@@ -415,11 +425,11 @@ class AdaptiveAsrEngine @Inject constructor(
             else -> 0.85f + (1.0f - kotlin.math.abs(wordsPerSecond - 3.0f) / 3.0f) * 0.15f
         }
 
-        // Vocabulary coverage
+        // Vocabulary coverage (uses pre-loaded set, no runBlocking)
         val words = transcript.split(" ")
         val knownWords = words.count { word ->
-            correctionCache.containsKey(word.lowercase()) ||
-            runBlocking { userVocabularyDao.getBySpokenForm(word.lowercase()) } != null
+            val lower = word.lowercase()
+            correctionCache.containsKey(lower) || knownVocabulary.contains(lower)
         }
         val vocabCoverage = if (words.isNotEmpty()) knownWords.toFloat() / words.size else 0.5f
 

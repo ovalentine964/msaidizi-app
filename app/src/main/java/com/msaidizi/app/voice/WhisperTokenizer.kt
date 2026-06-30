@@ -1,6 +1,7 @@
 package com.msaidizi.app.voice
 
 import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -16,7 +17,9 @@ import javax.inject.Singleton
  * For production, ship the real vocab in assets/.
  */
 @Singleton
-class WhisperTokenizer @Inject constructor() {
+class WhisperTokenizer @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context
+) {
 
     private var vocab: Map<Int, String> = emptyMap()
     private var reverseVocab: Map<String, Int> = emptyMap()
@@ -25,9 +28,21 @@ class WhisperTokenizer @Inject constructor() {
     /**
      * Load tokenizer vocabulary from assets.
      * Expects: assets/whisper_vocab.json mapping token IDs to strings.
+     * Auto-loads on first access if not already loaded.
      */
     fun load(context: Context) {
         if (isLoaded) return
+        loadFromAssets(context)
+    }
+
+    /**
+     * Ensure vocabulary is loaded. Uses injected app context.
+     */
+    fun ensureLoaded() {
+        if (!isLoaded) loadFromAssets(appContext)
+    }
+
+    private fun loadFromAssets(context: Context) {
         try {
             val json = context.assets.open("whisper_vocab.json")
                 .bufferedReader().readText()
