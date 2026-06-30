@@ -71,6 +71,11 @@
     <string name="models_sdcard_copying">Copying from SD card… %1$d%%</string>
     <string name="models_sdcard_complete">%1$d models copied!</string>
     <string name="cancel">Cancel</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_record">Record</string>
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_history">History</string>
+    <string name="nav_settings">Settings</string>
     <string name="nav_models">Models</string>
 
     <!-- Settings -->

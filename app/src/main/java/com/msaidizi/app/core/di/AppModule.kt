@@ -20,9 +20,16 @@ import com.msaidizi.app.core.model.UserVocabularyDao
 import com.msaidizi.app.core.model.UserCorrectionDao
 import com.msaidizi.app.core.database.VocabularyLearningDao
 import com.msaidizi.app.core.dialect.AdaptiveVocabulary
+import com.msaidizi.app.core.language.AdaptiveAsrEngine
+import com.msaidizi.app.core.language.ConfidenceCalibrator
+import com.msaidizi.app.core.language.PhonemeMapper
+import com.msaidizi.app.core.language.LanguageModelRegistry
+import com.msaidizi.app.core.language.FederatedLearningClient
+import com.msaidizi.app.core.network.PinnedHttpClient
 import com.msaidizi.app.sync.SyncManager
 import com.msaidizi.app.sync.SyncQueue
 import com.msaidizi.app.sync.NetworkMonitor
+import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -132,6 +139,28 @@ object AppModule {
                             `lastUsedAt`, `lastUsedAt`
                         FROM `vocabulary`
                     """.trimIndent())
+                }
+            })
+            // Migration from v2 to v3: Added LearnedWord table for dialect learning
+            .addMigrations(object : androidx.room.migration.Migration(2, 3) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `learned_words` (
+                            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            `word` TEXT NOT NULL,
+                            `translation` TEXT NOT NULL DEFAULT '',
+                            `language` TEXT NOT NULL DEFAULT 'sw',
+                            `dialect` TEXT NOT NULL DEFAULT '',
+                            `context` TEXT NOT NULL DEFAULT '',
+                            `frequency` INTEGER NOT NULL DEFAULT 1,
+                            `confidence` REAL NOT NULL DEFAULT 0.1,
+                            `isVerified` INTEGER NOT NULL DEFAULT 0,
+                            `createdAt` INTEGER NOT NULL DEFAULT 0,
+                            `lastUsedAt` INTEGER NOT NULL DEFAULT 0
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_learned_words_word` ON `learned_words` (`word`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_learned_words_language` ON `learned_words` (`language`)")
                 }
             })
             .fallbackToDestructiveMigrationOnDowngrade()

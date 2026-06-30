@@ -24,4 +24,7 @@
     <color name="accent">#FFFFC107</color>
     <color name="accent_dark">#FFFFA000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="profit_positive">#FF4CAF50</color>
+    <color name="profit_negative">#FFF44336</color>
+    <color name="surface_variant">#FFE8E8E8</color>
 </resources>

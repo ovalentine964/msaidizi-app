@@ -2,7 +2,7 @@ package com.msaidizi.app.voice
 
 import android.content.Context
 import com.msaidizi.app.core.util.DeviceTier
-import com.msaidizi.app.core.util.SwahiliParser
+import com.msaidizi.app.core.language.AdaptiveAsrEngine
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -23,7 +23,8 @@ class VoicePipeline @Inject constructor(
     private val audioRecorder: AudioRecorder,
     private val vad: VoiceActivityDetector,
     private val speechRecognizer: SpeechRecognizer,
-    private val ttsEngine: TextToSpeech
+    private val ttsEngine: TextToSpeech,
+    private val adaptiveAsrEngine: AdaptiveAsrEngine
 ) {
     // Pipeline state
     private val _pipelineState = MutableStateFlow(PipelineState.IDLE)
@@ -120,7 +121,8 @@ class VoicePipeline @Inject constructor(
 
     /**
      * Process the end of speech event.
-     * Runs ASR on the captured audio.
+     * Uses AdaptiveAsrEngine for dialect normalization, vocabulary correction,
+     * phoneme-aware post-processing, and Bayesian confidence calibration.
      */
     private suspend fun processEndOfSpeech() {
         val speechAudio = vad.getSpeechAudio()
@@ -132,10 +134,11 @@ class VoicePipeline @Inject constructor(
         _pipelineState.value = PipelineState.PROCESSING
 
         try {
-            // Step 1: ASR — convert audio to text
-            val rawText = speechRecognizer.transcribe(speechAudio)
+            // Use AdaptiveAsrEngine for full adaptive pipeline
+            // (dialect normalization, vocabulary correction, phoneme mapping, confidence calibration)
+            val result = adaptiveAsrEngine.transcribe(speechAudio)
 
-            if (rawText.isNullOrBlank()) {
+            if (result.transcript.isBlank()) {
                 _transcription.emit(TranscriptionResult(
                     text = "",
                     confidence = 0f,
@@ -146,14 +149,16 @@ class VoicePipeline @Inject constructor(
                 return
             }
 
-            // Step 2: Post-process ASR output
-            val correctedText = SwahiliParser.correctASROutput(rawText)
-
-            Timber.d("Transcription: '%s' → '%s'", rawText, correctedText)
+            Timber.d(
+                "Transcription: '%s' → '%s' (conf: %.3f, dialect: %s, drift: %s)",
+                result.rawTranscript, result.transcript,
+                result.calibratedConfidence.calibratedConfidence,
+                result.dialectRegion, result.driftDetected
+            )
 
             _transcription.emit(TranscriptionResult(
-                text = correctedText,
-                confidence = 0.85f,  // TODO: Get actual confidence from Whisper
+                text = result.transcript,
+                confidence = result.calibratedConfidence.calibratedConfidence,
                 success = true
             ))
 
