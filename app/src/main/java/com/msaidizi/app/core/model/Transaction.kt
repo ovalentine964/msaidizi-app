@@ -76,5 +76,9 @@ enum class TransactionType {
     SALE,
     PURCHASE,
     EXPENSE,
+    WITHDRAWAL,
+    DEPOSIT,
+    FEE,
+    REFUND,
     OTHER
 }

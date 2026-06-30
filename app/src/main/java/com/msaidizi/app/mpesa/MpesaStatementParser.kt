@@ -339,20 +339,6 @@ class MpesaStatementParser {
 // ────────────────────── Data Classes ──────────────────────
 
 /**
- * Transaction type classification.
- */
-enum class TransactionType {
-    SALE,        // Money received from customers
-    PURCHASE,    // Buy goods, pay suppliers
-    EXPENSE,     // Sent money, general expenses
-    WITHDRAWAL,  // Cash withdrawal
-    DEPOSIT,     // Cash deposit
-    FEE,         // Transaction fees, charges
-    REFUND,      // Reversals, refunds
-    OTHER        // Unclassified
-}
-
-/**
  * A parsed M-Pesa transaction from CSV.
  */
 data class ParsedMpesaTransaction(
