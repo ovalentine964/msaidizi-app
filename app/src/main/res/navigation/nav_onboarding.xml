@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_onboarding"
+    app:startDestination="@id/introductionFragment">
+
+    <fragment
+        android:id="@+id/introductionFragment"
+        android:name="com.msaidizi.app.onboarding.IntroductionFragment"
+        android:label="Introduction">
+        <action
+            android:id="@+id/action_introduction_to_business"
+            app:destination="@id/businessDiscoveryFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/businessDiscoveryFragment"
+        android:name="com.msaidizi.app.onboarding.BusinessDiscoveryFragment"
+        android:label="Business Discovery">
+        <action
+            android:id="@+id/action_business_to_whatsapp"
+            app:destination="@id/whatsappConnectionFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/whatsappConnectionFragment"
+        android:name="com.msaidizi.app.onboarding.WhatsAppConnectionStepFragment"
+        android:label="WhatsApp Connection"
+        tools:layout="@layout/fragment_whats_app_connection">
+        <action
+            android:id="@+id/action_whatsapp_to_personality"
+            app:destination="@id/personalityFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/personalityFragment"
+        android:name="com.msaidizi.app.onboarding.PersonalityFragment"
+        android:label="Personality">
+        <action
+            android:id="@+id/action_personality_to_first_use"
+            app:destination="@id/firstUseFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/firstUseFragment"
+        android:name="com.msaidizi.app.onboarding.FirstUseFragment"
+        android:label="First Use">
+        <action
+            android:id="@+id/action_first_use_to_main"
+            app:destination="@id/mainActivity"
+            app:popUpTo="@id/nav_onboarding"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <activity
+        android:id="@+id/mainActivity"
+        android:name="com.msaidizi.app.MainActivity"
+        android:label="Msaidizi" />
+
+</navigation>

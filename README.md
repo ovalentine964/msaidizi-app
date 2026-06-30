@@ -2,7 +2,7 @@
 
 **Your Business Assistant. Works Offline. Speaks Swahili.**
 
-Msaidizi is a voice-based AI CFO assistant for Africa's informal economy workers. It runs on 2GB Android phones, works offline, and speaks Swahili, Sheng, and English.
+Msaidizi is a voice-based Multi-Agentic CFO for Africa's informal economy workers. It runs on 2GB Android phones, works offline, and speaks Swahili, Sheng, and English.
 
 ## Features
 
@@ -78,4 +78,4 @@ See [SECURITY.md](SECURITY.md) for vulnerability reporting.
 
 ## License
 
-Proprietary — Biashara AI Ltd
+Proprietary — Biashara Intelligence

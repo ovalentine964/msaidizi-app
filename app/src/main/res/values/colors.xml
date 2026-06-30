@@ -1,57 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Primary Colors -->
     <color name="primary">#FF25D366</color>
     <color name="primary_dark">#FF128C7E</color>
     <color name="primary_light">#FF34B77B</color>
     <color name="primary_variant">#FF075E54</color>
-
-    <!-- Secondary Colors -->
     <color name="secondary">#FFFFC107</color>
     <color name="secondary_dark">#FFFFA000</color>
-    <color name="secondary_variant">#FFFF9800</color>
-
-    <!-- Background Colors -->
     <color name="background">#FFFFFFFF</color>
     <color name="surface">#FFF5F5F5</color>
-    <color name="surface_variant">#FFEEEEEE</color>
-
-    <!-- Text Colors -->
     <color name="text_primary">#FF212121</color>
     <color name="text_secondary">#FF757575</color>
     <color name="text_hint">#FFBDBDBD</color>
     <color name="text_on_primary">#FFFFFFFF</color>
-
-    <!-- Status Colors -->
     <color name="success">#FF4CAF50</color>
     <color name="error">#FFF44336</color>
     <color name="warning">#FFFF9800</color>
     <color name="info">#FF2196F3</color>
-
-    <!-- WhatsApp Colors -->
     <color name="whatsapp_green">#FF25D366</color>
     <color name="whatsapp_dark">#FF075E54</color>
-    <color name="whatsapp_light">#FFDCF8C6</color>
     <color name="whatsapp_teal">#FF128C7E</color>
-
-    <!-- Onboarding Colors -->
-    <color name="onboarding_bg">#FFF0F8F0</color>
-    <color name="onboarding_card">#FFFFFFFF</color>
-    <color name="onboarding_shadow">#1A000000</color>
-
-    <!-- Button Colors -->
-    <color name="button_primary">#FF25D366</color>
-    <color name="button_primary_pressed">#FF1DA851</color>
-    <color name="button_secondary">#FFEEEEEE</color>
-    <color name="button_secondary_pressed">#FFDDDDDD</color>
-    <color name="button_disabled">#FFBDBDBD</color>
-
-    <!-- Divider -->
     <color name="divider">#FFE0E0E0</color>
-
-    <!-- Ripple -->
-    <color name="ripple">#40000000</color>
-
-    <!-- Transparent -->
     <color name="transparent">#00000000</color>
 </resources>
