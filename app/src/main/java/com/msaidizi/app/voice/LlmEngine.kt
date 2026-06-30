@@ -1,6 +1,9 @@
 package com.msaidizi.app.voice
 
 import android.content.Context
+import com.msaidizi.app.core.language.LanguageLearningPipeline
+import com.msaidizi.app.core.language.LanguageModelRegistry
+import com.msaidizi.app.core.language.AdaptiveAsrEngine
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import timber.log.Timber
@@ -36,7 +39,9 @@ import javax.inject.Singleton
  */
 @Singleton
 class LlmEngine @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val languageModelRegistry: LanguageModelRegistry? = null,
+    private val adaptiveAsrEngine: AdaptiveAsrEngine? = null
 ) {
     // ────────────── Native JNI Methods (llama.cpp) ──────────────
 
@@ -370,6 +375,110 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
     }
 
     /**
+     * Generate response with learned context from the language learning pipeline.
+     *
+     * This method enriches the prompt with:
+     * - User's learned vocabulary (product names, prices, terms)
+     * - Business patterns (restock cycles, price trends)
+     * - Dialect-specific normalization (Migori Swahili → standard)
+     * - Active language adapter context
+     *
+     * The learned context is injected as a structured prefix that the LLM
+     * can use to better understand the user's intent and generate more
+     * personalized responses.
+     *
+     * @param userInput User's message (already transcribed by AdaptiveAsrEngine)
+     * @param businessContext Business context (transactions, inventory)
+     * @param language Response language
+     * @param learnedContext Optional pre-built learned context string
+     * @return Msaidizi's response, enriched with learned patterns
+     */
+    suspend fun generateWithLearnedContext(
+        userInput: String,
+        businessContext: String = "",
+        language: String = "sw",
+        learnedContext: String? = null
+    ): String {
+        val systemPrompt = SYSTEM_PROMPTS[language] ?: SYSTEM_PROMPTS["sw"]!!
+
+        // Build learned context from available sources
+        val enrichedContext = buildLearnedContext(businessContext, language, learnedContext)
+
+        val fullPrompt = buildString {
+            append(systemPrompt)
+            append("\n\n")
+
+            // Inject learned context (vocabulary, patterns, dialect info)
+            if (enrichedContext.isNotBlank()) {
+                append("Maelezo ya ziada (learned context):\n")
+                append(enrichedContext)
+                append("\n\n")
+            }
+
+            append("Mteja: ")
+            append(userInput)
+            append("\nMsaidizi:")
+        }
+
+        return generate(
+            fullPrompt,
+            maxTokens = DEFAULT_MAX_TOKENS_RESPONSE,
+            temperature = DEFAULT_TEMPERATURE
+        )
+    }
+
+    /**
+     * Build learned context string from the language learning pipeline.
+     *
+     * Context includes:
+     * - Active language and dialect
+     * - User's top vocabulary terms with typical prices
+     * - Recent correction patterns (what the user tends to correct)
+     * - Business product categories
+     * - Learning progress (how personalized the model is)
+     *
+     * Format is structured for LLM consumption:
+     * ```
+     * Lugha: Kiswahili (Migori)
+     * Bidhaa: mandazi (KSh 20), chapati (KSh 30), mchele (KSh 150/kilo)
+     * Masoko ya kawaida: mauzo ya asubuhi, ununuzi wa jioni
+     * Ukuzi wa msamiati: 45 maneno
+     * ```
+     */
+    private suspend fun buildLearnedContext(
+        businessContext: String,
+        language: String,
+        prebuiltContext: String?
+    ): String {
+        // If pre-built context is provided, use it
+        if (!prebuiltContext.isNullOrBlank()) return prebuiltContext
+
+        val parts = mutableListOf<String>()
+
+        // Language and dialect info
+        val langDef = languageModelRegistry?.getLanguageDef(language)
+        if (langDef != null) {
+            parts.add("Lugha: ${langDef.nativeName}")
+        }
+
+        // Learning progress
+        val stats = try {
+            adaptiveAsrEngine?.getCorrectionStats()
+        } catch (e: Exception) { null }
+
+        if (stats != null && stats.totalCorrections > 0) {
+            parts.add("Ukuzi wa msamiati: maneno ${stats.totalCorrections}")
+        }
+
+        // Merge with business context
+        if (businessContext.isNotBlank()) {
+            parts.add(businessContext)
+        }
+
+        return parts.joinToString("\n")
+    }
+
+    /**
      * Generate with function calling support.
      * Returns a structured function call if the model determines one is needed.
      *
@@ -426,6 +535,99 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
                 textResponse = output
             )
         }
+    }
+
+    /**
+     * Generate a response with personalized context from AdaptiveLearningEngine.
+     *
+     * This is the primary method for Level 2 adaptive learning.
+     * The personalizedContext includes:
+     * - User's product vocabulary and price ranges
+     * - Business patterns (peak hours, best days, trends)
+     * - Recent correction history
+     * - Business health score
+     *
+     * @param userInput User's message
+     * * @param personalizedContext Context from AdaptiveLearningEngine
+     * @param businessContext Additional business context (transactions, inventory)
+     * @param language Response language
+     * @return Msaidizi's personalized response
+     */
+    suspend fun generateWithAdaptiveContext(
+        userInput: String,
+        personalizedContext: String = "",
+        businessContext: String = "",
+        language: String = "sw"
+    ): String {
+        val systemPrompt = SYSTEM_PROMPTS[language] ?: SYSTEM_PROMPTS["sw"]!!
+
+        val fullPrompt = buildString {
+            append(systemPrompt)
+            append("\n\n")
+
+            // Personalized context from adaptive learning (highest priority)
+            if (personalizedContext.isNotBlank()) {
+                append("Maelezo ya mteja (kutokana na kujifunza kwa mteja):\n")
+                append(personalizedContext)
+                append("\n\n")
+            }
+
+            // General business context
+            if (businessContext.isNotBlank()) {
+                append("Maelezo ya biashara:\n")
+                append(businessContext)
+                append("\n\n")
+            }
+
+            append("Mteja: ")
+            append(userInput)
+            append("\nMsaidizi:")
+        }
+
+        return generate(
+            fullPrompt,
+            maxTokens = DEFAULT_MAX_TOKENS_RESPONSE,
+            temperature = DEFAULT_TEMPERATURE
+        )
+    }
+
+    /**
+     * Generate advice with full adaptive context.
+     * Combines personalized context with business data for rich, relevant advice.
+     *
+     * @param userInput User's question or request
+     * @param personalizedContext From AdaptiveLearningEngine
+     * @param recentTransactions Recent transaction summary
+     * @param inventoryStatus Current inventory status
+     * @param language Response language
+     * @return Personalized business advice
+     */
+    suspend fun generateAdviceWithContext(
+        userInput: String,
+        personalizedContext: String = "",
+        recentTransactions: String = "",
+        inventoryStatus: String = "",
+        language: String = "sw"
+    ): String {
+        val businessContext = buildString {
+            if (recentTransactions.isNotBlank()) {
+                append("Shughuli za hivi karibuni: ")
+                append(recentTransactions)
+                append(". ")
+            }
+            if (inventoryStatus.isNotBlank()) {
+                append("Hali ya stock: ")
+                append(inventoryStatus)
+                append(". ")
+            }
+        }
+
+        return generateWithAdaptiveContext(
+            userInput = userInput,
+            personalizedContext = personalizedContext,
+            businessContext = businessContext,
+            language = language
+        )
     }
 
     /**

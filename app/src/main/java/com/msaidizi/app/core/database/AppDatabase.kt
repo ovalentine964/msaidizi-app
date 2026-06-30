@@ -8,11 +8,14 @@ import com.msaidizi.app.core.model.*
 /**
  * Room database for Msaidizi.
  *
- * Stores all business transactions, inventory, patterns, and vocabulary.
+ * Stores all business transactions, inventory, patterns, vocabulary,
+ * user corrections, and adaptive learning data.
  * Optimized for 2GB devices:
  * - WAL mode for concurrent reads during writes
  * - Minimal indices (only what's needed for common queries)
  * - Integer timestamps (not datetime strings)
+ *
+ * Version 2: Added UserVocabulary and UserCorrection for adaptive learning.
  */
 @Database(
     entities = [
@@ -20,9 +23,12 @@ import com.msaidizi.app.core.model.*
         InventoryItem::class,
         BusinessPattern::class,
         VocabularyEntry::class,
-        DailySummary::class
+        DailySummary::class,
+        UserVocabulary::class,
+        UserCorrection::class,
+        LearnedWord::class
     ],
-    version = 1,
+    version = 3,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -30,6 +36,9 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun transactionDao(): TransactionDao
     abstract fun inventoryDao(): InventoryDao
     abstract fun patternDao(): PatternDao
+    abstract fun userVocabularyDao(): UserVocabularyDao
+    abstract fun userCorrectionDao(): UserCorrectionDao
+    abstract fun vocabularyLearningDao(): VocabularyLearningDao
 }
 
 /**
@@ -50,4 +59,11 @@ class Converters {
     @androidx.room.TypeConverter
     fun toPatternType(value: String): PatternType =
         PatternType.valueOf(value)
+
+    @androidx.room.TypeConverter
+    fun fromCorrectionType(value: CorrectionType): String = value.name
+
+    @androidx.room.TypeConverter
+    fun toCorrectionType(value: String): CorrectionType =
+        CorrectionType.valueOf(value)
 }

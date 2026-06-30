@@ -117,4 +117,78 @@
     <string name="models_sdcard_complete">%1$d models zimekopiwa!</string>
     <string name="cancel">Ghairi</string>
     <string name="nav_models">Models</string>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- Migori Dialect & Adaptive Vocabulary Strings -->
+    <!-- ══════════════════════════════════════════════════════ -->
+
+    <!-- Dialect / Region Settings -->
+    <string name="settings_dialect">🌍 Eneo la Kiswahili</string>
+    <string name="settings_dialect_summary">Chagua lahaja ya Kiswahili unayotumia</string>
+    <string name="dialect_standard">Kiswahili Sanifu</string>
+    <string name="dialect_migori">Migori — Kiswahili cha Luo</string>
+    <string name="dialect_nairobi">Nairobi — Sheng</string>
+    <string name="dialect_coast">Pwani — Kimvita</string>
+    <string name="dialect_tanzania">Tanzania — Kiswahili cha Bongo</string>
+
+    <!-- Adaptive Vocabulary / Learning -->
+    <string name="vocab_title">📚 Maneno Mapya</string>
+    <string name="vocab_pending_count">Maneno %d mapya yanahitaji kuthibitishwa</string>
+    <string name="vocab_no_pending">Hakuna maneno mapya kwa sasa</string>
+    <string name="vocab_heard_word">Niliskia: "%1$s" — maana yake ni nini?</string>
+    <string name="vocab_confirm">✅ Thibitisha</string>
+    <string name="vocab_correction">📝 Sahihisha</string>
+    <string name="vocab_skip_word">⏭️ Ruka</string>
+    <string name="vocab_teach_new">➕ Fundisha neno jipya</string>
+    <string name="vocab_spoken_hint">Jinsi unavyosema…</string>
+    <string name="vocab_canonical_hint">Maana yake ni…</string>
+    <string name="vocab_category">Aina ya neno</string>
+    <string name="vocab_category_product">Bidhaa</string>
+    <string name="vocab_category_unit">Kipimo</string>
+    <string name="vocab_category_currency">Pesa</string>
+    <string name="vocab_category_action">Kitendo</string>
+    <string name="vocab_learned_toast">✅ "%1$s" imejifunza!</string>
+    <string name="vocab_stats">Maneno uliyofundisha: %1$d</string>
+
+    <!-- Migori-specific business terms in UI -->
+    <string name="migori_omena">Omena</string>
+    <string name="migori_debe">Debe</string>
+    <string name="migori_gunia">Gunia</string>
+    <string name="migori_fundo">Fundo</string>
+    <string name="migori_mbao">Mbao (KSh 20)</string>
+    <string name="migori_kibabu">Kibabu (KSh 50)</string>
+    <string name="migori_ngiri">Ngiri (KSh 1,000)</string>
+    <string name="migori_finje">Finje (KSh 500)</string>
+
+    <!-- Code-switching indicator -->
+    <string name="dialect_code_switch_detected">🔀 Lugha mchanganyiko imegunduliwa</string>
+    <string name="dialect_migori_detected">🏘️ Kiswahili cha Migori kimegunduliwa</string>
+
+    <!-- Help — Migori examples -->
+    <string name="help_migori_title">Msaidizi — Migori</string>
+    <string name="help_migori_intro">Karibu! Msaidizi anaelewa Kiswahili cha Migori.</string>
+    <string name="help_migori_sale">Sema: "Nimeuza omena debe kwa mbao tatu"</string>
+    <string name="help_migori_slang">Sema: "Nimenunua unga kwa finje" (= KSh 500)</string>
+    <string name="help_migori_code_switch">Unaweza kutumia Kiswahili na Dholuo pamoja!</string>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- Dholuo Fallback Strings (key UI elements) -->
+    <!-- Used when Dholuo is detected as primary language -->
+    <!-- ══════════════════════════════════════════════════════ -->
+
+    <string name="luo_greeting">Misawa!</string>
+    <string name="luo_how_are_you">Inade nade?</string>
+    <string name="luo_fine">Adiera maber</string>
+    <string name="luo_listening">Tiyogo gi ng'eyo…</string>
+    <string name="luo_processing">Nigi tiyo…</string>
+    <string name="luo_recorded">Ese kanyalo!</string>
+    <string name="luo_sale_recorded">Itego %1$s gi KSh %2$s</string>
+    <string name="luo_purchase_recorded">Iguo %1$s gi KSh %2$s</string>
+    <string name="luo_profit_today">Yed gi ng'eny kod KSh %1$s</string>
+    <string name="luo_balance">Pesa maber ni KSh %1$s</string>
+    <string name="luo_error">Ket to ok wang' gi yudo</string>
+    <string name="luo_help">Ngi tim gi ng'eyo biachara marachielo</string>
+    <string name="luo_thank_you">Erokamano</string>
+    <string name="luo_yes">Ee</string>
+    <string name="luo_no">Ooyo</string>
 </resources>

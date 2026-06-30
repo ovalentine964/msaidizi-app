@@ -1,5 +1,6 @@
 package com.msaidizi.app.core.util
 
+import com.msaidizi.app.core.dialect.MigoriDialectAdapter
 import com.msaidizi.app.core.model.SaleData
 import com.msaidizi.app.core.model.PurchaseData
 import timber.log.Timber
@@ -19,7 +20,7 @@ object SwahiliParser {
     private val swahiliNumbers = mapOf(
         // Units
         "moja" to 1, "mbili" to 2, "tatu" to 3, "nne" to 4, "tano" to 5,
-        "sita" to 7, "saba" to 7, "nane" to 8, "tisa" to 9,
+        "sita" to 6, "saba" to 7, "nane" to 8, "tisa" to 9,
         "one" to 1, "two" to 2, "three" to 3, "four" to 4, "five" to 5,
         "six" to 6, "seven" to 7, "eight" to 8, "nine" to 9, "ten" to 10,
 
@@ -83,7 +84,45 @@ object SwahiliParser {
 
         // Household
         "sabuni" to "soap", "dawa" to "medicine", "pampers" to "diapers",
-        "mshumaa" to "candle", "kandamizi" to "starch"
+        "mshumaa" to "candle", "kandamizi" to "starch",
+
+        // ── Migori/Nyatike Business Vocabulary ──
+        // Local products (Luo substrate names used in Migori Swahili)
+        "omena" to "omena",                  // small dried fish — Migori/Rachuonyo staple
+        "omena_kubwa" to "omena_large",      // large dried fish
+        "piyo" to "groundnuts",              // Dholuo: groundnuts (cf. "njugu")
+        "atapa" to "atapa",                  // traditional Luo cassava bread
+        "nyoyo" to "nyoyo",                  // cowpeas (Migori term)
+        "odo" to "traditional_greens",        // Dholuo traditional greens
+        "apoth" to "traditional_greens",      // another traditional leafy vegetable
+        "sukuma" to "kale",                   // short form of sukuma wiki
+        "terere" to "terere",                // amaranth greens (common in Nyanza)
+        "mrenda" to "mrenda",                // jute mallow (Luo/Nyanza vegetable)
+        "kunde" to "kunde",                  // cowpea leaves
+
+        // Migori fish varieties (Lake Victoria)
+        "nguru" to "catfish",                // Nile catfish
+        "ngege" to "tilapia",                // tilapia
+        "omena" to "omena",                  // dagaa/small fish
+        "rohu" to "rohu",                    // rohu fish
+        "changu" to "rabbit_fish",           // rabbit fish
+
+        // Cross-border goods (Migori-Tanzania)
+        "mali" to "merchandise",              // cross-border goods
+        "sukari_tz" to "tanzania_sugar",     // sugar from Tanzania
+        "mafuta_tz" to "tanzania_oil",       // cooking oil from TZ
+
+        // Dholuo food terms used in code-switching
+        "kuon" to "ugali",                   // Dholuo: ugali
+        "rech" to "food",                    // Dholuo: food
+        "thwon" to "traditional_beer",       // Luo brew
+        "chang'aa" to "changaa",             // local spirit
+        "busaa" to "busaa",                  // traditional brew
+
+        // Livestock (Migori rural markets)
+        "ng'ina" to "hen",                   // Luo: hen
+        "dier" to "bull",                    // Luo: bull
+        "sungura" to "rabbit"                // rabbit
     )
 
     // === BUSINESS ACTION WORDS ===
@@ -111,7 +150,31 @@ object SwahiliParser {
         "kilo" to 1.0, "kilo_moja" to 1.0, "kilo_mbili" to 2.0,
         "lita" to 1.0, "lita_moja" to 1.0, "lita_mbili" to 2.0,
         "pakiti" to 1.0, "mfuko" to 1.0, "sanduku" to 1.0,
-        "debe" to 1.0, "frying" to 1.0
+        "debe" to 1.0, "frying" to 1.0,
+
+        // ── Migori local measurement units ──
+        "debe" to 1.0,              // tin can (~20kg for maize, ~18kg for beans)
+        "debe_ndogo" to 0.5,        // small tin
+        "debe_kubwa" to 1.5,        // large tin
+        "gunia" to 1.0,             // sack (50-90kg depending on commodity)
+        "gunia_ndogo" to 0.5,       // small sack (~25kg)
+        "gunia_kubwa" to 2.0,       // large sack (~90kg)
+        "fundo" to 1.0,             // bundle/tie (e.g., sukuma wiki, mboga)
+        "fundo_mbili" to 2.0,       // two bundles
+        "fundo_tatu" to 3.0,        // three bundles
+        "kibuyu" to 1.0,            // calabash measure
+        "goro" to 1.0,              // tin measure for oil (~1 liter)
+        "kibaba" to 1.0,            // small measure (~1 kg)
+        "kibaba_mbili" to 2.0,      // two kibaba
+        "ratili" to 1.0,            // pound measure
+        "ratili_mbili" to 2.0,      // two pounds
+        "mfuko" to 1.0,             // bag/packet
+        "mfuko_mdogo" to 0.5,       // small packet
+        "sanduku" to 1.0,           // box/crate
+        "karai" to 1.0,             // basin (common market measure)
+        "karai_ndogo" to 0.5,       // small basin
+        "bakuli" to 1.0,            // bowl measure
+        "goro" to 1.0               // gourd/tin for oil
     )
 
     // === PRICE PATTERNS ===
@@ -315,6 +378,7 @@ object SwahiliParser {
 
     /**
      * Post-process ASR output to fix common Swahili ASR errors.
+     * Now includes Migori-specific ASR correction patterns.
      */
     fun correctASROutput(text: String): String {
         var corrected = text
@@ -333,7 +397,40 @@ object SwahiliParser {
             "vi azi" to "viazi",
             "vi tunguu" to "vitunguu",
             "ma hundi" to "mahindi",
-            "nusu" to "nusu"
+            "nusu" to "nusu",
+
+            // ── Migori-specific ASR corrections ──
+            // Dholuo loanwords that ASR often misrecognizes
+            "omena" to "omena",
+            "o mena" to "omena",
+            "oh mena" to "omena",
+            "pi yo" to "piyo",
+            "a tapa" to "atapa",
+            "ku on" to "kuon",
+            "rech" to "rech",
+            // Pronunciation variations ("th" → "s" in Migori)
+            "samini" to "thamini",
+            "sa labu" to "tharabu",
+            // Currency expressions
+            "mbao" to "mbao",
+            "em bao" to "mbao",
+            "kibabu" to "kibabu",
+            "ki babu" to "kibabu",
+            "ngiri" to "ngiri",
+            "n giri" to "ngiri",
+            "finje" to "finje",
+            "fin je" to "finje",
+            // Measurement units
+            "debe" to "debe",
+            "de be" to "debe",
+            "gunia" to "gunia",
+            "gu nia" to "gunia",
+            "fundo" to "fundo",
+            "fun do" to "fundo",
+            "kibaba" to "kibaba",
+            "ki baba" to "kibaba",
+            "karai" to "karai",
+            "ka rai" to "karai"
         )
 
         for ((wrong, right) in corrections) {
@@ -345,6 +442,195 @@ object SwahiliParser {
         corrected = corrected.replace(Regex("""KES?\s*"""), "KSh ")  // Normalize currency
         corrected = corrected.replace(Regex("""bob"""), "KSh", ignoreCase = true)
 
+        // Normalize Migori currency slang to KSh amounts
+        corrected = normalizeCurrencySlang(corrected)
+
         return corrected.trim()
     }
+
+    /**
+     * Parse Migori currency slang expressions to KSh amounts.
+     * Handles: "mbao" → KSh 20, "kibabu" → KSh 50, "ngiri" → KSh 1000
+     *
+     * Also handles compound expressions like "mbao tatu" = KSh 60.
+     */
+    private fun normalizeCurrencySlang(text: String): String {
+        var result = text
+
+        // Currency slang → numeric value
+        val currencySlang = mapOf(
+            "mbao" to 20,            // 20 bob
+            "jeuri" to 50,           // 50 bob (Sheng, used in Migori)
+            "kibabu" to 50,          // 50 bob
+            "finje" to 500,          // 500 bob
+            "ngiri" to 1000,         // 1000 bob
+            "thao" to 1000,          // 1000 (from "thousand")
+            "nane" to 80,            // 80 bob ("nane" = 8 × 10)
+            "robo" to 250,           // 250 (quarter of 1000)
+            "nusu_thao" to 500,      // half of 1000
+            "quarter" to 250         // 250
+        )
+
+        for ((slang, value) in currencySlang) {
+            // Match "mbao tatu" → KSh 60, "mbao mbili" → KSh 40
+            val compoundPattern = Regex(
+                """\b$slang\s+(moja|mbili|tatu|nne|tano|sita|saba|nane|tisa|kumi)\b""",
+                RegexOption.IGNORE_CASE
+            )
+            compoundPattern.find(result)?.let { match ->
+                val multiplierWord = match.groupValues[1].lowercase()
+                val multiplier = when (multiplierWord) {
+                    "moja" -> 1; "mbili" -> 2; "tatu" -> 3; "nne" -> 4
+                    "tano" -> 5; "sita" -> 6; "saba" -> 7; "nane" -> 8
+                    "tisa" -> 9; "kumi" -> 10; else -> 1
+                }
+                result = result.replace(match.value, "KSh ${value * multiplier}")
+            }
+
+            // Match standalone slang: "mbao" → KSh 20
+            val standalonePattern = Regex("""\b$slang\b""", RegexOption.IGNORE_CASE)
+            standalonePattern.find(result)?.let { match ->
+                // Only replace if not already part of a compound we handled
+                if (!result.contains("KSh ${value}")) {
+                    result = result.replace(match.value, "KSh $value")
+                }
+            }
+        }
+
+        return result
+    }
+
+    /**
+     * Extract price handling Migori currency slang.
+     * Extends extractPrice() to understand local expressions.
+     *
+     * Examples:
+     * - "mbao tatu" → 60
+     * - "kibabu" → 50
+     * - "ngiri mbili" → 2000
+     * - "finje" → 500
+     */
+    fun extractPriceWithSlang(text: String): Double? {
+        // First try standard price extraction
+        extractPrice(text)?.let { return it }
+
+        // Try currency slang
+        val currencySlang = mapOf(
+            "mbao" to 20, "jeuri" to 50, "kibabu" to 50,
+            "finje" to 500, "ngiri" to 1000, "thao" to 1000,
+            "nane" to 80, "robo" to 250, "nusu_thao" to 500
+        )
+
+        val lower = text.lowercase()
+        for ((slang, value) in currencySlang) {
+            val compoundPattern = Regex(
+                """\b$slang\s+(moja|mbili|tatu|nne|tano|sita|saba|nane|tisa|kumi)\b""",
+                RegexOption.IGNORE_CASE
+            )
+            compoundPattern.find(lower)?.let { match ->
+                val multiplierWord = match.groupValues[1].lowercase()
+                val multiplier = when (multiplierWord) {
+                    "moja" -> 1; "mbili" -> 2; "tatu" -> 3; "nne" -> 4
+                    "tano" -> 5; "sita" -> 6; "saba" -> 7; "nane" -> 8
+                    "tisa" -> 9; "kumi" -> 10; else -> 1
+                }
+                return (value * multiplier).toDouble()
+            }
+
+            if (Regex("""\b$slang\b""", RegexOption.IGNORE_CASE).containsMatchIn(lower)) {
+                return value.toDouble()
+            }
+        }
+
+        return null
+    }
+
+    /**
+     * Full pipeline: dialect normalization + ASR correction + parsing.
+     * This is the main entry point for processing Migori Swahili input.
+     *
+     * Flow:
+     * 1. Run Migori dialect adapter (code-switch detection, normalization)
+     * 2. Apply ASR corrections
+     * 3. Parse using standard SwahiliParser
+     * 4. If parsing fails, try Migori slang extraction
+     * 5. Track unknown words via AdaptiveVocabulary
+     */
+    fun parseWithDialect(
+        text: String,
+        adaptiveVocabulary: com.msaidizi.app.core.dialect.AdaptiveVocabulary? = null
+    ): ParseResult {
+        Timber.d("Parsing with dialect: '%s'", text)
+
+        // Step 1: Dialect processing
+        val dialectResult = MigoriDialectAdapter.process(text)
+        Timber.d("Dialect: region=%s, codeSwitch=%s",
+            dialectResult.dialectRegion, dialectResult.codeSwitchResult.hasCodeSwitching)
+
+        // Step 2: ASR correction
+        val corrected = correctASROutput(dialectResult.normalizedText)
+
+        // Step 3: Standard parsing
+        val sale = parseSale(corrected)
+        val purchase = parsePurchase(corrected)
+
+        // Step 4: Try slang-aware price extraction if standard parsing failed
+        val priceWithSlang = extractPriceWithSlang(corrected)
+
+        // Step 5: Track unknown words for adaptive learning
+        adaptiveVocabulary?.let { vocab ->
+            val words = corrected.lowercase().split(Regex("""\s+"""))
+            val knownItems = commonItems.keys + migoriBusinessSlang.keys
+            for (word in words) {
+                val clean = word.trim()
+                if (clean.length > 2 && clean !in knownItems &&
+                    clean.toDoubleOrNull() == null &&
+                    parseSwahiliNumber(clean) == null
+                ) {
+                    // This might be a new product or term the user teaches us
+                    vocab.trackUnknownWord(clean, dialectResult.dialectRegion.name)
+                }
+            }
+        }
+
+        return ParseResult(
+            sale = sale,
+            purchase = purchase,
+            extractedPrice = priceWithSlang,
+            dialectResult = dialectResult,
+            correctedText = corrected
+        )
+    }
+
+    /**
+     * Migori-specific business slang not in the standard commonItems map.
+     * Used for fallback lookup when standard parsing fails.
+     */
+    private val migoriBusinessSlang = mapOf(
+        "mbao" to "twenty_shillings",
+        "kibabu" to "fifty_shillings",
+        "ngiri" to "thousand_shillings",
+        "finje" to "five_hundred_shillings",
+        "thao" to "thousand_shillings",
+        "omena" to "omena",
+        "piyo" to "groundnuts",
+        "atapa" to "atapa",
+        "kuon" to "ugali",
+        "debe" to "tin_measure",
+        "gunia" to "sack_measure",
+        "fundo" to "bundle_measure",
+        "kibaba" to "kibaba_measure",
+        "karai" to "basin_measure"
+    )
 }
+
+/**
+ * Result of dialect-aware parsing.
+ */
+data class ParseResult(
+    val sale: SaleData?,
+    val purchase: PurchaseData?,
+    val extractedPrice: Double?,
+    val dialectResult: com.msaidizi.app.core.dialect.ProcessedResult,
+    val correctedText: String
+)

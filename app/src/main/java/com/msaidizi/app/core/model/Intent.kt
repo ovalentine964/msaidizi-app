@@ -129,5 +129,28 @@ data class UserPreferences(
     val businessName: String = "",
     val businessType: String = "",
     val currency: String = "KES",
-    val onboardingComplete: Boolean = false
+    val onboardingComplete: Boolean = false,
+    val dialectRegion: DialectRegion = DialectRegion.STANDARD
 )
+
+/**
+ * Dialect regions supported by Msaidizi.
+ * Phase 1: Migori County (Luo substrate)
+ * Phase 2: Kenya nationwide
+ * Phase 3: East Africa
+ * Phase 4: All Africa
+ */
+enum class DialectRegion {
+    /** Standard Swahili (taught in schools) */
+    STANDARD,
+    /** Migori County — Luo substrate, code-switching with Dholuo */
+    MIGORI,
+    /** Nairobi — heavy Sheng influence */
+    NAIROBI,
+    /** Coast — Mvita/Swahili coast dialect, Arabic loanwords */
+    COAST,
+    /** Tanzania — standard Kiswahili with Bongo flavor */
+    TANZANIA,
+    /** Uganda — Luganda substrate */
+    UGANDA
+}

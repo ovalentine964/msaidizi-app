@@ -14,6 +14,12 @@ import com.msaidizi.app.agent.BusinessAgent
 import com.msaidizi.app.agent.AnalysisAgent
 import com.msaidizi.app.agent.AdvisorAgent
 import com.msaidizi.app.agent.LearningAgent
+import com.msaidizi.app.agent.AdaptiveLearningEngine
+import com.msaidizi.app.agent.BusinessPatternTracker
+import com.msaidizi.app.core.model.UserVocabularyDao
+import com.msaidizi.app.core.model.UserCorrectionDao
+import com.msaidizi.app.core.database.VocabularyLearningDao
+import com.msaidizi.app.core.dialect.AdaptiveVocabulary
 import com.msaidizi.app.sync.SyncManager
 import com.msaidizi.app.sync.SyncQueue
 import com.msaidizi.app.sync.NetworkMonitor
@@ -61,7 +67,74 @@ object AppModule {
                     db.execSQL("PRAGMA cache_size=-2000")  // 2MB cache
                 }
             })
-            .fallbackToDestructiveMigration()
+            // Migration from v1 to v2: Added UserVocabulary and UserCorrection
+            // tables for adaptive learning. Existing data is preserved.
+            .addMigrations(object : androidx.room.migration.Migration(1, 2) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    // Create user_vocabulary table
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `user_vocabulary` (
+                            `spokenForm` TEXT NOT NULL,
+                            `canonicalForm` TEXT NOT NULL,
+                            `language` TEXT NOT NULL DEFAULT 'sw',
+                            `frequency` INTEGER NOT NULL DEFAULT 1,
+                            `confidence` REAL NOT NULL DEFAULT 0.1,
+                            `minPrice` REAL NOT NULL DEFAULT 0.0,
+                            `maxPrice` REAL NOT NULL DEFAULT 0.0,
+                            `avgPrice` REAL NOT NULL DEFAULT 0.0,
+                            `priceObservations` INTEGER NOT NULL DEFAULT 0,
+                            `avgQuantity` REAL NOT NULL DEFAULT 0.0,
+                            `category` TEXT NOT NULL DEFAULT '',
+                            `isUserDefined` INTEGER NOT NULL DEFAULT 0,
+                            `lastUsedAt` INTEGER NOT NULL DEFAULT 0,
+                            `createdAt` INTEGER NOT NULL DEFAULT 0,
+                            PRIMARY KEY(`spokenForm`)
+                        )
+                    """.trimIndent())
+
+                    // Create indices for user_vocabulary
+                    db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_user_vocabulary_spokenForm` ON `user_vocabulary` (`spokenForm`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_user_vocabulary_canonicalForm` ON `user_vocabulary` (`canonicalForm`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_user_vocabulary_confidence` ON `user_vocabulary` (`confidence`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_user_vocabulary_lastUsedAt` ON `user_vocabulary` (`lastUsedAt`)")
+
+                    // Create user_corrections table
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `user_corrections` (
+                            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            `originalTransactionId` INTEGER NOT NULL DEFAULT 0,
+                            `correctionType` TEXT NOT NULL,
+                            `originalValue` TEXT NOT NULL,
+                            `correctedValue` TEXT NOT NULL,
+                            `originalInput` TEXT NOT NULL DEFAULT '',
+                            `correctionInput` TEXT NOT NULL DEFAULT '',
+                            `context` TEXT NOT NULL DEFAULT '{}',
+                            `applied` INTEGER NOT NULL DEFAULT 0,
+                            `createdAt` INTEGER NOT NULL DEFAULT 0
+                        )
+                    """.trimIndent())
+
+                    // Create indices for user_corrections
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_user_corrections_originalTransactionId` ON `user_corrections` (`originalTransactionId`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_user_corrections_correctionType` ON `user_corrections` (`correctionType`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_user_corrections_createdAt` ON `user_corrections` (`createdAt`)")
+
+                    // Migrate existing vocabulary entries to the new table
+                    db.execSQL("""
+                        INSERT OR IGNORE INTO `user_vocabulary` 
+                            (`spokenForm`, `canonicalForm`, `language`, `frequency`, `confidence`, `lastUsedAt`, `createdAt`)
+                        SELECT 
+                            `spokenForm`, `canonicalForm`, `language`, `frequency`,
+                            CASE WHEN `frequency` >= 10 THEN 0.7
+                                 WHEN `frequency` >= 5 THEN 0.5
+                                 WHEN `frequency` >= 2 THEN 0.3
+                                 ELSE 0.1 END,
+                            `lastUsedAt`, `lastUsedAt`
+                        FROM `vocabulary`
+                    """.trimIndent())
+                }
+            })
+            .fallbackToDestructiveMigrationOnDowngrade()
             .build()
     }
 
@@ -73,6 +146,24 @@ object AppModule {
 
     @Provides
     fun providePatternDao(db: AppDatabase): PatternDao = db.patternDao()
+
+    @Provides
+    fun provideUserVocabularyDao(db: AppDatabase): UserVocabularyDao = db.userVocabularyDao()
+
+    @Provides
+    fun provideUserCorrectionDao(db: AppDatabase): UserCorrectionDao = db.userCorrectionDao()
+
+    @Provides
+    fun provideVocabularyLearningDao(db: AppDatabase): VocabularyLearningDao = db.vocabularyLearningDao()
+
+    // === DIALECT & ADAPTIVE VOCABULARY ===
+
+    @Provides
+    @Singleton
+    fun provideAdaptiveVocabulary(
+        learningDao: VocabularyLearningDao,
+        userVocabDao: UserVocabularyDao
+    ): AdaptiveVocabulary = AdaptiveVocabulary(learningDao, userVocabDao)
 
     // === NETWORK ===
 
@@ -142,14 +233,36 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideBusinessPatternTracker(
+        transactionDao: TransactionDao,
+        patternDao: PatternDao
+    ): BusinessPatternTracker = BusinessPatternTracker(transactionDao, patternDao)
+
+    @Provides
+    @Singleton
+    fun provideAdaptiveLearningEngine(
+        userVocabularyDao: UserVocabularyDao,
+        userCorrectionDao: UserCorrectionDao,
+        transactionDao: TransactionDao,
+        patternDao: PatternDao,
+        patternTracker: BusinessPatternTracker,
+        learningAgent: LearningAgent
+    ): AdaptiveLearningEngine = AdaptiveLearningEngine(
+        userVocabularyDao, userCorrectionDao, transactionDao, patternDao,
+        patternTracker, learningAgent
+    )
+
+    @Provides
+    @Singleton
     fun provideOrchestrator(
         intentRouter: IntentRouter,
         businessAgent: BusinessAgent,
         analysisAgent: AnalysisAgent,
         advisorAgent: AdvisorAgent,
-        learningAgent: LearningAgent
+        learningAgent: LearningAgent,
+        adaptiveLearning: AdaptiveLearningEngine
     ): Orchestrator = Orchestrator(
-        intentRouter, businessAgent, analysisAgent, advisorAgent, learningAgent
+        intentRouter, businessAgent, analysisAgent, advisorAgent, learningAgent, adaptiveLearning
     )
 
     // === SYNC ===

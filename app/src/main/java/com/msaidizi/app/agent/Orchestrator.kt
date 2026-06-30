@@ -12,10 +12,16 @@ import javax.inject.Singleton
  * Main agent orchestrator.
  * Coordinates all agents and handles the request pipeline.
  *
- * Flow: Voice Input → IntentRouter → Agent → Response
+ * Flow: Voice Input → AdaptiveLearning → IntentRouter → Agent → Response
  *
  * 90% of requests are handled by code alone (no LLM).
  * 10% need LLM for natural language generation.
+ *
+ * Adaptive Learning Integration:
+ * - Before intent classification: enhance input with learned vocabulary
+ * - After intent classification: apply learned corrections
+ * - After transaction recording: learn from the transaction
+ * - For advice generation: inject personalized context
  */
 @Singleton
 class Orchestrator @Inject constructor(
@@ -23,7 +29,8 @@ class Orchestrator @Inject constructor(
     private val businessAgent: BusinessAgent,
     private val analysisAgent: AnalysisAgent,
     private val advisorAgent: AdvisorAgent,
-    private val learningAgent: LearningAgent
+    private val learningAgent: LearningAgent,
+    private val adaptiveLearning: AdaptiveLearningEngine
 ) {
     // Response flow for UI
     private val _responses = MutableSharedFlow<AgentResponse>(extraBufferCapacity = 8)
@@ -36,17 +43,54 @@ class Orchestrator @Inject constructor(
     /**
      * Process user input text and generate a response.
      * This is the main entry point for the agent system.
+     *
+     * Pipeline:
+     * 1. Check for corrections first
+     * 2. Classify intent with regex/code
+     * 3. Enhance intent with adaptive learning (vocabulary, corrections)
+     * 4. Route to appropriate agent
+     * 5. Learn from the transaction
+     * 6. Trigger background learning periodically
      */
     suspend fun processInput(text: String, language: String = "sw"): AgentResponse {
         Timber.d("Processing input: '%s' (lang=%s)", text, language)
 
+        // Step 0: Check if this is a correction to the last transaction
+        if (lastTransaction != null) {
+            val isCorrection = adaptiveLearning.parseAndRecordCorrection(
+                text = text,
+                lastTransaction = lastTransaction,
+                language = language
+            )
+            if (isCorrection) {
+                Timber.d("Correction detected and recorded")
+                val response = AgentResponse(
+                    text = if (language == "sw") {
+                        "✅ Nimekumbuka! Nitakumbuka kwa mara ijayo."
+                    } else {
+                        "✅ Got it! I'll remember that for next time."
+                    },
+                    type = ResponseType.CONFIRMATION
+                )
+                _responses.emit(response)
+                return response
+            }
+        }
+
         // Step 1: Classify intent
-        val intentResult = intentRouter.classify(text)
+        var intentResult = intentRouter.classify(text)
 
         Timber.d("Intent: %s (confidence=%.2f, needsLLM=%b)",
             intentResult.intent, intentResult.confidence, intentResult.needsLLM)
 
-        // Step 2: Route to appropriate agent
+        // Step 2: Enhance intent with adaptive learning
+        // This resolves vocabulary ("mahindi" → "maize"), applies corrections,
+        // and suggests prices if missing
+        intentResult = adaptiveLearning.enhanceIntentWithLearning(intentResult, text)
+
+        Timber.d("Enhanced intent: %s (data=%s)", intentResult.intent, intentResult.extractedData)
+
+        // Step 3: Route to appropriate agent
         val response = when (intentResult.intent) {
             IntentType.SALE -> handleSale(intentResult, language)
             IntentType.PURCHASE -> handlePurchase(intentResult, language)
@@ -63,7 +107,7 @@ class Orchestrator @Inject constructor(
             IntentType.UNKNOWN -> handleUnknown(text, language)
         }
 
-        // Step 3: Record vocabulary for learning
+        // Step 4: Record vocabulary for learning (legacy)
         learningAgent.recordPattern(
             PatternType.VOCABULARY,
             mapOf(
@@ -88,15 +132,20 @@ class Orchestrator @Inject constructor(
         )
 
         val quantity = intentResult.extractedData["quantity"]?.toDoubleOrNull() ?: 1.0
-        val amount = intentResult.extractedData["amount"]?.toDoubleOrNull() ?: return AgentResponse(
-            text = if (language == "sw") "Bei ni ngapi?" else "What price?",
-            type = ResponseType.CLARIFICATION
-        )
+        val amount = intentResult.extractedData["amount"]?.toDoubleOrNull()
+            ?: intentResult.extractedData["suggestedPrice"]?.toDoubleOrNull()
+            ?: return AgentResponse(
+                text = if (language == "sw") "Bei ni ngapi?" else "What price?",
+                type = ResponseType.CLARIFICATION
+            )
 
         val transaction = businessAgent.recordSale(item, quantity, amount, language)
         lastTransaction = transaction
 
-        // Record sale time for pattern learning
+        // Learn from this transaction (adaptive learning)
+        adaptiveLearning.learnFromTransaction(transaction)
+
+        // Record sale time for pattern learning (legacy)
         learningAgent.recordSaleTime(
             java.time.LocalTime.now().hour,
             java.time.LocalDate.now().dayOfWeek.value - 1
@@ -137,6 +186,9 @@ class Orchestrator @Inject constructor(
 
         val transaction = businessAgent.recordPurchase(item, quantity, amount, language)
         lastTransaction = transaction
+
+        // Learn from this transaction
+        adaptiveLearning.learnFromTransaction(transaction)
 
         return AgentResponse(
             text = if (language == "sw") {
@@ -284,7 +336,24 @@ class Orchestrator @Inject constructor(
     }
 
     private suspend fun handleAdvice(language: String): AgentResponse {
-        val text = advisorAgent.getAdvice(language)
+        // Use adaptive learning for personalized advice
+        val personalizedContext = adaptiveLearning.generatePersonalizedContext(
+            maxTokens = 200,
+            language = language
+        )
+
+        val text = if (personalizedContext.isNotBlank()) {
+            // Enhance advisor's advice with personalized context
+            val baseAdvice = advisorAgent.getAdvice(language)
+            if (language == "sw") {
+                "$baseAdvice\n\n📋 Kulingana na biashara yako: $personalizedContext"
+            } else {
+                "$baseAdvice\n\n📋 Based on your business: $personalizedContext"
+            }
+        } else {
+            advisorAgent.getAdvice(language)
+        }
+
         return AgentResponse(
             text = text,
             type = ResponseType.ADVICE
@@ -319,8 +388,25 @@ class Orchestrator @Inject constructor(
             )
         }
 
-        // TODO: Parse correction from text
-        // For now, ask for clarification
+        // Try to parse and record the correction through adaptive learning
+        val isCorrection = adaptiveLearning.parseAndRecordCorrection(
+            text = text,
+            lastTransaction = lastTransaction,
+            language = language
+        )
+
+        if (isCorrection) {
+            return AgentResponse(
+                text = if (language == "sw") {
+                    "✅ Nimekumbuka marekebisho! Nitakumbuka kwa mara ijayo."
+                } else {
+                    "✅ Correction recorded! I'll remember that for next time."
+                },
+                type = ResponseType.CONFIRMATION
+            )
+        }
+
+        // If we couldn't parse the correction, ask for clarification
         return AgentResponse(
             text = if (language == "sw") {
                 "Ni nini kibaya? Sema: 'Bei ni X' au 'Bidhaa ni Y'"
@@ -340,6 +426,24 @@ class Orchestrator @Inject constructor(
             },
             type = ResponseType.UNKNOWN
         )
+    }
+
+    // ═══════════════ LEARNING LIFECYCLE ═══════════════
+
+    /**
+     * Get adaptive learning statistics.
+     * Can be displayed in settings or debug screen.
+     */
+    suspend fun getLearningStats(): LearningStats {
+        return adaptiveLearning.getLearningStats()
+    }
+
+    /**
+     * Trigger background learning.
+     * Call this during heartbeats or when the device is charging.
+     */
+    fun triggerBackgroundLearning() {
+        adaptiveLearning.launchBackgroundLearning()
     }
 }
 
