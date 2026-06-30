@@ -323,7 +323,7 @@ class ModelRegistry @Inject constructor(
      * @param resumeOffset Byte offset to resume from (0 for fresh download)
      * @param onProgress Callback with total bytes downloaded so far
      */
-    private fun downloadFile(
+    private suspend fun downloadFile(
         url: String,
         dest: File,
         resumeOffset: Long,
@@ -363,9 +363,7 @@ class ModelRegistry @Inject constructor(
                         onProgress(downloaded)
 
                         // Check for cancellation
-                        if (!isActive) {
-                            throw CancellationException("Download cancelled")
-                        }
+                        ensureActive()
                     }
                 }
             }

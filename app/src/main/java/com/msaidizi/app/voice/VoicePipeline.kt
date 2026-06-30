@@ -23,7 +23,7 @@ class VoicePipeline @Inject constructor(
     private val audioRecorder: AudioRecorder,
     private val vad: VoiceActivityDetector,
     private val speechRecognizer: SpeechRecognizer,
-    private val ttsEngine: TextToSpeechEngine
+    private val ttsEngine: TextToSpeech
 ) {
     // Pipeline state
     private val _pipelineState = MutableStateFlow(PipelineState.IDLE)
@@ -175,7 +175,7 @@ class VoicePipeline @Inject constructor(
      */
     suspend fun speak(text: String, language: String = "sw") {
         _pipelineState.value = PipelineState.SPEAKING
-        ttsEngine.speak(text, language, QueueMode.INTERRUPT)
+        ttsEngine.speak(text, language)
         _response.emit(text)
     }
 
