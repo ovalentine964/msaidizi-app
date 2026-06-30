@@ -1,4 +1,4 @@
-# Msaidizi — Android App
+# Biashara Intelligence: Msaidizi — Android App
 
 **Your Business Assistant. Works Offline. Speaks Swahili.**
 
