@@ -119,7 +119,7 @@ dependencies {
     kapt("androidx.room:room-compiler:2.6.1")
 
     // SQLCipher for Room database encryption
-    implementation("net.zetetic:android-database-sqlcipher:4.5.6")
+    implementation("net.zetetic:android-database-sqlcipher:4.5.4")
     implementation("androidx.sqlite:sqlite:2.4.0")
 
     // Hilt DI
