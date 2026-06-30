@@ -76,10 +76,10 @@
     <!-- Help -->
     <string name="help_title">Msaidizi</string>
     <string name="help_intro">CFO wako wa biashara!</string>
-    <string name="help_sale">Sema: \Sema: \&quot;quot;Nimeuza mandazi kumi kwa 500\&quot;</string>
-    <string name="help_purchase">Sema: \Sema: \&quot;quot;Nimenunua unga kwa 200\&quot;</string>
-    <string name="help_profit">Sema: \Sema: \&quot;quot;Faida yangu\&quot;</string>
-    <string name="help_report">Sema: \Sema: \&quot;quot;Report ya leo\&quot;</string>
+    <string name="help_sale">Sema: &quot;Nimeuza mandazi kumi kwa 500&quot;</string>
+    <string name="help_purchase">Sema: &quot;Nimenunua unga kwa 200&quot;</string>
+    <string name="help_profit">Sema: &quot;Faida yangu&quot;</string>
+    <string name="help_report">Sema: &quot;Report ya leo&quot;</string>
 
     <!-- Errors -->
     <string name="error_no_permission">Hakuna ruhusa ya kurekodi sauti</string>
