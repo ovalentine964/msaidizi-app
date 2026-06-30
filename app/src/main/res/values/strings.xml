@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Msaidizi</string>
+
+    <!-- API Configuration -->
+    <string name="api_base_url">https://api.msaidizi.app/</string>
+
+    <!-- Onboarding - General -->
+    <string name="onboarding_step_indicator">Hatua %1$d ya %2$d</string>
+    <string name="onboarding_next">Endelea →</string>
+    <string name="onboarding_back">← Rudi</string>
+    <string name="onboarding_skip">Ruka hatua hii</string>
+    <string name="onboarding_finish">Anza!</string>
+
+    <!-- Phase 1: Introduction -->
+    <string name="intro_greeting">Habari! Mimi ni msaidizi wako wa biashara.</string>
+    <string name="intro_ask_name">Jina lako nani?</string>
+    <string name="intro_name_hint">Andika jina lako</string>
+    <string name="intro_ask_assistant_name">Sasa %1$s! Mimi bado sijina.\nUngependa kuniita nani?</string>
+    <string name="intro_assistant_name_hint">Andika jina langu</string>
+    <string name="intro_nice_name">Sawa! Sasa unaniita %1$s!</string>
+
+    <!-- Phase 2: Business Discovery -->
+    <string name="business_ask_description">Nieleze biashara yako — unauza nani?</string>
+    <string name="business_description_hint">Mfano: Nauza mandazi, chai, na vitafunwa</string>
+    <string name="business_ask_location">Biashara yako iko wapi?</string>
+    <string name="business_location_hint">Mfano: Karatasi, Nairobi</string>
+    <string name="business_ask_hours">Unafungua saa ngapi?</string>
+    <string name="business_hours_hint">Mfano: Saa 1 asubuhi — Saa 6 jioni</string>
+
+    <!-- Phase 3: WhatsApp Connection -->
+    <string name="whatsapp_prompt">Sasa ningependa kukutumia ripoti ya biashara yako kila siku kupitia WhatsApp.\n\nNamba yako ya WhatsApp ni ipi?</string>
+    <string name="whatsapp_phone_hint">Mfano: 0712345678</string>
+    <string name="whatsapp_phone_label">Namba ya WhatsApp</string>
+    <string name="whatsapp_confirm_prompt">Namba yako ni</string>
+    <string name="whatsapp_confirm_question">Sawa?</string>
+    <string name="whatsapp_confirm_yes">✅ Sawa!</string>
+    <string name="whatsapp_confirm_edit">📝 Badilisha</string>
+    <string name="whatsapp_sending">Nakutumia ujumbe wa WhatsApp sasa...</string>
+    <string name="whatsapp_waiting">Ujumbe umetumwa!\nAngalia WhatsApp yako.</string>
+    <string name="whatsapp_waiting_timer">Bado nasubiri… (%1$ds)</string>
+    <string name="whatsapp_received">✅ Nimepokea!</string>
+    <string name="whatsapp_success_title">🎉 Umefanikiwa!</string>
+    <string name="whatsapp_success_message">Sawa %1$s! Sasa kila jioni nitakutumia muhtasari wa mauzo yako, faida, na vidokezo kupitia WhatsApp.</string>
+    <string name="whatsapp_success_phone">📱 %1$s</string>
+    <string name="whatsapp_error_generic">😔 Kuna tatizo</string>
+    <string name="whatsapp_error_not_on_whatsapp">Namba hii haiko kwenye WhatsApp. Tafadhali hakikisha una WhatsApp imewashwa.</string>
+    <string name="whatsapp_error_network">Mtandao haupatikani. Tafadhali jaribu tena.</string>
+    <string name="whatsapp_error_rate_limit">Umeomba mara nyingi sana. Tafadhali subiri dakika chache.</string>
+    <string name="whatsapp_error_expired">Muda umekwisha. Ujumbe wa WhatsApp haujafika bado.</string>
+    <string name="whatsapp_retry">🔄 Jaribu Tena</string>
+    <string name="whatsapp_edit_phone">📝 Badilisha Namba</string>
+    <string name="whatsapp_skip">Ruka</string>
+    <string name="whatsapp_continue">Endelea →</string>
+
+    <!-- Phase 4: Personality & Preferences -->
+    <string name="personality_ask_speed">Ungependa niongeze haraka au polepole?</string>
+    <string name="personality_speed_fast">🏃 Haraka</string>
+    <string name="personality_speed_slow">🐢 Polepole</string>
+    <string name="personality_ask_language">Ungependa ripoti kwa lugha gani?</string>
+    <string name="personality_language_sw">🇹🇿 Kiswahili</string>
+    <string name="personality_language_sheng">🇰🇪 Sheng</string>
+    <string name="personality_language_en">🇬🇧 English</string>
+    <string name="personality_ask_report_time">Ungependa ripoti saa ngapi?</string>
+    <string name="personality_report_morning">🌅 Asubuhi (Saa 1)</string>
+    <string name="personality_report_afternoon">☀️ Mchana (Saa 12)</string>
+    <string name="personality_report_evening">🌙 Jioni (Saa 6)</string>
+
+    <!-- Phase 5: First Use Tutorial -->
+    <string name="tutorial_welcome">Sasa heanza!</string>
+    <string name="tutorial_ask_first_sale">Niambie mauzo yako ya kwanza</string>
+    <string name="tutorial_example">Mfano: "Nimeuziwa mandazi 5"</string>
+    <string name="tutorial_success">Umeona? Rahisi sana! 🎉</string>
+    <string name="tutorial_start">Anza kutumia Msaidizi!</string>
+
+    <!-- Validation Errors -->
+    <string name="error_name_required">Tafadhali andika jina lako.</string>
+    <string name="error_assistant_name_required">Tafadhali jina langu.</string>
+    <string name="error_phone_required">Tafadhali weka namba ya simu.</string>
+    <string name="error_phone_invalid">Namba ya simu si sahihi. Tafadhali weka namba ya Kenya (mfano: 0712345678).</string>
+    <string name="error_business_required">Tafadhali elezea biashara yako.</string>
+    <string name="error_location_required">Tafadhali weka mahali biashara yako iko.</string>
+    <string name="error_hours_required">Tafadhali weka saa za kufungua.</string>
+
+    <!-- WhatsApp Report Templates -->
+    <string name="report_daily_title">📊 Ripoti ya Leo — %1$s</string>
+    <string name="report_weekly_title">📊 Ripoti ya Wiki — %1$s</string>
+    <string name="report_sales">💰 Mauzo: KSh %1$s</string>
+    <string name="report_items">📦 Bidhaa zilizouzwa: %1$d</string>
+    <string name="report_profit">📈 Faida: KSh %1$s</string>
+    <string name="report_top_product">🏆 Bidhaa bora: %1$s (KSh %2$s)</string>
+    <string name="report_tip">💡 Kidokezo: %1$s</string>
+    <string name="report_download">🔗 Pakua Msaidizi: %1$s</string>
+    <string name="report_share">📤 Shiriki na rafiki: %1$s</string>
+
+    <!-- WhatsApp Query Responses -->
+    <string name="query_report">Tuma "ripoti" kwa ripoti ya leo</string>
+    <string name="query_sales">Tuma "mauzo" kwa muhtasari wa mauzo</string>
+    <string name="query_profit">Tuma "faida" kwa muhtasari wa faida</string>
+    <string name="query_help">Tuma "msaada" kwa msaada</string>
+    <string name="query_share">Tuma "shiriki" kushiriki na rafiki</string>
+
+    <!-- Accessibility -->
+    <string name="a11y_msaidizi_avatar">Picha ya Msaidizi</string>
+    <string name="a11y_phone_input">Ingiza namba ya WhatsApp</string>
+    <string name="a11y_whatsapp_icon">Ikoni ya WhatsApp</string>
+    <string name="a11y_success_icon">Ikoni ya mafanikio</string>
+    <string name="a11y_error_icon">Ikoni ya kosa</string>
+</resources>

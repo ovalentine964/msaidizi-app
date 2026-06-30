@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Msaidizi</string>
+    <string name="app_subtitle">CFO wako wa biashara</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Nyumbani</string>
+    <string name="nav_record">Rekodi</string>
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_history">Historia</string>
+    <string name="nav_settings">Mipangilio</string>
+
+    <!-- Home -->
+    <string name="home_title">Biashara Yako</string>
+    <string name="home_sales">Mauzo</string>
+    <string name="home_profit">Faida</string>
+    <string name="home_transactions">Shughuli</string>
+    <string name="home_restock_alerts">Bidhaa Zinazohitaji Kununuliwa</string>
+    <string name="home_top_items">Bidhaa Bora</string>
+
+    <!-- Record -->
+    <string name="record_ready">Tayari</string>
+    <string name="record_listening">Sikiliza...</string>
+    <string name="record_processing">Inachakata...</string>
+    <string name="record_speaking">Inazungumza...</string>
+    <string name="record_error">Hitilafu</string>
+    <string name="record_hint">Sema hapa...</string>
+    <string name="record_type_hint">Andika hapa...</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_title">Dashboard</string>
+    <string name="dashboard_cash_flow">Cash Flow</string>
+    <string name="dashboard_trend">Mwelekeo</string>
+    <string name="dashboard_margin">Margin</string>
+    <string name="dashboard_velocity">Sales Velocity</string>
+    <string name="dashboard_sales_chart">Mauzo ya Wiki</string>
+
+    <!-- History -->
+    <string name="history_title">Historia</string>
+    <string name="history_today">Leo</string>
+    <string name="history_sales">Mauzo</string>
+    <string name="history_purchases">Manunuzi</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Mipangilio</string>
+    <string name="settings_language">Lugha</string>
+    <string name="settings_voice_speed">Speed ya Sauti</string>
+    <string name="settings_business_name">Jina la Biashara</string>
+    <string name="settings_business_type">Aina ya Biashara</string>
+    <string name="settings_auto_sync">Sync Otomatiki</string>
+    <string name="settings_wifi_only">WiFi Tu</string>
+    <string name="settings_sync_now">Sync Sasa</string>
+
+    <!-- Transaction Types -->
+    <string name="sale">Mauzo</string>
+    <string name="purchase">Manunuzi</string>
+    <string name="expense">Matumizi</string>
+
+    <!-- Messages -->
+    <string name="msg_sale_recorded">Umeuza %s, KSh %s</string>
+    <string name="msg_purchase_recorded">Umenunua %s, KSh %s</string>
+    <string name="msg_expense_recorded">Umerekodi matumizi: %s, KSh %s</string>
+    <string name="msg_profit_today">Faida yako leo ni KSh %s</string>
+    <string name="msg_balance">Salio lako ni KSh %s</string>
+
+    <!-- Help -->
+    <string name="help_title">Msaidizi</string>
+    <string name="help_intro">CFO wako wa biashara!</string>
+    <string name="help_sale">Sema: \"Nimeuza mandazi kumi kwa 500\"</string>
+    <string name="help_purchase">Sema: \"Nimenunua unga kwa 200\"</string>
+    <string name="help_profit">Sema: \"Faida yangu\"</string>
+    <string name="help_report">Sema: \"Report ya leo\"</string>
+
+    <!-- Errors -->
+    <string name="error_no_permission">Hakuna ruhusa ya kurekodi sauti</string>
+    <string name="error_recording">Hitilafu ya kurekodi</string>
+    <string name="error_processing">Hitilafu ya kuchakata</string>
+    <string name="error_network">Hakuna mtandao</string>
+</resources>

@@ -1,0 +1,9 @@
+# Placeholder for ML models
+# This directory will contain:
+# - whisper-tiny-int4.onnx (ASR model, ~40MB)
+# - qwen-0.5b-q4_k_m.gguf (LLM model, ~300MB)
+# - piper-swahili.onnx (TTS model, ~25MB)
+# - silero_vad.onnx (VAD model, ~2.5MB)
+#
+# Models are downloaded on first launch or via settings.
+# They are memory-mapped for efficient RAM usage on 2GB devices.
