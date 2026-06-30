@@ -103,7 +103,7 @@
         android:layout_height="wrap_content"
         android:src="@drawable/ic_mic"
         android:contentDescription="Record"
-        app:fabSize="large"
+        app:fabSize="normal"
         app:backgroundTint="@color/primary"
         app:tint="@color/white"
         app:layout_constraintBottom_toBottomOf="parent"
