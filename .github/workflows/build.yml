@@ -63,4 +63,4 @@ jobs:
           tag_name: v${{ github.run_number }}
           generate_release_notes: true
         env:
-          GITHUB_TOKEN: *** secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
