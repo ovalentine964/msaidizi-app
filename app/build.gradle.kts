@@ -60,8 +60,8 @@ android {
     kotlinOptions {
         jvmTarget = "11"
         freeCompilerArgs += listOf(
-            "-Xopt-in=kotlin.RequiresOptIn",
-            "-Xopt-in=kotlinx.coroutines.ExperimentalCoroutinesApi"
+            "-opt-in=kotlin.RequiresOptIn",
+            "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi"
         )
     }
 
@@ -180,4 +180,7 @@ dependencies {
 
 kapt {
     correctErrorTypes = true
+    javacOptions {
+        option("-Adiagnostic.note.verbosity=full")
+    }
 }
