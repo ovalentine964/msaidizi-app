@@ -36,11 +36,11 @@
     <string name="report_top_product">🏆 Bidhaa bora: %1$s (KSh %2$s)</string>
     <string name="report_tip">💡 Kidokezo: %1$s</string>
 
-    <string name="query_report">Tuma "ripoti" kwa ripoti ya leo</string>
-    <string name="query_sales">Tuma "mauzo" kwa muhtasari wa mauzo</string>
-    <string name="query_profit">Tuma "faida" kwa muhtasari wa faida</string>
-    <string name="query_help">Tuma "msaada" kwa msaada</string>
-    <string name="query_share">Tuma "shiriki" kushiriki na rafiki</string>
+    <string name="query_report">Tuma &quot;ripoti&quot; kwa ripoti ya leo</string>
+    <string name="query_sales">Tuma &quot;mauzo&quot; kwa muhtasari wa mauzo</string>
+    <string name="query_profit">Tuma &quot;faida&quot; kwa muhtasari wa faida</string>
+    <string name="query_help">Tuma &quot;msaada&quot; kwa msaada</string>
+    <string name="query_share">Tuma &quot;shiriki&quot; kushiriki na rafiki</string>
 
     <!-- Model Download Management -->
     <string name="models_title">📦 Msaidizi Models</string>
@@ -100,7 +100,7 @@
 
     <!-- Adaptive ASR & Language Learning -->
     <string name="asr_confirm_title">Je, ni sawa?</string>
-    <string name="asr_confirm_message">Niliskia: "%1$s"</string>
+    <string name="asr_confirm_message">Niliskia: &quot;%1$s&quot;</string>
     <string name="asr_confirm_yes">✅ Sawa!</string>
     <string name="asr_confirm_no">❌ La, tena</string>
     <string name="asr_reject_message">Sikuelewi vizuri. Tafadhali rudia.</string>
@@ -143,13 +143,13 @@
     <string name="help_intro">Your business CFO!</string>
     <string name="help_migori_code_switch">You can mix Swahili and Dholuo!</string>
     <string name="help_migori_intro">Welcome! Msaidizi understands Migori Swahili.</string>
-    <string name="help_migori_sale">Say: \"Nimeuza omena debe kwa mbao tatu\"</string>
-    <string name="help_migori_slang">Say: \"Nimenunua unga kwa finje\" (= KSh 500)</string>
+    <string name="help_migori_sale">Say: \&quot;Nimeuza omena debe kwa mbao tatu\&quot;</string>
+    <string name="help_migori_slang">Say: \&quot;Nimenunua unga kwa finje\&quot; (= KSh 500)</string>
     <string name="help_migori_title">Msaidizi — Migori</string>
-    <string name="help_profit">Say: \"My profit\"</string>
-    <string name="help_purchase">Say: \"I bought flour for 200\"</string>
-    <string name="help_report">Say: \"Today\'s report\"</string>
-    <string name="help_sale">Say: \"I sold 10 mandazi for 500\"</string>
+    <string name="help_profit">Say: \&quot;My profit\&quot;</string>
+    <string name="help_purchase">Say: \&quot;I bought flour for 200\&quot;</string>
+    <string name="help_report">Say: \&quot;Today\'s report\&quot;</string>
+    <string name="help_sale">Say: \&quot;I sold 10 mandazi for 500\&quot;</string>
     <string name="help_title">Msaidizi</string>
     <string name="history_purchases">Purchases</string>
     <string name="history_sales">Sales</string>
@@ -208,8 +208,8 @@
     <string name="vocab_category_unit">Unit</string>
     <string name="vocab_confirm">✅ Confirm</string>
     <string name="vocab_correction">📝 Correct</string>
-    <string name="vocab_heard_word">I heard: \"%1$s\" — what does it mean?</string>
-    <string name="vocab_learned_toast">✅ \"%1$s\" learned!</string>
+    <string name="vocab_heard_word">I heard: \&quot;%1$s\&quot; — what does it mean?</string>
+    <string name="vocab_learned_toast">✅ \&quot;%1$s\&quot; learned!</string>
     <string name="vocab_no_pending">No new words right now</string>
     <string name="vocab_pending_count">%d new words need confirmation</string>
     <string name="vocab_skip_word">⏭️ Skip</string>

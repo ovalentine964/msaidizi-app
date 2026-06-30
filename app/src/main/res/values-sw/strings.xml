@@ -76,10 +76,10 @@
     <!-- Help -->
     <string name="help_title">Msaidizi</string>
     <string name="help_intro">CFO wako wa biashara!</string>
-    <string name="help_sale">Sema: \"Nimeuza mandazi kumi kwa 500\"</string>
-    <string name="help_purchase">Sema: \"Nimenunua unga kwa 200\"</string>
-    <string name="help_profit">Sema: \"Faida yangu\"</string>
-    <string name="help_report">Sema: \"Report ya leo\"</string>
+    <string name="help_sale">Sema: \Sema: \&quot;quot;Nimeuza mandazi kumi kwa 500\&quot;</string>
+    <string name="help_purchase">Sema: \Sema: \&quot;quot;Nimenunua unga kwa 200\&quot;</string>
+    <string name="help_profit">Sema: \Sema: \&quot;quot;Faida yangu\&quot;</string>
+    <string name="help_report">Sema: \Sema: \&quot;quot;Report ya leo\&quot;</string>
 
     <!-- Errors -->
     <string name="error_no_permission">Hakuna ruhusa ya kurekodi sauti</string>
@@ -135,7 +135,7 @@
     <string name="vocab_title">📚 Maneno Mapya</string>
     <string name="vocab_pending_count">Maneno %d mapya yanahitaji kuthibitishwa</string>
     <string name="vocab_no_pending">Hakuna maneno mapya kwa sasa</string>
-    <string name="vocab_heard_word">Niliskia: "%1$s" — maana yake ni nini?</string>
+    <string name="vocab_heard_word">Niliskia: &quot;%1$s&quot; — maana yake ni nini?</string>
     <string name="vocab_confirm">✅ Thibitisha</string>
     <string name="vocab_correction">📝 Sahihisha</string>
     <string name="vocab_skip_word">⏭️ Ruka</string>
@@ -147,7 +147,7 @@
     <string name="vocab_category_unit">Kipimo</string>
     <string name="vocab_category_currency">Pesa</string>
     <string name="vocab_category_action">Kitendo</string>
-    <string name="vocab_learned_toast">✅ "%1$s" imejifunza!</string>
+    <string name="vocab_learned_toast">✅ &quot;%1$s&quot; imejifunza!</string>
     <string name="vocab_stats">Maneno uliyofundisha: %1$d</string>
 
     <!-- Migori-specific business terms in UI -->
@@ -167,8 +167,8 @@
     <!-- Help — Migori examples -->
     <string name="help_migori_title">Msaidizi — Migori</string>
     <string name="help_migori_intro">Karibu! Msaidizi anaelewa Kiswahili cha Migori.</string>
-    <string name="help_migori_sale">Sema: "Nimeuza omena debe kwa mbao tatu"</string>
-    <string name="help_migori_slang">Sema: "Nimenunua unga kwa finje" (= KSh 500)</string>
+    <string name="help_migori_sale">Sema: &quot;Nimeuza omena debe kwa mbao tatu&quot;</string>
+    <string name="help_migori_slang">Sema: &quot;Nimenunua unga kwa finje&quot; (= KSh 500)</string>
     <string name="help_migori_code_switch">Unaweza kutumia Kiswahili na Dholuo pamoja!</string>
 
     <!-- ══════════════════════════════════════════════════════ -->
