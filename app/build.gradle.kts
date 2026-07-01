@@ -126,6 +126,9 @@ dependencies {
     implementation("com.google.dagger:hilt-android:2.50")
     kapt("com.google.dagger:hilt-android-compiler:2.50")
 
+    // Kotlin reflect — must match Kotlin version (transitive dep pulls 1.6.10)
+    implementation("org.jetbrains.kotlin:kotlin-reflect:1.9.22")
+
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
@@ -182,5 +185,12 @@ kapt {
     correctErrorTypes = true
     javacOptions {
         option("-Adiagnostic.note.verbosity=full")
+    }
+}
+
+// Force kotlin-reflect to match Kotlin version (transitive deps pull old versions)
+configurations.all {
+    resolutionStrategy {
+        force("org.jetbrains.kotlin:kotlin-reflect:1.9.22")
     }
 }
