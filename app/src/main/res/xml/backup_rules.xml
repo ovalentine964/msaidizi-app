@@ -4,5 +4,8 @@
     <full-backup-content>
         <include domain="sharedpref" path="." />
         <include domain="database" path="." />
+        <!-- Exclude sensitive SharedPreferences containing secrets -->
+        <exclude domain="sharedpref" path="msaidizi_db_key" />
+        <exclude domain="sharedpref" path="mpesa_config" />
     </full-backup-content>
 </resources>

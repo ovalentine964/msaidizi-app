@@ -435,12 +435,9 @@ class FederatedLearningClient @Inject constructor(
      * Uses device-specific key derived from hardware ID.
      */
     private fun encryptAdapter(adapterBytes: ByteArray): ByteArray {
-        return try {
-            com.msaidizi.app.core.util.CryptoUtils.encrypt(adapterBytes)
-        } catch (e: Exception) {
-            Timber.tag(TAG).w(e, "Adapter encryption failed, sending unencrypted over TLS")
-            adapterBytes
-        }
+        // SECURITY: Must fail-closed — never silently fall back to plaintext.
+        // Encryption failure means the adapter cannot be safely uploaded.
+        return com.msaidizi.app.core.util.CryptoUtils.encrypt(adapterBytes)
     }
 
     /**

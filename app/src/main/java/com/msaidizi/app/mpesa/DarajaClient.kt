@@ -47,7 +47,12 @@ class DarajaClient @Inject constructor(
         private const val SANDBOX_BASE = "https://sandbox.safaricom.co.ke"
         private const val PRODUCTION_BASE = "https://api.safaricom.co.ke"
 
-        /** Sandbox passkey (provided by Safaricom) */
+        /** Sandbox passkey (provided by Safaricom)
+         *  TODO: SECURITY — This is a hardcoded sandbox passkey.
+         *  Before going to production, load the production passkey from
+         *  encrypted SharedPreferences or BuildConfig. Never ship a
+         *  production passkey in source code.
+         */
         private const val PASSKEY_SANDBOX =
             "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919"
 
