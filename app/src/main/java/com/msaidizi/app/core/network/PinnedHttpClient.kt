@@ -44,7 +44,7 @@ class PinnedHttpClient @Inject constructor(
         // These will allow connections in release builds but MUST be replaced.
         private val CERTIFICATE_PINS = listOf(
             "sha256/YLh1dUR9y6Kja30RrAn7JKnbQG/uEtLMkBgFF2Fuihg=",  // Backup: Let's Encrypt R3
-            "sha256/sRHdihwgkaib1P1gN7SkKPIhFRBcBx0p0sHJ游戏副本+VKU="   // TODO: Replace with actual CDN pin
+            "sha256/sRHdihwgkaib1P1gN7SkKPIhFRBcBx0p0sHJKbQG/uEtLMkBgFF2Fuihg="   // TODO: Replace with actual CDN pin
         )
 
         private const val CONNECT_TIMEOUT_SEC = 30L

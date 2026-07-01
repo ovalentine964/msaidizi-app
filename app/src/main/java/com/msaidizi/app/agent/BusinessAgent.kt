@@ -7,8 +7,7 @@ import timber.log.Timber
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneOffset
-import javax.inject.Inject
-import javax.inject.Singleton
+
 
 /**
  * Business Agent — records transactions, tracks inventory, manages business state.
@@ -20,8 +19,7 @@ import javax.inject.Singleton
  * - Calculate profit, cash flow, balance
  * - Generate restock alerts
  */
-@Singleton
-class BusinessAgent @Inject constructor(
+class BusinessAgent(
     private val transactionDao: TransactionDao,
     private val inventoryDao: InventoryDao
 ) {

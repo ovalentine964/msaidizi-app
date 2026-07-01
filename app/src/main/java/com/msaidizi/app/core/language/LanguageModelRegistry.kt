@@ -1,14 +1,11 @@
 package com.msaidizi.app.core.language
 
 import android.content.Context
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import timber.log.Timber
 import java.io.File
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Per-language model registry — manages ASR, TTS, and LLM models
@@ -37,9 +34,8 @@ import javax.inject.Singleton
  * - Total for 1 active language: ~380 MB
  * - Total for 10 cached languages: ~420 MB
  */
-@Singleton
-class LanguageModelRegistry @Inject constructor(
-    @ApplicationContext private val context: Context
+class LanguageModelRegistry(
+    private val context: Context
 ) {
     companion object {
         private const val TAG = "LanguageModelRegistry"

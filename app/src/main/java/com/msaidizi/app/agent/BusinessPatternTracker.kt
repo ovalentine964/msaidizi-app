@@ -11,8 +11,7 @@ import timber.log.Timber
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneOffset
-import javax.inject.Inject
-import javax.inject.Singleton
+
 
 /**
  * Business Pattern Tracker — learns and tracks user's business patterns.
@@ -31,8 +30,7 @@ import javax.inject.Singleton
  * Performance: All queries use indexed SQLite columns.
  * Memory: Stateless — all data in Room, ~0 additional RAM.
  */
-@Singleton
-class BusinessPatternTracker @Inject constructor(
+class BusinessPatternTracker(
     private val transactionDao: TransactionDao,
     private val patternDao: PatternDao
 ) {

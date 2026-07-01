@@ -27,6 +27,18 @@
 # Keep Hilt generated code
 -keep class dagger.hilt.** { *; }
 -keep class * extends dagger.hilt.android.internal.managers.ViewComponentManager$FragmentContextWrapper { *; }
+-keep class **_HiltModules* { *; }
+-keep class **_HiltModules$* { *; }
+-keep class **_GeneratedInjector { *; }
+-keep class **_MembersInjector { *; }
+-keep class javax.inject.** { *; }
+-keep class * extends dagger.hilt.android.internal.lifecycle.HiltViewModelFactory { *; }
+
+# Keep Room generated code
+-keep class * extends androidx.room.RoomDatabase { *; }
+-keep class **_Impl { *; }
+-keepclassmembers class * { @androidx.room.* <methods>; }
+-keepclassmembers class * { @androidx.room.* <fields>; }
 
 # ONNX Runtime
 -keep class ai.onnxruntime.** { *; }

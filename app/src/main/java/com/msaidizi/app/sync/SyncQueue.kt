@@ -6,15 +6,13 @@ import com.msaidizi.app.core.model.Transaction
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import timber.log.Timber
-import javax.inject.Inject
-import javax.inject.Singleton
+
 
 /**
  * Sync queue — stores data locally until it can be uploaded.
  * Uses SQLite as the queue backend (no separate queue needed).
  */
-@Singleton
-class SyncQueue @Inject constructor(
+class SyncQueue(
     private val transactionDao: TransactionDao,
     private val patternDao: PatternDao
 ) {

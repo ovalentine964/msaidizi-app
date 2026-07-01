@@ -11,8 +11,7 @@ import kotlinx.serialization.json.Json
 import timber.log.Timber
 import java.time.LocalDate
 import java.time.ZoneOffset
-import javax.inject.Inject
-import javax.inject.Singleton
+
 
 /**
  * Adaptive Learning Engine — the brain of on-device personalization.
@@ -38,8 +37,7 @@ import javax.inject.Singleton
  * - Context generation: <50ms (aggregation queries)
  * - Memory: Stateless — all data in Room database
  */
-@Singleton
-class AdaptiveLearningEngine @Inject constructor(
+class AdaptiveLearningEngine(
     private val userVocabularyDao: UserVocabularyDao,
     private val userCorrectionDao: UserCorrectionDao,
     private val transactionDao: TransactionDao,

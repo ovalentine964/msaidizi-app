@@ -1,8 +1,6 @@
 package com.msaidizi.app.core.language
 
 import timber.log.Timber
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlin.math.*
 
 /**
@@ -46,8 +44,7 @@ import kotlin.math.*
  *
  * Battery impact: <0.01ms per calibration — pure arithmetic.
  */
-@Singleton
-class ConfidenceCalibrator @Inject constructor() {
+class ConfidenceCalibrator() {
 
     companion object {
         private const val TAG = "ConfidenceCalibrator"

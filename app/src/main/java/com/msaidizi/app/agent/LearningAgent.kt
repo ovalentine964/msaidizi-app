@@ -6,8 +6,7 @@ import com.msaidizi.app.core.model.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import timber.log.Timber
-import javax.inject.Inject
-import javax.inject.Singleton
+
 
 /**
  * Learning Agent — adapts to user's vocabulary, business patterns, preferences.
@@ -20,8 +19,7 @@ import javax.inject.Singleton
  * - Peak selling hours
  * - Day-of-week patterns
  */
-@Singleton
-class LearningAgent @Inject constructor(
+class LearningAgent(
     private val patternDao: PatternDao,
     private val inventoryDao: InventoryDao
 ) {

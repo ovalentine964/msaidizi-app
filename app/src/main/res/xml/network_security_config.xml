@@ -1,8 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
+    <!-- Allow cleartext for local development only -->
     <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
     </base-config>
+
+    <!-- Pin certificates for model CDN -->
+    <domain-config>
+        <domain includeSubdomains="true">models.msaidizi.app</domain>
+        <pin-set>
+            <!-- Backup: Let's Encrypt R3 -->
+            <pin digest="SHA-256">YLh1dUR9y6Kja30RrAn7JKnbQG/uEtLMkBgFF2Fuihg=</pin>
+            <!-- TODO: Replace with actual CDN pin before production release -->
+            <pin digest="SHA-256">sRHdihwgkaib1P1gN7SkKPIhFRBcBx0p0sHJKbQG/uEtLMkBgFF2Fuihg=</pin>
+        </pin-set>
+    </domain-config>
 </network-security-config>

@@ -39,7 +39,9 @@ import javax.inject.Singleton
  */
 @Singleton
 class SpeechRecognizer @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val modelRegistry: ModelRegistry,
+    private val whisperTokenizer: WhisperTokenizer
 ) {
     companion object {
         private const val MODEL_ID = "whisper-tiny-int4"
@@ -60,8 +62,6 @@ class SpeechRecognizer @Inject constructor(
     private var isModelLoaded = false
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    @Inject lateinit var modelRegistry: ModelRegistry
-    @Inject lateinit var whisperTokenizer: WhisperTokenizer
 
     // ────────────────────── Model Lifecycle ──────────────────────
 

@@ -5,8 +5,7 @@ import com.msaidizi.app.core.util.SwahiliParser
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import timber.log.Timber
-import javax.inject.Inject
-import javax.inject.Singleton
+
 
 /**
  * Main agent orchestrator.
@@ -23,8 +22,7 @@ import javax.inject.Singleton
  * - After transaction recording: learn from the transaction
  * - For advice generation: inject personalized context
  */
-@Singleton
-class Orchestrator @Inject constructor(
+class Orchestrator(
     private val intentRouter: IntentRouter,
     private val businessAgent: BusinessAgent,
     private val analysisAgent: AnalysisAgent,

@@ -3,7 +3,6 @@ package com.msaidizi.app.sync
 import android.content.Context
 import androidx.work.*
 import com.msaidizi.app.core.util.CryptoUtils
-import dagger.hilt.android.qualifiers.ApplicationContext
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -16,8 +15,7 @@ import kotlinx.serialization.json.Json
 import timber.log.Timber
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.TimeUnit
-import javax.inject.Inject
-import javax.inject.Singleton
+
 
 /**
  * Sync Manager — orchestrates cloud synchronization.
@@ -28,8 +26,7 @@ import javax.inject.Singleton
  * - Compress with zstd, encrypt with AES-256
  * - Retry with exponential backoff
  */
-@Singleton
-class SyncManager @Inject constructor(
+class SyncManager(
     private val syncQueue: SyncQueue,
     private val networkMonitor: NetworkMonitor,
     private val httpClient: HttpClient,

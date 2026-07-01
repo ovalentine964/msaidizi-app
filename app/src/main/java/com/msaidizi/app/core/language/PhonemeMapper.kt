@@ -1,8 +1,6 @@
 package com.msaidizi.app.core.language
 
 import timber.log.Timber
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Language-specific phoneme mapping and handling for African languages.
@@ -24,8 +22,7 @@ import javax.inject.Singleton
  *
  * Pure code — no ML models, <1ms latency.
  */
-@Singleton
-class PhonemeMapper @Inject constructor() {
+class PhonemeMapper {
 
     companion object {
         private const val TAG = "PhonemeMapper"

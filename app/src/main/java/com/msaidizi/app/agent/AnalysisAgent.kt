@@ -7,8 +7,7 @@ import com.msaidizi.app.core.model.Trend
 import timber.log.Timber
 import java.time.LocalDate
 import java.time.ZoneOffset
-import javax.inject.Inject
-import javax.inject.Singleton
+
 
 /**
  * Analysis Agent — calculates trends, patterns, and forecasts.
@@ -20,8 +19,7 @@ import javax.inject.Singleton
  * - Price analysis
  * - Day-of-week patterns
  */
-@Singleton
-class AnalysisAgent @Inject constructor(
+class AnalysisAgent(
     private val transactionDao: TransactionDao
 ) {
     /**

@@ -4,7 +4,6 @@ import android.content.Context
 import com.msaidizi.app.core.model.UserCorrection
 import com.msaidizi.app.core.network.PinnedHttpClient
 import com.msaidizi.app.core.util.CryptoUtils
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,8 +19,6 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.UUID
 import java.util.zip.GZIPOutputStream
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlin.math.ln
 import kotlin.math.exp
 
@@ -69,9 +66,8 @@ import kotlin.math.exp
  *
  * Battery impact: ~0.05% per sync (dominated by network I/O)
  */
-@Singleton
-class FederatedLearningClient @Inject constructor(
-    @ApplicationContext private val context: Context,
+class FederatedLearningClient(
+    private val context: Context,
     private val pinnedHttpClient: PinnedHttpClient,
 ) {
     companion object {

@@ -11,8 +11,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import timber.log.Timber
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Adaptive vocabulary learning system for Msaidizi.
@@ -42,8 +40,7 @@ import javax.inject.Singleton
  * @param learningDao DAO for tracking unknown words
  * @param userVocabDao DAO for confirmed user vocabulary
  */
-@Singleton
-class AdaptiveVocabulary @Inject constructor(
+class AdaptiveVocabulary(
     private val learningDao: VocabularyLearningDao,
     private val userVocabDao: UserVocabularyDao
 ) {

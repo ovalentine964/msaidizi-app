@@ -47,7 +47,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class TextToSpeech @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val modelRegistry: ModelRegistry
 ) {
     companion object {
         private const val MODEL_ID = "piper-swahili"
@@ -80,7 +81,6 @@ class TextToSpeech @Inject constructor(
     private var phonemeMap: Map<String, Int> = emptyMap()
     private var isPhonemeMapLoaded = false
 
-    @Inject lateinit var modelRegistry: ModelRegistry
 
     // ────────────────────── Model Lifecycle ──────────────────────
 

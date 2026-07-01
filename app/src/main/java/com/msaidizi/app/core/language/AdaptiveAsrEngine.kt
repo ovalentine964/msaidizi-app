@@ -7,8 +7,6 @@ import com.msaidizi.app.core.util.SwahiliParser
 import com.msaidizi.app.voice.SpeechRecognizer
 import kotlinx.coroutines.*
 import timber.log.Timber
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlin.math.ln
 import kotlin.math.exp
 
@@ -50,8 +48,7 @@ import kotlin.math.exp
  *
  * Battery: ~0.03% per transcription (dominated by Whisper inference)
  */
-@Singleton
-class AdaptiveAsrEngine @Inject constructor(
+class AdaptiveAsrEngine(
     private val speechRecognizer: SpeechRecognizer,
     private val confidenceCalibrator: ConfidenceCalibrator,
     private val phonemeMapper: PhonemeMapper,

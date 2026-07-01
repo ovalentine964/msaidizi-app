@@ -38,7 +38,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class VoiceActivityDetector @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val modelRegistry: ModelRegistry
 ) {
     companion object {
         private const val MODEL_ID = "silero-vad"
@@ -82,7 +83,6 @@ class VoiceActivityDetector @Inject constructor(
     var onSpeechStart: (() -> Unit)? = null
     var onSpeechEnd: ((ShortArray) -> Unit)? = null
 
-    @Inject lateinit var modelRegistry: ModelRegistry
 
     // ────────────────────── Model Lifecycle ──────────────────────
 

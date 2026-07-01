@@ -3,16 +3,14 @@ package com.msaidizi.app.agent
 import com.msaidizi.app.core.model.CashFlow
 import com.msaidizi.app.core.model.Trend
 import timber.log.Timber
-import javax.inject.Inject
-import javax.inject.Singleton
+
 
 /**
  * Advisor Agent — generates actionable business recommendations.
  * Code decides WHAT to say, LLM decides HOW to say it (when available).
  * Without LLM, uses template-based responses in Swahili.
  */
-@Singleton
-class AdvisorAgent @Inject constructor(
+class AdvisorAgent(
     private val businessAgent: BusinessAgent,
     private val analysisAgent: AnalysisAgent
 ) {

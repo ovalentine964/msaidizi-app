@@ -9,16 +9,14 @@ import android.os.Build
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import timber.log.Timber
-import javax.inject.Inject
-import javax.inject.Singleton
+
 
 /**
  * Network connectivity monitor.
  * Detects WiFi, cellular, and connectivity changes.
  * Used by SyncManager to determine when to sync.
  */
-@Singleton
-class NetworkMonitor @Inject constructor(
+class NetworkMonitor(
     private val context: Context
 ) {
     private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE)
