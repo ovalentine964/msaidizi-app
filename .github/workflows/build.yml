@@ -28,7 +28,7 @@ jobs:
           gradle-version: '8.5'
       
       - name: Build Debug APK
-        run: gradle assembleDebug --stacktrace --info 2>&1 | tail -200
+        run: gradle assembleDebug --stacktrace --info 2>&1 | tee /tmp/build-debug.log; EXIT_CODE=$?; echo "Gradle exit code: $EXIT_CODE"; tail -100 /tmp/build-debug.log; exit $EXIT_CODE
       
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -55,7 +55,7 @@ jobs:
           gradle-version: '8.5'
       
       - name: Build Release APK
-        run: gradle assembleRelease --stacktrace
+        run: gradle assembleRelease --stacktrace --info 2>&1 | tee /tmp/build-release.log; EXIT_CODE=$?; echo "Gradle exit code: $EXIT_CODE"; tail -100 /tmp/build-release.log; exit $EXIT_CODE
       
       - name: Create Release
         uses: softprops/action-gh-release@v2
