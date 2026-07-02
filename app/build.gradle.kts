@@ -188,9 +188,14 @@ kapt {
     }
 }
 
-// Force kotlin-reflect to match Kotlin version (transitive deps pull old versions)
+// Force ALL Kotlin deps to match Kotlin 1.9.22 (transitive deps from Ktor, coroutines, Hilt pull older versions)
 configurations.all {
     resolutionStrategy {
         force("org.jetbrains.kotlin:kotlin-reflect:1.9.22")
+        force("org.jetbrains.kotlin:kotlin-stdlib:1.9.22")
+        force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.22")
+        force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22")
+        force("org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable:1.9.22")
+        force("org.jetbrains.kotlin:kotlin-scripting-jvm:1.9.22")
     }
 }
