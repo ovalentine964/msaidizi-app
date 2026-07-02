@@ -32,6 +32,9 @@
     <color name="speaking">#FF2196F3</color>
     <color name="holo_red_dark">#FFCC0000</color>
 
+    <!-- App Icon background (Biashara Intelligence brand Deep Navy) -->
+    <color name="icon_bg">#FF1B2A4A</color>
+
     <!-- Business Flow colors -->
     <color name="card_border">#FFE0E0E0</color>
     <color name="flow_revenue">#FF4CAF50</color>

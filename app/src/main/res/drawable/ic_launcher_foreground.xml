@@ -4,22 +4,62 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Green circle background -->
+
+    <!-- ========================================
+         Msaidizi App Icon — Foreground Layer
+         "B" from Biashara Intelligence brand + pulse line
+         Deep Navy bg comes from @color/icon_bg
+         African Orange / Warm Gold pulse accents
+    ========================================= -->
+
+    <!-- THE B — bold geometric letterform (white) -->
     <path
-        android:fillColor="#FF25D366"
-        android:pathData="M54,54m-40,0a40,40 0,1 1,80 0a40,40 0,1 1,-80 0"/>
-    <!-- White "M" letter for Msaidizi -->
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="
+            M 35.6,26.8 L 35.6,81.2 L 63.5,81.2
+            C 70.9,81.2  77.2,76.4  77.2,69.8
+            C 77.2,65  74.4,61.2  70.4,59.7
+            C 74.7,58  77.6,54.2  77.6,49.1
+            C 77.6,42.2  72.1,37.5  64.5,37.5
+            L 35.6,37.5 Z
+
+            M 40.7,42.6 L 40.7,51.3 L 61.4,51.3
+            C 65.4,51.3  67.5,52.5  67.5,54.2
+            C 67.5,56.1  65.2,57.2  61.4,57.2
+            L 40.7,57.2 Z
+
+            M 40.7,62.2 L 40.7,76.1 L 62.2,76.1
+            C 65.8,76.1  67.9,74.9  67.9,73.2
+            C 67.9,71.3  65.8,70.2  62.2,70.2
+            L 40.7,70.2 Z"/>
+
+    <!-- PULSE LINE — heartbeat through the B (orange → gold gradient simulated) -->
+    <!-- Main pulse line in African Orange -->
     <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M34,70L34,40L42,40L42,70L42,55L50,70L58,55L58,70L58,40L66,40L66,70L74,70L74,40L66,40L58,55L50,40L42,40L34,40Z"
-        android:strokeWidth="0"/>
-    <!-- Microphone icon at bottom -->
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#E8853D"
+        android:strokeWidth="1.9"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="
+            M 16.9,54
+            L 41.7,54
+            L 45.3,48.5
+            L 49,54
+            L 55.9,54
+            L 58.8,46.4
+            L 62,56.4
+            L 64.8,54
+            L 91.1,54"/>
+
+    <!-- Data node at first peak (Warm Gold) -->
     <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M50,32c0,-2.2 1.8,-4 4,-4s4,1.8 4,4v8c0,2.2 -1.8,4 -4,4s-4,-1.8 -4,-4z"/>
+        android:fillColor="#F5A623"
+        android:pathData="M 45.3,48.5 m -1.2,0 a 1.2,1.2 0 1,1 2.4,0 a 1.2,1.2 0 1,1 -2.4,0"/>
+
+    <!-- Data node at second peak (African Orange, slightly larger) -->
     <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M42,42c0,6.6 5.4,12 12,12s12,-5.4 12,-12"
-        android:strokeWidth="2.5"
-        android:strokeColor="#FFFFFFFF"/>
+        android:fillColor="#E8853D"
+        android:pathData="M 58.8,46.4 m -1.5,0 a 1.5,1.5 0 1,1 3.0,0 a 1.5,1.5 0 1,1 -3.0,0"/>
 </vector>

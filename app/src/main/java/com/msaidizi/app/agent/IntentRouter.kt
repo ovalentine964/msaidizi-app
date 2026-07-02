@@ -1,5 +1,6 @@
 package com.msaidizi.app.agent
 
+import com.msaidizi.app.core.dialect.ShengDialectAdapter
 import com.msaidizi.app.core.model.*
 import com.msaidizi.app.core.util.SwahiliParser
 import timber.log.Timber
@@ -12,6 +13,112 @@ import timber.log.Timber
  * Handles 90%+ of user input without needing the LLM.
  */
 class IntentRouter {
+
+    // ═══════════════════════════════════════════════════════════════
+    // SHENG/DIALECT NORMALIZATION
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * Sheng-to-standard Swahili vocabulary mapping.
+     * 30% of Kenya's youth speak Sheng — this is critical for intent recognition.
+     *
+     * Key Sheng business terms:
+     * - chapaa/munde = pesa (money)
+     * - nikaue = niliuza (I sold)
+     * - nika-buy = nilinunua (I bought)
+     * - nduthi = pikipiki (motorcycle)
+     * - mat = matatu (minibus)
+     * - thao = elfu moja (1000)
+     * - finje = mia tano (500)
+     * - bao = ishirini (20)
+     * - jeuri = hamsini (50)
+     * - ngiri = elfu (1000)
+     */
+    private val shengToStandard = mapOf(
+        // Verbs — sale/purchase actions
+        "nikaue" to "nimeuza", "nikauze" to "nimeuza",
+        "nika-buy" to "nimenunua", "nikapurchase" to "nimenunua",
+        "nka-log" to "nimenunua", "nalog" to "nimenunua",
+        "nka-dispose" to "nimeuza", "nikasell" to "nimeuza",
+        "nauza" to "nimeuza", "nimenunua" to "nimenunua",
+
+        // Money amounts — Sheng slang for currency
+        "chapaa" to "pesa", "munde" to "pesa",
+        "thao" to "1000", "ngiri" to "1000", "thousand" to "1000",
+        "finje" to "500", "jeuri" to "50",
+        "bao" to "20", "kumi" to "10",
+        "jabaa" to "bure", "mwaks" to "0",
+
+        // Business items — common Sheng terms
+        "choma" to "nyama", "mutura" to "mutura",
+        "smocha" to "smokie", "mayai" to "mayai",
+        "rolex" to "chapati", "ndazi" to "mandazi",
+        "uji" to "uji",
+
+        // Transport
+        "mat" to "matatu", "nduthi" to "pikipiki",
+        "ndai" to "gari", "boda" to "boda",
+
+        // Digital
+        "mpesa" to "mpesa", "float" to "float",
+        "bundles" to "data", "stima" to "stima",
+
+        // Places
+        "base" to "nyumba", "ghetto" to "mtaa",
+        "kanairo" to "nairobi", "ushago" to "ushago",
+
+        // Descriptors
+        "poa" to "nzuri", "fiti" to "nzuri",
+        "safi" to "nzuri", "wazi" to "sawa",
+        "ndege" to "nzuri", "blaze" to "nzuri",
+        "freshi" to "nzuri"
+    )
+
+    /**
+     * Sheng-specific sale patterns.
+     * These match Sheng constructions that standard Swahili patterns miss.
+     *
+     * Examples:
+     * - "nikaue mandazi tano mia tano" (I sold 5 mandazi for 500)
+     * - "nikasell nyanya kwa 300" (I sold tomatoes for 300)
+     * - "nka-dispose smocha kumi" (I disposed/sold 10 smokies)
+     */
+    private val shengSalePatterns = listOf(
+        // "nikaue mandazi tano mia tano"
+        Regex("""(?i)(nikaue|nikauze|nikasell|nka-dispose)\s+(.+?)\s+(\d+)\s*(kwa|sh|ksh)?\s*(\d+(?:\.\d+)?)?"""),
+        // "nikaue mandazi 500" (without quantity)
+        Regex("""(?i)(nikaue|nikauze|nikasell)\s+(.+?)\s+(\d+(?:\.\d+)?)"""),
+        // "chapaa ya mandazi 500" (money from mandazi 500)
+        Regex("""(?i)(chapaa|munde|pesa)\s+ya\s+(.+?)\s+(\d+(?:\.\d+)?)"""),
+        // "nikapurchase unga 200" (Sheng purchase)
+        Regex("""(?i)(nika-buy|nikapurchase|nka-log|nalog)\s+(.+?)\s+(\d+(?:\.\d+)?)"""),
+        // "nika-buy unga thao" (I bought flour for 1000)
+        Regex("""(?i)(nika-buy|nikapurchase|nka-log)\s+(.+?)\s+(thao|ngiri|finje|bao|jeuri)"""),
+        // "nikaue smocha kumi kwa 50" (I sold 10 smokies for 50 each)
+        Regex("""(?i)(nikaue|nikauze|nikasell)\s+(.+?)\s+(\d+)\s+kwa\s*(\d+(?:\.\d+)?)""")
+    )
+
+    /**
+     * Sheng-specific expense patterns.
+     * Sheng speakers use different constructions for expenses.
+     *
+     * Examples:
+     * - "nikatoa 200 kwa mafuta" (I spent 200 on fuel)
+     * - "nka-float 5000" (I loaded float 5000)
+     * - "nikatoa thao kwa rent" (I spent 1000 on rent)
+     */
+    private val shengExpensePatterns = listOf(
+        // "nikatoa 200 kwa mafuta"
+        Regex("""(?i)(nikatoa|nkalipa|nikatoa)\s+(\d+(?:\.\d+)?)\s+(kwa|for)\s+(.+)"""),
+        // "nka-float 5000"
+        Regex("""(?i)(nka-float|nikaweka\s*float)\s+(\d+(?:\.\d+)?)"""),
+        // "nikatoa thao kwa rent" (Sheng amount in expense)
+        Regex("""(?i)(nikatoa|nkalipa)\s+(thao|ngiri|finje|bao|jeuri)\s+(kwa|for)\s+(.+)"""),
+        // "nduthi 300" / "mat 50" (transport expense in Sheng)
+        Regex("""(?i)(nduthi|mat|boda)\s+(\d+(?:\.\d+)?)"""),
+        // "stima 500" / "bundles 250" (utility expense in Sheng)
+        Regex("""(?i)(stima|bundles|data|airtime)\s+(\d+(?:\.\d+)?)""")
+    )
 
     // === SALE PATTERNS ===
     private val salePatterns = listOf(
@@ -219,6 +326,13 @@ class IntentRouter {
             return IntentResult(IntentType.UNKNOWN, 0.0)
         }
 
+        // ═══ STEP 0: Sheng/Dialect Normalization ═══
+        // 30% of Kenya's youth speak Sheng. Normalize before pattern matching.
+        // We keep the original text for Sheng-specific patterns.
+        val normalized = normalizeSheng(cleaned)
+        val hasSheng = normalized != cleaned.lowercase().trim()
+
+        // ═══ STEP 1: Try standard patterns on normalized text ═══
         // Try sale patterns first (most common)
         for (pattern in salePatterns) {
             val match = pattern.find(cleaned)
@@ -437,31 +551,31 @@ class IntentRouter {
             }
         }
 
-        // Try query patterns
-        if (profitPatterns.any { it.containsMatchIn(cleaned) }) {
+        // Try query patterns (use normalized text for Sheng support)
+        if (profitPatterns.any { it.containsMatchIn(normalized) }) {
             return IntentResult(
                 intent = IntentType.PROFIT_QUERY,
                 confidence = 0.90
             )
         }
 
-        if (balancePatterns.any { it.containsMatchIn(cleaned) }) {
+        if (balancePatterns.any { it.containsMatchIn(normalized) }) {
             return IntentResult(
                 intent = IntentType.CHECK_BALANCE,
                 confidence = 0.90
             )
         }
 
-        if (stockPatterns.any { it.containsMatchIn(cleaned) }) {
+        if (stockPatterns.any { it.containsMatchIn(normalized) }) {
             return IntentResult(
                 intent = IntentType.STOCK_QUERY,
                 confidence = 0.85,
-                extractedData = mapOf("item" to (SwahiliParser.extractItemName(cleaned) ?: ""))
+                extractedData = mapOf("item" to (SwahiliParser.extractItemName(normalized) ?: ""))
             )
         }
 
         // Transport-specific queries
-        if (tripQueryPatterns.any { it.containsMatchIn(cleaned) }) {
+        if (tripQueryPatterns.any { it.containsMatchIn(normalized) }) {
             return IntentResult(
                 intent = IntentType.TRANSPORT_TRIP,
                 confidence = 0.80,
@@ -470,7 +584,7 @@ class IntentRouter {
         }
 
         // Farming-specific queries
-        if (harvestQueryPatterns.any { it.containsMatchIn(cleaned) }) {
+        if (harvestQueryPatterns.any { it.containsMatchIn(normalized) }) {
             return IntentResult(
                 intent = IntentType.FARMING_ACTIVITY,
                 confidence = 0.80,
@@ -479,7 +593,7 @@ class IntentRouter {
         }
 
         // Digital/gig queries
-        if (digitalQueryPatterns.any { it.containsMatchIn(cleaned) }) {
+        if (digitalQueryPatterns.any { it.containsMatchIn(normalized) }) {
             return IntentResult(
                 intent = IntentType.DIGITAL_COMMISSION,
                 confidence = 0.80,
@@ -488,14 +602,14 @@ class IntentRouter {
         }
 
         // Try summary patterns
-        if (dailySummaryPatterns.any { it.containsMatchIn(cleaned) }) {
+        if (dailySummaryPatterns.any { it.containsMatchIn(normalized) }) {
             return IntentResult(
                 intent = IntentType.DAILY_SUMMARY,
                 confidence = 0.90
             )
         }
 
-        if (weeklySummaryPatterns.any { it.containsMatchIn(cleaned) }) {
+        if (weeklySummaryPatterns.any { it.containsMatchIn(normalized) }) {
             return IntentResult(
                 intent = IntentType.WEEKLY_SUMMARY,
                 confidence = 0.85
@@ -503,7 +617,7 @@ class IntentRouter {
         }
 
         // Try advice patterns
-        if (advicePatterns.any { it.containsMatchIn(cleaned) }) {
+        if (advicePatterns.any { it.containsMatchIn(normalized) }) {
             return IntentResult(
                 intent = IntentType.ASK_ADVICE,
                 confidence = 0.85,
@@ -536,12 +650,230 @@ class IntentRouter {
             )
         }
 
+        // ═══ STEP 2: Try Sheng-specific patterns on original text ═══
+        // If standard patterns failed and text contains Sheng markers,
+        // try Sheng-specific patterns.
+        if (hasSheng) {
+            val shengResult = tryShengPatterns(cleaned)
+            if (shengResult != null) {
+                Timber.d("Sheng pattern matched: %s (%.2f)", shengResult.intent, shengResult.confidence)
+                return shengResult
+            }
+        }
+
+        // ═══ STEP 3: Try normalized text with query patterns ═══
+        // Use normalized text for query patterns (greetings, help, etc.)
+        val queryResult = tryQueryPatterns(normalized)
+        if (queryResult.intent != IntentType.UNKNOWN) {
+            return queryResult
+        }
+
         // Fallback: unknown intent
         return IntentResult(
             intent = IntentType.UNKNOWN,
             confidence = 0.0,
             needsLLM = true
         )
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // SHENG NORMALIZATION
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * Normalize Sheng text to standard Swahili.
+     * Replaces Sheng vocabulary with standard equivalents so that
+     * the existing Swahili regex patterns can match.
+     *
+     * Example:
+     * "nikaue mandazi tano kwa thao" → "nimeuza mandazi tano kwa 1000"
+     * "nikapurchase unga finje" → "nimenunua unga 500"
+     */
+    private fun normalizeSheng(text: String): String {
+        var normalized = text.lowercase().trim()
+
+        // Replace Sheng words with standard equivalents
+        for ((sheng, standard) in shengToStandard) {
+            normalized = normalized.replace(sheng, standard)
+        }
+
+        return normalized
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // SHENG-SPECIFIC PATTERN MATCHING
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * Try Sheng-specific patterns for sale/purchase/expense.
+     * These handle constructions unique to Sheng that standard
+     * Swahili patterns can't match.
+     *
+     * @param text Original (un-normalized) Sheng text
+     * @return IntentResult if matched, null otherwise
+     */
+    private fun tryShengPatterns(text: String): IntentResult? {
+        // Sheng sale patterns
+        for (pattern in shengSalePatterns) {
+            val match = pattern.find(text) ?: continue
+            val groups = match.groupValues
+
+            // Determine if this is a sale or purchase based on verb
+            val verb = groups[1].lowercase()
+            val isPurchase = verb.contains("buy") || verb.contains("purchase") ||
+                verb.contains("log")
+
+            val item = groups[2].trim()
+            if (item.isBlank()) continue
+
+            // Extract amount — could be a Sheng number word or digit
+            val amountStr = groups.lastOrNull { it.toDoubleOrNull() != null }
+                ?: resolveShengAmount(groups)
+                ?: continue
+
+            val amount = amountStr.toDoubleOrNull() ?: continue
+
+            return IntentResult(
+                intent = if (isPurchase) IntentType.PURCHASE else IntentType.SALE,
+                confidence = 0.85,
+                extractedData = mapOf(
+                    "item" to item,
+                    "quantity" to (groups.getOrNull(3)?.toDoubleOrNull()?.toString() ?: "1"),
+                    "amount" to amount.toString(),
+                    "unitPrice" to amount.toString()
+                )
+            )
+        }
+
+        // Sheng expense patterns
+        for (pattern in shengExpensePatterns) {
+            val match = pattern.find(text) ?: continue
+            val groups = match.groupValues
+
+            // Resolve Sheng amount words
+            val amountStr = groups.getOrNull(2)?.toDoubleOrNull()?.toString()
+                ?: resolveShengAmount(groups)
+                ?: continue
+
+            val amount = amountStr.toDoubleOrNull() ?: continue
+            val category = groups.getOrNull(4)?.ifBlank { null }
+                ?: groups.getOrNull(1)?.lowercase()
+                ?: "other"
+
+            return IntentResult(
+                intent = IntentType.EXPENSE,
+                confidence = 0.80,
+                extractedData = mapOf(
+                    "category" to category,
+                    "amount" to amount.toString()
+                )
+            )
+        }
+
+        return null
+    }
+
+    /**
+     * Resolve Sheng amount words to numeric values.
+     * Handles constructions like "thao" (1000), "finje" (500), "bao" (20).
+     */
+    private fun resolveShengAmount(groups: List<String>): String? {
+        for (group in groups) {
+            val lower = group.lowercase().trim()
+            when (lower) {
+                "thao", "ngiri" -> return "1000"
+                "finje" -> return "500"
+                "jeuri" -> return "50"
+                "bao" -> return "20"
+                "kumi" -> return "10"
+            }
+        }
+        return null
+    }
+
+    /**
+     * Try query patterns (balance, profit, stock, summary, advice, greeting).
+     * This is the final fallback after standard and Sheng patterns.
+     */
+    private fun tryQueryPatterns(text: String): IntentResult {
+        // Profit query
+        if (profitPatterns.any { it.containsMatchIn(text) }) {
+            return IntentResult(intent = IntentType.PROFIT_QUERY, confidence = 0.90)
+        }
+
+        // Balance query
+        if (balancePatterns.any { it.containsMatchIn(text) }) {
+            return IntentResult(intent = IntentType.CHECK_BALANCE, confidence = 0.90)
+        }
+
+        // Stock query
+        if (stockPatterns.any { it.containsMatchIn(text) }) {
+            return IntentResult(
+                intent = IntentType.STOCK_QUERY,
+                confidence = 0.85,
+                extractedData = mapOf("item" to (SwahiliParser.extractItemName(text) ?: ""))
+            )
+        }
+
+        // Transport queries
+        if (tripQueryPatterns.any { it.containsMatchIn(text) }) {
+            return IntentResult(
+                intent = IntentType.TRANSPORT_TRIP,
+                confidence = 0.80,
+                extractedData = mapOf("queryType" to "trip_info")
+            )
+        }
+
+        // Farming queries
+        if (harvestQueryPatterns.any { it.containsMatchIn(text) }) {
+            return IntentResult(
+                intent = IntentType.FARMING_ACTIVITY,
+                confidence = 0.80,
+                extractedData = mapOf("queryType" to "harvest_info")
+            )
+        }
+
+        // Digital queries
+        if (digitalQueryPatterns.any { it.containsMatchIn(text) }) {
+            return IntentResult(
+                intent = IntentType.DIGITAL_COMMISSION,
+                confidence = 0.80,
+                extractedData = mapOf("queryType" to "digital_info")
+            )
+        }
+
+        // Daily summary
+        if (dailySummaryPatterns.any { it.containsMatchIn(text) }) {
+            return IntentResult(intent = IntentType.DAILY_SUMMARY, confidence = 0.90)
+        }
+
+        // Weekly summary
+        if (weeklySummaryPatterns.any { it.containsMatchIn(text) }) {
+            return IntentResult(intent = IntentType.WEEKLY_SUMMARY, confidence = 0.85)
+        }
+
+        // Advice
+        if (advicePatterns.any { it.containsMatchIn(text) }) {
+            return IntentResult(intent = IntentType.ASK_ADVICE, confidence = 0.85, needsLLM = true)
+        }
+
+        // Greeting
+        if (greetingPatterns.any { it.containsMatchIn(text) }) {
+            return IntentResult(intent = IntentType.GREETING, confidence = 0.95)
+        }
+
+        // Help
+        if (helpPatterns.any { it.containsMatchIn(text) }) {
+            return IntentResult(intent = IntentType.HELP, confidence = 0.80)
+        }
+
+        // Correction
+        if (correctionPatterns.any { it.containsMatchIn(text) }) {
+            return IntentResult(intent = IntentType.CORRECTION, confidence = 0.80, needsLLM = true)
+        }
+
+        // Unknown
+        return IntentResult(intent = IntentType.UNKNOWN, confidence = 0.0, needsLLM = true)
     }
 
     /**

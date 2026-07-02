@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <!-- Pulse gradient: African Orange → Warm Gold -->
+    <linearGradient id="pulseGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#E8853D"/>
+      <stop offset="40%" stop-color="#F5A623"/>
+      <stop offset="100%" stop-color="#E8853D"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ========================================
+       ADAPTIVE ICON FOREGROUND
+       Transparent background — Android provides the shape mask
+       B + pulse centered in safe zone
+  ========================================= -->
+
+  <!-- THE B — bold geometric letterform -->
+  <path d="
+    M 338,254 L 338,770 L 602,770
+    C 672,770  732,724  732,662
+    C 732,616  706,580  668,566
+    C 708,550  736,514  736,466
+    C 736,400  684,356  612,356
+    L 338,356 Z
+
+    M 386,404 L 386,486 L 582,486
+    C 620,486  640,498  640,514
+    C 640,532  618,542  582,542
+    L 386,542 Z
+
+    M 386,590 L 386,722 L 590,722
+    C 624,722  644,710  644,694
+    C 644,676  624,666  590,666
+    L 386,666 Z
+  " fill="#FFFFFF" fill-rule="evenodd"/>
+
+  <!-- PULSE LINE — heartbeat running through the B -->
+  <path d="
+    M 160,512
+    L 395,512
+    L 430,460
+    L 465,512
+    L 530,512
+    L 558,440
+    L 588,535
+    L 615,512
+    L 864,512
+  " fill="none" stroke="url(#pulseGrad)" stroke-width="18"
+    stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Data node dots at pulse peaks -->
+  <circle cx="430" cy="460" r="11" fill="#F5A623"/>
+  <circle cx="558" cy="440" r="14" fill="#E8853D"/>
+</svg>
