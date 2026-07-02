@@ -4,18 +4,23 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.msaidizi.app.core.model.*
+import com.msaidizi.app.evolution.FeedbackEntity
+import com.msaidizi.app.evolution.FeatureRequestEntity
+import com.msaidizi.app.evolution.FeedbackDao
+import com.msaidizi.app.evolution.FeatureRequestDao
 
 /**
  * Room database for Msaidizi.
  *
  * Stores all business transactions, inventory, patterns, vocabulary,
- * user corrections, and adaptive learning data.
+ * user corrections, adaptive learning data, and evolution feedback.
  * Optimized for 2GB devices:
  * - WAL mode for concurrent reads during writes
  * - Minimal indices (only what's needed for common queries)
  * - Integer timestamps (not datetime strings)
  *
  * Version 2: Added UserVocabulary and UserCorrection for adaptive learning.
+ * Version 4: Added Feedback and FeatureRequest for self-evolution.
  */
 @Database(
     entities = [
@@ -26,9 +31,11 @@ import com.msaidizi.app.core.model.*
         DailySummary::class,
         UserVocabulary::class,
         UserCorrection::class,
-        LearnedWord::class
+        LearnedWord::class,
+        FeedbackEntity::class,
+        FeatureRequestEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -39,6 +46,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun userVocabularyDao(): UserVocabularyDao
     abstract fun userCorrectionDao(): UserCorrectionDao
     abstract fun vocabularyLearningDao(): VocabularyLearningDao
+    abstract fun feedbackDao(): FeedbackDao
+    abstract fun featureRequestDao(): FeatureRequestDao
 }
 
 /**

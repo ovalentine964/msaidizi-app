@@ -18,6 +18,10 @@ import com.msaidizi.app.agent.AdaptiveLearningEngine
 import com.msaidizi.app.agent.BusinessPatternTracker
 import com.msaidizi.app.core.model.UserVocabularyDao
 import com.msaidizi.app.core.model.UserCorrectionDao
+import com.msaidizi.app.evolution.FeedbackDao
+import com.msaidizi.app.evolution.FeatureRequestDao
+import com.msaidizi.app.evolution.FeedbackCollector
+import com.msaidizi.app.evolution.FeatureRequestTracker
 import com.msaidizi.app.core.database.VocabularyLearningDao
 import com.msaidizi.app.core.dialect.AdaptiveVocabulary
 import com.msaidizi.app.core.language.AdaptiveAsrEngine
@@ -153,6 +157,42 @@ object AppModule {
                     db.execSQL("CREATE INDEX IF NOT EXISTS `index_learned_words_canonicalForm` ON `learned_words` (`canonicalForm`)")
                 }
             })
+            // Migration v3 → v4: Added feedback and feature_requests tables for self-evolution
+            .addMigrations(object : androidx.room.migration.Migration(3, 4) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `feedback` (
+                            `id` TEXT NOT NULL,
+                            `workerId` TEXT NOT NULL,
+                            `type` TEXT NOT NULL,
+                            `text` TEXT NOT NULL,
+                            `language` TEXT NOT NULL,
+                            `timestamp` INTEGER NOT NULL,
+                            `category` TEXT,
+                            `synced` INTEGER NOT NULL DEFAULT 0,
+                            PRIMARY KEY(`id`)
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_feedback_timestamp` ON `feedback` (`timestamp`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_feedback_synced` ON `feedback` (`synced`)")
+
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `feature_requests` (
+                            `id` TEXT NOT NULL,
+                            `clusterId` TEXT NOT NULL,
+                            `description` TEXT NOT NULL,
+                            `requestCount` INTEGER NOT NULL DEFAULT 1,
+                            `workerTypes` TEXT NOT NULL,
+                            `priority` REAL NOT NULL DEFAULT 0.0,
+                            `status` TEXT NOT NULL DEFAULT 'NEW',
+                            `createdAt` INTEGER NOT NULL,
+                            `lastUpdated` INTEGER NOT NULL,
+                            PRIMARY KEY(`id`)
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_feature_requests_clusterId` ON `feature_requests` (`clusterId`)")
+                }
+            })
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
     }
@@ -174,6 +214,12 @@ object AppModule {
 
     @Provides
     fun provideVocabularyLearningDao(db: AppDatabase): VocabularyLearningDao = db.vocabularyLearningDao()
+
+    @Provides
+    fun provideFeedbackDao(db: AppDatabase): FeedbackDao = db.feedbackDao()
+
+    @Provides
+    fun provideFeatureRequestDao(db: AppDatabase): FeatureRequestDao = db.featureRequestDao()
 
     // === DIALECT & ADAPTIVE VOCABULARY ===
 
@@ -343,4 +389,22 @@ object AppModule {
         @ApplicationContext context: Context,
         pinnedHttpClient: PinnedHttpClient
     ): FederatedLearningClient = FederatedLearningClient(context, pinnedHttpClient)
+
+    // === EVOLUTION / SELF-EVOLUTION ===
+
+    @Provides
+    @Singleton
+    fun provideFeedbackCollector(
+        feedbackDao: FeedbackDao,
+        httpClient: HttpClient,
+        json: Json,
+        @ApplicationContext context: Context
+    ): FeedbackCollector = FeedbackCollector(feedbackDao, httpClient, json, context)
+
+    @Provides
+    @Singleton
+    fun provideFeatureRequestTracker(
+        requestDao: FeatureRequestDao,
+        feedbackDao: FeedbackDao
+    ): FeatureRequestTracker = FeatureRequestTracker(requestDao, feedbackDao)
 }
