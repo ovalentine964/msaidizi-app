@@ -85,15 +85,15 @@ class SyncManager(
      * Trigger an immediate sync.
      * Called when user taps sync button or when good connectivity detected.
      */
-    suspend fun syncNow(scope: CoroutineScope): SyncResult {
+    suspend fun syncNow(scope: CoroutineScope): SyncStatus {
         if (_syncState.value == SyncState.SYNCING) {
             Timber.w("Sync already in progress")
-            return SyncResult.ALREADY_IN_PROGRESS
+            return SyncStatus.ALREADY_IN_PROGRESS
         }
 
         if (!networkMonitor.isConnected()) {
             Timber.w("No network connectivity")
-            return SyncResult.NO_NETWORK
+            return SyncStatus.NO_NETWORK
         }
 
         _syncState.value = SyncState.SYNCING
@@ -108,7 +108,7 @@ class SyncManager(
         }
 
         syncJob?.join()
-        return if (_syncState.value == SyncState.SUCCESS) SyncResult.SUCCESS else SyncResult.ERROR
+        return if (_syncState.value == SyncState.SUCCESS) SyncStatus.SUCCESS else SyncStatus.ERROR
     }
 
     /**
@@ -232,7 +232,7 @@ enum class SyncState {
 /**
  * Sync result.
  */
-enum class SyncResult {
+enum class SyncStatus {
     SUCCESS,
     NO_NETWORK,
     ALREADY_IN_PROGRESS,
