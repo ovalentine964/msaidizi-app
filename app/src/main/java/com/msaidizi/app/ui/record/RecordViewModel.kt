@@ -57,13 +57,12 @@ class RecordViewModel @Inject constructor(
 
                     when {
                         calibrated.shouldReject -> {
-                            // Low confidence — show feedback with alternatives
+                            // Low confidence — show feedback
                             _uiState.value = _uiState.value.copy(
                                 transcribedText = result.text,
                                 statusMessage = "Sikuelewi vizuri…",
                                 showPronunciationFeedback = true,
-                                pronunciationConfidence = calibrated,
-                                pronunciationAlternatives = result.alternatives ?: emptyList()
+                                pronunciationConfidence = calibrated
                             )
                         }
                         calibrated.shouldConfirm -> {

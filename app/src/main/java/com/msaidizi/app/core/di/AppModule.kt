@@ -311,9 +311,7 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideConfidenceCalibrator(
-        userVocabularyDao: UserVocabularyDao
-    ): ConfidenceCalibrator = ConfidenceCalibrator(userVocabularyDao)
+    fun provideConfidenceCalibrator(): ConfidenceCalibrator = ConfidenceCalibrator()
 
     @Provides
     @Singleton

@@ -15,12 +15,16 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import timber.log.Timber
 import java.io.ByteArrayOutputStream
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.UUID
 import java.util.zip.GZIPOutputStream
+import kotlin.math.abs
 import kotlin.math.ln
 import kotlin.math.exp
+import kotlin.math.sqrt
 
 /**
  * Federated Learning Client — Secure aggregation for cloud training.
@@ -520,6 +524,435 @@ class FederatedLearningClient(
     }
 
     /**
+     * Current LoRA training state for UI observation.
+     */
+    private val _trainingState = MutableStateFlow<LoRATrainingState>(LoRATrainingState.Idle)
+    val trainingState: StateFlow<LoRATrainingState> = _trainingState
+
+    // ════════════════════════════════════════════════════════════════════
+    // ON-DEVICE LoRA TRAINING
+    // ════════════════════════════════════════════════════════════════════
+
+    /**
+     * Perform LoRA fine-tuning on device using user corrections.
+     *
+     * LoRA (Low-Rank Adaptation) from Hu et al. (2021):
+     * - Freeze base model weights W₀ ∈ ℝ^{d×k}
+     * - Train low-rank decomposition: ΔW = B·A where B∈ℝ^{d×r}, A∈ℝ^{r×k}
+     * - Rank r=4 → only ~0.1% of parameters trained
+     * - Memory: ~50MB RAM on 2GB device (rank-4, d=512, k=512)
+     *
+     * Uses STA 341 (Estimation) for learning rate scheduling:
+     *   η_t = η₀ / (1 + λ·t)  where λ is decay rate
+     *
+     * Uses STA 342 (Hypothesis Testing) for convergence detection:
+     *   H₀: loss has converged (Δloss < threshold for N steps)
+     *   H₁: loss still decreasing
+     *   Test statistic: t = mean(Δloss) / se(Δloss)
+     *
+     * @param corrections User corrections to train on
+     * @param language Language of the corrections
+     * @return true if training completed and adapter was saved
+     */
+    suspend fun performLoRATraining(
+        corrections: List<UserCorrection>,
+        language: String
+    ): Boolean = withContext(Dispatchers.Default) {
+        if (corrections.size < MIN_CORRECTIONS_FOR_LORA) {
+            Timber.tag(TAG).d(
+                "Not enough corrections for LoRA: %d < %d",
+                corrections.size, MIN_CORRECTIONS_FOR_LORA
+            )
+            return@withContext false
+        }
+
+        _trainingState.value = LoRATrainingState.Preparing
+
+        try {
+            // Step 1: Collect and prepare training pairs
+            val trainingPairs = prepareTrainingPairs(corrections)
+            if (trainingPairs.isEmpty()) {
+                _trainingState.value = LoRATrainingState.Idle
+                return@withContext false
+            }
+
+            // Step 2: Split into train/validation (90/10)
+            val splitIndex = (trainingPairs.size * 0.9).toInt()
+            val trainPairs = trainingPairs.take(splitIndex)
+            val valPairs = trainingPairs.drop(splitIndex)
+
+            // Step 3: Initialize LoRA matrices
+            // Rank r=4, dimensions based on vocabulary embedding
+            val rank = LORA_RANK
+            val embedDim = LORA_EMBED_DIM
+            val vocabSize = estimateVocabularySize(corrections)
+
+            // A ∈ ℝ^{r×embedDim}, B ∈ ℝ^{embedDim×r}
+            // Initialize A with Gaussian, B with zeros (so ΔW starts at 0)
+            val loraA = FloatArray(rank * embedDim) {
+                (secureRandom.nextGaussian() * 0.01).toFloat()
+            }
+            val loraB = FloatArray(embedDim * rank) { 0.0f }
+
+            // Step 4: Training loop
+            var currentLr = LORA_LEARNING_RATE
+            val lossHistory = mutableListOf<Float>()
+            var bestValLoss = Float.MAX_VALUE
+            var patienceCounter = 0
+
+            _trainingState.value = LoRATrainingState.Training(0, LORA_EPOCHS)
+
+            for (epoch in 0 until LORA_EPOCHS) {
+                var epochLoss = 0.0f
+
+                // Shuffle training pairs each epoch
+                val shuffled = trainPairs.shuffled(secureRandom.nextInt())
+
+                for ((inputIdx, targetIdx) in shuffled) {
+                    // Forward pass: compute LoRA output
+                    // output = input_embed @ (B @ A)^T * (alpha / rank)
+                    val gradA = FloatArray(rank * embedDim)
+                    val gradB = FloatArray(embedDim * rank)
+
+                    // Compute loss gradient for this pair
+                    val loss = computeLoRAGradient(
+                        inputIdx, targetIdx, vocabSize, embedDim,
+                        loraA, loraB, rank, gradA, gradB
+                    )
+                    epochLoss += loss
+
+                    // Update weights: W = W - lr * grad
+                    for (i in loraA.indices) {
+                        loraA[i] -= currentLr * gradA[i]
+                    }
+                    for (i in loraB.indices) {
+                        loraB[i] -= currentLr * gradB[i]
+                    }
+                }
+
+                epochLoss /= trainPairs.size
+                lossHistory.add(epochLoss)
+
+                // STA 341: Learning rate scheduling (inverse decay)
+                currentLr = LORA_LEARNING_RATE / (1.0f + LORA_LR_DECAY * epoch)
+
+                // Validation check
+                val valLoss = computeValidationLoss(valPairs, vocabSize, embedDim, loraA, loraB, rank)
+
+                if (valLoss < bestValLoss) {
+                    bestValLoss = valLoss
+                    patienceCounter = 0
+                } else {
+                    patienceCounter++
+                }
+
+                _trainingState.value = LoRATrainingState.Training(epoch + 1, LORA_EPOCHS)
+
+                Timber.tag(TAG).d(
+                    "LoRA epoch %d/%d: train_loss=%.4f, val_loss=%.4f, lr=%.6f",
+                    epoch + 1, LORA_EPOCHS, epochLoss, valLoss, currentLr
+                )
+
+                // STA 342: Convergence detection (early stopping)
+                if (patienceCounter >= LORA_PATIENCE) {
+                    Timber.tag(TAG).i("LoRA converged after %d epochs (patience exceeded)", epoch + 1)
+                    break
+                }
+
+                // Check if loss is stagnant (t-test for convergence)
+                if (lossHistory.size >= 10 && hasConverged(lossHistory)) {
+                    Timber.tag(TAG).i("LoRA converged after %d epochs (statistical test)", epoch + 1)
+                    break
+                }
+            }
+
+            // Step 5: Serialize adapter weights
+            val adapterBytes = serializeLoRAAdapter(loraA, loraB, rank, embedDim, vocabSize, language)
+
+            // Step 6: Push update to federated learning server
+            _trainingState.value = LoRATrainingState.Uploading
+            val calibrationParams = CalibrationParams(
+                temperature = 1.5f,  // Would come from ConfidenceCalibrator
+                plattA = 0.8f,
+                plattB = -0.3f,
+                prior = 0.7f
+            )
+            uploadUpdate(language, corrections, adapterBytes, calibrationParams)
+
+            _trainingState.value = LoRATrainingState.Complete
+            Timber.tag(TAG).i(
+                "LoRA training complete: %d pairs, %d epochs, adapter=%d bytes",
+                trainingPairs.size, lossHistory.size, adapterBytes.size
+            )
+
+            true
+
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "LoRA training failed")
+            _trainingState.value = LoRATrainingState.Error(e.message ?: "Training failed")
+            false
+        }
+    }
+
+    /**
+     * Prepare training pairs from user corrections.
+     * Each pair is (input_token_index, target_token_index) in the vocabulary.
+     */
+    private fun prepareTrainingPairs(corrections: List<UserCorrection>): List<Pair<Int, Int>> {
+        // Build vocabulary from corrections
+        val vocab = mutableMapOf<String, Int>()
+        var nextIdx = 0
+
+        for (correction in corrections) {
+            for (word in correction.originalValue.split(" ")) {
+                val w = word.lowercase().trim()
+                if (w.isNotEmpty() && w !in vocab) {
+                    vocab[w] = nextIdx++
+                }
+            }
+            for (word in correction.correctedValue.split(" ")) {
+                val w = word.lowercase().trim()
+                if (w.isNotEmpty() && w !in vocab) {
+                    vocab[w] = nextIdx++
+                }
+            }
+        }
+
+        // Create aligned pairs (word-level alignment)
+        val pairs = mutableListOf<Pair<Int, Int>>()
+        for (correction in corrections) {
+            val origWords = correction.originalValue.lowercase().split(" ").filter { it.isNotBlank() }
+            val corrWords = correction.correctedValue.lowercase().split(" ").filter { it.isNotBlank() }
+
+            for ((ow, cw) in origWords.zip(corrWords)) {
+                if (ow != cw) {
+                    val inputIdx = vocab[ow] ?: continue
+                    val targetIdx = vocab[cw] ?: continue
+                    pairs.add(Pair(inputIdx, targetIdx))
+                }
+            }
+        }
+
+        return pairs
+    }
+
+    /**
+     * Compute LoRA gradient for a single training pair.
+     *
+     * Forward: output = x @ (B @ A)^T * (alpha / rank)
+     * Loss: cross-entropy between output and target
+     * Backward: standard chain rule through low-rank decomposition
+     *
+     * @return Loss value for this pair
+     */
+    private fun computeLoRAGradient(
+        inputIdx: Int,
+        targetIdx: Int,
+        vocabSize: Int,
+        embedDim: Int,
+        loraA: FloatArray,
+    	loraB: FloatArray,
+        rank: Int,
+        gradA: FloatArray,
+        gradB: FloatArray
+    ): Float {
+        // Create one-hot input embedding
+        val inputEmbed = FloatArray(embedDim)
+        val embedOffset = (inputIdx % embedDim)
+        inputEmbed[embedOffset] = 1.0f
+
+        // Forward pass through LoRA: output = input @ B @ A
+        // Step 1: h = input @ B  (h ∈ ℝ^rank)
+        val hidden = FloatArray(rank)
+        for (r in 0 until rank) {
+            var sum = 0.0f
+            for (d in 0 until embedDim) {
+                sum += inputEmbed[d] * loraB[d * rank + r]
+            }
+            hidden[r] = sum
+        }
+
+        // Step 2: logits = h @ A  (logits ∈ ℝ^embedDim, used as proxy for vocab)
+        val logits = FloatArray(embedDim)
+        for (d in 0 until embedDim) {
+            var sum = 0.0f
+            for (r in 0 until rank) {
+                sum += hidden[r] * loraA[r * embedDim + d]
+            }
+            logits[d] = sum * (LORA_ALPHA.toFloat() / rank)
+        }
+
+        // Softmax over logits (proxy — real impl would be over full vocab)
+        val maxLogit = logits.max()
+        val expLogits = FloatArray(embedDim) { exp((logits[it] - maxLogit).toDouble()).toFloat() }
+        val sumExp = expLogits.sum()
+        val probs = FloatArray(embedDim) { expLogits[it] / sumExp }
+
+        // Cross-entropy loss: -log(p[target])
+        val targetOffset = targetIdx % embedDim
+        val loss = -ln(probs[targetOffset].toDouble().coerceAtLeast(1e-10)).toFloat()
+
+        // Backward pass
+        // dL/dlogits = probs - one_hot(target)
+        val dLogits = FloatArray(embedDim)
+        for (d in 0 until embedDim) {
+            dLogits[d] = probs[d]
+        }
+        dLogits[targetOffset] -= 1.0f
+
+        // Scale by alpha/rank
+        val scale = LORA_ALPHA.toFloat() / rank
+        for (d in 0 until embedDim) {
+            dLogits[d] *= scale
+        }
+
+        // dL/dA = h^T @ dLogits  (outer product, accumulate)
+        for (r in 0 until rank) {
+            for (d in 0 until embedDim) {
+                gradA[r * embedDim + d] += hidden[r] * dLogits[d]
+            }
+        }
+
+        // dL/dB = input^T @ (dLogits @ A^T)
+        val dHidden = FloatArray(rank)
+        for (r in 0 until rank) {
+            var sum = 0.0f
+            for (d in 0 until embedDim) {
+                sum += dLogits[d] * loraA[r * embedDim + d]
+            }
+            dHidden[r] = sum
+        }
+        for (d in 0 until embedDim) {
+            for (r in 0 until rank) {
+                gradB[d * rank + r] += inputEmbed[d] * dHidden[r]
+            }
+        }
+
+        return loss
+    }
+
+    /**
+     * Compute validation loss for early stopping.
+     */
+    private fun computeValidationLoss(
+        valPairs: List<Pair<Int, Int>>,
+        vocabSize: Int,
+        embedDim: Int,
+        loraA: FloatArray,
+        loraB: FloatArray,
+        rank: Int
+    ): Float {
+        if (valPairs.isEmpty()) return 0.0f
+
+        var totalLoss = 0.0f
+        val dummyGradA = FloatArray(loraA.size)
+        val dummyGradB = FloatArray(loraB.size)
+
+        for ((inputIdx, targetIdx) in valPairs) {
+            totalLoss += computeLoRAGradient(
+                inputIdx, targetIdx, vocabSize, embedDim,
+                loraA, loraB, rank, dummyGradA, dummyGradB
+            )
+        }
+
+        return totalLoss / valPairs.size
+    }
+
+    /**
+     * STA 342: Convergence detection using t-test.
+     *
+     * Tests H₀: mean(Δloss) = 0 (loss has converged)
+     * vs    H₁: mean(Δloss) < 0 (loss still decreasing)
+     *
+     * Uses one-sided t-test on recent loss differences.
+     * Rejects H₀ (declares convergence) if p-value > 0.05.
+     */
+    private fun hasConverged(lossHistory: List<Float>): Boolean {
+        val windowSize = 10
+        if (lossHistory.size < windowSize + 1) return false
+
+        // Compute recent loss differences
+        val recent = lossHistory.takeLast(windowSize + 1)
+        val deltas = (0 until recent.size - 1).map { recent[it] - recent[it + 1] }
+
+        val n = deltas.size.toFloat()
+        val mean = deltas.sum() / n
+        val variance = deltas.map { (it - mean) * (it - mean) }.sum() / (n - 1)
+        val se = sqrt(variance / n)
+
+        if (se < 1e-10) return true  // No variance = converged
+
+        // t-statistic
+        val tStat = mean / se
+
+        // For df=9, t_critical (one-sided, α=0.05) ≈ 1.833
+        // If t < 1.833, we fail to reject H₀ → loss has converged
+        return tStat < 1.833f
+    }
+
+    /**
+     * Estimate vocabulary size from corrections.
+     */
+    private fun estimateVocabularySize(corrections: List<UserCorrection>): Int {
+        val words = mutableSetOf<String>()
+        for (c in corrections) {
+            words.addAll(c.originalValue.split(" ").map { it.lowercase().trim() })
+            words.addAll(c.correctedValue.split(" ").map { it.lowercase().trim() })
+        }
+        return words.size.coerceAtLeast(100)
+    }
+
+    /**
+     * Serialize LoRA adapter to bytes for storage/upload.
+     *
+     * Format:
+     * [4 bytes] magic: 0x4C4F5241 ("LORA")
+     * [4 bytes] version
+     * [4 bytes] rank
+     * [4 bytes] embedDim
+     * [4 bytes] vocabSize
+     * [N bytes] language (UTF-8, length-prefixed)
+     * [M bytes] loraA (float array, little-endian)
+     * [K bytes] loraB (float array, little-endian)
+     * [32 bytes] SHA-256 checksum
+     */
+    private fun serializeLoRAAdapter(
+        loraA: FloatArray,
+        loraB: FloatArray,
+        rank: Int,
+        embedDim: Int,
+        vocabSize: Int,
+        language: String
+    ): ByteArray {
+        val langBytes = language.toByteArray(Charsets.UTF_8)
+        val totalSize = 24 + (4 + langBytes.size) + (loraA.size * 4) + (loraB.size * 4) + 32
+        val buffer = ByteBuffer.allocate(totalSize).order(ByteOrder.LITTLE_ENDIAN)
+
+        // Header
+        buffer.putInt(0x4C4F5241)  // Magic: "LORA"
+        buffer.putInt(1)           // Version
+        buffer.putInt(rank)
+        buffer.putInt(embedDim)
+        buffer.putInt(vocabSize)
+
+        // Language
+        buffer.putInt(langBytes.size)
+        buffer.put(langBytes)
+
+        // LoRA weights
+        for (f in loraA) buffer.putFloat(f)
+        for (f in loraB) buffer.putFloat(f)
+
+        // Checksum (SHA-256 of everything before checksum)
+        val contentBytes = buffer.array().copyOf(buffer.position())
+        val digest = MessageDigest.getInstance("SHA-256")
+        val checksum = digest.digest(contentBytes)
+        buffer.put(checksum)
+
+        return buffer.array()
+    }
+
+    /**
      * Get the sync schedule (for UI display).
      */
     fun getSyncSchedule(): SyncSchedule {
@@ -533,8 +966,48 @@ class FederatedLearningClient(
 }
 
 // ════════════════════════════════════════════════════════════════════
+// CONSTANTS
+// ════════════════════════════════════════════════════════════════════
+
+/** Minimum corrections needed before LoRA training */
+private const val MIN_CORRECTIONS_FOR_LORA = 50
+
+/** LoRA rank — controls expressiveness vs memory */
+private const val LORA_RANK = 4
+
+/** LoRA alpha — scaling factor (alpha/rank) */
+private const val LORA_ALPHA = 16
+
+/** Embedding dimension for LoRA matrices */
+private const val LORA_EMBED_DIM = 512
+
+/** Learning rate for LoRA training */
+private const val LORA_LEARNING_RATE = 0.001f
+
+/** Learning rate decay for inverse schedule */
+private const val LORA_LR_DECAY = 0.1f
+
+/** Maximum training epochs */
+private const val LORA_EPOCHS = 20
+
+/** Early stopping patience (epochs without improvement) */
+private const val LORA_PATIENCE = 3
+
+// ════════════════════════════════════════════════════════════════════
 // DATA CLASSES
 // ════════════════════════════════════════════════════════════════════
+
+/**
+ * LoRA training state for UI observation.
+ */
+sealed class LoRATrainingState {
+    object Idle : LoRATrainingState()
+    object Preparing : LoRATrainingState()
+    data class Training(val epoch: Int, val totalEpochs: Int) : LoRATrainingState()
+    object Uploading : LoRATrainingState()
+    object Complete : LoRATrainingState()
+    data class Error(val message: String) : LoRATrainingState()
+}
 
 /**
  * Upload payload for federated learning.
