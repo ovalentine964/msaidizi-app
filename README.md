@@ -1,3 +1,5 @@
+![Biashara Intelligence](docs/logo-banner.svg)
+
 # Biashara Intelligence: Msaidizi — Android App
 
 **Your Business Assistant. Works Offline. Speaks Swahili.**

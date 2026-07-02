@@ -704,7 +704,8 @@ JSON:"""
         val cpuCores = Runtime.getRuntime().availableProcessors()
         return (cpuCores / 2).coerceIn(1, 4)  // Use half cores, max 4
     }
-}
+    } // companion object
+} // LlmEngine
 
 // ────────────────────── Data Classes ──────────────────────
 
