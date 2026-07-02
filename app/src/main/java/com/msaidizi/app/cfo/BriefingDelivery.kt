@@ -2,6 +2,8 @@ package com.msaidizi.app.cfo
 
 import com.msaidizi.app.agent.BusinessAgent
 import com.msaidizi.app.agent.WorkerType
+import com.msaidizi.app.core.database.BriefingDeliveryDao
+import com.msaidizi.app.core.model.BriefingDeliveryEntity
 import com.msaidizi.app.core.model.Transaction
 import com.msaidizi.app.core.model.TransactionType
 import com.msaidizi.app.finance.LoanManager
@@ -49,7 +51,8 @@ class BriefingDelivery(
     private val loanManager: LoanManager = LoanManager(),
     private val gamificationEngine: GamificationEngine? = null,
     private val mindsetAcademy: MindsetAcademy? = null,
-    private val richHabitsScore: RichHabitsScore? = null
+    private val richHabitsScore: RichHabitsScore? = null,
+    private val briefingDeliveryDao: BriefingDeliveryDao? = null
 ) {
     companion object {
         private const val TAG = "BriefingDelivery"
@@ -157,7 +160,7 @@ class BriefingDelivery(
 
         Timber.tag(TAG).d("Morning briefing generated: %d chars", fullMessage.length)
 
-        return BriefingResult(
+        val result = BriefingResult(
             message = fullMessage,
             type = BriefingType.MORNING,
             priority = BriefingPriority.NORMAL,
@@ -168,6 +171,29 @@ class BriefingDelivery(
                 "savingsRecommendation" to briefing.savingsRecommendation.toString()
             )
         )
+
+        // ═══ LOOP CLOSURE: Track briefing delivery for feedback cycle ═══
+        try {
+            val keyAdvice = when {
+                restockAlert.isNotBlank() -> restockAlert
+                tailoredTip.isNotBlank() -> tailoredTip
+                else -> ""
+            }
+            val deliveryId = briefingDeliveryDao?.insert(
+                BriefingDeliveryEntity(
+                    briefingType = BriefingType.MORNING.name,
+                    briefingText = fullMessage,
+                    predictedSales = briefing.todaySales,
+                    predictedProfit = briefing.todayProfit,
+                    keyAdvice = keyAdvice
+                )
+            )
+            return result.copy(data = result.data + ("deliveryId" to (deliveryId ?: 0L).toString()))
+        } catch (e: Exception) {
+            Timber.tag(TAG).w(e, "Failed to track briefing delivery")
+        }
+
+        return result
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -290,7 +316,7 @@ class BriefingDelivery(
             }
         }
 
-        return BriefingResult(
+        val result = BriefingResult(
             message = fullMessage,
             type = BriefingType.WEEKLY,
             priority = BriefingPriority.NORMAL,
@@ -301,6 +327,22 @@ class BriefingDelivery(
                 "topProduct" to (report.topProduct ?: "N/A")
             )
         )
+
+        // Track delivery for feedback loop
+        try {
+            briefingDeliveryDao?.insert(
+                BriefingDeliveryEntity(
+                    briefingType = BriefingType.WEEKLY.name,
+                    briefingText = fullMessage,
+                    predictedSales = report.totalSales,
+                    predictedProfit = report.totalProfit
+                )
+            )
+        } catch (e: Exception) {
+            Timber.tag(TAG).w(e, "Failed to track weekly briefing delivery")
+        }
+
+        return result
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -379,7 +421,7 @@ class BriefingDelivery(
             append("\n\nUsiku mwema! 🌙")
         }
 
-        return BriefingResult(
+        val result = BriefingResult(
             message = message,
             type = BriefingType.EVENING,
             priority = BriefingPriority.LOW,
@@ -389,6 +431,110 @@ class BriefingDelivery(
                 "transactionCount" to txnCount.toString()
             )
         )
+
+        // Track delivery for feedback loop
+        try {
+            briefingDeliveryDao?.insert(
+                BriefingDeliveryEntity(
+                    briefingType = BriefingType.EVENING.name,
+                    briefingText = message,
+                    predictedSales = sales,
+                    predictedProfit = profit
+                )
+            )
+        } catch (e: Exception) {
+            Timber.tag(TAG).w(e, "Failed to track evening briefing delivery")
+        }
+
+        return result
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // FEEDBACK LOOP — Track outcomes and adjust briefings
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * Mark a briefing as opened when worker views it.
+     */
+    suspend fun markBriefingOpened(deliveryId: Long) {
+        try {
+            briefingDeliveryDao?.markOpened(deliveryId)
+            Timber.tag(TAG).d("Briefing %d marked as opened", deliveryId)
+        } catch (e: Exception) {
+            Timber.tag(TAG).w(e, "Failed to mark briefing opened")
+        }
+    }
+
+    /**
+     * Record that the worker acted on a briefing.
+     * Compares predicted vs actual and calculates outcome score.
+     *
+     * @param deliveryId ID of the briefing that was acted on
+     * @param actualSales Sales recorded after briefing
+     * @param actualProfit Profit recorded after briefing
+     * @param adviceFollowed Whether the specific advice was followed
+     */
+    suspend fun recordBriefingOutcome(
+        deliveryId: Long,
+        actualSales: Double,
+        actualProfit: Double,
+        adviceFollowed: Boolean? = null
+    ) {
+        try {
+            val briefings = briefingDeliveryDao?.getRecent(1) ?: return
+            val briefing = briefings.find { it.id == deliveryId } ?: return
+
+            val outcomeScore = if (briefing.predictedSales > 0) {
+                val salesAccuracy = 1.0 - Math.min(
+                    Math.abs(actualSales - briefing.predictedSales) / briefing.predictedSales,
+                    2.0
+                )
+                salesAccuracy.coerceIn(-1.0, 1.0)
+            } else if (actualSales > 0) 0.5 else 0.0
+
+            briefingDeliveryDao?.markActedOn(
+                id = deliveryId,
+                actualSales = actualSales,
+                actualProfit = actualProfit,
+                outcomeScore = outcomeScore,
+                adviceFollowed = adviceFollowed
+            )
+
+            Timber.tag(TAG).d(
+                "Briefing outcome: predicted=%.0f actual=%.0f score=%.2f",
+                briefing.predictedSales, actualSales, outcomeScore
+            )
+        } catch (e: Exception) {
+            Timber.tag(TAG).w(e, "Failed to record briefing outcome")
+        }
+    }
+
+    /**
+     * Get briefing performance for adaptive adjustment.
+     * Returns (averageOutcomeScore, actionRate).
+     */
+    suspend fun getBriefingPerformance(): Pair<Double, Double> {
+        return try {
+            val avgScore = briefingDeliveryDao?.getAverageOutcomeScore(BriefingType.MORNING.name) ?: 0.0
+            val weekAgo = System.currentTimeMillis() / 1000 - (7 * 86400)
+            val delivered = briefingDeliveryDao?.getDeliveredCountSince(weekAgo) ?: 0
+            val actedOn = briefingDeliveryDao?.getActedOnCountSince(weekAgo) ?: 0
+            val actionRate = if (delivered > 0) actedOn.toDouble() / delivered else 0.0
+            Pair(avgScore, actionRate)
+        } catch (e: Exception) {
+            Pair(0.0, 0.0)
+        }
+    }
+
+    /**
+     * Get the most recent pending briefing (delivered but not acted on).
+     */
+    suspend fun getLatestPendingBriefing(): BriefingDeliveryEntity? {
+        return try {
+            briefingDeliveryDao?.getLatestPendingBriefing()
+        } catch (e: Exception) {
+            null
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════

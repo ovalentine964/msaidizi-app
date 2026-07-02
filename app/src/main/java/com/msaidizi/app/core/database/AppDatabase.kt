@@ -17,6 +17,7 @@ import com.msaidizi.app.core.model.LoanRepayment
 import com.msaidizi.app.core.model.GamificationEntity
 import com.msaidizi.app.core.model.RichHabitEntry
 import com.msaidizi.app.core.model.MindsetLessonEntity
+import com.msaidizi.app.core.model.BriefingDeliveryEntity
 
 /**
  * Room database for Msaidizi.
@@ -53,9 +54,10 @@ import com.msaidizi.app.core.model.MindsetLessonEntity
         GoalProgressEntry::class,
         GoalMilestone::class,
         LoanRecord::class,
-        LoanRepayment::class
+        LoanRepayment::class,
+        BriefingDeliveryEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -74,6 +76,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun goalDao(): GoalDao
     abstract fun loanDao(): LoanDao
     abstract fun mindsetLessonDao(): MindsetLessonDao
+    abstract fun briefingDeliveryDao(): BriefingDeliveryDao
 }
 
 /**

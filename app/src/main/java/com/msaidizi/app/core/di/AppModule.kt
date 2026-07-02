@@ -29,6 +29,7 @@ import com.msaidizi.app.core.database.TitheDao
 import com.msaidizi.app.core.database.GoalDao
 import com.msaidizi.app.core.database.LoanDao
 import com.msaidizi.app.core.database.VocabularyLearningDao
+import com.msaidizi.app.core.database.BriefingDeliveryDao
 import com.msaidizi.app.core.dialect.AdaptiveVocabulary
 import com.msaidizi.app.core.language.AdaptiveAsrEngine
 import com.msaidizi.app.core.language.ConfidenceCalibrator
@@ -48,6 +49,10 @@ import com.msaidizi.app.mindset.MindsetAcademy
 import com.msaidizi.app.mindset.RichHabitsScore
 import com.msaidizi.app.onboarding.AhaMomentFlow
 import com.msaidizi.app.cfo.BriefingDelivery
+import com.msaidizi.app.cfo.CFOEngine
+import com.msaidizi.app.loops.MorningBriefingLoop
+import com.msaidizi.app.loops.StreakProtectionLoop
+import com.msaidizi.app.loops.VariableRewardsLoop
 import com.msaidizi.app.cfo.CFOEngine
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import dagger.Module
@@ -374,6 +379,33 @@ object AppModule {
                     db.execSQL("CREATE INDEX IF NOT EXISTS `index_loan_repayments_status` ON `loan_repayments` (`status`)")
                 }
             })
+            // Migration v6 → v7: Added briefing_deliveries for morning briefing feedback loop
+            .addMigrations(object : androidx.room.migration.Migration(6, 7) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `briefing_deliveries` (
+                            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            `briefingType` TEXT NOT NULL,
+                            `briefingText` TEXT NOT NULL,
+                            `predictedSales` REAL NOT NULL DEFAULT 0.0,
+                            `predictedProfit` REAL NOT NULL DEFAULT 0.0,
+                            `keyAdvice` TEXT NOT NULL DEFAULT '',
+                            `opened` INTEGER NOT NULL DEFAULT 0,
+                            `openedAt` INTEGER NOT NULL DEFAULT 0,
+                            `actedOn` INTEGER NOT NULL DEFAULT 0,
+                            `actedOnAt` INTEGER NOT NULL DEFAULT 0,
+                            `actualSales` REAL NOT NULL DEFAULT 0.0,
+                            `actualProfit` REAL NOT NULL DEFAULT 0.0,
+                            `outcomeScore` REAL NOT NULL DEFAULT 0.0,
+                            `adviceFollowed` INTEGER,
+                            `deliveredAt` INTEGER NOT NULL DEFAULT 0
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_briefing_deliveries_briefingType` ON `briefing_deliveries` (`briefingType`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_briefing_deliveries_deliveredAt` ON `briefing_deliveries` (`deliveredAt`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_briefing_deliveries_actedOn` ON `briefing_deliveries` (`actedOn`)")
+                }
+            })
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
     }
@@ -419,6 +451,9 @@ object AppModule {
 
     @Provides
     fun provideMindsetLessonDao(db: AppDatabase): MindsetLessonDao = db.mindsetLessonDao()
+
+    @Provides
+    fun provideBriefingDeliveryDao(db: AppDatabase): BriefingDeliveryDao = db.briefingDeliveryDao()
 
     // === DIALECT & ADAPTIVE VOCABULARY ===
 
@@ -534,11 +569,16 @@ object AppModule {
         loanManager: LoanManager,
         titheDao: TitheDao,
         goalDao: GoalDao,
-        loanDao: LoanDao
+        loanDao: LoanDao,
+        briefingDelivery: BriefingDelivery,
+        morningBriefingLoop: MorningBriefingLoop,
+        streakProtectionLoop: StreakProtectionLoop,
+        variableRewardsLoop: VariableRewardsLoop
     ): Orchestrator = Orchestrator(
         intentRouter, businessAgent, analysisAgent, advisorAgent, learningAgent, adaptiveLearning,
         gamificationEngine, ahaMomentFlow, richHabitsScore, mindsetAcademy,
-        titheTracker, goalPlanner, loanManager, titheDao, goalDao, loanDao
+        titheTracker, goalPlanner, loanManager, titheDao, goalDao, loanDao,
+        briefingDelivery, morningBriefingLoop, streakProtectionLoop, variableRewardsLoop
     )
 
     // === SYNC ===
@@ -661,4 +701,56 @@ object AppModule {
     fun provideAhaMomentFlow(
         businessAgent: BusinessAgent
     ): AhaMomentFlow = AhaMomentFlow(businessAgent)
+
+    @Provides
+    @Singleton
+    fun provideBriefingDelivery(
+        cfoEngine: CFOEngine,
+        businessAgent: BusinessAgent,
+        loanManager: LoanManager,
+        gamificationEngine: GamificationEngine,
+        mindsetAcademy: MindsetAcademy,
+        richHabitsScore: RichHabitsScore,
+        briefingDeliveryDao: BriefingDeliveryDao
+    ): BriefingDelivery = BriefingDelivery(
+        cfoEngine, businessAgent, loanManager,
+        gamificationEngine, mindsetAcademy, richHabitsScore,
+        briefingDeliveryDao
+    )
+
+    // === LOOPS — Foundation engagement cycles ===
+
+    @Provides
+    @Singleton
+    fun provideMorningBriefingLoop(
+        cfoEngine: CFOEngine,
+        briefingDelivery: BriefingDelivery,
+        businessAgent: BusinessAgent,
+        transactionDao: TransactionDao,
+        briefingDeliveryDao: BriefingDeliveryDao
+    ): MorningBriefingLoop = MorningBriefingLoop(
+        cfoEngine, briefingDelivery, businessAgent,
+        transactionDao, briefingDeliveryDao
+    )
+
+    @Provides
+    @Singleton
+    fun provideStreakProtectionLoop(
+        gamificationEngine: GamificationEngine,
+        gamificationDao: GamificationDao,
+        transactionDao: TransactionDao
+    ): StreakProtectionLoop = StreakProtectionLoop(
+        gamificationEngine, gamificationDao, transactionDao
+    )
+
+    @Provides
+    @Singleton
+    fun provideVariableRewardsLoop(
+        gamificationEngine: GamificationEngine,
+        gamificationDao: GamificationDao,
+        transactionDao: TransactionDao,
+        patternDao: PatternDao
+    ): VariableRewardsLoop = VariableRewardsLoop(
+        gamificationEngine, gamificationDao, transactionDao, patternDao
+    )
 }

@@ -5,6 +5,7 @@ import com.msaidizi.app.core.model.Badge
 import com.msaidizi.app.core.model.GamificationEntity
 import timber.log.Timber
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.temporal.WeekFields
 import java.util.Locale
 
@@ -254,20 +255,46 @@ class GamificationEngine(
     }
 
     /**
-     * Record a sale event — awards points and updates counts.
-     * @return GamificationEvent with points earned, level-up info, and new badges
+     * Record a sale event — awards variable points and updates counts.
+     * Uses variable reward system for unpredictable, engaging rewards.
+     *
+     * @return GamificationEvent with variable points, level-up info, new badges, and surprise messages
      */
     suspend fun onSaleRecorded(language: String = "sw"): GamificationEvent {
         val now = System.currentTimeMillis() / 1000
-        gamificationDao.addPoints(POINTS_SALE, now)
-        gamificationDao.incrementSalesCount(now)
 
-        // Update streak
+        // Update streak first (needed for multiplier)
         updateDailyStreak()
+
+        // Calculate variable reward (Hook Model: Variable Reward)
+        val variableReward = getVariableReward("sale", language)
+        gamificationDao.addPoints(variableReward.totalPoints, now)
+        gamificationDao.incrementSalesCount(now)
 
         // Check level & badges
         val entity = gamificationDao.getGamification() ?: return GamificationEvent.empty()
-        return evaluateChanges(entity, language)
+        val event = evaluateChanges(entity, language)
+
+        // Build enriched messages with variable rewards
+        val messages = mutableListOf<String>()
+
+        if (variableReward.multiplier > 1) {
+            messages.add(if (language == "sw") {
+                "🔥 Streak ×${variableReward.multiplier}! +${variableReward.totalPoints} pointi!"
+            } else {
+                "🔥 Streak ×${variableReward.multiplier}! +${variableReward.totalPoints} points!"
+            })
+        }
+
+        variableReward.bonusMessage?.let { messages.add(it) }
+        getStreakPattern(language)?.let { messages.add(it) }
+        getSurprisePraise(language)?.let { messages.add(it) }
+        messages.addAll(event.messages)
+
+        return event.copy(
+            pointsEarned = variableReward.totalPoints,
+            messages = messages
+        )
     }
 
     /**
@@ -381,6 +408,262 @@ class GamificationEngine(
             protectionsAvailable = protectionsAvailable,
             lastActiveDay = entity.lastActiveDay
         )
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // STREAK PROTECTION LOOP — Close the retention loop
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * Check if streak is at risk and return a voice reminder in Swahili.
+     * Streak is at risk if: no activity today AND past 6 PM AND streak > 0.
+     */
+    suspend fun getStreakRiskReminder(language: String = "sw"): String? {
+        val entity = getState()
+        if (entity.currentStreak == 0) return null
+
+        val today = LocalDate.now().toEpochDay()
+        if (entity.lastActiveDay == today) return null
+
+        val hour = LocalTime.now().hour
+        if (hour < 18) return null
+
+        val streak = entity.currentStreak
+        val protectionsLeft = getStreakInfo().protectionsAvailable
+
+        return if (language == "sw") {
+            when {
+                streak >= 30 -> "⚠️ Mama! Streak yako ya siku $streak inaweza kupotea! " +
+                    "Rekodi mauzo yako sasa — umefanya kazi ngumu sana!"
+                streak >= 7 -> "⚠️ Streak yako ya wiki ${streak / 7} iko hatarini! " +
+                    "Sema mauzo yako leo ili usipoteze!"
+                protectionsLeft > 0 -> "💡 Streak yako ya siku $streak iko hatarini, " +
+                    "lakini una kinga moja ya bure wiki hii. Rekodi mauzo yako!"
+                else -> "🔥 Streak yako ya siku $streak itapotea usiku huu! " +
+                    "Rekodi mauzo yako sasa!"
+            }
+        } else {
+            when {
+                streak >= 30 -> "⚠️ Your $streak-day streak is at risk! Record your sales now!"
+                streak >= 7 -> "⚠️ Your week ${streak / 7} streak is at risk!"
+                protectionsLeft > 0 -> "💡 Your $streak-day streak is at risk, but you have a free protection this week."
+                else -> "🔥 Your $streak-day streak will break tonight! Record your sales now!"
+            }
+        }
+    }
+
+    /**
+     * Get streak freeze status.
+     * @return Triple of (available: Boolean, used: Int, max: Int)
+     */
+    suspend fun getStreakFreezeStatus(): Triple<Boolean, Int, Int> {
+        val info = getStreakInfo()
+        val used = MAX_STREAK_PROTECTIONS_PER_WEEK - info.protectionsAvailable
+        return Triple(info.protectionsAvailable > 0, used, MAX_STREAK_PROTECTIONS_PER_WEEK)
+    }
+
+    /**
+     * Get celebration message when streak recovers after protection was used.
+     */
+    suspend fun getStreakRecoveryMessage(language: String = "sw"): String? {
+        val entity = getState()
+        if (entity.streakProtectionsUsed == 0) return null
+
+        val currentWeek = LocalDate.now().get(WeekFields.of(Locale.getDefault()).weekOfWeekBasedYear())
+        if (entity.protectionWeek != currentWeek) return null
+
+        val streak = entity.currentStreak
+        return if (language == "sw") {
+            when {
+                streak >= 30 -> "🎉 Hongera! Streak yako ya siku $streak imeokolewa! Uko juu!"
+                streak >= 7 -> "✅ Streak yako imeokolewa! Siku $streak mfululizo! Wiki ${streak / 7} imekamilika!"
+                else -> "💪 Streak yako imeokolewa! Siku $streak mfululizo! Endelea!"
+            }
+        } else {
+            when {
+                streak >= 30 -> "🎉 Your $streak-day streak was saved! You're on fire!"
+                streak >= 7 -> "✅ Streak saved! $streak days in a row!"
+                else -> "💪 Streak saved! $streak days in a row! Keep going!"
+            }
+        }
+    }
+
+    /**
+     * Get streak pattern analysis — motivational insights about consistency.
+     */
+    suspend fun getStreakPattern(language: String = "sw"): String? {
+        val entity = getState()
+        if (entity.currentStreak < 3) return null
+
+        val streak = entity.currentStreak
+        val longest = entity.longestStreak
+
+        return if (language == "sw") {
+            when {
+                streak > longest -> "🏆 Rekodi mpya! Streak yako ya siku $streak ni bora zaidi!"
+                streak >= longest - 2 && streak < longest -> "🔥 Karibu kuvunja rekodi yako! Unahitaji siku ${longest - streak + 1} tu!"
+                streak % 30 == 0 -> "👑 Mwezi mzima! Streak yako ya siku $streak ni ya ajabu!"
+                streak % 7 == 0 -> "📅 Wiki ${streak / 7} imekamilika! Umekuwa mfuatiliaji mzuri sana."
+                else -> null
+            }
+        } else {
+            when {
+                streak > longest -> "🏆 New record! Your $streak-day streak is your best ever!"
+                streak >= longest - 2 && streak < longest -> "🔥 Almost breaking your record! Just ${longest - streak + 1} more days!"
+                streak % 30 == 0 -> "👑 Full month! Your $streak-day streak is amazing!"
+                streak % 7 == 0 -> "📅 Week ${streak / 7} complete!"
+                else -> null
+            }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // VARIABLE REWARDS LOOP — Make rewards unpredictable
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * Calculate variable points for an action.
+     * Base points × streak multiplier + random bonus chance.
+     */
+    suspend fun getVariableReward(action: String, language: String = "sw"): VariableReward {
+        val entity = getState()
+        val streak = entity.currentStreak
+
+        val basePoints = when (action) {
+            "sale" -> POINTS_SALE
+            "balance_check" -> POINTS_BALANCE_CHECK
+            "daily_streak" -> POINTS_DAILY_STREAK
+            "habits_bonus" -> POINTS_HABITS_BONUS
+            "mindset_lesson" -> POINTS_MINDSET_LESSON
+            "giving" -> POINTS_GIVING
+            else -> 0
+        }
+
+        val multiplier = when {
+            streak >= 30 -> 5
+            streak >= 14 -> 3
+            streak >= 7 -> 2
+            else -> 1
+        }
+
+        val random = Math.random()
+        val bonusPoints: Int
+        val bonusMessage: String?
+
+        when {
+            random < 0.02 -> {
+                bonusPoints = basePoints * 5
+                bonusMessage = if (language == "sw") "🎰 JACKPOT! +$bonusPoints pointi!"
+                    else "🎰 JACKPOT! +$bonusPoints points!"
+            }
+            random < 0.06 -> {
+                bonusPoints = basePoints * 3
+                bonusMessage = if (language == "sw") "🎁 Bonus kubwa! +$bonusPoints pointi!"
+                    else "🎁 Big bonus! +$bonusPoints points!"
+            }
+            random < 0.15 -> {
+                bonusPoints = basePoints
+                bonusMessage = if (language == "sw") "✨ Bonus! +$bonusPoints pointi!"
+                    else "✨ Bonus! +$bonusPoints points!"
+            }
+            else -> {
+                bonusPoints = 0
+                bonusMessage = null
+            }
+        }
+
+        return VariableReward(
+            basePoints = basePoints,
+            multiplier = multiplier,
+            bonusPoints = bonusPoints,
+            totalPoints = (basePoints * multiplier) + bonusPoints,
+            bonusMessage = bonusMessage
+        )
+    }
+
+    /**
+     * Surprise praise — fires ~15% of the time.
+     */
+    fun getSurprisePraise(language: String = "sw"): String? {
+        if (Math.random() > 0.15) return null
+
+        val praises = if (language == "sw") listOf(
+            "⭐ Wewe ni mfanyabiashara bora! Endelea hivi!",
+            "🔥 Biashara yako inakua! Nakutakia kila la heri!",
+            "💪 Umefanya kazi nzuri leo! Najivunia wewe!",
+            "🌟 Ujasiri wako wa biashara ni wa ajabu!",
+            "👏 Hongera! Umefanya vizuri sana!",
+            "🎯 Umefikia lengo lako! Sasa weka lengo jipya!",
+            "💎 Wewe ni mfanyabiashara wa kweli!"
+        ) else listOf(
+            "⭐ You're an amazing business person!",
+            "🔥 Your business is growing!",
+            "💪 Great work today!",
+            "🌟 Your business spirit is incredible!",
+            "👏 Congratulations!",
+            "🎯 You hit your target!",
+            "💎 You're a real entrepreneur!"
+        )
+        return praises.random()
+    }
+
+    /**
+     * Unexpected profit insight — delivered randomly.
+     */
+    fun getProfitInsight(
+        todayProfit: Double,
+        avgDailyProfit: Double,
+        language: String = "sw"
+    ): String? {
+        if (todayProfit <= 0 || avgDailyProfit <= 0) return null
+        if (Math.random() > 0.20) return null
+
+        val ratio = todayProfit / avgDailyProfit
+
+        return if (language == "sw") {
+            when {
+                ratio >= 2.0 -> "🚀 Leo umepata mara mbili ya wastani wako! Faida: KSh ${"%.0f".format(todayProfit)}!"
+                ratio >= 1.5 -> "📈 Faida yako leo ni kubwa! ${"%.0f".format((ratio - 1) * 100)}% zaidi ya kawaida!"
+                ratio >= 1.2 -> "👍 Leo ni siku nzuri! Faida iko ${"%.0f".format((ratio - 1) * 100)}% juu ya wastani."
+                else -> null
+            }
+        } else {
+            when {
+                ratio >= 2.0 -> "🚀 Today's profit is double your average! KSh ${"%.0f".format(todayProfit)}!"
+                ratio >= 1.5 -> "📈 Great day! Profit is ${"%.0f".format((ratio - 1) * 100)}% above average!"
+                ratio >= 1.2 -> "👍 Good day! Profit is ${"%.0f".format((ratio - 1) * 100)}% above average."
+                else -> null
+            }
+        }
+    }
+
+    /**
+     * Social proof message — anonymous peer comparison.
+     */
+    fun getSocialProofMessage(
+        todaySalesCount: Int,
+        streak: Int,
+        language: String = "sw"
+    ): String? {
+        if (Math.random() > 0.10) return null
+
+        return if (language == "sw") {
+            when {
+                todaySalesCount >= 10 -> "🏆 Wafanyabiashara 10% bora wanarekodi mauzo 10+ kwa siku. Wewe ni mmoja wao!"
+                todaySalesCount >= 5 -> "👥 Wafanyabiashara wengi wanarekodi 3-5 kwa siku. Wewe umefanya $todaySalesCount!"
+                streak >= 7 -> "🔥 Wafanyabiashara wenye mfululizo wa wiki 2+ wanapata faida 40% zaidi. Wewe uko njiani!"
+                streak >= 3 -> "📊 Wafanyabiashara wanaorekodi kila siku wanafanya vizuri zaidi. Endelea!"
+                else -> null
+            }
+        } else {
+            when {
+                todaySalesCount >= 10 -> "🏆 Top 10% of businesses record 10+ sales daily. You're one of them!"
+                todaySalesCount >= 5 -> "👥 Most businesses record 3-5 sales daily. You've done $todaySalesCount!"
+                streak >= 7 -> "🔥 Businesses with 2+ week streaks earn 40% more. You're on track!"
+                streak >= 3 -> "📊 Daily recorders do better. Keep going!"
+                else -> null
+            }
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -565,4 +848,16 @@ data class StreakInfo(
     val longestStreak: Int,
     val protectionsAvailable: Int,
     val lastActiveDay: Long
+)
+
+/**
+ * Variable reward result — makes gamification unpredictable.
+ * Part of the Hook Model: Trigger → Action → Variable Reward → Investment
+ */
+data class VariableReward(
+    val basePoints: Int,
+    val multiplier: Int,
+    val bonusPoints: Int,
+    val totalPoints: Int,
+    val bonusMessage: String?
 )

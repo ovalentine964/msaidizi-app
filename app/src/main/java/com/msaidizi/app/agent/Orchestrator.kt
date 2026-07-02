@@ -12,9 +12,17 @@ import com.msaidizi.app.gamification.GamificationEngine
 import com.msaidizi.app.onboarding.AhaMomentFlow
 import com.msaidizi.app.mindset.RichHabitsScore
 import com.msaidizi.app.mindset.MindsetAcademy
+import com.msaidizi.app.cfo.BriefingDelivery
+import com.msaidizi.app.loops.MorningBriefingLoop
+import com.msaidizi.app.loops.StreakProtectionLoop
+import com.msaidizi.app.loops.VariableRewardsLoop
+import com.msaidizi.app.loops.RewardAction
+import com.msaidizi.app.core.dialect.AdaptiveVocabulary
+import com.msaidizi.app.evolution.SelfEvolutionManager
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import timber.log.Timber
+import java.util.UUID
 
 
 /**
@@ -83,7 +91,14 @@ class Orchestrator(
     private val loanManager: LoanManager? = null,
     private val titheDao: TitheDao? = null,
     private val goalDao: GoalDao? = null,
-    private val loanDao: LoanDao? = null
+    private val loanDao: LoanDao? = null,
+    private val briefingDelivery: BriefingDelivery? = null,
+    private val morningBriefingLoop: MorningBriefingLoop? = null,
+    private val streakProtectionLoop: StreakProtectionLoop? = null,
+    private val variableRewardsLoop: VariableRewardsLoop? = null,
+    private val selfEvolution: SelfEvolutionManager? = null,
+    private val preferenceLearner: PreferenceLearner? = null,
+    private val adaptiveVocabulary: AdaptiveVocabulary? = null
 ) {
     // Response flow for UI
     private val _responses = MutableSharedFlow<AgentResponse>(extraBufferCapacity = 8)
@@ -131,15 +146,32 @@ class Orchestrator(
     suspend fun processInput(text: String, language: String = "sw"): AgentResponse {
         Timber.d("Processing input: '%s' (lang=%s)", text, language)
 
+        // ═══ Self-Evolution: Record interaction signals ═══
+        selfEvolution?.recordLanguageSignal(language)
+        selfEvolution?.recordTimeSignal(java.time.LocalTime.now().hour)
+        preferenceLearner?.learnLanguagePreference(language, text)
+        preferenceLearner?.learnInteractionTiming(
+            java.time.LocalTime.now().hour,
+            java.time.LocalDate.now().dayOfWeek.value - 1
+        )
+
+        // ═══ Self-Evolution: Apply learned correction patterns ═══
+        val evolvedText = selfEvolution?.applyCorrectionPatterns(text) ?: text
+
+        // ═══ Self-Evolution: Apply learned vocabulary to transcription ═══
+        val vocabEnhancedText = adaptiveVocabulary?.applyToTranscription(evolvedText) ?: evolvedText
+
         // ═══ Step 0: Check for corrections ═══
         if (lastTransaction != null) {
             val isCorrection = adaptiveLearning.parseAndRecordCorrection(
-                text = text,
+                text = vocabEnhancedText,
                 lastTransaction = lastTransaction,
                 language = language
             )
             if (isCorrection) {
                 Timber.d("Correction detected and recorded")
+                // Self-Evolution: Learn from this correction
+                selfEvolution?.recordFeatureUsage("CORRECTION")
                 val response = AgentResponse(
                     text = if (language == "sw") {
                         "✅ Nimekumbuka! Nitakumbuka kwa mara ijayo."
@@ -156,21 +188,21 @@ class Orchestrator(
         }
 
         // ═══ Step 1: Classify intent with context ═══
-        var intentResult = intentRouter.classify(text)
+        var intentResult = intentRouter.classify(vocabEnhancedText)
 
         Timber.d("Intent: %s (confidence=%.2f, needsLLM=%b)",
             intentResult.intent, intentResult.confidence, intentResult.needsLLM)
 
         // ═══ Step 2: Apply conversation context for reference resolution ═══
         // If this looks like a follow-up, resolve pronouns/references
-        if (conversationMemory.isFollowUp(text)) {
-            intentResult = conversationMemory.resolveReferences(text, intentResult)
+        if (conversationMemory.isFollowUp(vocabEnhancedText)) {
+            intentResult = conversationMemory.resolveReferences(vocabEnhancedText, intentResult)
             Timber.d("Context-resolved intent: %s (data=%s)", intentResult.intent, intentResult.extractedData)
         }
 
         // ═══ Step 3: Enhance intent with adaptive learning ═══
         // STA 443 §1.2.5: Bayesian updating of intent classification
-        intentResult = adaptiveLearning.enhanceIntentWithLearning(intentResult, text)
+        intentResult = adaptiveLearning.enhanceIntentWithLearning(intentResult, vocabEnhancedText)
 
         Timber.d("Enhanced intent: %s (data=%s)", intentResult.intent, intentResult.extractedData)
 
@@ -183,14 +215,14 @@ class Orchestrator(
             intentResult.intent != IntentType.HELP
         ) {
             // Low confidence: ask for clarification
-            handleLowConfidence(intentResult, text, language)
+            handleLowConfidence(intentResult, vocabEnhancedText, language)
         } else if (intentResult.confidence < CONFIDENCE_AUTO &&
             intentResult.intent != IntentType.UNKNOWN &&
             intentResult.intent != IntentType.GREETING &&
             intentResult.intent != IntentType.HELP
         ) {
             // Medium confidence: confirm before proceeding
-            handleMediumConfidence(intentResult, text, language)
+            handleMediumConfidence(intentResult, vocabEnhancedText, language)
         } else {
             // High confidence or non-transactional: proceed normally
             // ECO 104 §1.2: Route to agent that maximizes response quality
@@ -200,7 +232,7 @@ class Orchestrator(
         // ═══ Step 5: Record in conversation memory ═══
         conversationMemory.addTurn(
             speaker = "worker",
-            text = text,
+            text = vocabEnhancedText,
             intent = intentResult,
             extractedData = intentResult.extractedData
         )
@@ -214,10 +246,18 @@ class Orchestrator(
         learningAgent.recordPattern(
             PatternType.VOCABULARY,
             mapOf(
-                "input" to text,
+                "input" to vocabEnhancedText,
                 "intent" to intentResult.intent.name,
                 "language" to language
             )
+        )
+
+        // ═══ Step 7: Self-Evolution — track feature usage and response style ═══
+        selfEvolution?.recordFeatureUsage(intentResult.intent.name)
+        preferenceLearner?.learnResponseStyle(
+            responseLength = response.text.length,
+            hadEmojis = response.text.contains(Regex("[\\uD83C-\\uDBFF\\uDC00-\\uDFFF]")),
+            wasFollowed = response.type == ResponseType.CONFIRMATION
         )
 
         lastResponse = response.text
@@ -802,12 +842,53 @@ class Orchestrator(
             // ECO 101 §1.4: Calculate profit for this transaction
             val profit = transaction.totalAmount - transaction.costBasis
 
-            // Gamification: award points for sale
+            // ═══ LOOP CLOSURE: Morning Briefing Feedback Cycle ═══
+            morningBriefingLoop?.let { loop ->
+                try {
+                    loop.onTransactionAfterBriefing(transaction)
+                } catch (_: Exception) {}
+            } ?: run {
+                // Fallback to direct briefing delivery if loop not wired
+                briefingDelivery?.let { bd ->
+                    try {
+                        val pending = bd.getLatestPendingBriefing()
+                        if (pending != null) {
+                            bd.recordBriefingOutcome(
+                                deliveryId = pending.id,
+                                actualSales = amount,
+                                actualProfit = profit,
+                                adviceFollowed = null
+                            )
+                        }
+                    } catch (_: Exception) {}
+                }
+            }
+
+            // ═══ LOOP CLOSURE: Gamification + Variable Rewards ═══
             val gamificationMessages = mutableListOf<String>()
             gamificationEngine?.let { ge ->
                 try {
                     val event = ge.onSaleRecorded(language)
                     gamificationMessages.addAll(event.messages)
+
+                    // Streak protection: check milestone celebration
+                    streakProtectionLoop?.let { spl ->
+                        try {
+                            spl.checkStreakMilestone(language)?.let {
+                                gamificationMessages.add(it)
+                            }
+                        } catch (_: Exception) {}
+                    }
+
+                    // Variable rewards: surprise bonuses
+                    variableRewardsLoop?.let { vrl ->
+                        try {
+                            val reward = vrl.evaluateReward(RewardAction.SALE, language)
+                            if (reward != null) {
+                                gamificationMessages.add(reward.message)
+                            }
+                        } catch (_: Exception) {}
+                    }
                 } catch (_: Exception) {}
             }
 
@@ -1109,20 +1190,36 @@ class Orchestrator(
             language = language
         )
 
-        val text = if (personalizedContext.isNotBlank()) {
-            val baseAdvice = advisorAgent.getAdvice(language)
-            if (language == "sw") {
-                "$baseAdvice\n\n📋 Kulingana na biashara yako: $personalizedContext"
-            } else {
-                "$baseAdvice\n\n📋 Based on your business: $personalizedContext"
+        // Self-Evolution: Inject learned preferences into advice context
+        val preferenceContext = preferenceLearner?.generatePreferenceContext(language) ?: ""
+
+        val baseAdvice = advisorAgent.getAdvice(language)
+        val text = buildString {
+            append(baseAdvice)
+            if (personalizedContext.isNotBlank()) {
+                append("\n\n")
+                append(if (language == "sw") "📋 Kulingana na biashara yako: " else "📋 Based on your business: ")
+                append(personalizedContext)
             }
-        } else {
-            advisorAgent.getAdvice(language)
+            if (preferenceContext.isNotBlank()) {
+                append("\n")
+                append(preferenceContext)
+            }
         }
+
+        // Self-Evolution: Track advice delivery for outcome measurement
+        val adviceId = "advice_${UUID.randomUUID().toString().take(8)}"
+        selfEvolution?.trackAdviceDelivery(
+            adviceId = adviceId,
+            adviceType = "business_advice",
+            adviceText = text,
+            context = mapOf("language" to language)
+        )
 
         return AgentResponse(
             text = text,
-            type = ResponseType.ADVICE
+            type = ResponseType.ADVICE,
+            data = mapOf("adviceId" to adviceId)
         )
     }
 
@@ -1212,11 +1309,35 @@ class Orchestrator(
     /**
      * Initialize stickiness features.
      * Call on app startup to set up gamification, seed lessons, etc.
+     * Also checks streak risk and delivers recovery celebrations.
      */
     suspend fun initializeStickiness() {
         gamificationEngine?.initialize()
         mindsetAcademy?.seedLessons()
         titheTracker?.loadFromDb()
+
+        // ═══ STREAK PROTECTION LOOP: Check if streak is at risk on app open ═══
+        gamificationEngine?.let { ge ->
+            try {
+                val riskReminder = ge.getStreakRiskReminder()
+                if (riskReminder != null) {
+                    _responses.emit(AgentResponse(
+                        text = riskReminder,
+                        type = ResponseType.INFORMATION,
+                        shouldSpeak = true
+                    ))
+                }
+                val recoveryMsg = ge.getStreakRecoveryMessage()
+                if (recoveryMsg != null) {
+                    _responses.emit(AgentResponse(
+                        text = recoveryMsg,
+                        type = ResponseType.INFORMATION,
+                        shouldSpeak = true
+                    ))
+                }
+            } catch (_: Exception) {}
+        }
+
         Timber.d("Stickiness features initialized")
     }
 
@@ -1231,6 +1352,16 @@ class Orchestrator(
      * Get current gamification state.
      */
     suspend fun getGamificationState() = gamificationEngine?.getState()
+
+    /**
+     * Get streak protection status (freeze available, risk level).
+     */
+    suspend fun getStreakProtection() = gamificationEngine?.getStreakFreezeStatus()
+
+    /**
+     * Get briefing loop performance metrics.
+     */
+    suspend fun getBriefingLoopPerformance() = briefingDelivery?.getBriefingPerformance()
 
     /**
      * Get today's rich habits score.
