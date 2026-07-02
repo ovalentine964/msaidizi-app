@@ -20,6 +20,56 @@ import timber.log.Timber
  * Designed for <1ms latency — pure code, no ML models.
  */
 object HausaDialectAdapter {
+    companion object {
+        private val MARKERS = mapOf(
+            "da" to Regex("\\bda\\b"),
+            "kuma" to Regex("\\bkuma\\b"),
+            "amma" to Regex("\\bamma\\b"),
+            "ko" to Regex("\\bko\\b"),
+            "idã" to Regex("\\bidã\\b"),
+            "sabõda" to Regex("\\bsabõda\\b"),
+            "lokacin_da" to Regex("\\blokacin_da\\b"),
+            "wannan" to Regex("\\bwannan\\b"),
+            "wancan" to Regex("\\bwancan\\b"),
+            "yau" to Regex("\\byau\\b"),
+            "gobe" to Regex("\\bgobe\\b"),
+            "jiya" to Regex("\\bjiya\\b"),
+            "ina_son" to Regex("\\bina_son\\b"),
+            "na_gode" to Regex("\\bna_gode\\b"),
+            "don_allah" to Regex("\\bdon_allah\\b"),
+            "eh" to Regex("\\beh\\b"),
+            "a'a" to Regex("\\ba'a\\b"),
+            "sannu" to Regex("\\bsannu\\b"),
+            "yaya_kake" to Regex("\\byaya_kake\\b"),
+            "yaya_kike" to Regex("\\byaya_kike\\b"),
+            "mutum" to Regex("\\bmutum\\b"),
+            "mutane" to Regex("\\bmutane\\b"),
+            "gida" to Regex("\\bgida\\b"),
+            "kasuwa" to Regex("\\bkasuwa\\b"),
+            "kudi" to Regex("\\bkudi\\b"),
+            "aiki" to Regex("\\baiki\\b"),
+            "abinci" to Regex("\\babinci\\b"),
+            "ruwa" to Regex("\\bruwa\\b"),
+            "wata" to Regex("\\bwata\\b"),
+            "shekara" to Regex("\\bshekara\\b"),
+            "rana" to Regex("\\brana\\b"),
+            "lokaci" to Regex("\\blokaci\\b")
+        )
+        private val PRONUNCIATION_REGEXES = mapOf(
+            "ɓ" to Regex("\\bɓ\\b", RegexOption.IGNORE_CASE),
+            "ɗ" to Regex("\\bɗ\\b", RegexOption.IGNORE_CASE),
+            "t'" to Regex("\\bt'\\b", RegexOption.IGNORE_CASE),
+            "k'" to Regex("\\bk'\\b", RegexOption.IGNORE_CASE),
+            "aa" to Regex("\\baa\\b", RegexOption.IGNORE_CASE),
+            "ee" to Regex("\\bee\\b", RegexOption.IGNORE_CASE),
+            "ii" to Regex("\\bii\\b", RegexOption.IGNORE_CASE),
+            "oo" to Regex("\\boo\\b", RegexOption.IGNORE_CASE),
+            "uu" to Regex("\\buu\\b", RegexOption.IGNORE_CASE),
+            "kw" to Regex("\\bkw\\b", RegexOption.IGNORE_CASE),
+            "gw" to Regex("\\bgw\\b", RegexOption.IGNORE_CASE)
+        )
+    }
+
 
     private const val TAG = "HausaDialect"
 
@@ -155,7 +205,7 @@ object HausaDialectAdapter {
             return CodeSwitchResult(
                 hasCodeSwitching = false,
                 primaryLanguage = "sw",
-                dholuoWords = emptyList(),
+                dialectWords = emptyList(),
                 swahiliWords = emptyList(),
                 confidence = 0.5f
             )
@@ -168,7 +218,7 @@ object HausaDialectAdapter {
             val clean = word.trim('\'', '"', '.', ',', '!', '?')
             when {
                 hausaMarkers.contains(clean) -> hausaFound.add(clean)
-                isSwahiliWord(clean) -> swahiliFound.add(clean)
+                DialectUtils.isSwahiliWord(clean) -> swahiliFound.add(clean)
                 isHausaBusinessTerm(clean) -> swahiliFound.add(clean)
             }
         }
@@ -180,7 +230,7 @@ object HausaDialectAdapter {
         return CodeSwitchResult(
             hasCodeSwitching = hasCodeSwitching,
             primaryLanguage = if (hausaRatio > 0.4f) "ha" else "sw",
-            dholuoWords = hausaFound,
+            dialectWords = hausaFound,
             swahiliWords = swahiliFound,
             confidence = if (hasCodeSwitching) 0.8f else 0.6f
         )
@@ -190,10 +240,8 @@ object HausaDialectAdapter {
 
     fun normalize(text: String): String {
         var normalized = text
-        for ((hausa, standard) in pronunciationVariations) {
-            if (hausa != standard) {
-                normalized = normalized.replace(hausa, standard)
-            }
+        for ((key, regex) in PRONUNCIATION_REGEXES) {
+            normalized = regex.replace(normalized, pronunciationVariations[key]!!)
         }
         return normalized
     }
@@ -237,8 +285,8 @@ object HausaDialectAdapter {
         for (term in hausaBusinessTerms.keys) {
             if (lower.contains(term)) hausaScore += 2
         }
-        for (marker in hausaMarkers) {
-            if (Regex("\\b$marker\\b").containsMatchIn(lower)) hausaScore += 3
+        for ((_, regex) in MARKERS) {
+            if (regex.containsMatchIn(lower)) hausaScore += 3
         }
 
         return if (hausaScore > 5) DialectRegion.HAUSA else DialectRegion.STANDARD
@@ -271,16 +319,7 @@ object HausaDialectAdapter {
 
     // ────────────────────── Helpers ──────────────────────
 
-    private fun isSwahiliWord(word: String): Boolean {
-        val swahiliMarkers = setOf(
-            "na", "ya", "wa", "za", "kwa", "ni", "la", "cha",
-            "nime", "sija", "tuta", "wata", "nina", "tuna",
-            "sana", "pia", "lakini", "kama", "au", "hata", "bado",
-            "leo", "jana", "kesho", "sasa", "baada",
-            "biashara", "bei", "faida", "hasara", "deni", "pesa"
-        )
-        return word in swahiliMarkers
-    }
+}
 
     private fun isHausaBusinessTerm(word: String): Boolean {
         return hausaBusinessTerms.containsKey(word) ||

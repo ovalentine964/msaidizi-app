@@ -20,6 +20,56 @@ import timber.log.Timber
  * Designed for <1ms latency — pure code, no ML models.
  */
 object AmharicDialectAdapter {
+    companion object {
+        private val MARKERS = mapOf(
+            "yä" to Regex("\\byä\\b"),
+            "nä" to Regex("\\bnä\\b"),
+            "wädä" to Regex("\\bwädä\\b"),
+            "säbbäbä" to Regex("\\bsäbbäbä\\b"),
+            "änd" to Regex("\\bänd\\b"),
+            "gäza" to Regex("\\bgäza\\b"),
+            "säw" to Regex("\\bsäw\\b"),
+            "säwoc" to Regex("\\bsäwoc\\b"),
+            "bet" to Regex("\\bbet\\b"),
+            "shäro" to Regex("\\bshäro\\b"),
+            "täffa" to Regex("\\btäffa\\b"),
+            "mäläs" to Regex("\\bmäläs\\b"),
+            "selam" to Regex("\\bselam\\b"),
+            "tänässä" to Regex("\\btänässä\\b"),
+            "äzbäyähäwür" to Regex("\\bäzbäyähäwür\\b"),
+            "dä" to Regex("\\bdä\\b"),
+            "yähon" to Regex("\\byähon\\b"),
+            "käfätäri" to Regex("\\bkäfätäri\\b"),
+            "hulä" to Regex("\\bhulä\\b"),
+            "ämäsägn" to Regex("\\bämäsägn\\b"),
+            "bärä" to Regex("\\bbärä\\b"),
+            "zämän" to Regex("\\bzämän\\b"),
+            "gäbrä" to Regex("\\bgäbrä\\b"),
+            "täkäla" to Regex("\\btäkäla\\b"),
+            "säb" to Regex("\\bsäb\\b"),
+            "gäbäya" to Regex("\\bgäbäya\\b"),
+            "täjäj" to Regex("\\btäjäj\\b"),
+            "äsfä" to Regex("\\bäsfä\\b"),
+            "bärr" to Regex("\\bbärr\\b"),
+            "buna" to Regex("\\bbuna\\b"),
+            "jäbäna" to Regex("\\bjäbäna\\b"),
+            "säqäl" to Regex("\\bsäqäl\\b"),
+            "käffä" to Regex("\\bkäffä\\b")
+        )
+        private val PRONUNCIATION_REGEXES = mapOf(
+            "p'" to Regex("\\bp'\\b", RegexOption.IGNORE_CASE),
+            "t'" to Regex("\\bt'\\b", RegexOption.IGNORE_CASE),
+            "k'" to Regex("\\bk'\\b", RegexOption.IGNORE_CASE),
+            "ch'" to Regex("\\bch'\\b", RegexOption.IGNORE_CASE),
+            "ä" to Regex("\\bä\\b", RegexOption.IGNORE_CASE),
+            "ë" to Regex("\\bë\\b", RegexOption.IGNORE_CASE),
+            "ö" to Regex("\\bö\\b", RegexOption.IGNORE_CASE),
+            "ss" to Regex("\\bss\\b", RegexOption.IGNORE_CASE),
+            "tt" to Regex("\\btt\\b", RegexOption.IGNORE_CASE),
+            "kk" to Regex("\\bkk\\b", RegexOption.IGNORE_CASE)
+        )
+    }
+
 
     private const val TAG = "AmharicDialect"
 
@@ -153,7 +203,7 @@ object AmharicDialectAdapter {
             return CodeSwitchResult(
                 hasCodeSwitching = false,
                 primaryLanguage = "sw",
-                dholuoWords = emptyList(),
+                dialectWords = emptyList(),
                 swahiliWords = emptyList(),
                 confidence = 0.5f
             )
@@ -166,7 +216,7 @@ object AmharicDialectAdapter {
             val clean = word.trim('\'', '"', '.', ',', '!', '?')
             when {
                 amharicMarkers.contains(clean) -> amharicFound.add(clean)
-                isSwahiliWord(clean) -> swahiliFound.add(clean)
+                DialectUtils.isSwahiliWord(clean) -> swahiliFound.add(clean)
                 isAmharicBusinessTerm(clean) -> swahiliFound.add(clean)
             }
         }
@@ -178,7 +228,7 @@ object AmharicDialectAdapter {
         return CodeSwitchResult(
             hasCodeSwitching = hasCodeSwitching,
             primaryLanguage = if (amharicRatio > 0.4f) "am" else "sw",
-            dholuoWords = amharicFound,
+            dialectWords = amharicFound,
             swahiliWords = swahiliFound,
             confidence = if (hasCodeSwitching) 0.8f else 0.6f
         )
@@ -188,10 +238,8 @@ object AmharicDialectAdapter {
 
     fun normalize(text: String): String {
         var normalized = text
-        for ((amharic, standard) in pronunciationVariations) {
-            if (amharic != standard) {
-                normalized = normalized.replace(amharic, standard)
-            }
+        for ((key, regex) in PRONUNCIATION_REGEXES) {
+            normalized = regex.replace(normalized, pronunciationVariations[key]!!)
         }
         return normalized
     }
@@ -232,8 +280,8 @@ object AmharicDialectAdapter {
         for (term in amharicBusinessTerms.keys) {
             if (lower.contains(term)) amharicScore += 2
         }
-        for (marker in amharicMarkers) {
-            if (Regex("\\b$marker\\b").containsMatchIn(lower)) amharicScore += 3
+        for ((_, regex) in MARKERS) {
+            if (regex.containsMatchIn(lower)) amharicScore += 3
         }
 
         return if (amharicScore > 5) DialectRegion.AMHARIC else DialectRegion.STANDARD
@@ -266,16 +314,7 @@ object AmharicDialectAdapter {
 
     // ────────────────────── Helpers ──────────────────────
 
-    private fun isSwahiliWord(word: String): Boolean {
-        val swahiliMarkers = setOf(
-            "na", "ya", "wa", "za", "kwa", "ni", "la", "cha",
-            "nime", "sija", "tuta", "wata", "nina", "tuna",
-            "sana", "pia", "lakini", "kama", "au", "hata", "bado",
-            "leo", "jana", "kesho", "sasa", "baada",
-            "biashara", "bei", "faida", "hasara", "deni", "pesa"
-        )
-        return word in swahiliMarkers
-    }
+}
 
     private fun isAmharicBusinessTerm(word: String): Boolean {
         return amharicBusinessTerms.containsKey(word) ||

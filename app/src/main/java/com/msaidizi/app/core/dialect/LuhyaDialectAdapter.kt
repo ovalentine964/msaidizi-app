@@ -19,6 +19,51 @@ import timber.log.Timber
  * Designed for <1ms latency — pure code, no ML models.
  */
 object LuhyaDialectAdapter {
+    companion object {
+        private val MARKERS = mapOf(
+            "na" to Regex("\\bna\\b"),
+            "ni" to Regex("\\bni\\b"),
+            "kha" to Regex("\\bkha\\b"),
+            "inga" to Regex("\\binga\\b"),
+            "osi" to Regex("\\bosi\\b"),
+            "khutsia" to Regex("\\bkhutsia\\b"),
+            "mulembe" to Regex("\\bmulembe\\b"),
+            "mushiambo" to Regex("\\bmushiambo\\b"),
+            "khukhala" to Regex("\\bkhukhala\\b"),
+            "khulola" to Regex("\\bkhulola\\b"),
+            "khuseva" to Regex("\\bkhuseva\\b"),
+            "khukula" to Regex("\\bkhukula\\b"),
+            "khukhunda" to Regex("\\bkhukhunda\\b"),
+            "simba" to Regex("\\bsimba\\b"),
+            "mukulu" to Regex("\\bmukulu\\b"),
+            "mumama" to Regex("\\bmumama\\b"),
+            "mukhulu" to Regex("\\bmukhulu\\b"),
+            "mukasa" to Regex("\\bmukasa\\b"),
+            "omukhongo" to Regex("\\bomukhongo\\b"),
+            "omusinde" to Regex("\\bomusinde\\b"),
+            "omwikale" to Regex("\\bomwikale\\b"),
+            "omundu" to Regex("\\bomundu\\b"),
+            "abantu" to Regex("\\babantu\\b"),
+            "enyumba" to Regex("\\benyumba\\b"),
+            "omugunda" to Regex("\\bomugunda\\b"),
+            "omukhuyu" to Regex("\\bomukhuyu\\b"),
+            "amatsi" to Regex("\\bamatsi\\b"),
+            "endekho" to Regex("\\bendekho\\b"),
+            "omukhono" to Regex("\\bomukhono\\b"),
+            "eshiwi" to Regex("\\beshiwi\\b"),
+            "omukhwe" to Regex("\\bomukhwe\\b")
+        )
+        private val PRONUNCIATION_REGEXES = mapOf(
+            "aka" to Regex("\\baka\\b", RegexOption.IGNORE_CASE),
+            "oka" to Regex("\\boka\\b", RegexOption.IGNORE_CASE),
+            "iga" to Regex("\\biga\\b", RegexOption.IGNORE_CASE),
+            "saafi" to Regex("\\bsaafi\\b", RegexOption.IGNORE_CASE),
+            "twaa" to Regex("\\btwaa\\b", RegexOption.IGNORE_CASE),
+            "mboga" to Regex("\\bmboga\\b", RegexOption.IGNORE_CASE),
+            "ng'ombe" to Regex("\\bng'ombe\\b", RegexOption.IGNORE_CASE)
+        )
+    }
+
 
     private const val TAG = "LuhyaDialect"
 
@@ -136,7 +181,7 @@ object LuhyaDialectAdapter {
             return CodeSwitchResult(
                 hasCodeSwitching = false,
                 primaryLanguage = "sw",
-                dholuoWords = emptyList(),
+                dialectWords = emptyList(),
                 swahiliWords = emptyList(),
                 confidence = 0.5f
             )
@@ -149,7 +194,7 @@ object LuhyaDialectAdapter {
             val clean = word.trim('\'', '"', '.', ',', '!', '?')
             when {
                 luhyaMarkers.contains(clean) -> luhyaFound.add(clean)
-                isSwahiliWord(clean) -> swahiliFound.add(clean)
+                DialectUtils.isSwahiliWord(clean) -> swahiliFound.add(clean)
                 isLuhyaBusinessTerm(clean) -> swahiliFound.add(clean)
             }
         }
@@ -161,7 +206,7 @@ object LuhyaDialectAdapter {
         return CodeSwitchResult(
             hasCodeSwitching = hasCodeSwitching,
             primaryLanguage = if (luhyaRatio > 0.4f) "luy" else "sw",
-            dholuoWords = luhyaFound,
+            dialectWords = luhyaFound,
             swahiliWords = swahiliFound,
             confidence = if (hasCodeSwitching) 0.8f else 0.6f
         )
@@ -171,13 +216,8 @@ object LuhyaDialectAdapter {
 
     fun normalize(text: String): String {
         var normalized = text
-        for ((luhya, standard) in pronunciationVariations) {
-            if (luhya != standard) {
-                normalized = normalized.replace(
-                    Regex("\\b$luhya\\b", RegexOption.IGNORE_CASE),
-                    standard
-                )
-            }
+        for ((key, regex) in PRONUNCIATION_REGEXES) {
+            normalized = regex.replace(normalized, pronunciationVariations[key]!!)
         }
         return normalized
     }
@@ -215,8 +255,8 @@ object LuhyaDialectAdapter {
         for (term in luhyaBusinessTerms.keys) {
             if (lower.contains(term)) luhyaScore += 2
         }
-        for (marker in luhyaMarkers) {
-            if (Regex("\\b$marker\\b").containsMatchIn(lower)) luhyaScore += 3
+        for ((_, regex) in MARKERS) {
+            if (regex.containsMatchIn(lower)) luhyaScore += 3
         }
 
         return if (luhyaScore > 5) DialectRegion.LUHYA else DialectRegion.STANDARD
@@ -249,16 +289,7 @@ object LuhyaDialectAdapter {
 
     // ────────────────────── Helpers ──────────────────────
 
-    private fun isSwahiliWord(word: String): Boolean {
-        val swahiliMarkers = setOf(
-            "na", "ya", "wa", "za", "kwa", "ni", "la", "cha",
-            "nime", "sija", "tuta", "wata", "nina", "tuna",
-            "sana", "pia", "lakini", "kama", "au", "hata", "bado",
-            "leo", "jana", "kesho", "sasa", "baada",
-            "biashara", "bei", "faida", "hasara", "deni", "pesa"
-        )
-        return word in swahiliMarkers
-    }
+}
 
     private fun isLuhyaBusinessTerm(word: String): Boolean {
         return luhyaBusinessTerms.containsKey(word) ||

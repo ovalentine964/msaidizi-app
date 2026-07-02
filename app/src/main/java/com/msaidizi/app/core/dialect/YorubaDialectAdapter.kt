@@ -19,6 +19,48 @@ import timber.log.Timber
  * Designed for <1ms latency — pure code, no ML models.
  */
 object YorubaDialectAdapter {
+    companion object {
+        private val MARKERS = mapOf(
+            "ni" to Regex("\\bni\\b"),
+            "si" to Regex("\\bsi\\b"),
+            "ati" to Regex("\\bati\\b"),
+            "tabi" to Regex("\\btabi\\b"),
+            "ṣugbọn" to Regex("\\bṣugbọn\\b"),
+            "bi" to Regex("\\bbi\\b"),
+            "nitori" to Regex("\\bnitori\\b"),
+            "nigbati" to Regex("\\bnigbati\\b"),
+            "bẹẹni" to Regex("\\bbẹẹni\\b"),
+            "rara" to Regex("\\brara\\b"),
+            "jọwọ" to Regex("\\bjọwọ\\b"),
+            "e_se" to Regex("\\be_se\\b"),
+            "e_ku_ọjọ" to Regex("\\be_ku_ọjọ\\b"),
+            "e_ku_ọwọ" to Regex("\\be_ku_ọwọ\\b"),
+            "a_dupe" to Regex("\\ba_dupe\\b"),
+            "eniyan" to Regex("\\beniyan\\b"),
+            "awọn_eniyan" to Regex("\\bawọn_eniyan\\b"),
+            "ile" to Regex("\\bile\\b"),
+            "oja" to Regex("\\boja\\b"),
+            "owo" to Regex("\\bowo\\b"),
+            "iṣẹ" to Regex("\\biṣẹ\\b"),
+            "ounjẹ" to Regex("\\bounjẹ\\b"),
+            "omi" to Regex("\\bomi\\b"),
+            "oṣu" to Regex("\\boṣu\\b"),
+            "ọdun" to Regex("\\bọdun\\b"),
+            "ọjọ" to Regex("\\bọjọ\\b"),
+            "igba" to Regex("\\bigba\\b")
+        )
+        private val PRONUNCIATION_REGEXES = mapOf(
+            "kp" to Regex("\\bkp\\b", RegexOption.IGNORE_CASE),
+            "gb" to Regex("\\bgb\\b", RegexOption.IGNORE_CASE),
+            "ọ" to Regex("\\bọ\\b", RegexOption.IGNORE_CASE),
+            "ẹ" to Regex("\\bẹ\\b", RegexOption.IGNORE_CASE),
+            "ṣ" to Regex("\\bṣ\\b", RegexOption.IGNORE_CASE),
+            "ṣ" to Regex("\\bṣ\\b", RegexOption.IGNORE_CASE),
+            "àti" to Regex("\\bàti\\b", RegexOption.IGNORE_CASE),
+            "ní" to Regex("\\bní\\b", RegexOption.IGNORE_CASE)
+        )
+    }
+
 
     private const val TAG = "YorubaDialect"
 
@@ -148,7 +190,7 @@ object YorubaDialectAdapter {
             return CodeSwitchResult(
                 hasCodeSwitching = false,
                 primaryLanguage = "sw",
-                dholuoWords = emptyList(),
+                dialectWords = emptyList(),
                 swahiliWords = emptyList(),
                 confidence = 0.5f
             )
@@ -161,7 +203,7 @@ object YorubaDialectAdapter {
             val clean = word.trim('\'', '"', '.', ',', '!', '?')
             when {
                 yorubaMarkers.contains(clean) -> yorubaFound.add(clean)
-                isSwahiliWord(clean) -> swahiliFound.add(clean)
+                DialectUtils.isSwahiliWord(clean) -> swahiliFound.add(clean)
                 isYorubaBusinessTerm(clean) -> swahiliFound.add(clean)
             }
         }
@@ -173,7 +215,7 @@ object YorubaDialectAdapter {
         return CodeSwitchResult(
             hasCodeSwitching = hasCodeSwitching,
             primaryLanguage = if (yorubaRatio > 0.4f) "yo" else "sw",
-            dholuoWords = yorubaFound,
+            dialectWords = yorubaFound,
             swahiliWords = swahiliFound,
             confidence = if (hasCodeSwitching) 0.8f else 0.6f
         )
@@ -183,10 +225,8 @@ object YorubaDialectAdapter {
 
     fun normalize(text: String): String {
         var normalized = text
-        for ((yoruba, standard) in pronunciationVariations) {
-            if (yoruba != standard) {
-                normalized = normalized.replace(yoruba, standard)
-            }
+        for ((key, regex) in PRONUNCIATION_REGEXES) {
+            normalized = regex.replace(normalized, pronunciationVariations[key]!!)
         }
         return normalized
     }
@@ -226,8 +266,8 @@ object YorubaDialectAdapter {
         for (term in yorubaBusinessTerms.keys) {
             if (lower.contains(term)) yorubaScore += 2
         }
-        for (marker in yorubaMarkers) {
-            if (Regex("\\b$marker\\b").containsMatchIn(lower)) yorubaScore += 3
+        for ((_, regex) in MARKERS) {
+            if (regex.containsMatchIn(lower)) yorubaScore += 3
         }
 
         return if (yorubaScore > 5) DialectRegion.YORUBA else DialectRegion.STANDARD
@@ -260,16 +300,7 @@ object YorubaDialectAdapter {
 
     // ────────────────────── Helpers ──────────────────────
 
-    private fun isSwahiliWord(word: String): Boolean {
-        val swahiliMarkers = setOf(
-            "na", "ya", "wa", "za", "kwa", "ni", "la", "cha",
-            "nime", "sija", "tuta", "wata", "nina", "tuna",
-            "sana", "pia", "lakini", "kama", "au", "hata", "bado",
-            "leo", "jana", "kesho", "sasa", "baada",
-            "biashara", "bei", "faida", "hasara", "deni", "pesa"
-        )
-        return word in swahiliMarkers
-    }
+}
 
     private fun isYorubaBusinessTerm(word: String): Boolean {
         return yorubaBusinessTerms.containsKey(word) ||

@@ -19,6 +19,46 @@ import timber.log.Timber
  * Designed for <1ms latency — pure code, no ML models.
  */
 object KalenjinDialectAdapter {
+    companion object {
+        private val MARKERS = mapOf(
+            "amit" to Regex("\\bamit\\b"),
+            "mamit" to Regex("\\bmamit\\b"),
+            "kogo" to Regex("\\bkogo\\b"),
+            "kogoich" to Regex("\\bkogoich\\b"),
+            "koitoich" to Regex("\\bkoitoich\\b"),
+            "mising" to Regex("\\bmising\\b"),
+            "chamgei" to Regex("\\bchamgei\\b"),
+            "chengo" to Regex("\\bchengo\\b"),
+            "kainet" to Regex("\\bkainet\\b"),
+            "kongoi" to Regex("\\bkongoi\\b"),
+            "murio" to Regex("\\bmurio\\b"),
+            "ende" to Regex("\\bende\\b"),
+            "amuno" to Regex("\\bamuno\\b"),
+            "kipto" to Regex("\\bkipto\\b"),
+            "kipsigis" to Regex("\\bkipsigis\\b"),
+            "tugen" to Regex("\\btugen\\b"),
+            "nandi" to Regex("\\bnandi\\b"),
+            "kapkoros" to Regex("\\bkapkoros\\b"),
+            "kapchumba" to Regex("\\bkapchumba\\b"),
+            "kaptich" to Regex("\\bkaptich\\b"),
+            "kapsirwet" to Regex("\\bkapsirwet\\b"),
+            "murenik" to Regex("\\bmurenik\\b"),
+            "tuiyotich" to Regex("\\btuiyotich\\b"),
+            "mursik" to Regex("\\bmursik\\b"),
+            "kimiet" to Regex("\\bkimiet\\b"),
+            "kabotet" to Regex("\\bkabotet\\b"),
+            "ng'atuny" to Regex("\\bng'atuny\\b"),
+            "moit" to Regex("\\bmoit\\b")
+        )
+        private val PRONUNCIATION_REGEXES = mapOf(
+            "aka" to Regex("\\baka\\b", RegexOption.IGNORE_CASE),
+            "oka" to Regex("\\boka\\b", RegexOption.IGNORE_CASE),
+            "iga" to Regex("\\biga\\b", RegexOption.IGNORE_CASE),
+            "saafi" to Regex("\\bsaafi\\b", RegexOption.IGNORE_CASE),
+            "twaa" to Regex("\\btwaa\\b", RegexOption.IGNORE_CASE)
+        )
+    }
+
 
     private const val TAG = "KalenjinDialect"
 
@@ -126,7 +166,7 @@ object KalenjinDialectAdapter {
             return CodeSwitchResult(
                 hasCodeSwitching = false,
                 primaryLanguage = "sw",
-                dholuoWords = emptyList(),
+                dialectWords = emptyList(),
                 swahiliWords = emptyList(),
                 confidence = 0.5f
             )
@@ -139,7 +179,7 @@ object KalenjinDialectAdapter {
             val clean = word.trim('\'', '"', '.', ',', '!', '?')
             when {
                 kalenjinMarkers.contains(clean) -> kalenjinFound.add(clean)
-                isSwahiliWord(clean) -> swahiliFound.add(clean)
+                DialectUtils.isSwahiliWord(clean) -> swahiliFound.add(clean)
                 isKalenjinBusinessTerm(clean) -> swahiliFound.add(clean)
             }
         }
@@ -151,7 +191,7 @@ object KalenjinDialectAdapter {
         return CodeSwitchResult(
             hasCodeSwitching = hasCodeSwitching,
             primaryLanguage = if (kalenjinRatio > 0.4f) "kln" else "sw",
-            dholuoWords = kalenjinFound,
+            dialectWords = kalenjinFound,
             swahiliWords = swahiliFound,
             confidence = if (hasCodeSwitching) 0.8f else 0.6f
         )
@@ -161,13 +201,8 @@ object KalenjinDialectAdapter {
 
     fun normalize(text: String): String {
         var normalized = text
-        for ((kalenjin, standard) in pronunciationVariations) {
-            if (kalenjin != standard) {
-                normalized = normalized.replace(
-                    Regex("\\b$kalenjin\\b", RegexOption.IGNORE_CASE),
-                    standard
-                )
-            }
+        for ((key, regex) in PRONUNCIATION_REGEXES) {
+            normalized = regex.replace(normalized, pronunciationVariations[key]!!)
         }
         return normalized
     }
@@ -203,8 +238,8 @@ object KalenjinDialectAdapter {
         for (term in kalenjinBusinessTerms.keys) {
             if (lower.contains(term)) kalenjinScore += 2
         }
-        for (marker in kalenjinMarkers) {
-            if (Regex("\\b$marker\\b").containsMatchIn(lower)) kalenjinScore += 3
+        for ((_, regex) in MARKERS) {
+            if (regex.containsMatchIn(lower)) kalenjinScore += 3
         }
 
         return if (kalenjinScore > 5) DialectRegion.KALENJIN else DialectRegion.STANDARD
@@ -237,16 +272,7 @@ object KalenjinDialectAdapter {
 
     // ────────────────────── Helpers ──────────────────────
 
-    private fun isSwahiliWord(word: String): Boolean {
-        val swahiliMarkers = setOf(
-            "na", "ya", "wa", "za", "kwa", "ni", "la", "cha",
-            "nime", "sija", "tuta", "wata", "nina", "tuna",
-            "sana", "pia", "lakini", "kama", "au", "hata", "bado",
-            "leo", "jana", "kesho", "sasa", "baada",
-            "biashara", "bei", "faida", "hasara", "deni", "pesa"
-        )
-        return word in swahiliMarkers
-    }
+}
 
     private fun isKalenjinBusinessTerm(word: String): Boolean {
         return kalenjinBusinessTerms.containsKey(word) ||

@@ -19,6 +19,52 @@ import timber.log.Timber
  * Designed for <1ms latency — pure code, no ML models.
  */
 object SomaliDialectAdapter {
+    companion object {
+        private val MARKERS = mapOf(
+            "waa" to Regex("\\bwaa\\b"),
+            "oo" to Regex("\\boo\\b"),
+            "la" to Regex("\\bla\\b"),
+            "ka" to Regex("\\bka\\b"),
+            "ku" to Regex("\\bku\\b"),
+            "iyo" to Regex("\\biyo\\b"),
+            "ama" to Regex("\\bama\\b"),
+            "laakiin" to Regex("\\blaakiin\\b"),
+            "haddii" to Regex("\\bhaddii\\b"),
+            "maxaa" to Regex("\\bmaxaa\\b"),
+            "xagee" to Regex("\\bxagee\\b"),
+            "goorma" to Regex("\\bgoorma\\b"),
+            "sida" to Regex("\\bsida\\b"),
+            "ma" to Regex("\\bma\\b"),
+            "haye" to Regex("\\bhaye\\b"),
+            "mahadsanid" to Regex("\\bmahadsanid\\b"),
+            "fadlan" to Regex("\\bfadlan\\b"),
+            "waan" to Regex("\\bwaan\\b"),
+            "wuu" to Regex("\\bwuu\\b"),
+            "way" to Regex("\\bway\\b"),
+            "waxaa" to Regex("\\bwaxaa\\b"),
+            "qof" to Regex("\\bqof\\b"),
+            "dad" to Regex("\\bdad\\b"),
+            "guri" to Regex("\\bguri\\b"),
+            "suuq" to Regex("\\bsuuq\\b"),
+            "biyo" to Regex("\\bbiyo\\b"),
+            "caano" to Regex("\\bcaano\\b"),
+            "hilib" to Regex("\\bhilib\\b"),
+            "bariis" to Regex("\\bbariis\\b"),
+            "burr" to Regex("\\bburr\\b"),
+            "shaah" to Regex("\\bshaah\\b"),
+            "sonkor" to Regex("\\bsonkor\\b"),
+            "saliid" to Regex("\\bsaliid\\b"),
+            "dhar" to Regex("\\bdhar\\b"),
+            "lacag" to Regex("\\blacag\\b"),
+            "ganacsi" to Regex("\\bganacsi\\b")
+        )
+        private val PRONUNCIATION_REGEXES = mapOf(
+            "aka" to Regex("\\baka\\b", RegexOption.IGNORE_CASE),
+            "oka" to Regex("\\boka\\b", RegexOption.IGNORE_CASE),
+            "saafi" to Regex("\\bsaafi\\b", RegexOption.IGNORE_CASE)
+        )
+    }
+
 
     private const val TAG = "SomaliDialect"
 
@@ -143,7 +189,7 @@ object SomaliDialectAdapter {
             return CodeSwitchResult(
                 hasCodeSwitching = false,
                 primaryLanguage = "sw",
-                dholuoWords = emptyList(),
+                dialectWords = emptyList(),
                 swahiliWords = emptyList(),
                 confidence = 0.5f
             )
@@ -156,7 +202,7 @@ object SomaliDialectAdapter {
             val clean = word.trim('\'', '"', '.', ',', '!', '?')
             when {
                 somaliMarkers.contains(clean) -> somaliFound.add(clean)
-                isSwahiliWord(clean) -> swahiliFound.add(clean)
+                DialectUtils.isSwahiliWord(clean) -> swahiliFound.add(clean)
                 isSomaliBusinessTerm(clean) -> swahiliFound.add(clean)
             }
         }
@@ -168,7 +214,7 @@ object SomaliDialectAdapter {
         return CodeSwitchResult(
             hasCodeSwitching = hasCodeSwitching,
             primaryLanguage = if (somaliRatio > 0.4f) "so" else "sw",
-            dholuoWords = somaliFound,
+            dialectWords = somaliFound,
             swahiliWords = swahiliFound,
             confidence = if (hasCodeSwitching) 0.8f else 0.6f
         )
@@ -178,13 +224,8 @@ object SomaliDialectAdapter {
 
     fun normalize(text: String): String {
         var normalized = text
-        for ((somali, standard) in pronunciationVariations) {
-            if (somali != standard) {
-                normalized = normalized.replace(
-                    Regex("\\b$somali\\b", RegexOption.IGNORE_CASE),
-                    standard
-                )
-            }
+        for ((key, regex) in PRONUNCIATION_REGEXES) {
+            normalized = regex.replace(normalized, pronunciationVariations[key]!!)
         }
         return normalized
     }
@@ -230,8 +271,8 @@ object SomaliDialectAdapter {
         for (term in somaliBusinessTerms.keys) {
             if (lower.contains(term)) somaliScore += 2
         }
-        for (marker in somaliMarkers) {
-            if (Regex("\\b$marker\\b").containsMatchIn(lower)) somaliScore += 3
+        for ((_, regex) in MARKERS) {
+            if (regex.containsMatchIn(lower)) somaliScore += 3
         }
 
         return if (somaliScore > 5) DialectRegion.SOMALI else DialectRegion.STANDARD
@@ -264,16 +305,7 @@ object SomaliDialectAdapter {
 
     // ────────────────────── Helpers ──────────────────────
 
-    private fun isSwahiliWord(word: String): Boolean {
-        val swahiliMarkers = setOf(
-            "na", "ya", "wa", "za", "kwa", "ni", "la", "cha",
-            "nime", "sija", "tuta", "wata", "nina", "tuna",
-            "sana", "pia", "lakini", "kama", "au", "hata", "bado",
-            "leo", "jana", "kesho", "sasa", "baada",
-            "biashara", "bei", "faida", "hasara", "deni", "pesa"
-        )
-        return word in swahiliMarkers
-    }
+}
 
     private fun isSomaliBusinessTerm(word: String): Boolean {
         return somaliBusinessTerms.containsKey(word) ||

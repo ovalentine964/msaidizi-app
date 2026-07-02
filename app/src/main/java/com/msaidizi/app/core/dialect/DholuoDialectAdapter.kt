@@ -19,6 +19,69 @@ import timber.log.Timber
  * Designed for <1ms latency — pure code, no ML models.
  */
 object DholuoDialectAdapter {
+    companion object {
+        private val MARKERS = mapOf(
+            "kendo" to Regex("\\bkendo\\b"),
+            "to" to Regex("\\bto\\b"),
+            "ka" to Regex("\\bka\\b"),
+            "mano" to Regex("\\bmano\\b"),
+            "gi" to Regex("\\bgi\\b"),
+            "nyiso" to Regex("\\bnyiso\\b"),
+            "en" to Regex("\\ben\\b"),
+            "ok" to Regex("\\bok\\b"),
+            "kata" to Regex("\\bkata\\b"),
+            "chon" to Regex("\\bchon\\b"),
+            "nadi" to Regex("\\bnadi\\b"),
+            "inyalo" to Regex("\\binyalo\\b"),
+            "kia" to Regex("\\bkia\\b"),
+            "ber" to Regex("\\bber\\b"),
+            "maber" to Regex("\\bmaber\\b"),
+            "malo" to Regex("\\bmalo\\b"),
+            "yawuoyo" to Regex("\\byawuoyo\\b"),
+            "amos" to Regex("\\bamos\\b"),
+            "erokamano" to Regex("\\berokamano\\b"),
+            "wang'" to Regex("\\bwang'\\b"),
+            "neno" to Regex("\\bneno\\b"),
+            "kwee" to Regex("\\bkwee\\b"),
+            "dhok" to Regex("\\bdhok\\b"),
+            "ogo" to Regex("\\bogo\\b"),
+            "wuon" to Regex("\\bwuon\\b"),
+            "min" to Regex("\\bmin\\b"),
+            "ja" to Regex("\\bja\\b"),
+            "juak" to Regex("\\bjuak\\b"),
+            "tich" to Regex("\\btich\\b"),
+            "paro" to Regex("\\bparo\\b"),
+            "pod" to Regex("\\bpod\\b"),
+            "piny" to Regex("\\bpiny\\b"),
+            "piyo" to Regex("\\bpiyo\\b"),
+            "rech" to Regex("\\brech\\b"),
+            "uong'" to Regex("\\buong'\\b"),
+            "rimo" to Regex("\\brimo\\b"),
+            "are" to Regex("\\bare\\b"),
+            "ng'ato" to Regex("\\bng'ato\\b"),
+            "moko" to Regex("\\bmoko\\b"),
+            "dala" to Regex("\\bdala\\b"),
+            "ot" to Regex("\\bot\\b"),
+            "thur" to Regex("\\bthur\\b"),
+            "siru" to Regex("\\bsiru\\b"),
+            "ng'wen" to Regex("\\bng'wen\\b")
+        )
+        private val PRONUNCIATION_REGEXES = mapOf(
+            "samini" to Regex("\\bsamini\\b", RegexOption.IGNORE_CASE),
+            "sababu" to Regex("\\bsababu\\b", RegexOption.IGNORE_CASE),
+            "sulu" to Regex("\\bsulu\\b", RegexOption.IGNORE_CASE),
+            "aka" to Regex("\\baka\\b", RegexOption.IGNORE_CASE),
+            "oka" to Regex("\\boka\\b", RegexOption.IGNORE_CASE),
+            "iga" to Regex("\\biga\\b", RegexOption.IGNORE_CASE),
+            "osha" to Regex("\\bosha\\b", RegexOption.IGNORE_CASE),
+            "naani" to Regex("\\bnaani\\b", RegexOption.IGNORE_CASE),
+            "saafi" to Regex("\\bsaafi\\b", RegexOption.IGNORE_CASE),
+            "twaa" to Regex("\\btwaa\\b", RegexOption.IGNORE_CASE),
+            "b" to Regex("\\bb\\b", RegexOption.IGNORE_CASE),
+            "d" to Regex("\\bd\\b", RegexOption.IGNORE_CASE)
+        )
+    }
+
 
     private const val TAG = "DholuoDialect"
 
@@ -163,7 +226,7 @@ object DholuoDialectAdapter {
             return CodeSwitchResult(
                 hasCodeSwitching = false,
                 primaryLanguage = "sw",
-                dholuoWords = emptyList(),
+                dialectWords = emptyList(),
                 swahiliWords = emptyList(),
                 confidence = 0.5f
             )
@@ -176,7 +239,7 @@ object DholuoDialectAdapter {
             val clean = word.trim('\'', '"', '.', ',', '!', '?')
             when {
                 dholuoMarkers.contains(clean) -> dholuoFound.add(clean)
-                isSwahiliWord(clean) -> swahiliFound.add(clean)
+                DialectUtils.isSwahiliWord(clean) -> swahiliFound.add(clean)
                 isDholuoBusinessTerm(clean) -> swahiliFound.add(clean)
             }
         }
@@ -188,7 +251,7 @@ object DholuoDialectAdapter {
         return CodeSwitchResult(
             hasCodeSwitching = hasCodeSwitching,
             primaryLanguage = if (dholuoRatio > 0.4f) "luo" else "sw",
-            dholuoWords = dholuoFound,
+            dialectWords = dholuoFound,
             swahiliWords = swahiliFound,
             confidence = if (hasCodeSwitching) 0.8f else 0.6f
         )
@@ -198,13 +261,8 @@ object DholuoDialectAdapter {
 
     fun normalize(text: String): String {
         var normalized = text
-        for ((dholuo, standard) in pronunciationVariations) {
-            if (dholuo != standard) {
-                normalized = normalized.replace(
-                    Regex("\\b$dholuo\\b", RegexOption.IGNORE_CASE),
-                    standard
-                )
-            }
+        for ((key, regex) in PRONUNCIATION_REGEXES) {
+            normalized = regex.replace(normalized, pronunciationVariations[key]!!)
         }
         return normalized
     }
@@ -255,8 +313,8 @@ object DholuoDialectAdapter {
         for (term in dholuoBusinessTerms.keys) {
             if (lower.contains(term)) dholuoScore += 2
         }
-        for (marker in dholuoMarkers) {
-            if (Regex("\\b$marker\\b").containsMatchIn(lower)) dholuoScore += 3
+        for ((_, regex) in MARKERS) {
+            if (regex.containsMatchIn(lower)) dholuoScore += 3
         }
 
         return if (dholuoScore > 5) DialectRegion.DHOLUO else DialectRegion.STANDARD
@@ -289,16 +347,7 @@ object DholuoDialectAdapter {
 
     // ────────────────────── Helpers ──────────────────────
 
-    private fun isSwahiliWord(word: String): Boolean {
-        val swahiliMarkers = setOf(
-            "na", "ya", "wa", "za", "kwa", "ni", "la", "cha",
-            "nime", "sija", "tuta", "wata", "nina", "tuna",
-            "sana", "pia", "lakini", "kama", "au", "hata", "bado",
-            "leo", "jana", "kesho", "sasa", "baada",
-            "biashara", "bei", "faida", "hasara", "deni", "pesa"
-        )
-        return word in swahiliMarkers
-    }
+}
 
     private fun isDholuoBusinessTerm(word: String): Boolean {
         return dholuoBusinessTerms.containsKey(word) ||

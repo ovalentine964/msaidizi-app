@@ -21,6 +21,84 @@ import timber.log.Timber
  * Designed for <1ms latency — pure code, no ML models.
  */
 object ShengDialectAdapter {
+    companion object {
+        private val MARKERS = mapOf(
+            "sasa" to Regex("\\bsasa\\b"),
+            "poa" to Regex("\\bpoa\\b"),
+            "fiti" to Regex("\\bfiti\\b"),
+            "aje" to Regex("\\baje\\b"),
+            "niaje" to Regex("\\bniaje\\b"),
+            "mambo" to Regex("\\bmambo\\b"),
+            "vipi" to Regex("\\bvipi\\b"),
+            "wazi" to Regex("\\bwazi\\b"),
+            "safi" to Regex("\\bsafi\\b"),
+            "freshi" to Regex("\\bfreshi\\b"),
+            "ndege" to Regex("\\bndege\\b"),
+            "blaze" to Regex("\\bblaze\\b"),
+            "mbogi" to Regex("\\bmbogi\\b"),
+            "sonko" to Regex("\\bsonko\\b"),
+            "mheshimiwa" to Regex("\\bmheshimiwa\\b"),
+            "chapaa" to Regex("\\bchapaa\\b"),
+            "munde" to Regex("\\bmunde\\b"),
+            "pesa" to Regex("\\bpesa\\b"),
+            "bao" to Regex("\\bbao\\b"),
+            "ngiri" to Regex("\\bngiri\\b"),
+            "thao" to Regex("\\bthao\\b"),
+            "finje" to Regex("\\bfinje\\b"),
+            "jeuri" to Regex("\\bjeuri\\b"),
+            "kumi" to Regex("\\bkumi\\b"),
+            "jabaa" to Regex("\\bjabaa\\b"),
+            "mwaks" to Regex("\\bmwaks\\b"),
+            "kanyang'u" to Regex("\\bkanyang'u\\b"),
+            "kudevaa" to Regex("\\bkudevaa\\b"),
+            "kukasirika" to Regex("\\bkukasirika\\b"),
+            "kuja" to Regex("\\bkuja\\b"),
+            "kuja_kuja" to Regex("\\bkuja_kuja\\b"),
+            "kupiga" to Regex("\\bkupiga\\b"),
+            "kuchapa" to Regex("\\bkuchapa\\b"),
+            "kublaze" to Regex("\\bkublaze\\b"),
+            "kutoka" to Regex("\\bkutoka\\b"),
+            "kukula" to Regex("\\bkukula\\b"),
+            "kunywa" to Regex("\\bkunywa\\b"),
+            "kuvuta" to Regex("\\bkuvuta\\b"),
+            "kusoma" to Regex("\\bkusoma\\b"),
+            "kuskizaa" to Regex("\\bkuskizaa\\b"),
+            "kuwatch" to Regex("\\bkuwatch\\b"),
+            "msee" to Regex("\\bmsee\\b"),
+            "msichana" to Regex("\\bmsichana\\b"),
+            "kijana" to Regex("\\bkijana\\b"),
+            "mubaba" to Regex("\\bmubaba\\b"),
+            "mumama" to Regex("\\bmumama\\b"),
+            "dame" to Regex("\\bdame\\b"),
+            "boyi" to Regex("\\bboyi\\b"),
+            "mbogi" to Regex("\\bmbogi\\b"),
+            "kamuti" to Regex("\\bkamuti\\b"),
+            "ndai" to Regex("\\bndai\\b"),
+            "mzae" to Regex("\\bmzae\\b"),
+            "base" to Regex("\\bbase\\b"),
+            "ghetto" to Regex("\\bghetto\\b"),
+            "mtaa" to Regex("\\bmtaa\\b"),
+            "kanairo" to Regex("\\bkanairo\\b"),
+            "ushago" to Regex("\\bushago\\b"),
+            "mat" to Regex("\\bmat\\b"),
+            "nduthi" to Regex("\\bnduthi\\b"),
+            "gari" to Regex("\\bgari\\b"),
+            "ndai" to Regex("\\bndai\\b")
+        )
+        private val PRONUNCIATION_REGEXES = mapOf(
+            "chapaa" to Regex("\\bchapaa\\b", RegexOption.IGNORE_CASE),
+            "munde" to Regex("\\bmunde\\b", RegexOption.IGNORE_CASE),
+            "ndege" to Regex("\\bndege\\b", RegexOption.IGNORE_CASE),
+            "mbogi" to Regex("\\bmbogi\\b", RegexOption.IGNORE_CASE),
+            "sonko" to Regex("\\bsonko\\b", RegexOption.IGNORE_CASE),
+            "kuchapa" to Regex("\\bkuchapa\\b", RegexOption.IGNORE_CASE),
+            "kublaze" to Regex("\\bkublaze\\b", RegexOption.IGNORE_CASE),
+            "kuwatch" to Regex("\\bkuwatch\\b", RegexOption.IGNORE_CASE),
+            "nkt" to Regex("\\bnkt\\b", RegexOption.IGNORE_CASE),
+            "wah" to Regex("\\bwah\\b", RegexOption.IGNORE_CASE)
+        )
+    }
+
 
     private const val TAG = "ShengDialect"
 
@@ -193,7 +271,7 @@ object ShengDialectAdapter {
             return CodeSwitchResult(
                 hasCodeSwitching = false,
                 primaryLanguage = "sw",
-                dholuoWords = emptyList(),
+                dialectWords = emptyList(),
                 swahiliWords = emptyList(),
                 confidence = 0.5f
             )
@@ -206,7 +284,7 @@ object ShengDialectAdapter {
             val clean = word.trim('\'', '"', '.', ',', '!', '?')
             when {
                 shengMarkers.contains(clean) -> shengFound.add(clean)
-                isSwahiliWord(clean) -> swahiliFound.add(clean)
+                DialectUtils.isSwahiliWord(clean) -> swahiliFound.add(clean)
                 isShengBusinessTerm(clean) -> swahiliFound.add(clean)
             }
         }
@@ -218,7 +296,7 @@ object ShengDialectAdapter {
         return CodeSwitchResult(
             hasCodeSwitching = hasCodeSwitching,
             primaryLanguage = if (shengRatio > 0.4f) "sheng" else "sw",
-            dholuoWords = shengFound,
+            dialectWords = shengFound,
             swahiliWords = swahiliFound,
             confidence = if (hasCodeSwitching) 0.8f else 0.6f
         )
@@ -228,13 +306,8 @@ object ShengDialectAdapter {
 
     fun normalize(text: String): String {
         var normalized = text
-        for ((sheng, standard) in pronunciationVariations) {
-            if (sheng != standard) {
-                normalized = normalized.replace(
-                    Regex("\\b$sheng\\b", RegexOption.IGNORE_CASE),
-                    standard
-                )
-            }
+        for ((key, regex) in PRONUNCIATION_REGEXES) {
+            normalized = regex.replace(normalized, pronunciationVariations[key]!!)
         }
         return normalized
     }
@@ -278,8 +351,8 @@ object ShengDialectAdapter {
         for (term in shengBusinessTerms.keys) {
             if (lower.contains(term)) shengScore += 2
         }
-        for (marker in shengMarkers) {
-            if (Regex("\\b$marker\\b").containsMatchIn(lower)) shengScore += 3
+        for ((_, regex) in MARKERS) {
+            if (regex.containsMatchIn(lower)) shengScore += 3
         }
 
         return if (shengScore > 5) DialectRegion.SHENG else DialectRegion.STANDARD
@@ -312,16 +385,7 @@ object ShengDialectAdapter {
 
     // ────────────────────── Helpers ──────────────────────
 
-    private fun isSwahiliWord(word: String): Boolean {
-        val swahiliMarkers = setOf(
-            "na", "ya", "wa", "za", "kwa", "ni", "la", "cha",
-            "nime", "sija", "tuta", "wata", "nina", "tuna",
-            "sana", "pia", "lakini", "kama", "au", "hata", "bado",
-            "leo", "jana", "kesho", "sasa", "baada",
-            "biashara", "bei", "faida", "hasara", "deni", "pesa"
-        )
-        return word in swahiliMarkers
-    }
+}
 
     private fun isShengBusinessTerm(word: String): Boolean {
         return shengBusinessTerms.containsKey(word) ||

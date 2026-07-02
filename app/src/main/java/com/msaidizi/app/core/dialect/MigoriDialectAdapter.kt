@@ -22,6 +22,77 @@ import timber.log.Timber
  * Designed for <1ms latency — pure code, no ML models.
  */
 object MigoriDialectAdapter {
+    companion object {
+        private val MARKERS = mapOf(
+            "kendo" to Regex("\\bkendo\\b"),
+            "to" to Regex("\\bto\\b"),
+            "ka" to Regex("\\bka\\b"),
+            "mano" to Regex("\\bmano\\b"),
+            "gi" to Regex("\\bgi\\b"),
+            "nyiso" to Regex("\\bnyiso\\b"),
+            "en" to Regex("\\ben\\b"),
+            "ok" to Regex("\\bok\\b"),
+            "kata" to Regex("\\bkata\\b"),
+            "chon" to Regex("\\bchon\\b"),
+            "nadi" to Regex("\\bnadi\\b"),
+            "inyalo" to Regex("\\binyalo\\b"),
+            "kia" to Regex("\\bkia\\b"),
+            "ber" to Regex("\\bber\\b"),
+            "maber" to Regex("\\bmaber\\b"),
+            "malo" to Regex("\\bmalo\\b"),
+            "yawuoyo" to Regex("\\byawuoyo\\b"),
+            "amos" to Regex("\\bamos\\b"),
+            "erokamano" to Regex("\\berokamano\\b"),
+            "chuthi" to Regex("\\bchuthi\\b"),
+            "dhok" to Regex("\\bdhok\\b"),
+            "ogo" to Regex("\\bogo\\b"),
+            "wuon" to Regex("\\bwuon\\b"),
+            "min" to Regex("\\bmin\\b"),
+            "ja" to Regex("\\bja\\b"),
+            "juak" to Regex("\\bjuak\\b"),
+            "tich" to Regex("\\btich\\b"),
+            "paro" to Regex("\\bparo\\b"),
+            "saa" to Regex("\\bsaa\\b"),
+            "pod" to Regex("\\bpod\\b"),
+            "piny" to Regex("\\bpiny\\b"),
+            "piyo" to Regex("\\bpiyo\\b"),
+            "rech" to Regex("\\brech\\b"),
+            "uong'" to Regex("\\buong'\\b"),
+            "rimo" to Regex("\\brimo\\b"),
+            "are" to Regex("\\bare\\b"),
+            "ng'ato" to Regex("\\bng'ato\\b"),
+            "moko" to Regex("\\bmoko\\b"),
+            "chuthi" to Regex("\\bchuthi\\b"),
+            "oduol" to Regex("\\boduol\\b"),
+            "ng'wen" to Regex("\\bng'wen\\b"),
+            "siru" to Regex("\\bsiru\\b"),
+            "pesa" to Regex("\\bpesa\\b"),
+            "ot" to Regex("\\bot\\b"),
+            "daraja" to Regex("\\bdaraja\\b")
+        )
+        private val PRONUNCIATION_REGEXES = mapOf(
+            "samini" to Regex("\\bsamini\\b", RegexOption.IGNORE_CASE),
+            "sababu" to Regex("\\bsababu\\b", RegexOption.IGNORE_CASE),
+            "sulu" to Regex("\\bsulu\\b", RegexOption.IGNORE_CASE),
+            "sahabu" to Regex("\\bsahabu\\b", RegexOption.IGNORE_CASE),
+            "aka" to Regex("\\baka\\b", RegexOption.IGNORE_CASE),
+            "apata" to Regex("\\bapata\\b", RegexOption.IGNORE_CASE),
+            "oka" to Regex("\\boka\\b", RegexOption.IGNORE_CASE),
+            "iga" to Regex("\\biga\\b", RegexOption.IGNORE_CASE),
+            "osha" to Regex("\\bosha\\b", RegexOption.IGNORE_CASE),
+            "oka" to Regex("\\boka\\b", RegexOption.IGNORE_CASE),
+            "naani" to Regex("\\bnaani\\b", RegexOption.IGNORE_CASE),
+            "saafi" to Regex("\\bsaafi\\b", RegexOption.IGNORE_CASE),
+            "twaa" to Regex("\\btwaa\\b", RegexOption.IGNORE_CASE),
+            "b" to Regex("\\bb\\b", RegexOption.IGNORE_CASE),
+            "d" to Regex("\\bd\\b", RegexOption.IGNORE_CASE),
+            "pesa" to Regex("\\bpesa\\b", RegexOption.IGNORE_CASE),
+            "rejareja" to Regex("\\brejareja\\b", RegexOption.IGNORE_CASE),
+            "mboga" to Regex("\\bmboga\\b", RegexOption.IGNORE_CASE),
+            "ng'ombe" to Regex("\\bng'ombe\\b", RegexOption.IGNORE_CASE)
+        )
+    }
+
 
     private const val TAG = "MigoriDialect"
 
@@ -220,7 +291,7 @@ object MigoriDialectAdapter {
             return CodeSwitchResult(
                 hasCodeSwitching = false,
                 primaryLanguage = "sw",
-                dholuoWords = emptyList(),
+                dialectWords = emptyList(),
                 swahiliWords = emptyList(),
                 confidence = 0.5f
             )
@@ -234,7 +305,7 @@ object MigoriDialectAdapter {
             val clean = word.trim('\'', '"', '.', ',', '!', '?')
             when {
                 clean in dholuoMarkers -> dholuoFound.add(clean)
-                isSwahiliWord(clean) -> swahiliFound.add(clean)
+                DialectUtils.isSwahiliWordExtended(clean) -> swahiliFound.add(clean)
                 isMigoriBusinessTerm(clean) -> swahiliFound.add(clean) // counts as Swahili context
                 else -> unknownWords.add(clean)
             }
@@ -252,7 +323,7 @@ object MigoriDialectAdapter {
         return CodeSwitchResult(
             hasCodeSwitching = hasCodeSwitching,
             primaryLanguage = if (dholuoRatio > 0.4f) "luo" else "sw",
-            dholuoWords = dholuoFound,
+            dialectWords = dholuoFound,
             swahiliWords = swahiliFound,
             confidence = if (hasCodeSwitching) 0.8f else 0.6f
         )
@@ -269,22 +340,9 @@ object MigoriDialectAdapter {
         var normalized = text
 
         // Apply pronunciation variations (Migori → standard)
-        for ((migori, standard) in pronunciationVariations) {
-            if (migori != standard) {
-                normalized = normalized.replace(
-                    Regex("\\b$migori\\b", RegexOption.IGNORE_CASE),
-                    standard
-                )
-            }
+        for ((key, regex) in PRONUNCIATION_REGEXES) {
+            normalized = regex.replace(normalized, pronunciationVariations[key]!!)
         }
-
-        // Normalize Dholuo loanwords to their Swahili equivalents
-        for ((dholuo, meaning) in dholuoMarkers.associateWith { it }) {
-            // Keep Dholuo markers but log them for ASR training data
-            Timber.tag(TAG).v("Dholuo marker preserved: %s", dholuo)
-        }
-
-        Timber.tag(TAG).d("Normalized: '%s' → '%s'", text, normalized)
         return normalized
     }
 
@@ -345,26 +403,47 @@ object MigoriDialectAdapter {
         for (term in migoriBusinessTerms.keys) {
             if (lower.contains(term)) migoriScore += 2
         }
-        for (marker in dholuoMarkers) {
-            if (Regex("\\b$marker\\b").containsMatchIn(lower)) migoriScore += 3
+        for ((_, regex) in MARKERS) {
+            if (regex.containsMatchIn(lower)) migoriScore += 3
         }
 
         // Nairobi Sheng markers
-        val nairobiSheng = setOf("sasa", "poa", "fiti", "aje", "niaje", "chapaa", "ndege")
-        for (marker in nairobiSheng) {
-            if (Regex("\\b$marker\\b").containsMatchIn(lower)) nairobiScore += 2
+        val nairobiSheng = mapOf(
+            "sasa" to Regex("\\bsasa\\b"),
+            "poa" to Regex("\\bpoa\\b"),
+            "fiti" to Regex("\\bfiti\\b"),
+            "aje" to Regex("\\baje\\b"),
+            "niaje" to Regex("\\bniaje\\b"),
+            "chapaa" to Regex("\\bchapaa\\b"),
+            "ndege" to Regex("\\bndege\\b")
+        )
+        for ((_, regex) in nairobiSheng) {
+            if (regex.containsMatchIn(lower)) nairobiScore += 2
         }
 
         // Coast markers
-        val coastWords = setOf("habari", "mambo", "vipi", "niaje", "shwari")
-        for (marker in coastWords) {
-            if (Regex("\\b$marker\\b").containsMatchIn(lower)) coastScore += 1
+        val coastWords = mapOf(
+            "habari" to Regex("\\bhabari\\b"),
+            "mambo" to Regex("\\bmambo\\b"),
+            "vipi" to Regex("\\bvipi\\b"),
+            "niaje" to Regex("\\bniaje\\b"),
+            "shwari" to Regex("\\bshwari\\b")
+        )
+        for ((_, regex) in coastWords) {
+            if (regex.containsMatchIn(lower)) coastScore += 1
         }
 
         // Standard Swahili
-        val standardWords = setOf("sana", "pia", "lakini", "kama", "bado", "ndio")
-        for (marker in standardWords) {
-            if (Regex("\\b$marker\\b").containsMatchIn(lower)) standardScore += 1
+        val standardWords = mapOf(
+            "sana" to Regex("\\bsana\\b"),
+            "pia" to Regex("\\bpia\\b"),
+            "lakini" to Regex("\\blakini\\b"),
+            "kama" to Regex("\\bkama\\b"),
+            "bado" to Regex("\\bbado\\b"),
+            "ndio" to Regex("\\bndio\\b")
+        )
+        for ((_, regex) in standardWords) {
+            if (regex.containsMatchIn(lower)) standardScore += 1
         }
 
         return when {
@@ -424,19 +503,7 @@ object MigoriDialectAdapter {
 
     // ────────────────────── Helper Methods ──────────────────────
 
-    private fun isSwahiliWord(word: String): Boolean {
-        val swahiliMarkers = setOf(
-            "na", "ya", "wa", "za", "kwa", "ni", "la", "cha",
-            "nime", "sija", "tuta", "wata", "nina", "tuna",
-            "sana", "pia", "lakini", "kama", "au", "hata", "bado",
-            "leo", "jana", "kesho", "sasa", "baada",
-            "nini", "gani", "wapi", "lini", "vipi",
-            "hapa", "pale", "ndani", "nje", "juu", "chini",
-            "nenda", "kuja", "fanya", "sema", "ona", "pata",
-            "biashara", "bei", "faida", "hasara", "deni", "pesa"
-        )
-        return word in swahiliMarkers
-    }
+}
 
     private fun isMigoriBusinessTerm(word: String): Boolean {
         return migoriBusinessTerms.containsKey(word) ||
@@ -452,7 +519,7 @@ object MigoriDialectAdapter {
 data class CodeSwitchResult(
     val hasCodeSwitching: Boolean,
     val primaryLanguage: String,  // "sw", "luo", "en"
-    val dholuoWords: List<String>,
+    val dialectWords: List<String>,
     val swahiliWords: List<String>,
     val confidence: Float
 )

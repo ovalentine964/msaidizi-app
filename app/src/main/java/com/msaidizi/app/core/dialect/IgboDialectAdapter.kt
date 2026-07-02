@@ -19,6 +19,48 @@ import timber.log.Timber
  * Designed for <1ms latency — pure code, no ML models.
  */
 object IgboDialectAdapter {
+    companion object {
+        private val MARKERS = mapOf(
+            "na" to Regex("\\bna\\b"),
+            "bụ" to Regex("\\bbụ\\b"),
+            "ga" to Regex("\\bga\\b"),
+            "nke" to Regex("\\bnke\\b"),
+            "ma" to Regex("\\bma\\b"),
+            "ọ bụrụ" to Regex("\\bọ bụrụ\\b"),
+            "n'ihi_na" to Regex("\\bn'ihi_na\\b"),
+            "otú_ọ_nọ" to Regex("\\botú_ọ_nọ\\b"),
+            "ịhụnanya" to Regex("\\bịhụnanya\\b"),
+            "ndewo" to Regex("\\bndewo\\b"),
+            "kedu" to Regex("\\bkedu\\b"),
+            "daalụ" to Regex("\\bdaalụ\\b"),
+            "biko" to Regex("\\bbiko\\b"),
+            "ọ_dị_mma" to Regex("\\bọ_dị_mma\\b"),
+            "ehee" to Regex("\\behee\\b"),
+            "mba" to Regex("\\bmba\\b"),
+            "mmadụ" to Regex("\\bmmadụ\\b"),
+            "ndị" to Regex("\\bndị\\b"),
+            "ụlọ" to Regex("\\bụlọ\\b"),
+            "ahịa" to Regex("\\bahịa\\b"),
+            "ego" to Regex("\\bego\\b"),
+            "ọrụ" to Regex("\\bọrụ\\b"),
+            "nri" to Regex("\\bnri\\b"),
+            "mmiri" to Regex("\\bmmiri\\b"),
+            "ọnwụ" to Regex("\\bọnwụ\\b"),
+            "afọ" to Regex("\\bafọ\\b"),
+            "ụbọchị" to Regex("\\bụbọchị\\b"),
+            "oge" to Regex("\\boge\\b")
+        )
+        private val PRONUNCIATION_REGEXES = mapOf(
+            "ọ" to Regex("\\bọ\\b", RegexOption.IGNORE_CASE),
+            "ụ" to Regex("\\bụ\\b", RegexOption.IGNORE_CASE),
+            "ị" to Regex("\\bị\\b", RegexOption.IGNORE_CASE),
+            "ẹ" to Regex("\\bẹ\\b", RegexOption.IGNORE_CASE),
+            "ụ" to Regex("\\bụ\\b", RegexOption.IGNORE_CASE),
+            "m̄" to Regex("\\bm̄\\b", RegexOption.IGNORE_CASE),
+            "n̄" to Regex("\\bn̄\\b", RegexOption.IGNORE_CASE)
+        )
+    }
+
 
     private const val TAG = "IgboDialect"
 
@@ -138,7 +180,7 @@ object IgboDialectAdapter {
             return CodeSwitchResult(
                 hasCodeSwitching = false,
                 primaryLanguage = "sw",
-                dholuoWords = emptyList(),
+                dialectWords = emptyList(),
                 swahiliWords = emptyList(),
                 confidence = 0.5f
             )
@@ -151,7 +193,7 @@ object IgboDialectAdapter {
             val clean = word.trim('\'', '"', '.', ',', '!', '?')
             when {
                 igboMarkers.contains(clean) -> igboFound.add(clean)
-                isSwahiliWord(clean) -> swahiliFound.add(clean)
+                DialectUtils.isSwahiliWord(clean) -> swahiliFound.add(clean)
                 isIgboBusinessTerm(clean) -> swahiliFound.add(clean)
             }
         }
@@ -163,7 +205,7 @@ object IgboDialectAdapter {
         return CodeSwitchResult(
             hasCodeSwitching = hasCodeSwitching,
             primaryLanguage = if (igboRatio > 0.4f) "ig" else "sw",
-            dholuoWords = igboFound,
+            dialectWords = igboFound,
             swahiliWords = swahiliFound,
             confidence = if (hasCodeSwitching) 0.8f else 0.6f
         )
@@ -173,10 +215,8 @@ object IgboDialectAdapter {
 
     fun normalize(text: String): String {
         var normalized = text
-        for ((igbo, standard) in pronunciationVariations) {
-            if (igbo != standard) {
-                normalized = normalized.replace(igbo, standard)
-            }
+        for ((key, regex) in PRONUNCIATION_REGEXES) {
+            normalized = regex.replace(normalized, pronunciationVariations[key]!!)
         }
         return normalized
     }
@@ -219,8 +259,8 @@ object IgboDialectAdapter {
         for (term in igboBusinessTerms.keys) {
             if (lower.contains(term)) igboScore += 2
         }
-        for (marker in igboMarkers) {
-            if (Regex("\\b$marker\\b").containsMatchIn(lower)) igboScore += 3
+        for ((_, regex) in MARKERS) {
+            if (regex.containsMatchIn(lower)) igboScore += 3
         }
 
         return if (igboScore > 5) DialectRegion.IGBO else DialectRegion.STANDARD
@@ -253,16 +293,7 @@ object IgboDialectAdapter {
 
     // ────────────────────── Helpers ──────────────────────
 
-    private fun isSwahiliWord(word: String): Boolean {
-        val swahiliMarkers = setOf(
-            "na", "ya", "wa", "za", "kwa", "ni", "la", "cha",
-            "nime", "sija", "tuta", "wata", "nina", "tuna",
-            "sana", "pia", "lakini", "kama", "au", "hata", "bado",
-            "leo", "jana", "kesho", "sasa", "baada",
-            "biashara", "bei", "faida", "hasara", "deni", "pesa"
-        )
-        return word in swahiliMarkers
-    }
+}
 
     private fun isIgboBusinessTerm(word: String): Boolean {
         return igboBusinessTerms.containsKey(word) ||

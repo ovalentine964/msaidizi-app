@@ -19,6 +19,49 @@ import timber.log.Timber
  * Designed for <1ms latency — pure code, no ML models.
  */
 object MaasaiDialectAdapter {
+    companion object {
+        private val MARKERS = mapOf(
+            "sopa" to Regex("\\bsopa\\b"),
+            "yeyo" to Regex("\\byeyo\\b"),
+            "iko" to Regex("\\biko\\b"),
+            "meita" to Regex("\\bmeita\\b"),
+            "naikai" to Regex("\\bnaikai\\b"),
+            "enaiki" to Regex("\\benaiki\\b"),
+            "kioku" to Regex("\\bkioku\\b"),
+            "ai" to Regex("\\bai\\b"),
+            "aiye" to Regex("\\baiye\\b"),
+            "keju" to Regex("\\bkeju\\b"),
+            "ashe" to Regex("\\bashe\\b"),
+            "oleng" to Regex("\\boleng\\b"),
+            "ilkeek" to Regex("\\bilkeek\\b"),
+            "enkang'" to Regex("\\benkang'\\b"),
+            "enkaji" to Regex("\\benkaji\\b"),
+            "olchani" to Regex("\\bolchani\\b"),
+            "laibon" to Regex("\\blaibon\\b"),
+            "ilmurran" to Regex("\\bilmurran\\b"),
+            "inkajijik" to Regex("\\binkajijik\\b"),
+            "olotuno" to Regex("\\bolotuno\\b"),
+            "enkare" to Regex("\\benkare\\b"),
+            "olari" to Regex("\\bolari\\b"),
+            "enk'ee" to Regex("\\benk'ee\\b"),
+            "ore" to Regex("\\bore\\b"),
+            "enk'ositon" to Regex("\\benk'ositon\\b"),
+            "entit" to Regex("\\bentit\\b"),
+            "ork'oiyotap" to Regex("\\bork'oiyotap\\b"),
+            "enkejuk" to Regex("\\benkejuk\\b"),
+            "oret" to Regex("\\boret\\b"),
+            "enk'ariak" to Regex("\\benk'ariak\\b"),
+            "entulelei" to Regex("\\bentulelei\\b"),
+            "shuka" to Regex("\\bshuka\\b")
+        )
+        private val PRONUNCIATION_REGEXES = mapOf(
+            "aka" to Regex("\\baka\\b", RegexOption.IGNORE_CASE),
+            "oka" to Regex("\\boka\\b", RegexOption.IGNORE_CASE),
+            "iga" to Regex("\\biga\\b", RegexOption.IGNORE_CASE),
+            "saafi" to Regex("\\bsaafi\\b", RegexOption.IGNORE_CASE)
+        )
+    }
+
 
     private const val TAG = "MaasaiDialect"
 
@@ -131,7 +174,7 @@ object MaasaiDialectAdapter {
             return CodeSwitchResult(
                 hasCodeSwitching = false,
                 primaryLanguage = "sw",
-                dholuoWords = emptyList(),
+                dialectWords = emptyList(),
                 swahiliWords = emptyList(),
                 confidence = 0.5f
             )
@@ -144,7 +187,7 @@ object MaasaiDialectAdapter {
             val clean = word.trim('\'', '"', '.', ',', '!', '?')
             when {
                 maasaiMarkers.contains(clean) -> maasaiFound.add(clean)
-                isSwahiliWord(clean) -> swahiliFound.add(clean)
+                DialectUtils.isSwahiliWord(clean) -> swahiliFound.add(clean)
                 isMaasaiBusinessTerm(clean) -> swahiliFound.add(clean)
             }
         }
@@ -156,7 +199,7 @@ object MaasaiDialectAdapter {
         return CodeSwitchResult(
             hasCodeSwitching = hasCodeSwitching,
             primaryLanguage = if (maasaiRatio > 0.4f) "mas" else "sw",
-            dholuoWords = maasaiFound,
+            dialectWords = maasaiFound,
             swahiliWords = swahiliFound,
             confidence = if (hasCodeSwitching) 0.8f else 0.6f
         )
@@ -166,13 +209,8 @@ object MaasaiDialectAdapter {
 
     fun normalize(text: String): String {
         var normalized = text
-        for ((maasai, standard) in pronunciationVariations) {
-            if (maasai != standard) {
-                normalized = normalized.replace(
-                    Regex("\\b$maasai\\b", RegexOption.IGNORE_CASE),
-                    standard
-                )
-            }
+        for ((key, regex) in PRONUNCIATION_REGEXES) {
+            normalized = regex.replace(normalized, pronunciationVariations[key]!!)
         }
         return normalized
     }
@@ -211,8 +249,8 @@ object MaasaiDialectAdapter {
         for (term in maasaiBusinessTerms.keys) {
             if (lower.contains(term)) maasaiScore += 2
         }
-        for (marker in maasaiMarkers) {
-            if (Regex("\\b$marker\\b").containsMatchIn(lower)) maasaiScore += 3
+        for ((_, regex) in MARKERS) {
+            if (regex.containsMatchIn(lower)) maasaiScore += 3
         }
 
         return if (maasaiScore > 5) DialectRegion.MAASAI else DialectRegion.STANDARD
@@ -245,16 +283,7 @@ object MaasaiDialectAdapter {
 
     // ────────────────────── Helpers ──────────────────────
 
-    private fun isSwahiliWord(word: String): Boolean {
-        val swahiliMarkers = setOf(
-            "na", "ya", "wa", "za", "kwa", "ni", "la", "cha",
-            "nime", "sija", "tuta", "wata", "nina", "tuna",
-            "sana", "pia", "lakini", "kama", "au", "hata", "bado",
-            "leo", "jana", "kesho", "sasa", "baada",
-            "biashara", "bei", "faida", "hasara", "deni", "pesa"
-        )
-        return word in swahiliMarkers
-    }
+}
 
     private fun isMaasaiBusinessTerm(word: String): Boolean {
         return maasaiBusinessTerms.containsKey(word) ||

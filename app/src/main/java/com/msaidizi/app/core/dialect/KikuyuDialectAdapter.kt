@@ -19,6 +19,69 @@ import timber.log.Timber
  * Designed for <1ms latency — pure code, no ML models.
  */
 object KikuyuDialectAdapter {
+    companion object {
+        private val MARKERS = mapOf(
+            "na" to Regex("\\bna\\b"),
+            "nĩ" to Regex("\\bnĩ\\b"),
+            "no" to Regex("\\bno\\b"),
+            "ũngĩ" to Regex("\\bũngĩ\\b"),
+            "o" to Regex("\\bo\\b"),
+            "nake" to Regex("\\bnake\\b"),
+            "nayo" to Regex("\\bnayo\\b"),
+            "nĩo" to Regex("\\bnĩo\\b"),
+            "tuĩka" to Regex("\\btuĩka\\b"),
+            "rĩ" to Regex("\\brĩ\\b"),
+            "ngĩ" to Regex("\\bngĩ\\b"),
+            "mũno" to Regex("\\bmũno\\b"),
+            "hingo" to Regex("\\bhingo\\b"),
+            "ũngĩ" to Regex("\\bũngĩ\\b"),
+            "kana" to Regex("\\bkana\\b"),
+            "tiga" to Regex("\\btiga\\b"),
+            "ngũ" to Regex("\\bngũ\\b"),
+            "ndũ" to Regex("\\bndũ\\b"),
+            "nĩndũ" to Regex("\\bnĩndũ\\b"),
+            "mũndũ" to Regex("\\bmũndũ\\b"),
+            "andũ" to Regex("\\bandũ\\b"),
+            "nyũmba" to Regex("\\bnyũmba\\b"),
+            "mũtũũrĩ" to Regex("\\bmũtũũrĩ\\b"),
+            "kĩhĩ" to Regex("\\bkĩhĩ\\b"),
+            "ng'ombe" to Regex("\\bng'ombe\\b"),
+            "mbũri" to Regex("\\bmbũri\\b"),
+            "mũgũnda" to Regex("\\bmũgũnda\\b"),
+            "mũtĩ" to Regex("\\bmũtĩ\\b"),
+            "njeri" to Regex("\\bnjeri\\b"),
+            "gĩka" to Regex("\\bgĩka\\b"),
+            "mũthũri" to Regex("\\bmũthũri\\b"),
+            "wĩra" to Regex("\\bwĩra\\b"),
+            "mũthondeki" to Regex("\\bmũthondeki\\b"),
+            "ndũma" to Regex("\\bndũma\\b"),
+            "mūkimo" to Regex("\\bmūkimo\\b"),
+            "gĩtheri" to Regex("\\bgĩtheri\\b"),
+            "irio" to Regex("\\birio\\b"),
+            "mũtũra" to Regex("\\bmũtũra\\b"),
+            "njahĩ" to Regex("\\bnjahĩ\\b"),
+            "kĩrĩma" to Regex("\\bkĩrĩma\\b"),
+            "mũkorũ" to Regex("\\bmũkorũ\\b"),
+            "njohi" to Regex("\\bnjohi\\b"),
+            "thabiti" to Regex("\\bthabiti\\b")
+        )
+        private val PRONUNCIATION_REGEXES = mapOf(
+            "aka" to Regex("\\baka\\b", RegexOption.IGNORE_CASE),
+            "apata" to Regex("\\bapata\\b", RegexOption.IGNORE_CASE),
+            "oka" to Regex("\\boka\\b", RegexOption.IGNORE_CASE),
+            "iga" to Regex("\\biga\\b", RegexOption.IGNORE_CASE),
+            "saafi" to Regex("\\bsaafi\\b", RegexOption.IGNORE_CASE),
+            "twaa" to Regex("\\btwaa\\b", RegexOption.IGNORE_CASE),
+            "zaa" to Regex("\\bzaa\\b", RegexOption.IGNORE_CASE),
+            "lali" to Regex("\\blali\\b", RegexOption.IGNORE_CASE),
+            "leta" to Regex("\\bleta\\b", RegexOption.IGNORE_CASE),
+            "mboga" to Regex("\\bmboga\\b", RegexOption.IGNORE_CASE),
+            "ng'ombe" to Regex("\\bng'ombe\\b", RegexOption.IGNORE_CASE),
+            "samahani" to Regex("\\bsamahani\\b", RegexOption.IGNORE_CASE),
+            "sawa" to Regex("\\bsawa\\b", RegexOption.IGNORE_CASE)
+        )
+    }
+
 
     private const val TAG = "KikuyuDialect"
 
@@ -162,7 +225,7 @@ object KikuyuDialectAdapter {
             return CodeSwitchResult(
                 hasCodeSwitching = false,
                 primaryLanguage = "sw",
-                dholuoWords = emptyList(),
+                dialectWords = emptyList(),
                 swahiliWords = emptyList(),
                 confidence = 0.5f
             )
@@ -175,7 +238,7 @@ object KikuyuDialectAdapter {
             val clean = word.trim('\'', '"', '.', ',', '!', '?')
             when {
                 kikuyuMarkers.any { clean.contains(it) } -> kikuyuFound.add(clean)
-                isSwahiliWord(clean) -> swahiliFound.add(clean)
+                DialectUtils.isSwahiliWord(clean) -> swahiliFound.add(clean)
                 isKikuyuBusinessTerm(clean) -> swahiliFound.add(clean)
             }
         }
@@ -187,7 +250,7 @@ object KikuyuDialectAdapter {
         return CodeSwitchResult(
             hasCodeSwitching = hasCodeSwitching,
             primaryLanguage = if (kikuyuRatio > 0.4f) "ki" else "sw",
-            dholuoWords = kikuyuFound,
+            dialectWords = kikuyuFound,
             swahiliWords = swahiliFound,
             confidence = if (hasCodeSwitching) 0.8f else 0.6f
         )
@@ -197,13 +260,8 @@ object KikuyuDialectAdapter {
 
     fun normalize(text: String): String {
         var normalized = text
-        for ((kikuyu, standard) in pronunciationVariations) {
-            if (kikuyu != standard) {
-                normalized = normalized.replace(
-                    Regex("\\b$kikuyu\\b", RegexOption.IGNORE_CASE),
-                    standard
-                )
-            }
+        for ((key, regex) in PRONUNCIATION_REGEXES) {
+            normalized = regex.replace(normalized, pronunciationVariations[key]!!)
         }
         return normalized
     }
@@ -242,8 +300,8 @@ object KikuyuDialectAdapter {
         for (term in kikuyuBusinessTerms.keys) {
             if (lower.contains(term)) kikuyuScore += 2
         }
-        for (marker in kikuyuMarkers) {
-            if (Regex("\\b$marker\\b").containsMatchIn(lower)) kikuyuScore += 3
+        for ((_, regex) in MARKERS) {
+            if (regex.containsMatchIn(lower)) kikuyuScore += 3
         }
 
         return if (kikuyuScore > 5) DialectRegion.KIKUYU else DialectRegion.STANDARD
@@ -276,16 +334,7 @@ object KikuyuDialectAdapter {
 
     // ────────────────────── Helpers ──────────────────────
 
-    private fun isSwahiliWord(word: String): Boolean {
-        val swahiliMarkers = setOf(
-            "na", "ya", "wa", "za", "kwa", "ni", "la", "cha",
-            "nime", "sija", "tuta", "wata", "nina", "tuna",
-            "sana", "pia", "lakini", "kama", "au", "hata", "bado",
-            "leo", "jana", "kesho", "sasa", "baada",
-            "biashara", "bei", "faida", "hasara", "deni", "pesa"
-        )
-        return word in swahiliMarkers
-    }
+}
 
     private fun isKikuyuBusinessTerm(word: String): Boolean {
         return kikuyuBusinessTerms.containsKey(word) ||
