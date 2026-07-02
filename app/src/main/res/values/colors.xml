@@ -31,4 +31,15 @@
     <color name="recording_active">#FFF44336</color>
     <color name="speaking">#FF2196F3</color>
     <color name="holo_red_dark">#FFCC0000</color>
+
+    <!-- Business Flow colors -->
+    <color name="card_border">#FFE0E0E0</color>
+    <color name="flow_revenue">#FF4CAF50</color>
+    <color name="flow_expense">#FFF44336</color>
+    <color name="flow_profit">#FF2196F3</color>
+    <color name="flow_savings">#FFFFC107</color>
+    <color name="health_excellent">#FF4CAF50</color>
+    <color name="health_good">FF8BC34A</color>
+    <color name="health_fair">#FFFF9800</color>
+    <color name="health_poor">#FFF44336</color>
 </resources>
