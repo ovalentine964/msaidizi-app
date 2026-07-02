@@ -30,21 +30,21 @@ class PinnedHttpClient @Inject constructor(
         // Certificate pin for models.msaidizi.app — SHA-256 of SubjectPublicKeyInfo
         private const val CDN_HOST = "models.msaidizi.app"
 
-        // TODO(security): Replace these placeholder hashes with real SHA-256 pin hashes
-        // from the CDN certificate before production release.
-        // Generate with:
+        // Certificate pinning is DISABLED until real CDN certificate hashes are available.
+        // To enable:
+        //   1. Obtain the SHA-256 hash of the CDN certificate's SubjectPublicKeyInfo
+        //   2. Add the hash below (also add a backup pin for rotation)
+        //   3. Remove the `if (false)` guard and restore the BuildConfig.DEBUG check
+        //
+        // Generate pin hash with:
         //   openssl s_client -connect models.msaidizi.app:443 2>/dev/null \
         //     | openssl x509 -pubkey -noout \
         //     | openssl pkey -pubin -outform DER \
         //     | openssl dgst -sha256 -binary \
         //     | base64
-        // Also add a backup pin for certificate rotation.
-        //
-        // Current values are SHA-256 of well-known test keys (NOT production).
-        // These will allow connections in release builds but MUST be replaced.
-        private val CERTIFICATE_PINS = listOf(
-            "sha256/YLh1dUR9y6Kja30RrAn7JKnbQG/uEtLMkBgFF2Fuihg=",  // Backup: Let's Encrypt R3
-            "sha256/sRHdihwgkaib1P1gN7SkKPIhFRBcBx0p0sHJKbQG/uEtLMkBgFF2Fuihg="   // TODO: Replace with actual CDN pin
+        private val CERTIFICATE_PINS = listOf<String>(
+            // "sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="  // TODO: primary pin
+            // "sha256/BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB="  // TODO: backup pin
         )
 
         private const val CONNECT_TIMEOUT_SEC = 30L
@@ -96,8 +96,8 @@ class PinnedHttpClient @Inject constructor(
                 }
             }
 
-        // In debug builds, skip certificate pinning for development flexibility
-        if (!BuildConfig.DEBUG) {
+        // Only enable certificate pinning when real pins are configured.
+        if (CERTIFICATE_PINS.isNotEmpty() && !BuildConfig.DEBUG) {
             val pinner = CertificatePinner.Builder().apply {
                 for (pin in CERTIFICATE_PINS) {
                     add(CDN_HOST, pin)

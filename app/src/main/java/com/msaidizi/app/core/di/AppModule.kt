@@ -20,6 +20,9 @@ import com.msaidizi.app.core.model.UserVocabularyDao
 import com.msaidizi.app.core.model.UserCorrectionDao
 import com.msaidizi.app.evolution.FeedbackDao
 import com.msaidizi.app.evolution.FeatureRequestDao
+import com.msaidizi.app.core.database.GamificationDao
+import com.msaidizi.app.core.database.RichHabitsDao
+import com.msaidizi.app.core.database.MindsetLessonDao
 import com.msaidizi.app.evolution.FeedbackCollector
 import com.msaidizi.app.evolution.FeatureRequestTracker
 import com.msaidizi.app.core.database.VocabularyLearningDao
@@ -194,6 +197,65 @@ object AppModule {
                     db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_feature_requests_clusterId` ON `feature_requests` (`clusterId`)")
                 }
             })
+            // Migration v4 → v5: Added gamification, rich_habits, and mindset_lessons tables
+            .addMigrations(object : androidx.room.migration.Migration(4, 5) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `gamification` (
+                            `id` INTEGER NOT NULL,
+                            `totalPoints` INTEGER NOT NULL DEFAULT 0,
+                            `level` INTEGER NOT NULL DEFAULT 0,
+                            `currentStreak` INTEGER NOT NULL DEFAULT 0,
+                            `longestStreak` INTEGER NOT NULL DEFAULT 0,
+                            `lastActiveDay` INTEGER NOT NULL DEFAULT 0,
+                            `streakProtectionsUsed` INTEGER NOT NULL DEFAULT 0,
+                            `protectionWeek` INTEGER NOT NULL DEFAULT 0,
+                            `totalSalesRecorded` INTEGER NOT NULL DEFAULT 0,
+                            `totalBalanceChecks` INTEGER NOT NULL DEFAULT 0,
+                            `earnedBadges` TEXT NOT NULL DEFAULT '',
+                            `updatedAt` INTEGER NOT NULL DEFAULT 0,
+                            PRIMARY KEY(`id`)
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_gamification_level` ON `gamification` (`level`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_gamification_currentStreak` ON `gamification` (`currentStreak`)")
+
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `rich_habits` (
+                            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            `habitId` TEXT NOT NULL,
+                            `date` TEXT NOT NULL,
+                            `completed` INTEGER NOT NULL DEFAULT 0,
+                            `completedAt` INTEGER NOT NULL DEFAULT 0,
+                            `notes` TEXT NOT NULL DEFAULT ''
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_rich_habits_date` ON `rich_habits` (`date`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_rich_habits_habitId` ON `rich_habits` (`habitId`)")
+
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `mindset_lessons` (
+                            `lessonId` TEXT NOT NULL,
+                            `category` TEXT NOT NULL,
+                            `titleSw` TEXT NOT NULL,
+                            `titleEn` TEXT NOT NULL,
+                            `contentSw` TEXT NOT NULL,
+                            `contentEn` TEXT NOT NULL,
+                            `sourceBook` TEXT NOT NULL,
+                            `durationSeconds` INTEGER NOT NULL DEFAULT 150,
+                            `delivered` INTEGER NOT NULL DEFAULT 0,
+                            `completed` INTEGER NOT NULL DEFAULT 0,
+                            `deliveredAt` INTEGER NOT NULL DEFAULT 0,
+                            `completedAt` INTEGER NOT NULL DEFAULT 0,
+                            `sortOrder` INTEGER NOT NULL DEFAULT 0,
+                            PRIMARY KEY(`lessonId`)
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_mindset_lessons_category` ON `mindset_lessons` (`category`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_mindset_lessons_delivered` ON `mindset_lessons` (`delivered`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_mindset_lessons_completed` ON `mindset_lessons` (`completed`)")
+                }
+            })
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
     }
@@ -221,6 +283,15 @@ object AppModule {
 
     @Provides
     fun provideFeatureRequestDao(db: AppDatabase): FeatureRequestDao = db.featureRequestDao()
+
+    @Provides
+    fun provideGamificationDao(db: AppDatabase): GamificationDao = db.gamificationDao()
+
+    @Provides
+    fun provideRichHabitsDao(db: AppDatabase): RichHabitsDao = db.richHabitsDao()
+
+    @Provides
+    fun provideMindsetLessonDao(db: AppDatabase): MindsetLessonDao = db.mindsetLessonDao()
 
     // === DIALECT & ADAPTIVE VOCABULARY ===
 

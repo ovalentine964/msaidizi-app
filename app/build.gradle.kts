@@ -36,6 +36,13 @@ android {
         buildConfigField("String", "TTS_MODEL", "\"piper-swahili.onnx\"")
         buildConfigField("String", "VAD_MODEL", "\"silero_vad.onnx\"")
 
+        // M-Pesa passkey — set via MPESA_PASSKEY env var at build time
+        // NEVER commit production passkeys to source control
+        val mpesaPasskey = project.findProperty("MPESA_PASSKEY") as? String
+            ?: System.getenv("MPESA_PASSKEY")
+            ?: ""
+        buildConfigField("String", "MPESA_PASSKEY", "\"$mpesaPasskey\"")
+
         // NDK/CMake flags for llama.cpp JNI bridge
         externalNativeBuild {
             cmake {

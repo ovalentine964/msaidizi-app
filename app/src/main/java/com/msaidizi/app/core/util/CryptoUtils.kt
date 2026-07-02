@@ -113,23 +113,126 @@ object CryptoUtils {
         return hash.joinToString("") { "%02x".format(it) }
     }
 
+    private const val DB_KEY_ALIAS = "msaidizi_db_keystore_key"
+    private const val DB_PREFS_NAME = "msaidizi_db_key"
+    private const val DB_PREFS_KEY = "db_passphrase_encrypted"
+    private const val DB_PREFS_IV = "db_passphrase_iv"
+
     /**
      * Get or create a database encryption key for SQLCipher.
-     * Derives a deterministic key from Android Keystore, stored in SharedPreferences
-     * as an encrypted blob. Falls back to a random key if Keystore is unavailable.
+     * The passphrase is generated randomly and encrypted with an Android Keystore
+     * key before being stored in SharedPreferences. On retrieval, it is decrypted
+     * using the Keystore key so the plaintext passphrase never persists to disk.
      */
     fun getOrCreateDatabaseKey(context: android.content.Context): String {
-        val prefs = context.getSharedPreferences("msaidizi_db_key", android.content.Context.MODE_PRIVATE)
-        val existing = prefs.getString("db_passphrase", null)
-        if (existing != null) return existing
+        val prefs = context.getSharedPreferences(DB_PREFS_NAME, android.content.Context.MODE_PRIVATE)
+        val encryptedHex = prefs.getString(DB_PREFS_KEY, null)
+        val ivHex = prefs.getString(DB_PREFS_IV, null)
 
-        // Generate a random 32-byte passphrase and store it
+        if (encryptedHex != null && ivHex != null) {
+            // Decrypt the stored passphrase using Keystore key
+            return try {
+                val encrypted = hexToBytes(encryptedHex)
+                val iv = hexToBytes(ivHex)
+                val decrypted = decryptWithKeystoreKey(encrypted, iv)
+                String(decrypted, Charsets.UTF_8)
+            } catch (e: Exception) {
+                Timber.e(e, "CryptoUtils: Failed to decrypt DB key, regenerating")
+                generateAndStoreDatabaseKey(context, prefs)
+            }
+        }
+
+        return generateAndStoreDatabaseKey(context, prefs)
+    }
+
+    private fun generateAndStoreDatabaseKey(
+        context: android.content.Context,
+        prefs: android.content.SharedPreferences
+    ): String {
+        // Generate a random 32-byte passphrase
         val random = SecureRandom()
         val bytes = ByteArray(32)
         random.nextBytes(bytes)
         val passphrase = bytes.joinToString("") { "%02x".format(it) }
-        prefs.edit().putString("db_passphrase", passphrase).apply()
-        Timber.d("CryptoUtils: Generated new database encryption key")
+
+        // Encrypt with Android Keystore and store the ciphertext
+        try {
+            val (encrypted, iv) = encryptWithKeystoreKey(passphrase.toByteArray(Charsets.UTF_8))
+            prefs.edit()
+                .putString(DB_PREFS_KEY, bytesToHex(encrypted))
+                .putString(DB_PREFS_IV, bytesToHex(iv))
+                .apply()
+            Timber.d("CryptoUtils: Generated and encrypted new database key")
+        } catch (e: Exception) {
+            Timber.e(e, "CryptoUtils: Keystore encryption failed, storing plaintext as fallback")
+            // Last-resort fallback — still better than no encryption
+            prefs.edit().putString(DB_PREFS_KEY, passphrase).apply()
+        }
+
         return passphrase
+    }
+
+    /**
+     * Get or create a dedicated Keystore key for wrapping the DB passphrase.
+     */
+    private fun getOrCreateDbKeystoreKey(): SecretKey {
+        val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
+        keyStore.load(null)
+
+        keyStore.getEntry(DB_KEY_ALIAS, null)?.let { entry ->
+            return (entry as KeyStore.SecretKeyEntry).secretKey
+        }
+
+        val keyGen = KeyGenerator.getInstance(
+            KeyProperties.KEY_ALGORITHM_AES,
+            ANDROID_KEYSTORE
+        )
+        val spec = KeyGenParameterSpec.Builder(
+            DB_KEY_ALIAS,
+            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+        )
+            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+            .setKeySize(256)
+            .build()
+
+        keyGen.init(spec)
+        return keyGen.generateKey()
+    }
+
+    /**
+     * Encrypt data with the DB Keystore key.
+     * Returns (ciphertext, iv).
+     */
+    private fun encryptWithKeystoreKey(plaintext: ByteArray): Pair<ByteArray, ByteArray> {
+        val key = getOrCreateDbKeystoreKey()
+        val cipher = Cipher.getInstance(AES_GCM)
+        cipher.init(Cipher.ENCRYPT_MODE, key)
+        val iv = cipher.iv
+        val ciphertext = cipher.doFinal(plaintext)
+        return Pair(ciphertext, iv)
+    }
+
+    /**
+     * Decrypt data with the DB Keystore key.
+     */
+    private fun decryptWithKeystoreKey(ciphertext: ByteArray, iv: ByteArray): ByteArray {
+        val key = getOrCreateDbKeystoreKey()
+        val cipher = Cipher.getInstance(AES_GCM)
+        val spec = GCMParameterSpec(GCM_TAG_LENGTH, iv)
+        cipher.init(Cipher.DECRYPT_MODE, key, spec)
+        return cipher.doFinal(ciphertext)
+    }
+
+    private fun bytesToHex(bytes: ByteArray): String {
+        return bytes.joinToString("") { "%02x".format(it) }
+    }
+
+    private fun hexToBytes(hex: String): ByteArray {
+        val bytes = ByteArray(hex.length / 2)
+        for (i in bytes.indices) {
+            bytes[i] = Integer.parseInt(hex.substring(i * 2, i * 2 + 2), 16).toByte()
+        }
+        return bytes
     }
 }

@@ -8,6 +8,9 @@ import com.msaidizi.app.evolution.FeedbackEntity
 import com.msaidizi.app.evolution.FeatureRequestEntity
 import com.msaidizi.app.evolution.FeedbackDao
 import com.msaidizi.app.evolution.FeatureRequestDao
+import com.msaidizi.app.core.model.GamificationEntity
+import com.msaidizi.app.core.model.RichHabitEntry
+import com.msaidizi.app.core.model.MindsetLessonEntity
 
 /**
  * Room database for Msaidizi.
@@ -33,9 +36,12 @@ import com.msaidizi.app.evolution.FeatureRequestDao
         UserCorrection::class,
         LearnedWord::class,
         FeedbackEntity::class,
-        FeatureRequestEntity::class
+        FeatureRequestEntity::class,
+        GamificationEntity::class,
+        RichHabitEntry::class,
+        MindsetLessonEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -48,6 +54,9 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun vocabularyLearningDao(): VocabularyLearningDao
     abstract fun feedbackDao(): FeedbackDao
     abstract fun featureRequestDao(): FeatureRequestDao
+    abstract fun gamificationDao(): GamificationDao
+    abstract fun richHabitsDao(): RichHabitsDao
+    abstract fun mindsetLessonDao(): MindsetLessonDao
 }
 
 /**

@@ -9,6 +9,7 @@ import io.ktor.http.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import timber.log.Timber
+import com.msaidizi.app.BuildConfig
 import java.text.SimpleDateFormat
 import java.util.Base64
 import java.util.Date
@@ -47,14 +48,8 @@ class DarajaClient @Inject constructor(
         private const val SANDBOX_BASE = "https://sandbox.safaricom.co.ke"
         private const val PRODUCTION_BASE = "https://api.safaricom.co.ke"
 
-        /** Sandbox passkey (provided by Safaricom)
-         *  TODO: SECURITY — This is a hardcoded sandbox passkey.
-         *  Before going to production, load the production passkey from
-         *  encrypted SharedPreferences or BuildConfig. Never ship a
-         *  production passkey in source code.
-         */
-        private const val PASSKEY_SANDBOX =
-            "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919"
+        // Passkey loaded from BuildConfig (set via env var MPESA_PASSKEY at build time).
+        // NEVER commit passkeys to source control.
 
         // Sandbox shortcode
         private const val SHORTCODE_SANDBOX = "174379"
@@ -168,7 +163,7 @@ class DarajaClient @Inject constructor(
         val token = getAccessToken()
         val timestamp = dateFormat.format(Date())
         val password = Base64.getEncoder().encodeToString(
-            "${getShortCode()}$PASSKEY_SANDBOX$timestamp".toByteArray()
+            "${getShortCode()}${BuildConfig.MPESA_PASSKEY}$timestamp".toByteArray()
         )
 
         val request = StkPushRequest(
@@ -225,7 +220,7 @@ class DarajaClient @Inject constructor(
         val token = getAccessToken()
         val timestamp = dateFormat.format(Date())
         val password = Base64.getEncoder().encodeToString(
-            "${getShortCode()}$PASSKEY_SANDBOX$timestamp".toByteArray()
+            "${getShortCode()}${BuildConfig.MPESA_PASSKEY}$timestamp".toByteArray()
         )
 
         val request = StkQueryRequest(
