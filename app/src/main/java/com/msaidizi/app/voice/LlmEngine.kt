@@ -52,13 +52,21 @@ class LlmEngine @Inject constructor(
      * @param nThreads Number of CPU threads for inference
      * @return Model handle (0 on failure)
      */
-    external fun nativeLoadModel(path: String, nCtx: Int, nThreads: Int): Long
+    // Native method — implemented in llama_jni.cpp via JNI
+    // Stub for kapt compatibility (actual implementation loaded at runtime)
+    fun nativeLoadModel(path: String, nCtx: Int, nThreads: Int): Long {
+        throw UnsupportedOperationException("Native method — requires llama_jni library")
+    }
 
     /**
      * Free a loaded model and release memory.
      * @param handle Model handle from nativeLoadModel
      */
-    external fun nativeFreeModel(handle: Long)
+    // Native method — implemented in llama_jni.cpp via JNI
+    // Stub for kapt compatibility (actual implementation loaded at runtime)
+    fun nativeFreeModel(handle: Long) {
+        throw UnsupportedOperationException("Native method — requires llama_jni library")
+    }
 
     /**
      * Generate text from a prompt with streaming callback.
@@ -72,7 +80,9 @@ class LlmEngine @Inject constructor(
      * @param callback Called for each generated token
      * @return Complete generated text
      */
-    external fun nativeGenerate(
+    // Native method — implemented in llama_jni.cpp via JNI
+    // Stub for kapt compatibility (actual implementation loaded at runtime)
+    fun nativeGenerate(
         handle: Long,
         prompt: String,
         maxTokens: Int,
@@ -80,7 +90,9 @@ class LlmEngine @Inject constructor(
         topP: Float,
         stopSequences: Array<String>,
         callback: (String) -> Unit
-    ): String
+    ): String {
+        throw UnsupportedOperationException("Native method — requires llama_jni library")
+    }
 
     /**
      * Count tokens in a text string.
@@ -88,16 +100,24 @@ class LlmEngine @Inject constructor(
      * @param text Text to tokenize
      * @return Number of tokens
      */
-    external fun nativeGetTokenCount(handle: Long, text: String): Int
+    // Native method — implemented in llama_jni.cpp via JNI
+    // Stub for kapt compatibility (actual implementation loaded at runtime)
+    fun nativeGetTokenCount(handle: Long, text: String): Int {
+        throw UnsupportedOperationException("Native method — requires llama_jni library")
+    }
 
     /**
      * Evaluate a function call from the model output.
      * Parses JSON function call format.
      */
-    external fun nativeParseFunctionCall(
+    // Native method — implemented in llama_jni.cpp via JNI
+    // Stub for kapt compatibility (actual implementation loaded at runtime)
+    fun nativeParseFunctionCall(
         handle: Long,
         output: String
-    ): String  // Returns JSON
+    ): String {
+        throw UnsupportedOperationException("Native method — requires llama_jni library")
+    }
 
     companion object {
         /** Whether llama_jni native library is available */
