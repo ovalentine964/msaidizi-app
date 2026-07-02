@@ -3,7 +3,8 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.kapt")
     id("com.google.dagger.hilt.android")
-    id("org.jetbrains.kotlin.plugin.serialization")
+    // TEMPORARILY DISABLED to isolate kapt error
+    // id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {
@@ -202,9 +203,12 @@ dependencies {
 }
 
 kapt {
-    correctErrorTypes = true
+    // correctErrorTypes removed — may mask real errors with 'Could not load module <Error module>'
     javacOptions {
         option("-Adiagnostic.note.verbosity=full")
+    }
+    arguments {
+        arg("kapt.verbose", "true")
     }
 }
 
