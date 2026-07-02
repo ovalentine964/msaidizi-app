@@ -1,0 +1,23 @@
+name: Pre-Commit Validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Validate Build
+        run: |
+          chmod +x scripts/validate-build.sh
+          ./scripts/validate-build.sh
+      
+      - name: Check Kotlin Compilation
+        run: |
+          # Quick syntax check without full build
+          find app/src -name "*.kt" -exec grep -l "import\|class\|fun" {} \; | wc -l

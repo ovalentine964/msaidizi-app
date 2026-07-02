@@ -1,4 +1,4 @@
-name: Build APK
+name: Build and Release
 
 on:
   push:
@@ -11,7 +11,18 @@ permissions:
   contents: write
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Validate Build
+        run: |
+          chmod +x scripts/validate-build.sh
+          ./scripts/validate-build.sh
+
   build:
+    needs: validate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

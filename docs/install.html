@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Msaidizi — Download & Install</title>
+    <style>
+        :root {
+            --green: #22c55e;
+            --green-dark: #16a34a;
+            --blue: #3b82f6;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-600: #4b5563;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--gray-50);
+            color: var(--gray-800);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .hero {
+            background: linear-gradient(135deg, #065f46, #059669);
+            color: white;
+            width: 100%;
+            padding: 3rem 1.5rem 4rem;
+            text-align: center;
+        }
+        .hero h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+        .hero p { font-size: 1.1rem; opacity: 0.9; }
+        .card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            max-width: 480px;
+            width: calc(100% - 2rem);
+            margin-top: -2rem;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+        .download-btn {
+            display: block;
+            width: 100%;
+            padding: 1rem;
+            background: var(--green);
+            color: white;
+            border: none;
+            border-radius: 0.75rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .download-btn:hover { background: var(--green-dark); }
+        .download-btn .icon { font-size: 1.5rem; vertical-align: middle; margin-right: 0.5rem; }
+        .subtitle {
+            text-align: center;
+            color: var(--gray-600);
+            margin: 0.75rem 0 1.5rem;
+            font-size: 0.9rem;
+        }
+        .steps { list-style: none; margin-top: 1.5rem; }
+        .steps li {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--gray-100);
+        }
+        .steps li:last-child { border-bottom: none; }
+        .step-icon {
+            flex-shrink: 0;
+            width: 2.5rem;
+            height: 2.5rem;
+            background: var(--gray-100);
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+        .step-text h3 { font-size: 1rem; margin-bottom: 0.25rem; }
+        .step-text p { font-size: 0.85rem; color: var(--gray-600); line-height: 1.4; }
+        .ios-notice {
+            display: none;
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-top: 1rem;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        .ios-notice .icon { font-size: 1.5rem; }
+        .lang-toggle {
+            text-align: center;
+            margin-top: 1.5rem;
+        }
+        .lang-toggle button {
+            background: none;
+            border: 1px solid var(--gray-600);
+            color: var(--gray-600);
+            padding: 0.4rem 1rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .lang-toggle button:hover { background: var(--gray-100); }
+        .footer {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            text-align: center;
+            color: var(--gray-600);
+            font-size: 0.8rem;
+        }
+        @media (max-width: 480px) {
+            .hero { padding: 2rem 1rem 3rem; }
+            .hero h1 { font-size: 1.5rem; }
+            .card { padding: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <h1>📱 Msaidizi</h1>
+        <p id="hero-sub">Your AI Business Assistant</p>
+    </div>
+
+    <div class="card">
+        <!-- English content -->
+        <div id="en">
+            <a href="#" class="download-btn" id="dl-btn-en">
+                <span class="icon">⬇️</span> Download Msaidizi
+            </a>
+            <p class="subtitle">Free · Works offline · No data charges</p>
+
+            <div class="ios-notice" id="ios-notice">
+                <span class="icon">🍎</span>
+                <strong>iOS not available yet.</strong><br>
+                Msaidizi is currently Android only. Join our waitlist for iPhone updates.
+            </div>
+
+            <ol class="steps">
+                <li>
+                    <div class="step-icon">1️⃣</div>
+                    <div class="step-text">
+                        <h3>Download the app</h3>
+                        <p>Tap the green button above. The file will start downloading automatically.</p>
+                    </div>
+                </li>
+                <li>
+                    <div class="step-icon">2️⃣</div>
+                    <div class="step-text">
+                        <h3>Open the file</h3>
+                        <p>When download finishes, tap the file. If asked, allow installation from this source.</p>
+                    </div>
+                </li>
+                <li>
+                    <div class="step-icon">3️⃣</div>
+                    <div class="step-text">
+                        <h3>Install & Launch</h3>
+                        <p>Tap "Install", then "Open". Msaidizi is ready to help your business! 🎉</p>
+                    </div>
+                </li>
+            </ol>
+        </div>
+
+        <!-- Swahili content -->
+        <div id="sw" style="display:none">
+            <a href="#" class="download-btn" id="dl-btn-sw">
+                <span class="icon">⬇️</span> Pakua Msaidizi
+            </a>
+            <p class="subtitle">Bure · Inafanya bila mtandao · Hakuna gharama za data</p>
+
+            <div class="ios-notice" id="ios-notice-sw">
+                <span class="icon">🍎</span>
+                <strong>iOS bado haipatikani.</strong><br>
+                Msaidizi kwa sasa ni ya Android tu. Jiunge na orodha yetu kwa sasisho za iPhone.
+            </div>
+
+            <ol class="steps">
+                <li>
+                    <div class="step-icon">1️⃣</div>
+                    <div class="step-text">
+                        <h3>Pakua programu</h3>
+                        <p>Gusa kitufe kijani hapo juu. Faili itaanza kupakuliwa moja kwa moja.</p>
+                    </div>
+                </li>
+                <li>
+                    <div class="step-icon">2️⃣</div>
+                    <div class="step-text">
+                        <h3>Fungua faili</h3>
+                        <p>Ukishamaliza kupakua, gusa faili. Ukiulizwa, ruhusu usakinishaji kutoka chanzo hiki.</p>
+                    </div>
+                </li>
+                <li>
+                    <div class="step-icon">3️⃣</div>
+                    <div class="step-text">
+                        <h3>Sakinisha na Anzisha</h3>
+                        <p>Gusa "Sakisha", kisha "Fungua". Msaidizi iko tayari kusaidia biashara yako! 🎉</p>
+                    </div>
+                </li>
+            </ol>
+        </div>
+
+        <div class="lang-toggle">
+            <button onclick="toggleLang()">🇰🇪 Swahili / English</button>
+        </div>
+    </div>
+
+    <div class="footer">
+        Msaidizi — AI Biashara Msaidizi<br>
+        Android 8.0+ required · ~50 MB
+    </div>
+
+    <script>
+        // Detect iOS
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        if (isIOS) {
+            document.getElementById('ios-notice').style.display = 'block';
+            document.getElementById('ios-notice-sw').style.display = 'block';
+            document.getElementById('dl-btn-en').style.background = '#9ca3af';
+            document.getElementById('dl-btn-en').style.pointerEvents = 'none';
+            document.getElementById('dl-btn-en').innerHTML = '<span class="icon">🍎</span> Android Only';
+            document.getElementById('dl-btn-sw').style.background = '#9ca3af';
+            document.getElementById('dl-btn-sw').style.pointerEvents = 'none';
+            document.getElementById('dl-btn-sw').innerHTML = '<span class="icon">🍎</span> Android Tu';
+        }
+
+        // Language toggle
+        let currentLang = 'en';
+        function toggleLang() {
+            currentLang = currentLang === 'en' ? 'sw' : 'en';
+            document.getElementById('en').style.display = currentLang === 'en' ? 'block' : 'none';
+            document.getElementById('sw').style.display = currentLang === 'sw' ? 'block' : 'none';
+            document.getElementById('hero-sub').textContent = currentLang === 'en'
+                ? 'Your AI Business Assistant'
+                : 'Msaidizi Wako wa Biashara wa AI';
+        }
+    </script>
+</body>
+</html>
