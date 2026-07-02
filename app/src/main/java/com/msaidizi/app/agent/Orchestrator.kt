@@ -17,6 +17,9 @@ import com.msaidizi.app.loops.MorningBriefingLoop
 import com.msaidizi.app.loops.StreakProtectionLoop
 import com.msaidizi.app.loops.VariableRewardsLoop
 import com.msaidizi.app.loops.RewardAction
+import com.msaidizi.app.loops.ReActLoop
+import com.msaidizi.app.loops.ReflexionLoop
+import com.msaidizi.app.loops.PlanExecuteLoop
 import com.msaidizi.app.core.dialect.AdaptiveVocabulary
 import com.msaidizi.app.evolution.SelfEvolutionManager
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -98,7 +101,10 @@ class Orchestrator(
     private val variableRewardsLoop: VariableRewardsLoop? = null,
     private val selfEvolution: SelfEvolutionManager? = null,
     private val preferenceLearner: PreferenceLearner? = null,
-    private val adaptiveVocabulary: AdaptiveVocabulary? = null
+    private val adaptiveVocabulary: AdaptiveVocabulary? = null,
+    private val reActLoop: ReActLoop = ReActLoop(),
+    private val reflexionLoop: ReflexionLoop = ReflexionLoop(),
+    private val planExecuteLoop: PlanExecuteLoop = PlanExecuteLoop()
 ) {
     // Response flow for UI
     private val _responses = MutableSharedFlow<AgentResponse>(extraBufferCapacity = 8)
@@ -122,18 +128,23 @@ class Orchestrator(
 
     // ═══════════════════════════════════════════════════════════════
     // STA 443 §1.2 — PROBABILITY SPACES: Intent classification
+    // with ReAct Loop (explicit reasoning trace)
     // ═══════════════════════════════════════════════════════════════
 
     /**
      * Process user input text and generate a response.
      * This is the main entry point for the agent system.
      *
+     * **ReAct Loop Integration:**
+     * Every request now produces an explicit reasoning trace showing:
+     * - What was observed (input text, language)
+     * - What was reasoned (intent classification, confidence analysis)
+     * - What action was taken (which agent handled it)
+     * - What was reflected on (success/failure, lessons learned)
+     *
      * **STA 443 §1.2.5 (Conditional Expectation):**
      * The optimal response maximizes E[Quality | Intent, Context]:
      *   Response* = argmax_R E[Quality(R) | Intent = i, Context = c]
-     *
-     * In practice, this means routing to the agent best suited for
-     * the classified intent, enhanced with personalized context.
      *
      * **Pipeline (ECO 103 §1.3 — Sequences):**
      * 1. Check for corrections first (error correction)
@@ -144,7 +155,12 @@ class Orchestrator(
      * 6. Trigger background learning periodically (batch processing)
      */
     suspend fun processInput(text: String, language: String = "sw"): AgentResponse {
-        Timber.d("Processing input: '%s' (lang=%s)", text, language)
+        // ═══ ReAct Loop: Start reasoning trace ═══
+        val trace = reActLoop.startTrace("process_input:$language")
+        
+        Timber.d("Processing input: \'%s\' (lang=%s)", text, language)
+
+        reActLoop.think(trace, "Received input: \"${text.take(50)}\" in language=$language")
 
         // ═══ Self-Evolution: Record interaction signals ═══
         selfEvolution?.recordLanguageSignal(language)
@@ -161,6 +177,8 @@ class Orchestrator(
         // ═══ Self-Evolution: Apply learned vocabulary to transcription ═══
         val vocabEnhancedText = adaptiveVocabulary?.applyToTranscription(evolvedText) ?: evolvedText
 
+        reActLoop.observe(trace, "Applied vocabulary enhancement: \"${vocabEnhancedText.take(50)}\"")
+
         // ═══ Step 0: Check for corrections ═══
         if (lastTransaction != null) {
             val isCorrection = adaptiveLearning.parseAndRecordCorrection(
@@ -169,8 +187,8 @@ class Orchestrator(
                 language = language
             )
             if (isCorrection) {
+                reActLoop.act(trace, "correction_detected", "Correction detected and recorded")
                 Timber.d("Correction detected and recorded")
-                // Self-Evolution: Learn from this correction
                 selfEvolution?.recordFeatureUsage("CORRECTION")
                 val response = AgentResponse(
                     text = if (language == "sw") {
@@ -183,6 +201,8 @@ class Orchestrator(
                 conversationMemory.addTurn("msaidizi", response.text)
                 lastResponse = response.text
                 _responses.emit(response)
+                reActLoop.reflect(trace, "Correction handled successfully", 1.0)
+                reActLoop.complete(trace, true, response.text)
                 return response
             }
         }
@@ -190,42 +210,50 @@ class Orchestrator(
         // ═══ Step 1: Classify intent with context ═══
         var intentResult = intentRouter.classify(vocabEnhancedText)
 
+        reActLoop.think(
+            trace,
+            "Intent classified: ${intentResult.intent} (confidence=${String.format("%.2f", intentResult.confidence)}, needsLLM=${intentResult.needsLLM})",
+            intentResult.confidence
+        )
+
         Timber.d("Intent: %s (confidence=%.2f, needsLLM=%b)",
             intentResult.intent, intentResult.confidence, intentResult.needsLLM)
 
         // ═══ Step 2: Apply conversation context for reference resolution ═══
-        // If this looks like a follow-up, resolve pronouns/references
         if (conversationMemory.isFollowUp(vocabEnhancedText)) {
             intentResult = conversationMemory.resolveReferences(vocabEnhancedText, intentResult)
+            reActLoop.think(trace, "Resolved as follow-up, intent now: ${intentResult.intent}")
             Timber.d("Context-resolved intent: %s (data=%s)", intentResult.intent, intentResult.extractedData)
         }
 
         // ═══ Step 3: Enhance intent with adaptive learning ═══
-        // STA 443 §1.2.5: Bayesian updating of intent classification
         intentResult = adaptiveLearning.enhanceIntentWithLearning(intentResult, vocabEnhancedText)
+
+        reActLoop.think(
+            trace,
+            "Enhanced intent: ${intentResult.intent} (confidence=${String.format("%.2f", intentResult.confidence)})",
+            intentResult.confidence
+        )
 
         Timber.d("Enhanced intent: %s (data=%s)", intentResult.intent, intentResult.extractedData)
 
-        // ═══ Step 4: Confidence escalation ═══
-        // When confidence is low, ask for clarification instead of guessing.
-        // This prevents false recordings that could corrupt the worker's data.
+        // ═══ Step 4: Confidence escalation with Reflexion ═══
         val response = if (intentResult.confidence < CONFIDENCE_CONFIRM &&
             intentResult.intent != IntentType.UNKNOWN &&
             intentResult.intent != IntentType.GREETING &&
             intentResult.intent != IntentType.HELP
         ) {
-            // Low confidence: ask for clarification
+            reActLoop.act(trace, "low_confidence_clarification", "Confidence ${String.format("%.2f", intentResult.confidence)} below threshold, asking for clarification")
             handleLowConfidence(intentResult, vocabEnhancedText, language)
         } else if (intentResult.confidence < CONFIDENCE_AUTO &&
             intentResult.intent != IntentType.UNKNOWN &&
             intentResult.intent != IntentType.GREETING &&
             intentResult.intent != IntentType.HELP
         ) {
-            // Medium confidence: confirm before proceeding
+            reActLoop.act(trace, "medium_confidence_confirm", "Confidence ${String.format("%.2f", intentResult.confidence)}, confirming with user")
             handleMediumConfidence(intentResult, vocabEnhancedText, language)
         } else {
-            // High confidence or non-transactional: proceed normally
-            // ECO 104 §1.2: Route to agent that maximizes response quality
+            reActLoop.act(trace, "route_to_agent", "Routing to agent for intent: ${intentResult.intent}")
             routeToAgent(intentResult, text, language)
         }
 
@@ -242,7 +270,6 @@ class Orchestrator(
         )
 
         // ═══ Step 6: Record vocabulary for learning ═══
-        // STA 347: Each interaction is a data point for on-device ML
         learningAgent.recordPattern(
             PatternType.VOCABULARY,
             mapOf(
@@ -260,8 +287,37 @@ class Orchestrator(
             wasFollowed = response.type == ResponseType.CONFIRMATION
         )
 
+        // ═══ Step 8: Reflexion — self-critique the response ═══
+        val critique = reflexionLoop.critiqueResponse(
+            response = response.text,
+            expectedLanguage = language
+        )
+        reActLoop.observe(
+            trace,
+            "Response generated (${response.text.length} chars, type=${response.type}), " +
+                "Reflexion score: ${String.format("%.2f", critique.score)}",
+            critique.score
+        )
+        if (critique.shouldRetry) {
+            reActLoop.reflect(
+                trace,
+                "Response quality below threshold (${String.format("%.2f", critique.score)}). " +
+                    "Issues: ${critique.issues}. Will apply feedback next time.",
+                critique.score
+            )
+        } else {
+            reActLoop.reflect(
+                trace,
+                "Response quality acceptable (${String.format("%.2f", critique.score)}). " +
+                    "Intent: ${intentResult.intent}, confidence: ${String.format("%.2f", intentResult.confidence)}",
+                critique.score
+            )
+        }
+
         lastResponse = response.text
         _responses.emit(response)
+
+        reActLoop.complete(trace, response.type != ResponseType.ERROR, response.text)
 
         return response
     }
@@ -1372,6 +1428,31 @@ class Orchestrator(
      * Get mindset academy progress.
      */
     suspend fun getMindsetProgress() = mindsetAcademy?.getProgress()
+
+    /**
+     * Get ReAct reasoning traces for debugging.
+     */
+    fun getReActTraces(n: Int = 10): List<Map<String, Any>> = reActLoop.getRecentTraces(n)
+
+    /**
+     * Get successful reasoning chains for few-shot learning.
+     */
+    fun getReasoningExamples(n: Int = 5): List<Map<String, Any>> = reActLoop.getReasoningExamples(n)
+
+    /**
+     * Get Reflexion critique history.
+     */
+    fun getReflexionCritiques(n: Int = 10): List<Map<String, Any>> = reflexionLoop.getCritiqueHistory(n)
+
+    /**
+     * Get average Reflexion critique score.
+     */
+    fun getReflexionAverageScore(): Double = reflexionLoop.getAverageScore()
+
+    /**
+     * Get Plan-and-Execute plan history.
+     */
+    fun getPlanHistory(n: Int = 10): List<Map<String, Any>> = planExecuteLoop.getPlanHistory(n)
 
     /**
      * Get conversation memory for debugging or UI display.
