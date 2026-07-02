@@ -25,6 +25,9 @@ import com.msaidizi.app.core.database.RichHabitsDao
 import com.msaidizi.app.core.database.MindsetLessonDao
 import com.msaidizi.app.evolution.FeedbackCollector
 import com.msaidizi.app.evolution.FeatureRequestTracker
+import com.msaidizi.app.core.database.TitheDao
+import com.msaidizi.app.core.database.GoalDao
+import com.msaidizi.app.core.database.LoanDao
 import com.msaidizi.app.core.database.VocabularyLearningDao
 import com.msaidizi.app.core.dialect.AdaptiveVocabulary
 import com.msaidizi.app.core.language.AdaptiveAsrEngine
@@ -37,6 +40,9 @@ import com.msaidizi.app.sync.SyncManager
 import com.google.gson.Gson
 import com.msaidizi.app.sync.SyncQueue
 import com.msaidizi.app.sync.NetworkMonitor
+import com.msaidizi.app.finance.TitheTracker
+import com.msaidizi.app.finance.GoalPlanner
+import com.msaidizi.app.finance.LoanManager
 import com.msaidizi.app.gamification.GamificationEngine
 import com.msaidizi.app.mindset.MindsetAcademy
 import com.msaidizi.app.mindset.RichHabitsScore
@@ -262,6 +268,112 @@ object AppModule {
                     db.execSQL("CREATE INDEX IF NOT EXISTS `index_mindset_lessons_completed` ON `mindset_lessons` (`completed`)")
                 }
             })
+            .addMigrations(object : androidx.room.migration.Migration(5, 6) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    // Tithe records
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `tithe_records` (
+                            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            `type` TEXT NOT NULL,
+                            `amount` REAL NOT NULL,
+                            `recipient` TEXT NOT NULL DEFAULT '',
+                            `date` INTEGER NOT NULL,
+                            `category` TEXT NOT NULL DEFAULT '',
+                            `notes` TEXT NOT NULL DEFAULT '',
+                            `incomeAtTime` REAL NOT NULL DEFAULT 0.0,
+                            `inputMethod` TEXT NOT NULL DEFAULT 'VOICE',
+                            `createdAt` INTEGER NOT NULL DEFAULT 0
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_tithe_records_date` ON `tithe_records` (`date`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_tithe_records_type` ON `tithe_records` (`type`)")
+
+                    // Goal records
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `goal_records` (
+                            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            `name` TEXT NOT NULL,
+                            `targetAmount` REAL NOT NULL,
+                            `currentAmount` REAL NOT NULL DEFAULT 0.0,
+                            `category` TEXT NOT NULL,
+                            `deadline` INTEGER NOT NULL DEFAULT 0,
+                            `status` TEXT NOT NULL DEFAULT 'ACTIVE',
+                            `weeklyTarget` REAL NOT NULL DEFAULT 0.0,
+                            `dailyTarget` REAL NOT NULL DEFAULT 0.0,
+                            `streak` INTEGER NOT NULL DEFAULT 0,
+                            `bestStreak` INTEGER NOT NULL DEFAULT 0,
+                            `deeperPurpose` TEXT NOT NULL DEFAULT '',
+                            `createdAt` INTEGER NOT NULL DEFAULT 0,
+                            `updatedAt` INTEGER NOT NULL DEFAULT 0
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_goal_records_status` ON `goal_records` (`status`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_goal_records_category` ON `goal_records` (`category`)")
+
+                    // Goal progress entries
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `goal_progress_entries` (
+                            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            `goalId` INTEGER NOT NULL,
+                            `amount` REAL NOT NULL,
+                            `note` TEXT NOT NULL DEFAULT '',
+                            `timestamp` INTEGER NOT NULL DEFAULT 0,
+                            FOREIGN KEY(`goalId`) REFERENCES `goal_records`(`id`) ON DELETE CASCADE
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_goal_progress_entries_goalId` ON `goal_progress_entries` (`goalId`)")
+
+                    // Goal milestones
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `goal_milestones` (
+                            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            `goalId` INTEGER NOT NULL,
+                            `percentage` REAL NOT NULL,
+                            `reachedAt` INTEGER NOT NULL DEFAULT 0,
+                            FOREIGN KEY(`goalId`) REFERENCES `goal_records`(`id`) ON DELETE CASCADE
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_goal_milestones_goalId` ON `goal_milestones` (`goalId`)")
+
+                    // Loan records
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `loan_records` (
+                            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            `amount` REAL NOT NULL,
+                            `purpose` TEXT NOT NULL,
+                            `lender` TEXT NOT NULL DEFAULT '',
+                            `interestRate` REAL NOT NULL DEFAULT 0.0,
+                            `totalDue` REAL NOT NULL DEFAULT 0.0,
+                            `startDate` INTEGER NOT NULL,
+                            `endDate` INTEGER NOT NULL DEFAULT 0,
+                            `repaymentFrequency` TEXT NOT NULL DEFAULT 'MONTHLY',
+                            `totalRepaid` REAL NOT NULL DEFAULT 0.0,
+                            `status` TEXT NOT NULL DEFAULT 'ACTIVE',
+                            `createdAt` INTEGER NOT NULL DEFAULT 0,
+                            `updatedAt` INTEGER NOT NULL DEFAULT 0
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_loan_records_status` ON `loan_records` (`status`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_loan_records_purpose` ON `loan_records` (`purpose`)")
+
+                    // Loan repayments
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `loan_repayments` (
+                            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            `loanId` INTEGER NOT NULL,
+                            `amount` REAL NOT NULL,
+                            `dueDate` INTEGER NOT NULL,
+                            `paidDate` INTEGER,
+                            `paidAmount` REAL,
+                            `status` TEXT NOT NULL DEFAULT 'PENDING',
+                            `penalty` REAL NOT NULL DEFAULT 0.0,
+                            FOREIGN KEY(`loanId`) REFERENCES `loan_records`(`id`) ON DELETE CASCADE
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_loan_repayments_loanId` ON `loan_repayments` (`loanId`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_loan_repayments_status` ON `loan_repayments` (`status`)")
+                }
+            })
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
     }
@@ -295,6 +407,15 @@ object AppModule {
 
     @Provides
     fun provideRichHabitsDao(db: AppDatabase): RichHabitsDao = db.richHabitsDao()
+
+    @Provides
+    fun provideTitheDao(db: AppDatabase): TitheDao = db.titheDao()
+
+    @Provides
+    fun provideGoalDao(db: AppDatabase): GoalDao = db.goalDao()
+
+    @Provides
+    fun provideLoanDao(db: AppDatabase): LoanDao = db.loanDao()
 
     @Provides
     fun provideMindsetLessonDao(db: AppDatabase): MindsetLessonDao = db.mindsetLessonDao()
@@ -407,10 +528,17 @@ object AppModule {
         gamificationEngine: GamificationEngine,
         ahaMomentFlow: AhaMomentFlow,
         richHabitsScore: RichHabitsScore,
-        mindsetAcademy: MindsetAcademy
+        mindsetAcademy: MindsetAcademy,
+        titheTracker: TitheTracker,
+        goalPlanner: GoalPlanner,
+        loanManager: LoanManager,
+        titheDao: TitheDao,
+        goalDao: GoalDao,
+        loanDao: LoanDao
     ): Orchestrator = Orchestrator(
         intentRouter, businessAgent, analysisAgent, advisorAgent, learningAgent, adaptiveLearning,
-        gamificationEngine, ahaMomentFlow, richHabitsScore, mindsetAcademy
+        gamificationEngine, ahaMomentFlow, richHabitsScore, mindsetAcademy,
+        titheTracker, goalPlanner, loanManager, titheDao, goalDao, loanDao
     )
 
     // === SYNC ===
@@ -509,6 +637,24 @@ object AppModule {
     fun provideRichHabitsScore(
         richHabitsDao: RichHabitsDao
     ): RichHabitsScore = RichHabitsScore(richHabitsDao)
+
+    @Provides
+    @Singleton
+    fun provideTitheTracker(
+        titheDao: TitheDao
+    ): TitheTracker = TitheTracker(titheDao)
+
+    @Provides
+    @Singleton
+    fun provideGoalPlanner(
+        goalDao: GoalDao
+    ): GoalPlanner = GoalPlanner(goalDao)
+
+    @Provides
+    @Singleton
+    fun provideLoanManager(
+        loanDao: LoanDao
+    ): LoanManager = LoanManager(loanDao)
 
     @Provides
     @Singleton

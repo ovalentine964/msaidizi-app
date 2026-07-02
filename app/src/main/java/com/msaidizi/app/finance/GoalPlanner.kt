@@ -1,5 +1,9 @@
 package com.msaidizi.app.finance
 
+import com.msaidizi.app.core.database.GoalDao
+import com.msaidizi.app.core.model.GoalRecord
+import com.msaidizi.app.core.model.GoalProgressEntry
+import com.msaidizi.app.core.model.GoalMilestone
 import timber.log.Timber
 import java.util.UUID
 import kotlin.math.max
@@ -32,7 +36,9 @@ import kotlin.math.roundToInt
  * - ECO 210 (Quantitative Methods): Break-even analysis for equipment goals
  * - ECO 206 (Microfinance): Savings behavior optimization
  */
-class GoalPlanner {
+class GoalPlanner(
+    private val goalDao: GoalDao
+) {
 
     companion object {
         /** Minimum data points for reliable time-to-goal forecast */
@@ -184,7 +190,7 @@ class GoalPlanner {
      * @param category Goal category (auto-detected if not provided)
      * @return Created Goal with auto-generated action steps
      */
-    fun createGoal(
+    suspend fun createGoal(
         description: String,
         targetAmount: Double,
         deadline: Long,
@@ -200,8 +206,21 @@ class GoalPlanner {
             steps = steps
         )
 
-        Timber.i("Goal created: ${goal.id} — $description (KSh $targetAmount)")
-        return goal
+        // Persist to Room
+        val entity = GoalRecord(
+            name = description,
+            targetAmount = targetAmount,
+            currentAmount = 0.0,
+            category = category.name,
+            deadline = deadline,
+            status = "ACTIVE",
+            createdAt = System.currentTimeMillis() / 1000,
+            updatedAt = System.currentTimeMillis() / 1000
+        )
+        val roomId = goalDao.insertGoal(entity)
+
+        Timber.i("Goal created: $roomId — $description (KSh $targetAmount)")
+        return goal.copy(id = roomId.toString())
     }
 
     /**
@@ -248,6 +267,35 @@ class GoalPlanner {
     /**
      * Helper: check if string contains any of the given keywords.
      */
+    /**
+     * Load active goals from Room.
+     */
+    suspend fun getActiveGoals(): List<Goal> {
+        return goalDao.getActive().map { it.toGoal() }
+    }
+
+    /**
+     * Load all goals from Room.
+     */
+    suspend fun getAllGoals(): List<Goal> {
+        return goalDao.getAll().map { it.toGoal() }
+    }
+
+    /**
+     * Convert GoalRecord entity to domain Goal.
+     */
+    private fun GoalRecord.toGoal(): Goal {
+        return Goal(
+            id = id.toString(),
+            description = name,
+            targetAmount = targetAmount,
+            currentAmount = currentAmount,
+            deadline = deadline,
+            category = try { GoalCategory.valueOf(category) } catch (_: Exception) { GoalCategory.OTHER },
+            isActive = status == "ACTIVE"
+        )
+    }
+
     private fun String.containsAny(vararg keywords: String): Boolean {
         return keywords.any { this.contains(it) }
     }
@@ -413,7 +461,7 @@ class GoalPlanner {
      * @param note Optional note from worker
      * @return Updated goal with new progress entry and any milestone celebration
      */
-    fun updateProgress(
+    suspend fun updateProgress(
         goal: Goal,
         amount: Double,
         note: String = ""
@@ -437,6 +485,29 @@ class GoalPlanner {
             }
         )
 
+        // Persist progress to Room
+        val goalId = goal.id.toLongOrNull()
+        if (goalId != null) {
+            goalDao.addProgress(goalId, amount)
+            goalDao.insertProgressEntry(
+                GoalProgressEntry(
+                    goalId = goalId,
+                    amount = amount,
+                    note = note,
+                    timestamp = System.currentTimeMillis() / 1000
+                )
+            )
+            // Persist milestone if reached
+            if (celebration != null && celebration.isNew) {
+                goalDao.insertMilestone(
+                    GoalMilestone(
+                        goalId = goalId,
+                        percentage = celebration.milestone
+                    )
+                )
+            }
+        }
+
         Timber.i("Goal ${goal.id} progress: ${(newProgress * 100).roundToInt()}%")
         return Pair(updatedGoal, celebration)
     }
@@ -448,7 +519,7 @@ class GoalPlanner {
      * @param percent Progress percentage (0-100)
      * @return Updated goal
      */
-    fun setProgress(goal: Goal, percent: Double): Pair<Goal, MilestoneCelebration?> {
+    suspend fun setProgress(goal: Goal, percent: Double): Pair<Goal, MilestoneCelebration?> {
         val clampedPercent = percent.coerceIn(0.0, 100.0) / 100.0
         val newAmount = goal.targetAmount * clampedPercent
         val delta = newAmount - goal.currentAmount
@@ -461,12 +532,18 @@ class GoalPlanner {
      * @param goal Goal to complete
      * @return Completed goal with celebration message
      */
-    fun completeGoal(goal: Goal): Pair<Goal, MilestoneCelebration> {
+    suspend fun completeGoal(goal: Goal): Pair<Goal, MilestoneCelebration> {
         val completedGoal = goal.copy(
             currentAmount = goal.targetAmount,
             isActive = false,
             milestonesReached = (goal.milestonesReached + 1.0).distinct()
         )
+
+        // Persist completion to Room
+        val goalId = goal.id.toLongOrNull()
+        if (goalId != null) {
+            goalDao.updateStatus(goalId, "COMPLETED")
+        }
 
         val celebration = MilestoneCelebration(
             goalId = goal.id,
@@ -734,7 +811,11 @@ class GoalPlanner {
      * @param goal Goal to abandon
      * @return Inactive goal
      */
-    fun abandonGoal(goal: Goal): Goal {
+    suspend fun abandonGoal(goal: Goal): Goal {
+        val goalId = goal.id.toLongOrNull()
+        if (goalId != null) {
+            goalDao.updateStatus(goalId, "ABANDONED")
+        }
         return goal.copy(isActive = false)
     }
 

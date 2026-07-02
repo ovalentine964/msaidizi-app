@@ -43,13 +43,13 @@ android {
             ?: ""
         buildConfigField("String", "MPESA_PASSKEY", "\"$mpesaPasskey\"")
 
-        // NDK/CMake flags for llama.cpp JNI bridge
-        externalNativeBuild {
-            cmake {
-                cppFlags += "-std=c++17"
-                abiFilters += listOf("arm64-v8a", "armeabi-v7a")
-            }
-        }
+        // NDK/CMake flags for llama.cpp JNI bridge (temporarily disabled)
+        // externalNativeBuild {
+        //     cmake {
+        //         cppFlags += "-std=c++17"
+        //         abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+        //     }
+        // }
     }
 
     buildTypes {
@@ -96,25 +96,25 @@ android {
         }
     }
 
-    // ABI filter for 2GB devices — only ship ARM
-    splits {
-        abi {
-            isEnable = true
-            reset()
-            include("arm64-v8a", "armeabi-v7a")
-            isUniversalApk = false
-        }
-    }
+    // ABI filter for 2GB devices — only ship ARM (temporarily disabled)
+    // splits {
+    //     abi {
+    //         isEnable = true
+    //         reset()
+    //         include("arm64-v8a", "armeabi-v7a")
+    //         isUniversalApk = false
+    //     }
+    // }
 
-    // NDK config for native model inference
-    ndkVersion = "25.2.9519653"
+    // NDK config for native model inference (temporarily disabled for kapt fix)
+    // ndkVersion = "25.2.9519653"
 
-    externalNativeBuild {
-        cmake {
-            path = file("src/main/cpp/CMakeLists.txt")
-            version = "3.22.1"
-        }
-    }
+    // externalNativeBuild {
+    //     cmake {
+    //         path = file("src/main/cpp/CMakeLists.txt")
+    //         version = "3.22.1"
+    //     }
+    // }
 }
 
 dependencies {

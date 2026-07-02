@@ -8,6 +8,12 @@ import com.msaidizi.app.evolution.FeedbackEntity
 import com.msaidizi.app.evolution.FeatureRequestEntity
 import com.msaidizi.app.evolution.FeedbackDao
 import com.msaidizi.app.evolution.FeatureRequestDao
+import com.msaidizi.app.core.model.TitheRecord
+import com.msaidizi.app.core.model.GoalRecord
+import com.msaidizi.app.core.model.GoalProgressEntry
+import com.msaidizi.app.core.model.GoalMilestone
+import com.msaidizi.app.core.model.LoanRecord
+import com.msaidizi.app.core.model.LoanRepayment
 import com.msaidizi.app.core.model.GamificationEntity
 import com.msaidizi.app.core.model.RichHabitEntry
 import com.msaidizi.app.core.model.MindsetLessonEntity
@@ -24,6 +30,8 @@ import com.msaidizi.app.core.model.MindsetLessonEntity
  *
  * Version 2: Added UserVocabulary and UserCorrection for adaptive learning.
  * Version 4: Added Feedback and FeatureRequest for self-evolution.
+ * Version 5: Added gamification, rich habits, and mindset lessons.
+ * Version 6: Added tithe records, goal records, and loan records.
  */
 @Database(
     entities = [
@@ -39,9 +47,15 @@ import com.msaidizi.app.core.model.MindsetLessonEntity
         FeatureRequestEntity::class,
         GamificationEntity::class,
         RichHabitEntry::class,
-        MindsetLessonEntity::class
+        MindsetLessonEntity::class,
+        TitheRecord::class,
+        GoalRecord::class,
+        GoalProgressEntry::class,
+        GoalMilestone::class,
+        LoanRecord::class,
+        LoanRepayment::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -56,6 +70,9 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun featureRequestDao(): FeatureRequestDao
     abstract fun gamificationDao(): GamificationDao
     abstract fun richHabitsDao(): RichHabitsDao
+    abstract fun titheDao(): TitheDao
+    abstract fun goalDao(): GoalDao
+    abstract fun loanDao(): LoanDao
     abstract fun mindsetLessonDao(): MindsetLessonDao
 }
 

@@ -2,6 +2,12 @@ package com.msaidizi.app.agent
 
 import com.msaidizi.app.core.model.*
 import com.msaidizi.app.core.util.SwahiliParser
+import com.msaidizi.app.core.database.TitheDao
+import com.msaidizi.app.core.database.GoalDao
+import com.msaidizi.app.core.database.LoanDao
+import com.msaidizi.app.finance.TitheTracker
+import com.msaidizi.app.finance.GoalPlanner
+import com.msaidizi.app.finance.LoanManager
 import com.msaidizi.app.gamification.GamificationEngine
 import com.msaidizi.app.onboarding.AhaMomentFlow
 import com.msaidizi.app.mindset.RichHabitsScore
@@ -71,7 +77,13 @@ class Orchestrator(
     private val gamificationEngine: GamificationEngine? = null,
     private val ahaMomentFlow: AhaMomentFlow? = null,
     private val richHabitsScore: RichHabitsScore? = null,
-    private val mindsetAcademy: MindsetAcademy? = null
+    private val mindsetAcademy: MindsetAcademy? = null,
+    private val titheTracker: TitheTracker? = null,
+    private val goalPlanner: GoalPlanner? = null,
+    private val loanManager: LoanManager? = null,
+    private val titheDao: TitheDao? = null,
+    private val goalDao: GoalDao? = null,
+    private val loanDao: LoanDao? = null
 ) {
     // Response flow for UI
     private val _responses = MutableSharedFlow<AgentResponse>(extraBufferCapacity = 8)
@@ -343,20 +355,20 @@ class Orchestrator(
                 IntentType.DIGITAL_COMMISSION,
                 IntentType.DIGITAL_TRANSACTION,
                 IntentType.SERVICE_CLIENT,
-                IntentType.SERVICE_JOB,
-                IntentType.GIVING_RECORD,
-                IntentType.GIVING_QUERY,
-                IntentType.GIVING_GOAL,
-                IntentType.GOAL_CREATE,
-                IntentType.GOAL_PROGRESS,
-                IntentType.GOAL_REPORT,
-                IntentType.GOAL_TIME_FORECAST,
-                IntentType.GOAL_ADJUST,
-                IntentType.GOAL_ENCOURAGEMENT,
-                IntentType.LOAN_RECORD,
-                IntentType.LOAN_QUERY,
-                IntentType.LOAN_REPORT,
-                IntentType.LOAN_DEADLINE -> handleDomainIntent(intentResult, language)
+                IntentType.SERVICE_JOB -> handleDomainIntent(intentResult, language)
+                IntentType.GIVING_RECORD -> handleGivingRecord(intentResult, language)
+                IntentType.GIVING_QUERY -> handleGivingQuery(intentResult, language)
+                IntentType.GIVING_GOAL -> handleGivingGoal(intentResult, language)
+                IntentType.GOAL_CREATE -> handleGoalCreate(intentResult, language)
+                IntentType.GOAL_PROGRESS -> handleGoalProgress(intentResult, language)
+                IntentType.GOAL_REPORT -> handleGoalReport(language)
+                IntentType.GOAL_TIME_FORECAST -> handleGoalTimeForecast(language)
+                IntentType.GOAL_ADJUST -> handleGoalAdjust(intentResult, language)
+                IntentType.GOAL_ENCOURAGEMENT -> handleGoalEncouragement(language)
+                IntentType.LOAN_RECORD -> handleLoanRecord(intentResult, language)
+                IntentType.LOAN_QUERY -> handleLoanQuery(language)
+                IntentType.LOAN_REPORT -> handleLoanReport(language)
+                IntentType.LOAN_DEADLINE -> handleLoanDeadline(language)
             }
         } catch (e: OutOfMemoryError) {
             // Critical: OME means the device is under severe memory pressure
@@ -386,6 +398,309 @@ class Orchestrator(
                     "intent" to intentResult.intent.name
                 )
             )
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // GIVING / TITHE INTENT HANDLERS
+    // ═══════════════════════════════════════════════════════════════
+
+    private suspend fun handleGivingRecord(intentResult: IntentResult, language: String): AgentResponse {
+        val tracker = titheTracker ?: return handleDomainIntent(intentResult, language)
+        val text = intentResult.extractedData["originalText"] ?: ""
+        val amount = intentResult.extractedData["amount"]?.toDoubleOrNull()
+
+        return try {
+            if (amount != null && amount > 0) {
+                val record = tracker.parseGivingCommand(text) ?: TitheTracker.GivingRecord(
+                    amount = amount,
+                    type = TitheTracker.GivingType.OFFERING,
+                    recipient = "",
+                    date = System.currentTimeMillis()
+                )
+                tracker.recordGiving(record)
+                AgentResponse(
+                    text = tracker.generateGivingConfirmation(record),
+                    type = ResponseType.CONFIRMATION
+                )
+            } else {
+                AgentResponse(
+                    text = if (language == "sw") "Umetoa pesa ngapi?" else "How much did you give?",
+                    type = ResponseType.CLARIFICATION
+                )
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error recording giving")
+            AgentResponse(
+                text = if (language == "sw") "⚠️ Kuna tatizo. Jaribu tena." else "⚠️ Something went wrong.",
+                type = ResponseType.ERROR
+            )
+        }
+    }
+
+    private suspend fun handleGivingQuery(intentResult: IntentResult, language: String): AgentResponse {
+        val tracker = titheTracker ?: return handleDomainIntent(intentResult, language)
+        return try {
+            val summary = tracker.getGivingSummary("month")
+            AgentResponse(
+                text = tracker.generateSummaryResponse(summary),
+                type = ResponseType.INFORMATION
+            )
+        } catch (e: Exception) {
+            Timber.e(e, "Error querying giving")
+            AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR)
+        }
+    }
+
+    private suspend fun handleGivingGoal(intentResult: IntentResult, language: String): AgentResponse {
+        val tracker = titheTracker ?: return handleDomainIntent(intentResult, language)
+        return try {
+            val amount = intentResult.extractedData["amount"]?.toDoubleOrNull()
+            if (amount != null && amount > 0) {
+                val goal = TitheTracker.GivingGoal(
+                    targetType = TitheTracker.GivingType.TITHE,
+                    targetAmount = amount,
+                    period = "monthly"
+                )
+                tracker.setGivingGoal(goal)
+                AgentResponse(
+                    text = if (language == "sw") {
+                        "🎯 Lengo la kutoa: KSh ${"%.0f".format(amount)} kwa mwezi. Mungu akubariki!"
+                    } else {
+                        "🎯 Giving goal: KSh ${"%.0f".format(amount)} per month."
+                    },
+                    type = ResponseType.CONFIRMATION
+                )
+            } else {
+                AgentResponse(
+                    text = if (language == "sw") "Lengo ni KSh ngapi?" else "What's the target amount?",
+                    type = ResponseType.CLARIFICATION
+                )
+            }
+        } catch (e: Exception) {
+            AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR)
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // GOAL INTENT HANDLERS
+    // ═══════════════════════════════════════════════════════════════
+
+    private suspend fun handleGoalCreate(intentResult: IntentResult, language: String): AgentResponse {
+        val planner = goalPlanner ?: return handleDomainIntent(intentResult, language)
+        val description = intentResult.extractedData["item"] ?: intentResult.extractedData["description"] ?: ""
+        val amount = intentResult.extractedData["amount"]?.toDoubleOrNull()
+
+        return try {
+            if (description.isNotBlank() && amount != null && amount > 0) {
+                val goal = planner.createGoal(description, amount, 0L)
+                AgentResponse(
+                    text = if (language == "sw") {
+                        "🎯 Lengo: $description — KSh ${"%.0f".format(amount)}. Twende!"
+                    } else {
+                        "🎯 Goal: $description — KSh ${"%.0f".format(amount)}. Let's go!"
+                    },
+                    type = ResponseType.CONFIRMATION
+                )
+            } else {
+                AgentResponse(
+                    text = if (language == "sw") "Lengo lako ni nini? Bei ngapi?" else "What's your goal? How much?",
+                    type = ResponseType.CLARIFICATION
+                )
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error creating goal")
+            AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR)
+        }
+    }
+
+    private suspend fun handleGoalProgress(intentResult: IntentResult, language: String): AgentResponse {
+        val planner = goalPlanner ?: return handleDomainIntent(intentResult, language)
+        val amount = intentResult.extractedData["amount"]?.toDoubleOrNull()
+
+        return try {
+            val activeGoals = planner.getActiveGoals()
+            val goal = activeGoals.firstOrNull()
+            if (goal != null && amount != null && amount > 0) {
+                val (updatedGoal, celebration) = planner.updateProgress(goal, amount)
+                val percent = (updatedGoal.progress * 100).toInt()
+                val baseText = if (language == "sw") {
+                    "✅ Umefikia $percent% ya lengo lako!"
+                } else {
+                    "✅ You've reached $percent% of your goal!"
+                }
+                val fullText = if (celebration != null) {
+                    baseText + "\n" + celebration.message
+                } else baseText
+                AgentResponse(text = fullText, type = ResponseType.CONFIRMATION)
+            } else if (goal == null) {
+                AgentResponse(
+                    text = if (language == "sw") "Huna lengo. Sema 'Lengo langu ni...'" else "No goal set. Say 'My goal is...'" ,
+                    type = ResponseType.CLARIFICATION
+                )
+            } else {
+                AgentResponse(
+                    text = if (language == "sw") "Umetoa KSh ngapi?" else "How much did you save?",
+                    type = ResponseType.CLARIFICATION
+                )
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error updating goal progress")
+            AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR)
+        }
+    }
+
+    private suspend fun handleGoalReport(language: String): AgentResponse {
+        val planner = goalPlanner ?: return AgentResponse(
+            text = if (language == "sw") "Huna malengo bado." else "No goals yet.",
+            type = ResponseType.INFORMATION
+        )
+        return try {
+            val goals = planner.getAllGoals()
+            val report = planner.getGoalReport(goals)
+            AgentResponse(text = report.message, type = ResponseType.INFORMATION)
+        } catch (e: Exception) {
+            AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR)
+        }
+    }
+
+    private suspend fun handleGoalTimeForecast(language: String): AgentResponse {
+        val planner = goalPlanner ?: return AgentResponse(
+            text = if (language == "sw") "Huna lengo." else "No goal.",
+            type = ResponseType.INFORMATION
+        )
+        return try {
+            val activeGoals = planner.getActiveGoals()
+            val goal = activeGoals.firstOrNull()
+            if (goal != null) {
+                val forecast = planner.getTimeToGoal(goal)
+                AgentResponse(text = forecast.message, type = ResponseType.INFORMATION)
+            } else {
+                AgentResponse(text = if (language == "sw") "Huna lengo." else "No goal.", type = ResponseType.INFORMATION)
+            }
+        } catch (e: Exception) {
+            AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR)
+        }
+    }
+
+    private suspend fun handleGoalAdjust(intentResult: IntentResult, language: String): AgentResponse {
+        val planner = goalPlanner ?: return handleDomainIntent(intentResult, language)
+        return try {
+            val activeGoals = planner.getActiveGoals()
+            val goal = activeGoals.firstOrNull()
+            if (goal != null) {
+                val amount = intentResult.extractedData["amount"]?.toDoubleOrNull()
+                val adjusted = planner.adjustGoal(goal, newTarget = amount)
+                AgentResponse(
+                    text = if (language == "sw") "✅ Lengo limesasishwa." else "✅ Goal updated.",
+                    type = ResponseType.CONFIRMATION
+                )
+            } else {
+                AgentResponse(text = if (language == "sw") "Huna lengo." else "No goal.", type = ResponseType.INFORMATION)
+            }
+        } catch (e: Exception) {
+            AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR)
+        }
+    }
+
+    private suspend fun handleGoalEncouragement(language: String): AgentResponse {
+        val planner = goalPlanner ?: return AgentResponse(
+            text = if (language == "sw") "Sema 'Lengo langu ni...' kuanza!" else "Say 'My goal is...' to start!",
+            type = ResponseType.INFORMATION
+        )
+        return try {
+            val activeGoals = planner.getActiveGoals()
+            val goal = activeGoals.firstOrNull()
+            if (goal != null) {
+                AgentResponse(text = planner.getEncouragement(goal), type = ResponseType.INFORMATION)
+            } else {
+                AgentResponse(
+                    text = if (language == "sw") "Anza na lengo! Sema 'Lengo langu ni...'" else "Start with a goal! Say 'My goal is...'" ,
+                    type = ResponseType.INFORMATION
+                )
+            }
+        } catch (e: Exception) {
+            AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR)
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // LOAN INTENT HANDLERS
+    // ═══════════════════════════════════════════════════════════════
+
+    private suspend fun handleLoanRecord(intentResult: IntentResult, language: String): AgentResponse {
+        val manager = loanManager ?: return handleDomainIntent(intentResult, language)
+        val amount = intentResult.extractedData["amount"]?.toDoubleOrNull()
+        val purpose = intentResult.extractedData["item"] ?: intentResult.extractedData["purpose"] ?: "biashara"
+
+        return try {
+            if (amount != null && amount > 0) {
+                val schedule = manager.generateRepaymentSchedule(amount, 0.15, 3, System.currentTimeMillis() / 1000)
+                val loan = LoanManager.Loan(
+                    amount = amount,
+                    purpose = purpose,
+                    interestRate = 0.15,
+                    repaymentSchedule = schedule,
+                    startDate = System.currentTimeMillis() / 1000,
+                    endDate = System.currentTimeMillis() / 1000 + (90 * 86400),
+                    lender = intentResult.extractedData["lender"] ?: "M-Shwari"
+                )
+                val recorded = manager.recordLoan(loan)
+                AgentResponse(
+                    text = if (language == "sw") {
+                        "✅ Mkopo wa KSh ${"%.0f".format(amount)} umerekodiwa. Malipo ya KSh ${"%.0f".format(recorded.totalToRepay / 3)} kwa mwezi."
+                    } else {
+                        "✅ Loan of KSh ${"%.0f".format(amount)} recorded. Payments of KSh ${"%.0f".format(recorded.totalToRepay / 3)} monthly."
+                    },
+                    type = ResponseType.CONFIRMATION
+                )
+            } else {
+                AgentResponse(
+                    text = if (language == "sw") "Mkopo ni KSh ngapi?" else "How much is the loan?",
+                    type = ResponseType.CLARIFICATION
+                )
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error recording loan")
+            AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR)
+        }
+    }
+
+    private suspend fun handleLoanQuery(language: String): AgentResponse {
+        val manager = loanManager ?: return AgentResponse(
+            text = if (language == "sw") "Huna mkopo." else "No loans.",
+            type = ResponseType.INFORMATION
+        )
+        return try {
+            val reminder = manager.getRepaymentReminder()
+            AgentResponse(text = reminder, type = ResponseType.INFORMATION)
+        } catch (e: Exception) {
+            AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR)
+        }
+    }
+
+    private suspend fun handleLoanReport(language: String): AgentResponse {
+        val manager = loanManager ?: return AgentResponse(
+            text = if (language == "sw") "Huna mkopo." else "No loans.",
+            type = ResponseType.INFORMATION
+        )
+        return try {
+            AgentResponse(text = manager.getLoanReport(), type = ResponseType.INFORMATION)
+        } catch (e: Exception) {
+            AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR)
+        }
+    }
+
+    private suspend fun handleLoanDeadline(language: String): AgentResponse {
+        val manager = loanManager ?: return AgentResponse(
+            text = if (language == "sw") "Huna mkopo." else "No loans.",
+            type = ResponseType.INFORMATION
+        )
+        return try {
+            val reminder = manager.getRepaymentReminder()
+            AgentResponse(text = reminder, type = ResponseType.INFORMATION)
+        } catch (e: Exception) {
+            AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR)
         }
     }
 
@@ -901,6 +1216,7 @@ class Orchestrator(
     suspend fun initializeStickiness() {
         gamificationEngine?.initialize()
         mindsetAcademy?.seedLessons()
+        titheTracker?.loadFromDb()
         Timber.d("Stickiness features initialized")
     }
 

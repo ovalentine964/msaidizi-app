@@ -1,5 +1,7 @@
 package com.msaidizi.app.finance
 
+import com.msaidizi.app.core.database.TitheDao
+import com.msaidizi.app.core.model.TitheRecord
 import timber.log.Timber
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
@@ -31,7 +33,9 @@ import java.util.concurrent.TimeUnit
  *
  * @author Msaidizi Team
  */
-class TitheTracker {
+class TitheTracker(
+    private val titheDao: TitheDao
+) {
 
     // ═══════════════════════════════════════════════════════════════
     // DATA MODELS
@@ -118,6 +122,8 @@ class TitheTracker {
     // ═══════════════════════════════════════════════════════════════
 
     private val givingRecords = mutableListOf<GivingRecord>()
+
+    // In-memory giving goals (lightweight, not persisted to Room)
     private val givingGoals = mutableListOf<GivingGoal>()
 
     // ═══════════════════════════════════════════════════════════════
@@ -134,11 +140,26 @@ class TitheTracker {
      *
      * @param record The giving record to store
      */
-    fun recordGiving(record: GivingRecord) {
+    suspend fun recordGiving(record: GivingRecord) {
         if (record.amount <= 0) {
             Timber.w("TitheTracker: Ignoring giving record with amount ≤ 0")
             return
         }
+
+        // Persist to Room
+        val entity = TitheRecord(
+            type = record.type.name,
+            amount = record.amount,
+            recipient = record.recipient,
+            date = record.date,
+            category = record.type.swahili,
+            notes = record.notes,
+            incomeAtTime = record.incomeAtTime,
+            inputMethod = "VOICE",
+            createdAt = System.currentTimeMillis()
+        )
+        titheDao.insert(entity)
+
         givingRecords.add(record)
         Timber.i(
             "TitheTracker: Recorded %s of KSh %.0f to %s",
@@ -153,14 +174,17 @@ class TitheTracker {
      * @param limit Maximum records to return (0 = all)
      * @return List of giving records, newest first
      */
-    fun getGivingHistory(
+    suspend fun getGivingHistory(
         typeFilter: GivingType? = null,
         limit: Int = 0
     ): List<GivingRecord> {
-        var records = givingRecords.sortedByDescending { it.date }
-        if (typeFilter != null) {
-            records = records.filter { it.type == typeFilter }
+        // Load from Room
+        val entities = if (typeFilter != null) {
+            titheDao.getByType(typeFilter.name)
+        } else {
+            titheDao.getAll()
         }
+        var records = entities.map { it.toGivingRecord() }.sortedByDescending { it.date }
         return if (limit > 0) records.take(limit) else records
     }
 
@@ -171,9 +195,10 @@ class TitheTracker {
      * @param totalIncome Total income for the period (for calculating %)
      * @return GivingSummary with aggregated data
      */
-    fun getGivingSummary(period: String = "month", totalIncome: Double = 0.0): GivingSummary {
+    suspend fun getGivingSummary(period: String = "month", totalIncome: Double = 0.0): GivingSummary {
         val cutoff = getPeriodCutoff(period)
-        val periodRecords = givingRecords.filter { it.date >= cutoff }
+        val periodEntities = titheDao.getSince(cutoff)
+        val periodRecords = periodEntities.map { it.toGivingRecord() }
 
         if (periodRecords.isEmpty()) {
             return GivingSummary(
@@ -258,14 +283,16 @@ class TitheTracker {
      *
      * @return Map of period → income change percentage
      */
-    fun getAbundancePattern(): Map<String, Double> {
-        if (givingRecords.isEmpty()) return emptyMap()
+    suspend fun getAbundancePattern(): Map<String, Double> {
+        val allEntities = titheDao.getAll()
+        val allRecords = allEntities.map { it.toGivingRecord() }
+        if (allRecords.isEmpty()) return emptyMap()
 
         val pattern = mutableMapOf<String, Double>()
 
         // Group giving by week
         val calendar = Calendar.getInstance()
-        for (record in givingRecords.sortedBy { it.date }) {
+        for (record in allRecords.sortedBy { it.date }) {
             calendar.timeInMillis = record.date
             val weekKey = "${calendar.get(Calendar.YEAR)}-W${calendar.get(Calendar.WEEK_OF_YEAR)}"
 
@@ -298,7 +325,7 @@ class TitheTracker {
      *
      * @param goal The goal to set
      */
-    fun setGivingGoal(goal: GivingGoal) {
+    suspend fun setGivingGoal(goal: GivingGoal) {
         // Remove existing goal of same type
         givingGoals.removeAll { it.targetType == goal.targetType }
         givingGoals.add(goal)
@@ -320,11 +347,10 @@ class TitheTracker {
      * @param period "week" or "month"
      * @return Progress as 0.0 to 1.0+ (1.0 = goal met)
      */
-    fun getGoalProgress(goal: GivingGoal, period: String = "month"): Double {
+    suspend fun getGoalProgress(goal: GivingGoal, period: String = "month"): Double {
         val cutoff = getPeriodCutoff(period)
-        val periodGiving = givingRecords
-            .filter { it.date >= cutoff && it.type == goal.targetType }
-            .sumOf { it.amount }
+        val periodEntities = titheDao.getByTypeSince(goal.targetType.name, cutoff)
+        val periodGiving = periodEntities.sumOf { it.amount }
 
         return if (goal.targetAmount > 0) {
             round2(periodGiving / goal.targetAmount)
@@ -544,7 +570,7 @@ class TitheTracker {
      * 2. Period coverage (how many expected periods have giving)
      * 3. Streak length (consecutive periods with giving)
      */
-    private fun calculateConsistencyScore(records: List<GivingRecord>, period: String): Int {
+    private suspend fun calculateConsistencyScore(records: List<GivingRecord>, period: String): Int {
         if (records.isEmpty()) return 0
         if (records.size == 1) return 20
 
@@ -597,10 +623,12 @@ class TitheTracker {
     /**
      * Calculate current giving streak in days.
      */
-    private fun calculateStreak(): Int {
-        if (givingRecords.isEmpty()) return 0
+    private suspend fun calculateStreak(): Int {
+        val allEntities = titheDao.getAll()
+        val allRecords = allEntities.map { it.toGivingRecord() }
+        if (allRecords.isEmpty()) return 0
 
-        val sorted = givingRecords.sortedByDescending { it.date }
+        val sorted = allRecords.sortedByDescending { it.date }
         val today = dayOfYear(System.currentTimeMillis())
 
         // Check if there's giving today or yesterday
@@ -715,6 +743,29 @@ class TitheTracker {
         }
 
         return null
+    }
+
+    /**
+     * Load all records from Room into memory cache on startup.
+     */
+    suspend fun loadFromDb() {
+        val entities = titheDao.getAll()
+        givingRecords.clear()
+        givingRecords.addAll(entities.map { it.toGivingRecord() })
+    }
+
+    /**
+     * Convert TitheRoom entity to domain GivingRecord.
+     */
+    private fun TitheRecord.toGivingRecord(): GivingRecord {
+        return GivingRecord(
+            amount = amount,
+            type = try { GivingType.valueOf(type) } catch (_: Exception) { GivingType.OTHER },
+            recipient = recipient,
+            date = date,
+            notes = notes,
+            incomeAtTime = incomeAtTime
+        )
     }
 
     private fun dayOfYear(timestamp: Long): Int {

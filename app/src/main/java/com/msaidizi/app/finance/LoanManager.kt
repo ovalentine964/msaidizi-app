@@ -1,5 +1,8 @@
 package com.msaidizi.app.finance
 
+import com.msaidizi.app.core.database.LoanDao
+import com.msaidizi.app.core.model.LoanRecord
+import com.msaidizi.app.core.model.LoanRepayment
 import com.msaidizi.app.core.model.Transaction
 import com.msaidizi.app.core.model.TransactionType
 import timber.log.Timber
@@ -34,7 +37,9 @@ import kotlin.math.roundToInt
  *   scheduling, linear programming for debt prioritization
  * - FIN 201 (Corporate Finance): Debt service coverage ratio, amortization
  */
-class LoanManager {
+class LoanManager(
+    private val loanDao: LoanDao
+) {
 
     companion object {
         private const val TAG = "LoanManager"
@@ -173,16 +178,49 @@ class LoanManager {
      * @param loan The loan to record
      * @return The recorded loan with generated ID
      */
-    fun recordLoan(loan: Loan): Loan {
+    suspend fun recordLoan(loan: Loan): Loan {
         Timber.tag(TAG).d("Recording loan: KSh %.0f from %s for '%s'",
             loan.amount, loan.lender, loan.purpose)
 
-        loans[loan.id] = loan
+        // Persist to Room
+        val entity = LoanRecord(
+            amount = loan.amount,
+            purpose = loan.purpose,
+            lender = loan.lender,
+            interestRate = loan.interestRate,
+            totalDue = loan.totalToRepay,
+            startDate = loan.startDate,
+            endDate = loan.endDate,
+            repaymentFrequency = "MONTHLY",
+            totalRepaid = loan.totalRepaid,
+            status = loan.status.name,
+            createdAt = System.currentTimeMillis() / 1000,
+            updatedAt = System.currentTimeMillis() / 1000
+        )
+        val roomId = loanDao.insertLoan(entity)
+
+        // Persist repayment schedule
+        for (repayment in loan.repaymentSchedule) {
+            loanDao.insertRepayment(
+                LoanRepayment(
+                    loanId = roomId,
+                    amount = repayment.amount,
+                    dueDate = repayment.dueDate,
+                    paidDate = repayment.paidDate,
+                    paidAmount = repayment.paidAmount,
+                    status = repayment.status.name,
+                    penalty = repayment.penalty
+                )
+            )
+        }
+
+        val persistedLoan = loan.copy(id = roomId.toString())
+        loans[roomId.toString()] = persistedLoan
 
         Timber.tag(TAG).d("Loan recorded. %d payments scheduled, total repayment: KSh %.0f",
             loan.repaymentSchedule.size, loan.totalToRepay)
 
-        return loan
+        return persistedLoan
     }
 
     /**
@@ -256,7 +294,7 @@ class LoanManager {
      * @param amount Amount paid in KSh
      * @return Updated loan, or null if loan not found
      */
-    fun recordRepayment(loanId: String, amount: Double): Loan? {
+    suspend fun recordRepayment(loanId: String, amount: Double): Loan? {
         val loan = loans[loanId] ?: run {
             Timber.tag(TAG).w("Loan not found: %s", loanId)
             return null
@@ -301,6 +339,17 @@ class LoanManager {
             status = newStatus
         )
 
+        // Persist repayment to Room
+        val roomId = loanId.toLongOrNull()
+        if (roomId != null) {
+            loanDao.addRepayment(roomId, amount - remainingPayment)
+            if (allPaid) {
+                loanDao.updateStatus(roomId, "PAID")
+            } else if (hasOverdue) {
+                loanDao.updateStatus(roomId, "OVERDUE")
+            }
+        }
+
         loans[loanId] = updatedLoan
 
         Timber.tag(TAG).d("Repayment recorded: KSh %.0f. Balance: KSh %.0f",
@@ -318,7 +367,7 @@ class LoanManager {
      *
      * @return List of upcoming repayments sorted by due date
      */
-    fun getUpcomingPayments(): List<Repayment> {
+    suspend fun getUpcomingPayments(): List<Repayment> {
         val now = System.currentTimeMillis() / 1000
         return loans.values
             .filter { it.status == LoanStatus.ACTIVE || it.status == LoanStatus.OVERDUE }
@@ -337,7 +386,7 @@ class LoanManager {
      * @param loanId The loan to check
      * @return Progress string in Swahili
      */
-    fun getLoanProgress(loanId: String): String {
+    suspend fun getLoanProgress(loanId: String): String {
         val loan = loans[loanId] ?: return "Mkopo haujapatikana."
 
         val progress = getLoanProgressDetail(loanId)
@@ -347,7 +396,7 @@ class LoanManager {
     /**
      * Get detailed loan progress.
      */
-    fun getLoanProgressDetail(loanId: String): LoanProgress? {
+    suspend fun getLoanProgressDetail(loanId: String): LoanProgress? {
         val loan = loans[loanId] ?: return null
 
         val now = System.currentTimeMillis() / 1000
@@ -393,16 +442,70 @@ class LoanManager {
     /**
      * Get all active loans.
      */
-    fun getActiveLoans(): List<Loan> {
-        return loans.values.filter {
-            it.status == LoanStatus.ACTIVE || it.status == LoanStatus.OVERDUE
-        }.toList()
+    suspend fun getActiveLoans(): List<Loan> {
+        // Load from Room first
+        val entities = loanDao.getActive()
+        return entities.mapNotNull { entity ->
+            val cached = loans[entity.id.toString()]
+            if (cached != null) return@mapNotNull cached
+
+            val repayments = loanDao.getRepayments(entity.id).map { r ->
+                Repayment(
+                    id = r.id.toString(),
+                    amount = r.amount,
+                    dueDate = r.dueDate,
+                    paidDate = r.paidDate,
+                    paidAmount = r.paidAmount,
+                    status = try { RepaymentStatus.valueOf(r.status) } catch (_: Exception) { RepaymentStatus.PENDING },
+                    penalty = r.penalty
+                )
+            }
+            Loan(
+                id = entity.id.toString(),
+                amount = entity.amount,
+                purpose = entity.purpose,
+                interestRate = entity.interestRate,
+                repaymentSchedule = repayments,
+                startDate = entity.startDate,
+                endDate = entity.endDate,
+                lender = entity.lender,
+                status = try { LoanStatus.valueOf(entity.status) } catch (_: Exception) { LoanStatus.ACTIVE },
+                totalRepaid = entity.totalRepaid
+            ).also { loans[it.id] = it }
+        }
     }
 
     /**
      * Get a specific loan.
      */
-    fun getLoan(loanId: String): Loan? = loans[loanId]
+    suspend fun getLoan(loanId: String): Loan? {
+        loans[loanId]?.let { return it }
+        val roomId = loanId.toLongOrNull() ?: return null
+        val entity = loanDao.getById(roomId) ?: return null
+        val repayments = loanDao.getRepayments(entity.id).map { r ->
+            Repayment(
+                id = r.id.toString(),
+                amount = r.amount,
+                dueDate = r.dueDate,
+                paidDate = r.paidDate,
+                paidAmount = r.paidAmount,
+                status = try { RepaymentStatus.valueOf(r.status) } catch (_: Exception) { RepaymentStatus.PENDING },
+                penalty = r.penalty
+            )
+        }
+        return Loan(
+            id = entity.id.toString(),
+            amount = entity.amount,
+            purpose = entity.purpose,
+            interestRate = entity.interestRate,
+            repaymentSchedule = repayments,
+            startDate = entity.startDate,
+            endDate = entity.endDate,
+            lender = entity.lender,
+            status = try { LoanStatus.valueOf(entity.status) } catch (_: Exception) { LoanStatus.ACTIVE },
+            totalRepaid = entity.totalRepaid
+        ).also { loans[it.id] = it }
+    }
 
     // ═══════════════════════════════════════════════════════════════
     // LOAN PURPOSE VERIFICATION
@@ -543,7 +646,7 @@ class LoanManager {
      *
      * @return Swahili reminder message
      */
-    fun getRepaymentReminder(): String {
+    suspend fun getRepaymentReminder(): String {
         val now = System.currentTimeMillis() / 1000
         val upcomingPayments = getUpcomingPayments()
 
@@ -590,7 +693,7 @@ class LoanManager {
      *
      * @return Swahili loan status for briefing, or null if no active loans
      */
-    fun getBriefingLoanStatus(): String? {
+    suspend fun getBriefingLoanStatus(): String? {
         val activeLoans = getActiveLoans()
         if (activeLoans.isEmpty()) return null
 
@@ -627,8 +730,8 @@ class LoanManager {
      *
      * @return Comprehensive Swahili loan report
      */
-    fun getLoanReport(): String {
-        val allLoans = loans.values.toList()
+    suspend fun getLoanReport(): String {
+        val allLoans = loadAllLoans()
         if (allLoans.isEmpty()) {
             return "Huna mkopo wowote uliorekodiwa. Hii ni habari nzuri!"
         }
@@ -699,7 +802,7 @@ class LoanManager {
      * @param monthlyIncome Average monthly income in KSh
      * @return Warning message if ratio is too high, null if healthy
      */
-    fun checkDebtToIncome(monthlyIncome: Double): String? {
+    suspend fun checkDebtToIncome(monthlyIncome: Double): String? {
         if (monthlyIncome <= 0) return null
 
         val activeLoans = getActiveLoans()
@@ -741,7 +844,7 @@ class LoanManager {
      *
      * @return List of overdue payment messages
      */
-    fun checkOverduePayments(): List<String> {
+    suspend fun checkOverduePayments(): List<String> {
         val now = System.currentTimeMillis() / 1000
         val overdueMessages = mutableListOf<String>()
 
@@ -779,6 +882,38 @@ class LoanManager {
     // ═══════════════════════════════════════════════════════════════
     // UTILITY
     // ═══════════════════════════════════════════════════════════════
+
+    private suspend fun loadAllLoans(): List<Loan> {
+        val entities = loanDao.getAll()
+        return entities.mapNotNull { entity ->
+            val cached = loans[entity.id.toString()]
+            if (cached != null) return@mapNotNull cached
+
+            val repayments = loanDao.getRepayments(entity.id).map { r ->
+                Repayment(
+                    id = r.id.toString(),
+                    amount = r.amount,
+                    dueDate = r.dueDate,
+                    paidDate = r.paidDate,
+                    paidAmount = r.paidAmount,
+                    status = try { RepaymentStatus.valueOf(r.status) } catch (_: Exception) { RepaymentStatus.PENDING },
+                    penalty = r.penalty
+                )
+            }
+            Loan(
+                id = entity.id.toString(),
+                amount = entity.amount,
+                purpose = entity.purpose,
+                interestRate = entity.interestRate,
+                repaymentSchedule = repayments,
+                startDate = entity.startDate,
+                endDate = entity.endDate,
+                lender = entity.lender,
+                status = try { LoanStatus.valueOf(entity.status) } catch (_: Exception) { LoanStatus.ACTIVE },
+                totalRepaid = entity.totalRepaid
+            ).also { loans[it.id] = it }
+        }
+    }
 
     private fun formatAmount(amount: Int): String {
         return if (amount >= 1_000_000) {
