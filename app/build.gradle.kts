@@ -202,7 +202,13 @@ dependencies {
 }
 
 kapt {
-    correctErrorTypes = true
+    correctErrorTypes = false
+    javacOptions {
+        option("-Adiagnostic.note.verbosity=full")
+    }
+    arguments {
+        arg("kapt.verbose", "true")
+    }
 }
 
 // Force ALL Kotlin deps to match Kotlin 1.9.22 (transitive deps from Ktor, coroutines, Hilt pull older versions)
