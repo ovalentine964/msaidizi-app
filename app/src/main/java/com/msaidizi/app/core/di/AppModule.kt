@@ -37,6 +37,12 @@ import com.msaidizi.app.sync.SyncManager
 import com.google.gson.Gson
 import com.msaidizi.app.sync.SyncQueue
 import com.msaidizi.app.sync.NetworkMonitor
+import com.msaidizi.app.gamification.GamificationEngine
+import com.msaidizi.app.mindset.MindsetAcademy
+import com.msaidizi.app.mindset.RichHabitsScore
+import com.msaidizi.app.onboarding.AhaMomentFlow
+import com.msaidizi.app.cfo.BriefingDelivery
+import com.msaidizi.app.cfo.CFOEngine
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import dagger.Module
 import dagger.Provides
@@ -397,9 +403,14 @@ object AppModule {
         analysisAgent: AnalysisAgent,
         advisorAgent: AdvisorAgent,
         learningAgent: LearningAgent,
-        adaptiveLearning: AdaptiveLearningEngine
+        adaptiveLearning: AdaptiveLearningEngine,
+        gamificationEngine: GamificationEngine,
+        ahaMomentFlow: AhaMomentFlow,
+        richHabitsScore: RichHabitsScore,
+        mindsetAcademy: MindsetAcademy
     ): Orchestrator = Orchestrator(
-        intentRouter, businessAgent, analysisAgent, advisorAgent, learningAgent, adaptiveLearning
+        intentRouter, businessAgent, analysisAgent, advisorAgent, learningAgent, adaptiveLearning,
+        gamificationEngine, ahaMomentFlow, richHabitsScore, mindsetAcademy
     )
 
     // === SYNC ===
@@ -478,4 +489,30 @@ object AppModule {
         requestDao: FeatureRequestDao,
         feedbackDao: FeedbackDao
     ): FeatureRequestTracker = FeatureRequestTracker(requestDao, feedbackDao)
+
+    // === GAMIFICATION & STICKINESS ===
+
+    @Provides
+    @Singleton
+    fun provideGamificationEngine(
+        gamificationDao: GamificationDao
+    ): GamificationEngine = GamificationEngine(gamificationDao)
+
+    @Provides
+    @Singleton
+    fun provideMindsetAcademy(
+        mindsetLessonDao: MindsetLessonDao
+    ): MindsetAcademy = MindsetAcademy(mindsetLessonDao)
+
+    @Provides
+    @Singleton
+    fun provideRichHabitsScore(
+        richHabitsDao: RichHabitsDao
+    ): RichHabitsScore = RichHabitsScore(richHabitsDao)
+
+    @Provides
+    @Singleton
+    fun provideAhaMomentFlow(
+        businessAgent: BusinessAgent
+    ): AhaMomentFlow = AhaMomentFlow(businessAgent)
 }

@@ -5,6 +5,9 @@ import com.msaidizi.app.agent.WorkerType
 import com.msaidizi.app.core.model.Transaction
 import com.msaidizi.app.core.model.TransactionType
 import com.msaidizi.app.finance.LoanManager
+import com.msaidizi.app.gamification.GamificationEngine
+import com.msaidizi.app.mindset.MindsetAcademy
+import com.msaidizi.app.mindset.RichHabitsScore
 import timber.log.Timber
 import java.time.LocalTime
 import java.time.LocalDate
@@ -43,7 +46,10 @@ import java.time.DayOfWeek
 class BriefingDelivery(
     private val cfoEngine: CFOEngine,
     private val businessAgent: BusinessAgent,
-    private val loanManager: LoanManager = LoanManager()
+    private val loanManager: LoanManager = LoanManager(),
+    private val gamificationEngine: GamificationEngine? = null,
+    private val mindsetAcademy: MindsetAcademy? = null,
+    private val richHabitsScore: RichHabitsScore? = null
 ) {
     companion object {
         private const val TAG = "BriefingDelivery"
@@ -124,6 +130,28 @@ class BriefingDelivery(
 
             if (restockAlert.isNotBlank()) {
                 append("\n\n$restockAlert")
+            }
+
+            // Gamification: streak & level info
+            gamificationEngine?.let { ge ->
+                try {
+                    val streakInfo = ge.getStreakInfo()
+                    val levelInfo = ge.getCurrentLevel()
+                    append("\n\n🎮 Level: ${levelInfo.emoji} ${levelInfo.nameSw}")
+                    if (streakInfo.currentStreak > 0) {
+                        append(" | 🔥 Mfululizo: siku ${streakInfo.currentStreak}")
+                    }
+                } catch (_: Exception) {}
+            }
+
+            // Mindset: daily lesson prompt
+            mindsetAcademy?.let { ma ->
+                try {
+                    val lessonPrompt = ma.getDailyLessonPrompt()
+                    if (lessonPrompt != null) {
+                        append("\n\n$lessonPrompt")
+                    }
+                } catch (_: Exception) {}
             }
         }
 
@@ -232,6 +260,34 @@ class BriefingDelivery(
             if (creditMessage.isNotBlank()) {
                 append("\n\n🏦 $creditMessage")
             }
+
+            // Gamification: weekly level & streak
+            gamificationEngine?.let { ge ->
+                try {
+                    val levelInfo = ge.getCurrentLevel()
+                    val streakInfo = ge.getStreakInfo()
+                    append("\n\n🎮 Level yako: ${levelInfo.emoji} ${levelInfo.nameSw} (${levelInfo.totalPoints} points)")
+                    if (streakInfo.currentStreak > 0) {
+                        append(" | 🔥 Mfululizo: siku ${streakInfo.currentStreak}")
+                    }
+                } catch (_: Exception) {}
+            }
+
+            // Mindset: weekly progress
+            mindsetAcademy?.let { ma ->
+                try {
+                    val progress = ma.getProgress()
+                    append("\n\n📖 Somo: ${progress.completedLessons}/${progress.totalLessons} zimekamilisha (${progress.progressPercent}%)")
+                } catch (_: Exception) {}
+            }
+
+            // Rich Habits: weekly average
+            richHabitsScore?.let { rhs ->
+                try {
+                    val avg = rhs.getWeeklyAverage()
+                    if (avg > 0) append("\n\n📋 Wastani wa tabia wiki hii: ${"%.0f".format(avg)}/100")
+                } catch (_: Exception) {}
+            }
         }
 
         return BriefingResult(
@@ -275,6 +331,13 @@ class BriefingDelivery(
         val profit = sales - expenses
         val txnCount = todayTransactions.size
 
+        // Update gamification streak on evening check
+        gamificationEngine?.let { ge ->
+            try {
+                kotlinx.coroutines.runBlocking { ge.onDailyActivity() }
+            } catch (_: Exception) {}
+        }
+
         val message = buildString {
             append("🌆 Habari $workerName! Muhtasari wa leo:\n\n")
             append("📊 Shughuli: $txnCount\n")
@@ -284,8 +347,33 @@ class BriefingDelivery(
             if (profit > 0) {
                 val savings = (profit * 0.20).toInt()
                 append("\n💡 Weka KSh $savings kwenye akiba ya dharura.")
+                append(" Umehifadhi KSh $savings. Nzuri!")
             } else if (profit < 0) {
                 append("\n💪 Leo haikuwa siku nzuri. Kesho ni nafasi mpya!")
+            }
+
+            // Gamification: evening score
+            gamificationEngine?.let { ge ->
+                try {
+                    val levelInfo = ge.getCurrentLevel()
+                    val streakInfo = ge.getStreakInfo()
+                    append("\n\n🎮 Level: ${levelInfo.emoji} ${levelInfo.nameSw} | Points: ${levelInfo.totalPoints}")
+                    if (streakInfo.currentStreak > 0) {
+                        append(" | 🔥 Mfululizo: siku ${streakInfo.currentStreak}")
+                    }
+                } catch (_: Exception) {}
+            }
+
+            // Rich Habits: evening score & improvement
+            richHabitsScore?.let { rhs ->
+                try {
+                    val score = rhs.getTodayScore()
+                    val improvement = rhs.getImprovementCelebration()
+                    append("\n\n📋 Tabia za leo: $score/100")
+                    if (improvement != null) {
+                        append("\n$improvement")
+                    }
+                } catch (_: Exception) {}
             }
 
             append("\n\nUsiku mwema! 🌙")

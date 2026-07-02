@@ -2,6 +2,10 @@ package com.msaidizi.app.agent
 
 import com.msaidizi.app.core.model.*
 import com.msaidizi.app.core.util.SwahiliParser
+import com.msaidizi.app.gamification.GamificationEngine
+import com.msaidizi.app.onboarding.AhaMomentFlow
+import com.msaidizi.app.mindset.RichHabitsScore
+import com.msaidizi.app.mindset.MindsetAcademy
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import timber.log.Timber
@@ -63,7 +67,11 @@ class Orchestrator(
     private val analysisAgent: AnalysisAgent,
     private val advisorAgent: AdvisorAgent,
     private val learningAgent: LearningAgent,
-    private val adaptiveLearning: AdaptiveLearningEngine
+    private val adaptiveLearning: AdaptiveLearningEngine,
+    private val gamificationEngine: GamificationEngine? = null,
+    private val ahaMomentFlow: AhaMomentFlow? = null,
+    private val richHabitsScore: RichHabitsScore? = null,
+    private val mindsetAcademy: MindsetAcademy? = null
 ) {
     // Response flow for UI
     private val _responses = MutableSharedFlow<AgentResponse>(extraBufferCapacity = 8)
@@ -479,14 +487,44 @@ class Orchestrator(
             // ECO 101 §1.4: Calculate profit for this transaction
             val profit = transaction.totalAmount - transaction.costBasis
 
+            // Gamification: award points for sale
+            val gamificationMessages = mutableListOf<String>()
+            gamificationEngine?.let { ge ->
+                try {
+                    val event = ge.onSaleRecorded(language)
+                    gamificationMessages.addAll(event.messages)
+                } catch (_: Exception) {}
+            }
+
+            // Rich Habits: auto-complete "record_sales" habit
+            richHabitsScore?.let { rhs ->
+                try {
+                    val completions = rhs.autoCompleteFromAction("sale", language)
+                    completions.forEach { gamificationMessages.add(it.message) }
+                } catch (_: Exception) {}
+            }
+
+            // Aha Moment: check if this triggers the aha moment
+            val ahaPrompt = ahaMomentFlow?.onSaleRecorded(language)
+            if (ahaPrompt != null) {
+                gamificationMessages.add(ahaPrompt.getText(language))
+            }
+
+            // Build response with gamification messages
+            val baseText = if (language == "sw") {
+                "✅ Umeuza ${item} x${quantity.toInt()}, KSh ${"%.0f".format(amount)}. " +
+                "Faida: KSh ${"%.0f".format(profit)}"
+            } else {
+                "✅ Sold ${item} x${quantity.toInt()}, KSh ${"%.0f".format(amount)}. " +
+                "Profit: KSh ${"%.0f".format(profit)}"
+            }
+
+            val fullText = if (gamificationMessages.isNotEmpty()) {
+                baseText + "\n\n" + gamificationMessages.joinToString("\n")
+            } else baseText
+
             AgentResponse(
-                text = if (language == "sw") {
-                    "✅ Umeuza ${item} x${quantity.toInt()}, KSh ${"%.0f".format(amount)}. " +
-                    "Faida: KSh ${"%.0f".format(profit)}"
-                } else {
-                    "✅ Sold ${item} x${quantity.toInt()}, KSh ${"%.0f".format(amount)}. " +
-                    "Profit: KSh ${"%.0f".format(profit)}"
-                },
+                text = fullText,
                 type = ResponseType.CONFIRMATION,
                 data = mapOf(
                     "transactionId" to transaction.id.toString(),
@@ -629,12 +667,35 @@ class Orchestrator(
     private suspend fun handleBalanceQuery(language: String): AgentResponse {
         val balance = businessAgent.getBalance()
 
+        // Gamification: award points for balance check
+        val gamificationMessages = mutableListOf<String>()
+        gamificationEngine?.let { ge ->
+            try {
+                val event = ge.onBalanceChecked(language)
+                gamificationMessages.addAll(event.messages)
+            } catch (_: Exception) {}
+        }
+
+        // Rich Habits: auto-complete "check_balance" habit
+        richHabitsScore?.let { rhs ->
+            try {
+                val completions = rhs.autoCompleteFromAction("balance_check", language)
+                completions.forEach { gamificationMessages.add(it.message) }
+            } catch (_: Exception) {}
+        }
+
+        val baseText = if (language == "sw") {
+            "💰 Salio lako ni KSh ${"%.0f".format(balance)}"
+        } else {
+            "💰 Your balance is KSh ${"%.0f".format(balance)}"
+        }
+
+        val fullText = if (gamificationMessages.isNotEmpty()) {
+            baseText + "\n" + gamificationMessages.joinToString("\n")
+        } else baseText
+
         return AgentResponse(
-            text = if (language == "sw") {
-                "💰 Salio lako ni KSh ${"%.0f".format(balance)}"
-            } else {
-                "💰 Your balance is KSh ${"%.0f".format(balance)}"
-            },
+            text = fullText,
             type = ResponseType.INFORMATION,
             data = mapOf("balance" to balance.toString())
         )
@@ -832,6 +893,38 @@ class Orchestrator(
     fun triggerBackgroundLearning() {
         adaptiveLearning.launchBackgroundLearning()
     }
+
+    /**
+     * Initialize stickiness features.
+     * Call on app startup to set up gamification, seed lessons, etc.
+     */
+    suspend fun initializeStickiness() {
+        gamificationEngine?.initialize()
+        mindsetAcademy?.seedLessons()
+        Timber.d("Stickiness features initialized")
+    }
+
+    /**
+     * Get the welcome prompt for first launch.
+     */
+    fun getSessionWelcome(language: String = "sw"): String? {
+        return ahaMomentFlow?.onSessionStart(language)?.getText(language)
+    }
+
+    /**
+     * Get current gamification state.
+     */
+    suspend fun getGamificationState() = gamificationEngine?.getState()
+
+    /**
+     * Get today's rich habits score.
+     */
+    suspend fun getRichHabitsScore() = richHabitsScore?.getTodayScore()
+
+    /**
+     * Get mindset academy progress.
+     */
+    suspend fun getMindsetProgress() = mindsetAcademy?.getProgress()
 
     /**
      * Get conversation memory for debugging or UI display.
