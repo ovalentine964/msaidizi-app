@@ -10,6 +10,9 @@ import com.msaidizi.app.core.database.PatternDao
 import com.msaidizi.app.core.database.TransactionDao
 import com.msaidizi.app.agent.Orchestrator
 import com.msaidizi.app.agent.IntentRouter
+import com.msaidizi.app.agent.ContextManager
+import com.msaidizi.app.agent.ErrorCompactor
+import com.msaidizi.app.agent.UnifiedStateManager
 import com.msaidizi.app.agent.BusinessAgent
 import com.msaidizi.app.agent.AnalysisAgent
 import com.msaidizi.app.agent.AdvisorAgent
@@ -499,6 +502,20 @@ object AppModule {
             }
         }
     }
+
+    // === 12-FACTOR AGENT INFRASTRUCTURE ===
+
+    @Provides
+    @Singleton
+    fun provideContextManager(): ContextManager = ContextManager(agentName = "orchestrator")
+
+    @Provides
+    @Singleton
+    fun provideErrorCompactor(): ErrorCompactor = ErrorCompactor(agentName = "orchestrator")
+
+    @Provides
+    @Singleton
+    fun provideUnifiedStateManager(): UnifiedStateManager = UnifiedStateManager(agentName = "orchestrator")
 
     // === AGENTS ===
 
