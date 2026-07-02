@@ -47,12 +47,9 @@ if [[ $AUTO_FIX_EXIT -eq 1 ]]; then
     # Stage any modified files
     git add -u
 
-    # Create a temporary commit with the fixes
-    # We use --amend to fold fixes into the original commit
-    git commit --amend --no-edit --no-verify 2>/dev/null || {
-        # If amend fails (e.g., no previous commit), just stage the changes
-        echo -e "${YELLOW}⚠️  Could not amend. Fixes are staged for this commit.${NC}"
-    }
+    # The fixes are now staged. They will be included in the current commit.
+    # We do NOT amend here — the parent git commit will include these staged changes.
+    echo -e "${GREEN}✅ Auto-fixes staged — will be included in this commit${NC}"
 
     echo -e "${GREEN}✅ Auto-fixes committed${NC}"
 elif [[ $AUTO_FIX_EXIT -eq 2 ]]; then
