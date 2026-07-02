@@ -52,6 +52,7 @@ import com.msaidizi.app.mindset.RichHabitsScore
 import com.msaidizi.app.onboarding.AhaMomentFlow
 import com.msaidizi.app.cfo.BriefingDelivery
 import com.msaidizi.app.cfo.CFOEngine
+import com.msaidizi.app.skills.SkillBridge
 import com.msaidizi.app.loops.MorningBriefingLoop
 import com.msaidizi.app.loops.StreakProtectionLoop
 import com.msaidizi.app.loops.VariableRewardsLoop
@@ -767,4 +768,13 @@ object AppModule {
     ): VariableRewardsLoop = VariableRewardsLoop(
         gamificationEngine, gamificationDao, transactionDao, patternDao
     )
+
+    // === SKILLS — Degree-to-skill bridge ===
+
+    @Provides
+    @Singleton
+    fun provideSkillBridge(
+        httpClient: HttpClient,
+        json: Json
+    ): SkillBridge = SkillBridge(httpClient, json)
 }
