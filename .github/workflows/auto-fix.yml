@@ -1,0 +1,110 @@
+name: Auto-Fix Build Issues
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'app/src/main/java/**/*.kt'
+      - 'app/src/main/res/**'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  auto-fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Run auto-fix script
+        id: autofix
+        run: |
+          chmod +x scripts/auto-fix-build.sh
+          set +e
+          OUTPUT=$(bash scripts/auto-fix-build.sh 2>&1)
+          EXIT_CODE=$?
+          set -e
+
+          echo "$OUTPUT"
+          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+
+          if [ $EXIT_CODE -eq 1 ]; then
+            echo "fixes_applied=true" >> "$GITHUB_OUTPUT"
+            echo "🔧 Auto-fixes were applied"
+          else
+            echo "fixes_applied=false" >> "$GITHUB_OUTPUT"
+            echo "✅ No fixes needed"
+          fi
+
+      - name: Commit auto-fixes
+        if: steps.autofix.outputs.fixes_applied == 'true'
+        run: |
+          git config user.name "Msaidizi Bot"
+          git config user.email "bot@msaidizi.app"
+
+          # Stage all changes
+          git add -u
+
+          # Check if there are changes to commit
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "🔧 auto-fix: resolve build issues automatically
+
+            Auto-fixed by CI:
+            - Removed @Serializable from @Entity classes
+            - Registered missing Room entities in @Database
+            - Renamed duplicate class names
+            - Bumped database version
+
+            [skip ci]"
+
+            git push
+            echo "✅ Auto-fixes committed and pushed"
+          fi
+
+      - name: Run Room entity check
+        run: |
+          python3 scripts/check-room-entities.py
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.5'
+
+      - name: Build Debug APK
+        run: |
+          set -o pipefail
+          gradle assembleDebug --stacktrace --info -Dkotlin.daemon.enabled=false 2>&1 | tee build-debug.log
+          echo "Gradle exit code: $?"
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-debug-log
+          path: build-debug.log
+
+      - name: Upload APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: msaidizi-debug
+          path: app/build/outputs/apk/debug/*.apk
