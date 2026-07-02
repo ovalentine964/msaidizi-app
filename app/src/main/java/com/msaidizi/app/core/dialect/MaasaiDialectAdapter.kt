@@ -283,7 +283,6 @@ object MaasaiDialectAdapter {
 
     // ────────────────────── Helpers ──────────────────────
 
-}
 
     private fun isMaasaiBusinessTerm(word: String): Boolean {
         return maasaiBusinessTerms.containsKey(word) ||

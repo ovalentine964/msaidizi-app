@@ -289,7 +289,6 @@ object LuhyaDialectAdapter {
 
     // ────────────────────── Helpers ──────────────────────
 
-}
 
     private fun isLuhyaBusinessTerm(word: String): Boolean {
         return luhyaBusinessTerms.containsKey(word) ||

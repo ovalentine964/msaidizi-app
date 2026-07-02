@@ -304,7 +304,6 @@ object XhosaDialectAdapter {
 
     // ────────────────────── Helpers ──────────────────────
 
-}
 
     private fun isXhosaBusinessTerm(word: String): Boolean {
         return xhosaBusinessTerms.containsKey(word) ||

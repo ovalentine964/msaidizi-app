@@ -385,7 +385,6 @@ object ShengDialectAdapter {
 
     // ────────────────────── Helpers ──────────────────────
 
-}
 
     private fun isShengBusinessTerm(word: String): Boolean {
         return shengBusinessTerms.containsKey(word) ||

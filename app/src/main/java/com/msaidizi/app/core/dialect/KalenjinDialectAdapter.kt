@@ -272,7 +272,6 @@ object KalenjinDialectAdapter {
 
     // ────────────────────── Helpers ──────────────────────
 
-}
 
     private fun isKalenjinBusinessTerm(word: String): Boolean {
         return kalenjinBusinessTerms.containsKey(word) ||

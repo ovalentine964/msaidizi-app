@@ -319,7 +319,6 @@ object HausaDialectAdapter {
 
     // ────────────────────── Helpers ──────────────────────
 
-}
 
     private fun isHausaBusinessTerm(word: String): Boolean {
         return hausaBusinessTerms.containsKey(word) ||

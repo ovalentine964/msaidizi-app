@@ -313,7 +313,6 @@ object ZuluDialectAdapter {
 
     // ────────────────────── Helpers ──────────────────────
 
-}
 
     private fun isZuluBusinessTerm(word: String): Boolean {
         return zuluBusinessTerms.containsKey(word) ||

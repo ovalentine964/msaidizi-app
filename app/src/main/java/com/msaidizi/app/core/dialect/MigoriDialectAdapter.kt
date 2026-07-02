@@ -503,7 +503,6 @@ object MigoriDialectAdapter {
 
     // ────────────────────── Helper Methods ──────────────────────
 
-}
 
     private fun isMigoriBusinessTerm(word: String): Boolean {
         return migoriBusinessTerms.containsKey(word) ||

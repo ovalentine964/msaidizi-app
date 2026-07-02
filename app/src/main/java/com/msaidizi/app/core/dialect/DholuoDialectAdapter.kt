@@ -347,7 +347,6 @@ object DholuoDialectAdapter {
 
     // ────────────────────── Helpers ──────────────────────
 
-}
 
     private fun isDholuoBusinessTerm(word: String): Boolean {
         return dholuoBusinessTerms.containsKey(word) ||

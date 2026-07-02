@@ -305,7 +305,6 @@ object SomaliDialectAdapter {
 
     // ────────────────────── Helpers ──────────────────────
 
-}
 
     private fun isSomaliBusinessTerm(word: String): Boolean {
         return somaliBusinessTerms.containsKey(word) ||

@@ -293,7 +293,6 @@ object IgboDialectAdapter {
 
     // ────────────────────── Helpers ──────────────────────
 
-}
 
     private fun isIgboBusinessTerm(word: String): Boolean {
         return igboBusinessTerms.containsKey(word) ||

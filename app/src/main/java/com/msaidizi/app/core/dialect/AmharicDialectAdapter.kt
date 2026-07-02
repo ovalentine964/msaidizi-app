@@ -314,7 +314,6 @@ object AmharicDialectAdapter {
 
     // ────────────────────── Helpers ──────────────────────
 
-}
 
     private fun isAmharicBusinessTerm(word: String): Boolean {
         return amharicBusinessTerms.containsKey(word) ||

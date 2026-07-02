@@ -300,7 +300,6 @@ object YorubaDialectAdapter {
 
     // ────────────────────── Helpers ──────────────────────
 
-}
 
     private fun isYorubaBusinessTerm(word: String): Boolean {
         return yorubaBusinessTerms.containsKey(word) ||

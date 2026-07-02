@@ -334,7 +334,6 @@ object KikuyuDialectAdapter {
 
     // ────────────────────── Helpers ──────────────────────
 
-}
 
     private fun isKikuyuBusinessTerm(word: String): Boolean {
         return kikuyuBusinessTerms.containsKey(word) ||
