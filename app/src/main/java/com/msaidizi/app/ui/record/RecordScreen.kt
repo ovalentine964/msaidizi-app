@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.msaidizi.app.R
+import com.msaidizi.app.core.language.CalibrationAction
 import com.msaidizi.app.voice.PipelineState
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -39,6 +40,7 @@ class RecordFragment : Fragment() {
     private lateinit var textInput: EditText
     private lateinit var sendButton: ImageButton
     private lateinit var conversationRecycler: RecyclerView
+    private lateinit var pronunciationFeedback: PronunciationFeedbackView
 
     private var isRecording = false
 
@@ -93,6 +95,21 @@ class RecordFragment : Fragment() {
         conversationRecycler.layoutManager = LinearLayoutManager(requireContext()).apply {
             stackFromEnd = true
         }
+
+        // Setup pronunciation feedback
+        pronunciationFeedback = view.findViewById(R.id.pronunciation_feedback)
+        pronunciationFeedback.onConfirmed = { transcription ->
+            viewModel.onPronunciationConfirmed(transcription)
+        }
+        pronunciationFeedback.onCorrection = { original, corrected ->
+            viewModel.onPronunciationCorrection(original, corrected)
+        }
+        pronunciationFeedback.onAlternativeSelected = { alternative ->
+            viewModel.onAlternativeSelected(alternative)
+        }
+        pronunciationFeedback.onDismissed = {
+            viewModel.onPronunciationDismissed()
+        }
     }
 
     private fun observeState() {
@@ -139,6 +156,18 @@ class RecordFragment : Fragment() {
         if (state.conversationHistory.isNotEmpty()) {
             conversationRecycler.adapter = ConversationAdapter(state.conversationHistory)
             conversationRecycler.scrollToPosition(state.conversationHistory.size - 1)
+        }
+
+        // Update pronunciation feedback
+        if (state.showPronunciationFeedback && state.pronunciationConfidence != null) {
+            pronunciationFeedback.showFeedback(
+                transcription = state.transcribedText,
+                confidence = state.pronunciationConfidence!!,
+                expectedText = state.expectedText,
+                alternatives = state.pronunciationAlternatives
+            )
+        } else if (!state.showPronunciationFeedback && pronunciationFeedback.isShowingFeedback()) {
+            pronunciationFeedback.dismiss()
         }
     }
 

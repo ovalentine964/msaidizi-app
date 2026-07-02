@@ -16,43 +16,43 @@ data class BusinessPattern(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
 
-    /** Pattern type */
+    // Pattern type
     val patternType: PatternType,
 
-    /** JSON-encoded pattern data */
+    // JSON-encoded pattern data
     val data: String = "{}",
 
-    /** Confidence in this pattern (0.0-1.0) */
+    // Confidence in this pattern (0.0-1.0)
     val confidence: Double = 0.5,
 
-    /** When this pattern was first observed */
+    // When this pattern was first observed
     val createdAt: Long = System.currentTimeMillis() / 1000,
 
-    /** When this pattern was last updated */
+    // When this pattern was last updated
     val updatedAt: Long = System.currentTimeMillis() / 1000
 )
 
 @Serializable
 enum class PatternType {
-    /** User's vocabulary (spoken → canonical mapping) */
+    // User's vocabulary (spoken → canonical mapping)
     VOCABULARY,
 
-    /** Restocking cycle for an item */
+    // Restocking cycle for an item
     RESTOCK_CYCLE,
 
-    /** Price trend for an item */
+    // Price trend for an item
     PRICE_TREND,
 
-    /** Peak selling hours */
+    // Peak selling hours
     PEAK_HOURS,
 
-    /** Seasonal patterns */
+    // Seasonal patterns
     SEASONAL,
 
-    /** Language preference */
+    // Language preference
     LANGUAGE_SWITCH,
 
-    /** Day-of-week sales pattern */
+    // Day-of-week sales pattern
     DAY_OF_WEEK
 }
 
@@ -65,16 +65,16 @@ data class VocabularyEntry(
     @PrimaryKey
     val spokenForm: String,
 
-    /** Canonical/standard form */
+    // Canonical/standard form
     val canonicalForm: String,
 
-    /** Language code (sw, en, sheng) */
+    // Language code (sw, en, sheng)
     val language: String = "sw",
 
-    /** How often the user uses this term */
+    // How often the user uses this term
     val frequency: Int = 1,
 
-    /** Last time user used this term */
+    // Last time user used this term
     val lastUsedAt: Long = System.currentTimeMillis() / 1000
 )
 
@@ -92,7 +92,7 @@ data class DailySummary(
     val totalExpenses: Double = 0.0,
     val profit: Double = 0.0,
 
-    /** JSON array of top items */
+    // JSON array of top items
     val topItems: String = "[]",
 
     val transactionCount: Int = 0,

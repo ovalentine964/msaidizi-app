@@ -217,4 +217,23 @@
     <string name="vocab_stats">Words you taught: %1$d</string>
     <string name="vocab_teach_new">➕ Teach new word</string>
     <string name="vocab_title">📚 New Words</string>
+
+    <!-- Pronunciation Feedback UI -->
+    <string name="pronunciation_confirm_title">Je, ni sawa?</string>
+    <string name="pronunciation_confirm_message">Niliskia \"%1$s\", sahihi?</string>
+    <string name="pronunciation_reject_title">Sikuelewi vizuri</string>
+    <string name="pronunciation_reject_message">Tafadhali andika ulisema nini.</string>
+    <string name="pronunciation_expected_label">Ulitarajia:</string>
+    <string name="pronunciation_yes_correct">✅ Sawa!</string>
+    <string name="pronunciation_no_wrong">❌ La</string>
+    <string name="pronunciation_submit_correction">📝 Tuma marekebisho</string>
+    <string name="pronunciation_try_again">🔄 Jaribu tena</string>
+    <string name="pronunciation_correction_hint">Ulisema nini?</string>
+    <string name="pronunciation_what_did_you_say">Andika ulichosema…</string>
+    <string name="pronunciation_alternatives_label">Labda ulisema:</string>
+    <string name="pronunciation_correction_saved">Asante! Nimejifunza.</string>
+    <string name="pronunciation_confirmation_saved">Sawa! Nimesikia sawa.</string>
+    <string name="pronunciation_training_ready">Mfumo unaanza kujifunza kutoka kwa marekebisho yako…</string>
+    <string name="pronunciation_lora_training">Inafundisha mfumo… (%1$d%%)</string>
+    <string name="pronunciation_lora_complete">✅ Mfumo umesasishwa!</string>
 </resources>

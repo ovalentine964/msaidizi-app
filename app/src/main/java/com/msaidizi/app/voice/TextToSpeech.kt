@@ -59,11 +59,11 @@ class TextToSpeech @Inject constructor(
         private const val DEFAULT_SPEAKER_ID = 0L
         private const val AUDIO_BUFFER_MULTIPLIER = 4  // Buffer size = pcm.size * this
 
-        /** Phoneme ID for padding */
+        // Phoneme ID for padding
         private const val PAD_PHONEME_ID = 0
-        /** Phoneme ID for beginning of utterance */
+        // Phoneme ID for beginning of utterance
         private const val BOS_PHONEME_ID = 1
-        /** Phoneme ID for end of utterance */
+        // Phoneme ID for end of utterance
         private const val EOS_PHONEME_ID = 2
     }
 
@@ -77,7 +77,7 @@ class TextToSpeech @Inject constructor(
     private var currentAudioTrack: AudioTrack? = null
     private var speed: Float = DEFAULT_SPEED
 
-    /** Phoneme map: grapheme/phoneme string → integer ID */
+    // Phoneme map: grapheme/phoneme string → integer ID
     private var phonemeMap: Map<String, Int> = emptyMap()
     private var isPhonemeMapLoaded = false
 

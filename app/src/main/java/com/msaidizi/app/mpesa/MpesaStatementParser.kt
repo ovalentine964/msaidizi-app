@@ -34,7 +34,7 @@ import java.util.Locale
 class MpesaStatementParser {
 
     companion object {
-        /** Supported date formats in M-Pesa statements */
+        // Supported date formats in M-Pesa statements
         private val DATE_FORMATS = listOf(
             SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US),
             SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.US),
@@ -45,10 +45,10 @@ class MpesaStatementParser {
         private const val EXPECTED_MIN_COLUMNS = 6
         private const val EXPECTED_COLUMNS = 8
 
-        /** Minimum reasonable amount (filter out noise) */
+        // Minimum reasonable amount (filter out noise)
         private const val MIN_AMOUNT = 0.01
 
-        /** Maximum reasonable single M-Pesa transaction */
+        // Maximum reasonable single M-Pesa transaction
         private const val MAX_AMOUNT = 500_000.0
     }
 
@@ -386,31 +386,31 @@ data class DateRange(
 class MpesaSmsParser {
 
     companion object {
-        /** Pattern: "RECEIPT Confirmed. KshAMOUNT received from NAME PHONE on DATE" */
+        // Pattern: "RECEIPT Confirmed. KshAMOUNT received from NAME PHONE on DATE"
         private val RECEIVE_PATTERN = Regex(
             """(\w+)\s+Confirmed\.\s+Ksh([\d,]+\.?\d*)\s+received\s+from\s+(.+?)\s+(\d{10,12})\s+on\s+(.+?)\.""",
             RegexOption.IGNORE_CASE
         )
 
-        /** Pattern: "RECEIPT Confirmed. KshAMOUNT sent to NAME PHONE on DATE" */
+        // Pattern: "RECEIPT Confirmed. KshAMOUNT sent to NAME PHONE on DATE"
         private val SEND_PATTERN = Regex(
             """(\w+)\s+Confirmed\.\s+Ksh([\d,]+\.?\d*)\s+sent\s+to\s+(.+?)\s+(\d{10,12})\s+on\s+(.+?)\.""",
             RegexOption.IGNORE_CASE
         )
 
-        /** Pattern: "RECEIPT Confirmed. KshAMOUNT paid to PAYEE" */
+        // Pattern: "RECEIPT Confirmed. KshAMOUNT paid to PAYEE"
         private val PAYBILL_PATTERN = Regex(
             """(\w+)\s+Confirmed\.\s+Ksh([\d,]+\.?\d*)\s+paid\s+to\s+(.+?)\.""",
             RegexOption.IGNORE_CASE
         )
 
-        /** Pattern: "RECEIPT Confirmed. KshAMOUNT withdrawn from" */
+        // Pattern: "RECEIPT Confirmed. KshAMOUNT withdrawn from"
         private val WITHDRAW_PATTERN = Regex(
             """(\w+)\s+Confirmed\.\s+Ksh([\d,]+\.?\d*)\s+withdrawn""",
             RegexOption.IGNORE_CASE
         )
 
-        /** Balance extraction */
+        // Balance extraction
         private val BALANCE_PATTERN = Regex(
             """balance\s+is\s+Ksh([\d,]+\.?\d*)""",
             RegexOption.IGNORE_CASE

@@ -27,7 +27,7 @@ class PinnedHttpClient @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     companion object {
-        /** Certificate pin for models.msaidizi.app — SHA-256 of SubjectPublicKeyInfo */
+        // Certificate pin for models.msaidizi.app — SHA-256 of SubjectPublicKeyInfo
         private const val CDN_HOST = "models.msaidizi.app"
 
         // TODO(security): Replace these placeholder hashes with real SHA-256 pin hashes

@@ -56,19 +56,19 @@ class DarajaClient @Inject constructor(
         private const val PASSKEY_SANDBOX =
             "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919"
 
-        /** Sandbox shortcode */
+        // Sandbox shortcode
         private const val SHORTCODE_SANDBOX = "174379"
 
-        /** Callback URL for STK Push results */
+        // Callback URL for STK Push results
         private const val CALLBACK_URL = "https://api.msaidizi.app/v1/mpesa/callback"
 
-        /** Token refresh buffer — refresh 60s before expiry */
+        // Token refresh buffer — refresh 60s before expiry
         private const val TOKEN_REFRESH_BUFFER_MS = 60_000L
 
-        /** Date format for Daraja API timestamps */
+        // Date format for Daraja API timestamps
         private const val TIMESTAMP_FORMAT = "yyyyMMddHHmmss"
 
-        /** Phone number regex — must be 254XXXXXXXXX */
+        // Phone number regex — must be 254XXXXXXXXX
         private val PHONE_REGEX = Regex("^254[17]\\d{8}$")
     }
 
@@ -400,7 +400,7 @@ data class StkPushResponse(
     val responseDescription: String? = null,
     val customerMessage: String? = null
 ) {
-    /** Whether the STK Push was successfully initiated */
+    // Whether the STK Push was successfully initiated
     val isSuccess: Boolean get() = responseCode == "0"
 }
 
@@ -421,11 +421,11 @@ data class StkQueryResponse(
     val resultCode: String? = null,
     val resultDesc: String? = null
 ) {
-    /** Whether the payment completed successfully */
+    // Whether the payment completed successfully
     val isPaid: Boolean get() = resultCode == "0"
-    /** Whether the user cancelled the payment */
+    // Whether the user cancelled the payment
     val isCancelled: Boolean get() = resultCode == "1032"
-    /** Whether the request is still being processed */
+    // Whether the request is still being processed
     val isPending: Boolean get() = resultCode == "1037"
 }
 

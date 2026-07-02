@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.msaidizi.app.agent.AgentResponse
 import com.msaidizi.app.agent.Orchestrator
+import com.msaidizi.app.core.language.CalibratedConfidence
+import com.msaidizi.app.core.language.ConfidenceCalibrator
 import com.msaidizi.app.core.util.SwahiliParser
 import com.msaidizi.app.voice.*
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,7 +21,8 @@ import javax.inject.Inject
 @HiltViewModel
 class RecordViewModel @Inject constructor(
     private val voicePipeline: VoicePipeline,
-    private val orchestrator: Orchestrator
+    private val orchestrator: Orchestrator,
+    private val confidenceCalibrator: ConfidenceCalibrator
 ) : ViewModel() {
 
     // UI State
@@ -46,16 +49,47 @@ class RecordViewModel @Inject constructor(
         viewModelScope.launch {
             voicePipeline.transcription.collect { result ->
                 if (result.success) {
-                    _uiState.value = _uiState.value.copy(
-                        transcribedText = result.text,
-                        statusMessage = "Processing..."
+                    // Check confidence and route to feedback if needed
+                    val calibrated = confidenceCalibrator.calibrate(
+                        rawConfidence = result.confidence,
+                        language = currentLanguage
                     )
-                    // Process through orchestrator
-                    processTranscription(result.text)
+
+                    when {
+                        calibrated.shouldReject -> {
+                            // Low confidence — show feedback with alternatives
+                            _uiState.value = _uiState.value.copy(
+                                transcribedText = result.text,
+                                statusMessage = "Sikuelewi vizuri…",
+                                showPronunciationFeedback = true,
+                                pronunciationConfidence = calibrated,
+                                pronunciationAlternatives = result.alternatives ?: emptyList()
+                            )
+                        }
+                        calibrated.shouldConfirm -> {
+                            // Medium confidence — ask for confirmation
+                            _uiState.value = _uiState.value.copy(
+                                transcribedText = result.text,
+                                statusMessage = "Je, ni sawa?",
+                                showPronunciationFeedback = true,
+                                pronunciationConfidence = calibrated
+                            )
+                        }
+                        else -> {
+                            // High confidence — process directly
+                            _uiState.value = _uiState.value.copy(
+                                transcribedText = result.text,
+                                statusMessage = "Processing...",
+                                showPronunciationFeedback = false
+                            )
+                            processTranscription(result.text)
+                        }
+                    }
                 } else {
                     _uiState.value = _uiState.value.copy(
                         statusMessage = result.error ?: "Could not understand",
-                        transcribedText = ""
+                        transcribedText = "",
+                        showPronunciationFeedback = false
                     )
                 }
             }
@@ -104,6 +138,71 @@ class RecordViewModel @Inject constructor(
         viewModelScope.launch {
             voicePipeline.stopListening()
         }
+    }
+
+    /**
+     * Called when user confirms pronunciation was correct.
+     */
+    fun onPronunciationConfirmed(transcription: String) {
+        _uiState.value = _uiState.value.copy(
+            showPronunciationFeedback = false,
+            statusMessage = "Sawa!"
+        )
+        // Record positive signal for calibration learning
+        viewModelScope.launch {
+            confidenceCalibrator.recordOutcome(
+                rawConfidence = _uiState.value.pronunciationConfidence?.rawConfidence ?: 0.8f,
+                language = currentLanguage,
+                wasCorrect = true
+            )
+        }
+        // Process the confirmed transcription
+        processTranscription(transcription)
+    }
+
+    /**
+     * Called when user provides a correction.
+     */
+    fun onPronunciationCorrection(original: String, corrected: String) {
+        _uiState.value = _uiState.value.copy(
+            showPronunciationFeedback = false,
+            transcribedText = corrected,
+            statusMessage = "Asante! Nimejifunza."
+        )
+        // Record negative signal for calibration learning
+        viewModelScope.launch {
+            confidenceCalibrator.recordOutcome(
+                rawConfidence = _uiState.value.pronunciationConfidence?.rawConfidence ?: 0.5f,
+                language = currentLanguage,
+                wasCorrect = false
+            )
+            // Store correction for LoRA training
+            // This will be picked up by FederatedLearningClient
+        }
+        // Process the corrected transcription
+        processTranscription(corrected)
+    }
+
+    /**
+     * Called when user selects an alternative transcription.
+     */
+    fun onAlternativeSelected(alternative: String) {
+        _uiState.value = _uiState.value.copy(
+            showPronunciationFeedback = false,
+            transcribedText = alternative,
+            statusMessage = "Processing..."
+        )
+        processTranscription(alternative)
+    }
+
+    /**
+     * Called when pronunciation feedback is dismissed.
+     */
+    fun onPronunciationDismissed() {
+        _uiState.value = _uiState.value.copy(
+            showPronunciationFeedback = false,
+            statusMessage = "Ready"
+        )
     }
 
     /**
@@ -211,7 +310,12 @@ data class RecordUiState(
     val responseText: String = "",
     val statusMessage: String = "Ready",
     val lastResponse: AgentResponse? = null,
-    val conversationHistory: List<ConversationEntry> = emptyList()
+    val conversationHistory: List<ConversationEntry> = emptyList(),
+    // Pronunciation feedback state
+    val showPronunciationFeedback: Boolean = false,
+    val pronunciationConfidence: CalibratedConfidence? = null,
+    val pronunciationAlternatives: List<String> = emptyList(),
+    val expectedText: String? = null
 )
 
 /**

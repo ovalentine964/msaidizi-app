@@ -553,21 +553,21 @@ class BusinessAgent(
     // QUERIES
     // ═══════════════════════════════════════════════════════════════
 
-    /** Get today's profit (sales - purchases - expenses). */
+    // Get today's profit (sales - purchases - expenses).
     suspend fun getDailyProfit(date: LocalDate = LocalDate.now()): Double {
         val startOfDay = date.atStartOfDay().toEpochSecond(ZoneOffset.UTC)
         val endOfDay = date.plusDays(1).atStartOfDay().toEpochSecond(ZoneOffset.UTC)
         return transactionDao.getProfit(startOfDay, endOfDay)
     }
 
-    /** Get today's sales total. */
+    // Get today's sales total.
     suspend fun getDailySales(date: LocalDate = LocalDate.now()): Double {
         val startOfDay = date.atStartOfDay().toEpochSecond(ZoneOffset.UTC)
         val endOfDay = date.plusDays(1).atStartOfDay().toEpochSecond(ZoneOffset.UTC)
         return transactionDao.getSalesTotal(startOfDay, endOfDay)
     }
 
-    /** Get today's purchases total. */
+    // Get today's purchases total.
     suspend fun getDailyPurchases(date: LocalDate = LocalDate.now()): Double {
         val startOfDay = date.atStartOfDay().toEpochSecond(ZoneOffset.UTC)
         val endOfDay = date.plusDays(1).atStartOfDay().toEpochSecond(ZoneOffset.UTC)
@@ -599,20 +599,20 @@ class BusinessAgent(
         )
     }
 
-    /** Get current balance (total sales - total purchases - total expenses). */
+    // Get current balance (total sales - total purchases - total expenses).
     suspend fun getBalance(): Double {
         val now = System.currentTimeMillis() / 1000
         return transactionDao.getProfit(0, now)
     }
 
-    /** Get transaction count for today. */
+    // Get transaction count for today.
     suspend fun getDailyTransactionCount(date: LocalDate = LocalDate.now()): Int {
         val startOfDay = date.atStartOfDay().toEpochSecond(ZoneOffset.UTC)
         val endOfDay = date.plusDays(1).atStartOfDay().toEpochSecond(ZoneOffset.UTC)
         return transactionDao.getTransactionCount(startOfDay, endOfDay)
     }
 
-    /** Get top selling items. */
+    // Get top selling items.
     suspend fun getTopSellingItems(days: Int = 7, limit: Int = 5): List<ItemRanking> {
         val endDate = LocalDate.now()
         val startDate = endDate.minusDays(days.toLong())
@@ -629,7 +629,7 @@ class BusinessAgent(
         }
     }
 
-    /** Get items needing restock. */
+    // Get items needing restock.
     suspend fun getRestockAlerts(): List<RestockAlert> {
         return inventoryDao.getItemsNeedingRestock().map { item ->
             RestockAlert(
@@ -642,7 +642,7 @@ class BusinessAgent(
         }
     }
 
-    /** Generate daily summary. */
+    // Generate daily summary.
     suspend fun generateDailySummary(date: LocalDate = LocalDate.now()): DailySummary {
         val startOfDay = date.atStartOfDay().toEpochSecond(ZoneOffset.UTC)
         val endOfDay = date.plusDays(1).atStartOfDay().toEpochSecond(ZoneOffset.UTC)
@@ -671,7 +671,7 @@ class BusinessAgent(
     // HELPERS
     // ═══════════════════════════════════════════════════════════════
 
-    /** Check if an item needs restocking and log alert. */
+    // Check if an item needs restocking and log alert.
     private suspend fun checkRestockAlert(item: String) {
         val inventoryItem = inventoryDao.getItem(item) ?: return
         if (inventoryItem.currentStock <= inventoryItem.restockThreshold) {
@@ -755,15 +755,15 @@ class BusinessAgent(
  * Informs pricing strategy and demand forecasting.
  */
 enum class ElasticityClassification {
-    /** |PED| > 1.5 — Small price changes cause large demand shifts */
+    // |PED| > 1.5 — Small price changes cause large demand shifts
     HIGHLY_ELASTIC,
-    /** |PED| 1.0-1.5 — Demand is price-sensitive */
+    // |PED| 1.0-1.5 — Demand is price-sensitive
     ELASTIC,
-    /** |PED| 0.5-1.0 — Demand is somewhat price-insensitive */
+    // |PED| 0.5-1.0 — Demand is somewhat price-insensitive
     INELASTIC,
-    /** |PED| < 0.5 — Necessities; demand barely changes with price */
+    // |PED| < 0.5 — Necessities; demand barely changes with price
     HIGHLY_INELASTIC,
-    /** Insufficient data to classify */
+    // Insufficient data to classify
     UNKNOWN
 }
 

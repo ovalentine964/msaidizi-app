@@ -120,7 +120,7 @@ class LlmEngine @Inject constructor(
     }
 
     companion object {
-        /** Whether llama_jni native library is available */
+        // Whether llama_jni native library is available
         var isNativeAvailable = false
             private set
 
@@ -135,18 +135,18 @@ class LlmEngine @Inject constructor(
             }
         }
 
-        /** Default context lengths by device tier */
+        // Default context lengths by device tier
         private const val CTX_BASIC = 1024
         private const val CTX_STANDARD = 2048
         private const val CTX_ENHANCED = 4096
 
-        /** Default generation parameters */
+        // Default generation parameters
         private const val DEFAULT_MAX_TOKENS = 256
         private const val DEFAULT_TEMPERATURE = 0.3f
         private const val DEFAULT_TOP_P = 0.9f
         private const val DEFAULT_MAX_TOKENS_RESPONSE = 128
 
-        /** System prompts by language */
+        // System prompts by language
         private val SYSTEM_PROMPTS = mapOf(
             "sw" to """Wewe ni Msaidizi, msaidizi wa biashara kwa wafanyabiashara wadogo Afrika.
 Jibu kwa Kiswahili rahisi, lugha rahisi inayoeleweka na mtu yeyote.
@@ -162,7 +162,7 @@ Don't use jargon or complex terms.""",
 Kuwa brief na toa info poa. Usiwatie maneno mangi."""
         )
 
-        /** Function calling schema for business operations */
+        // Function calling schema for business operations
         val FUNCTION_SCHEMAS = listOf(
             mapOf(
                 "name" to "record_sale",

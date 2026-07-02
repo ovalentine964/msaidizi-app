@@ -17,43 +17,43 @@ data class Intent(
 
 @Serializable
 enum class IntentType {
-    /** Record a sale: "Nimeuza mandazi kumi kwa Sh 500" */
+    // Record a sale: "Nimeuza mandazi kumi kwa Sh 500"
     SALE,
 
-    /** Record a purchase: "Nimenunua unga kwa Sh 200" */
+    // Record a purchase: "Nimenunua unga kwa Sh 200"
     PURCHASE,
 
-    /** Record an expense: "Nimetumia Sh 100 kwa usafiri" */
+    // Record an expense: "Nimetumia Sh 100 kwa usafiri"
     EXPENSE,
 
-    /** Ask about balance/sales: "Salio langu ni ngapi?" */
+    // Ask about balance/sales: "Salio langu ni ngapi?"
     CHECK_BALANCE,
 
-    /** Ask about profit: "Faida yangu ni ngapi?" */
+    // Ask about profit: "Faida yangu ni ngapi?"
     PROFIT_QUERY,
 
-    /** Ask about stock: "Nina baki ngapi ya mandazi?" */
+    // Ask about stock: "Nina baki ngapi ya mandazi?"
     STOCK_QUERY,
 
-    /** Request advice: "Nisaidie na biashara yangu" */
+    // Request advice: "Nisaidie na biashara yangu"
     ASK_ADVICE,
 
-    /** Get daily summary: "Report ya leo" */
+    // Get daily summary: "Report ya leo"
     DAILY_SUMMARY,
 
-    /** Get weekly summary */
+    // Get weekly summary
     WEEKLY_SUMMARY,
 
-    /** Help command */
+    // Help command
     HELP,
 
-    /** Greeting */
+    // Greeting
     GREETING,
 
-    /** Correction to previous transaction */
+    // Correction to previous transaction
     CORRECTION,
 
-    /** Unknown/ambiguous intent */
+    // Unknown/ambiguous intent
     UNKNOWN
 }
 
@@ -141,16 +141,16 @@ data class UserPreferences(
  * Phase 4: All Africa
  */
 enum class DialectRegion {
-    /** Standard Swahili (taught in schools) */
+    // Standard Swahili (taught in schools)
     STANDARD,
-    /** Migori County — Luo substrate, code-switching with Dholuo */
+    // Migori County — Luo substrate, code-switching with Dholuo
     MIGORI,
-    /** Nairobi — heavy Sheng influence */
+    // Nairobi — heavy Sheng influence
     NAIROBI,
-    /** Coast — Mvita/Swahili coast dialect, Arabic loanwords */
+    // Coast — Mvita/Swahili coast dialect, Arabic loanwords
     COAST,
-    /** Tanzania — standard Kiswahili with Bongo flavor */
+    // Tanzania — standard Kiswahili with Bongo flavor
     TANZANIA,
-    /** Uganda — Luganda substrate */
+    // Uganda — Luganda substrate
     UGANDA
 }

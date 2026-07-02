@@ -33,7 +33,8 @@ import javax.inject.Singleton
  * - piper-swahili.onnx: ~25MB
  * - silero_vad.onnx: ~2.5MB
  * - qwen-0.5b-q4_k_m.gguf: ~300MB
- * Total: ~367MB (downloaded, not in APK)
+ * - mms-tts-*.onnx: ~65MB each (on-demand, per language)
+ * Total: ~367MB base + MMS models on demand
  */
 @Singleton
 class ModelRegistry @Inject constructor(

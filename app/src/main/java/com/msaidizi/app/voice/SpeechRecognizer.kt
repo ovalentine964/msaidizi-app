@@ -53,7 +53,7 @@ class SpeechRecognizer @Inject constructor(
         private const val LENGTH_PENALTY = 1.0f
         private const val REPETITION_PENALTY = 1.2f
 
-        /** Minimum audio length in samples (0.5s) to bother transcribing */
+        // Minimum audio length in samples (0.5s) to bother transcribing
         private const val MIN_AUDIO_SAMPLES = SAMPLE_RATE / 2
     }
 

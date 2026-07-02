@@ -479,18 +479,18 @@ data class PhonemeInventory(
     val tones: Set<String>,
     val specialRules: Map<String, String>
 ) {
-    /** Total phoneme count */
+    // Total phoneme count
     val size: Int get() = vowels.size + consonants.size
 
-    /** Whether this language is tonal */
+    // Whether this language is tonal
     val isTonal: Boolean get() = tones.isNotEmpty()
 
-    /** Whether this language has implosive consonants */
+    // Whether this language has implosive consonants
     val hasImplosives: Boolean get() = consonants.any { it in setOf("ɓ", "ɗ") }
 
-    /** Whether this language has prenasalized stops */
+    // Whether this language has prenasalized stops
     val hasPrenasalized: Boolean get() = consonants.any { it in setOf("mb", "nd", "ŋg", "nj") }
 
-    /** Get all phonemes as a flat set */
+    // Get all phonemes as a flat set
     fun allPhonemes(): Set<String> = vowels + consonants
 }

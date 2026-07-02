@@ -35,19 +35,19 @@ import kotlin.math.sqrt
 class CusumDriftTracker @Inject constructor() {
 
     companion object {
-        /** Default minimum shift to detect (in standard deviation units) */
+        // Default minimum shift to detect (in standard deviation units)
         private const val DEFAULT_DELTA = 1.0
 
-        /** Default decision threshold (in standard deviation units) */
+        // Default decision threshold (in standard deviation units)
         private const val DEFAULT_H = 4.0
 
-        /** Number of observations to calibrate baseline */
+        // Number of observations to calibrate baseline
         private const val BURN_IN_SIZE = 30
 
-        /** Sliding window size for adaptive baseline */
+        // Sliding window size for adaptive baseline
         private const val WINDOW_SIZE = 200
 
-        /** Minimum observations before drift detection activates */
+        // Minimum observations before drift detection activates
         private const val MIN_OBSERVATIONS = BURN_IN_SIZE + 10
     }
 
@@ -237,25 +237,25 @@ class CusumDriftTracker @Inject constructor() {
  * Result of a single CUSUM update.
  */
 data class CusumResult(
-    /** Whether drift was detected in this observation */
+    // Whether drift was detected in this observation
     val isDriftDetected: Boolean,
-    /** Whether the tracker is still in burn-in/calibration phase */
+    // Whether the tracker is still in burn-in/calibration phase
     val isCalibrating: Boolean,
-    /** The metric value that was processed */
+    // The metric value that was processed
     val metricValue: Double,
-    /** Current upper CUSUM value (degradation) */
+    // Current upper CUSUM value (degradation)
     val cusumUpper: Double,
-    /** Current lower CUSUM value (improvement) */
+    // Current lower CUSUM value (improvement)
     val cusumLower: Double,
-    /** Current baseline mean */
+    // Current baseline mean
     val baselineMean: Double,
-    /** Current baseline standard deviation */
+    // Current baseline standard deviation
     val baselineStd: Double,
-    /** Total observations processed */
+    // Total observations processed
     val observations: Int,
-    /** Direction of detected drift (if any) */
+    // Direction of detected drift (if any)
     val driftDirection: DriftDirection = DriftDirection.NONE,
-    /** Total alerts generated */
+    // Total alerts generated
     val alertsTotal: Int = 0
 )
 

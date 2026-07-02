@@ -24,6 +24,7 @@ class VoicePipeline @Inject constructor(
     private val vad: VoiceActivityDetector,
     private val speechRecognizer: SpeechRecognizer,
     private val ttsEngine: TextToSpeech,
+    private val mmsTtsEngine: MMSTextToSpeech,
     private val adaptiveAsrEngine: AdaptiveAsrEngine
 ) {
     // Pipeline state
@@ -52,8 +53,11 @@ class VoicePipeline @Inject constructor(
         // VAD is lightweight (~3MB), always load
         // (VoiceActivityDetector uses code-based detection, no model needed)
 
-        // Initialize TTS (Android TTS fallback is always available)
-        ttsEngine.initialize()
+        // Initialize Piper TTS for Swahili (fast, good quality)
+        ttsEngine.loadModel()
+
+        // MMS TTS is lazy-loaded on demand for non-Swahili languages
+        // (saves ~35MB RAM until actually needed)
 
         // ASR is lazy-loaded on first use (saves 40MB on 2GB devices)
         if (DeviceTier.preloadASR()) {
@@ -104,7 +108,7 @@ class VoicePipeline @Inject constructor(
                     RecordingState.ERROR_READ -> {
                         _pipelineState.value = PipelineState.ERROR
                     }
-                    else -> { /* continue */ }
+                    else -> { } // continue
                 }
             }
         }
@@ -177,10 +181,23 @@ class VoicePipeline @Inject constructor(
 
     /**
      * Speak a response to the user.
+     *
+     * Routes to the appropriate TTS engine:
+     * - Swahili/Sheng → Piper (fast, optimized for Swahili)
+     * - Other African languages → MMS (broader language support)
+     * - Unsupported language → Piper with Swahili fallback
      */
     suspend fun speak(text: String, language: String = "sw") {
         _pipelineState.value = PipelineState.SPEAKING
-        ttsEngine.speak(text, language)
+
+        val engine = selectTtsEngine(language)
+        Timber.d("TTS: Using %s engine for language '%s'", engine.name, language)
+
+        when (engine) {
+            TtsEngineType.MMS -> mmsTtsEngine.speak(text, language)
+            TtsEngineType.PIPER -> ttsEngine.speak(text, language)
+        }
+
         _response.emit(text)
     }
 
@@ -189,29 +206,63 @@ class VoicePipeline @Inject constructor(
      */
     suspend fun speakAndWait(text: String, language: String = "sw") {
         speak(text, language)
-        // Wait for TTS to finish
-        while (ttsEngine.isSpeaking()) {
+        // Wait for appropriate TTS engine to finish
+        while (isAnyTtsSpeaking()) {
             delay(100)
         }
         _pipelineState.value = PipelineState.IDLE
     }
 
     /**
-     * Stop speaking.
+     * Stop speaking (stops both engines).
      */
     fun stopSpeaking() {
         ttsEngine.stop()
+        mmsTtsEngine.stop()
         _pipelineState.value = PipelineState.IDLE
     }
 
     /**
+     * Select TTS engine based on language.
+     *
+     * Strategy:
+     * - Swahili/Sheng/English → Piper (fast, low memory, good quality)
+     * - Other supported African languages → MMS (supports 1,100+ languages)
+     * - Unknown language → Piper with Swahili fallback
+     */
+    private fun selectTtsEngine(language: String): TtsEngineType {
+        return when (language.lowercase()) {
+            "sw", "swahili", "swa", "sheng", "mixed" -> TtsEngineType.PIPER
+            "en", "english", "eng" -> TtsEngineType.PIPER
+            else -> {
+                // Check if MMS supports this language
+                if (mmsTtsEngine.isLanguageSupported(language)) {
+                    TtsEngineType.MMS
+                } else {
+                    Timber.w("Language '%s' not supported by any TTS, falling back to Piper/Swahili", language)
+                    TtsEngineType.PIPER
+                }
+            }
+        }
+    }
+
+    /**
+     * Check if any TTS engine is currently speaking.
+     */
+    private fun isAnyTtsSpeaking(): Boolean {
+        return ttsEngine.isSpeaking() || mmsTtsEngine.isSpeaking()
+    }
+
+    /**
      * Release models when app goes to background.
-     * Critical for 2GB devices — frees ~65MB.
+     * Critical for 2GB devices — frees ~100MB.
      */
     fun onBackground() {
         Timber.d("VoicePipeline: Releasing models for background")
         speechRecognizer.unloadModel()
-        // Keep TTS for notifications
+        // Unload MMS to free ~35MB (heavier than Piper)
+        mmsTtsEngine.unloadModel()
+        // Keep Piper TTS for Swahili notifications
     }
 
     /**
@@ -230,7 +281,8 @@ class VoicePipeline @Inject constructor(
     fun release() {
         audioRecorder.release()
         speechRecognizer.unloadModel()
-        ttsEngine.release()
+        ttsEngine.unloadModel()
+        mmsTtsEngine.unloadModel()
         audioCollectionJob?.cancel()
         _pipelineState.value = PipelineState.IDLE
     }
@@ -241,9 +293,21 @@ class VoicePipeline @Inject constructor(
     fun getStatus(): Map<String, Any> = mapOf(
         "state" to _pipelineState.value.name,
         "asrLoaded" to speechRecognizer.isModelReady(),
-        "ttsReady" to (ttsEngine.isSpeaking()),
+        "piperReady" to ttsEngine.isModelReady(),
+        "mmsReady" to mmsTtsEngine.isModelReady(),
+        "ttsSpeaking" to isAnyTtsSpeaking(),
         "deviceTier" to DeviceTier.current.name
     )
+}
+
+/**
+ * TTS engine selection.
+ */
+enum class TtsEngineType {
+    /** Piper — fast, optimized for Swahili, ~25MB */
+    PIPER,
+    /** Meta MMS — 1,100+ languages, ~35MB per language */
+    MMS
 }
 
 /**
