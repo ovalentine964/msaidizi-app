@@ -141,7 +141,7 @@ class FeedbackCollector @Inject constructor(
         val byType = FeedbackType.values().associateWith { type ->
             feedbackDao.countByType(type.name)
         }
-        val byCategory = feedbackDao.countByCategory()
+        val byCategory = feedbackDao.countByCategory().associate { it.category to it.count }
         return FeedbackStats(
             totalFeedback = total,
             countsByType = byType,
@@ -306,5 +306,13 @@ interface FeedbackDao {
     suspend fun countByType(type: String): Int
 
     @Query("SELECT category, COUNT(*) as count FROM feedback WHERE category IS NOT NULL GROUP BY category")
-    suspend fun countByCategory(): Map<String, Int>
+    suspend fun countByCategory(): List<CategoryCountTuple>
 }
+
+/**
+ * Tuple for category count query results.
+ */
+data class CategoryCountTuple(
+    val category: String,
+    val count: Int
+)

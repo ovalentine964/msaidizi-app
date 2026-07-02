@@ -202,7 +202,7 @@ dependencies {
 }
 
 kapt {
-    correctErrorTypes = false
+    correctErrorTypes = true
     javacOptions {
         option("-Adiagnostic.note.verbosity=full")
     }

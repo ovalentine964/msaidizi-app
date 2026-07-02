@@ -31,6 +31,7 @@ import com.msaidizi.app.core.language.LanguageModelRegistry
 import com.msaidizi.app.core.language.FederatedLearningClient
 import com.msaidizi.app.core.network.PinnedHttpClient
 import com.msaidizi.app.sync.SyncManager
+import com.google.gson.Gson
 import com.msaidizi.app.sync.SyncQueue
 import com.msaidizi.app.sync.NetworkMonitor
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
@@ -349,9 +350,8 @@ object AppModule {
     fun provideSyncManager(
         syncQueue: SyncQueue,
         networkMonitor: NetworkMonitor,
-        httpClient: HttpClient,
-        json: Json
-    ): SyncManager = SyncManager(syncQueue, networkMonitor, httpClient, json)
+        httpClient: HttpClient
+    ): SyncManager = SyncManager(syncQueue, networkMonitor, httpClient, Gson())
 
     // === ADAPTIVE ASR & LANGUAGE LEARNING ===
 

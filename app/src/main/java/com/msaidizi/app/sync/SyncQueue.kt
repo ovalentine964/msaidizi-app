@@ -3,8 +3,6 @@ package com.msaidizi.app.sync
 import com.msaidizi.app.core.database.PatternDao
 import com.msaidizi.app.core.database.TransactionDao
 import com.msaidizi.app.core.model.Transaction
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import timber.log.Timber
 
 
@@ -16,7 +14,6 @@ class SyncQueue(
     private val transactionDao: TransactionDao,
     private val patternDao: PatternDao
 ) {
-    private val json = Json { ignoreUnknownKeys = true }
 
     /**
      * Get all unsynced transactions.
@@ -70,8 +67,9 @@ class SyncQueue(
 
 /**
  * Sync payload data class.
+ * Uses Gson for serialization (via SyncManager) since Transaction is a Room entity
+ * without kotlinx-serialization annotations.
  */
-@kotlinx.serialization.Serializable
 data class SyncPayload(
     val transactions: List<Transaction>,
     val timestamp: Long,

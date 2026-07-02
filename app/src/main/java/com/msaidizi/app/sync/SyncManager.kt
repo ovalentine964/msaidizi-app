@@ -10,8 +10,7 @@ import io.ktor.http.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import com.google.gson.Gson
 import timber.log.Timber
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.TimeUnit
@@ -30,7 +29,7 @@ class SyncManager(
     private val syncQueue: SyncQueue,
     private val networkMonitor: NetworkMonitor,
     private val httpClient: HttpClient,
-    private val json: Json
+    private val json: Gson
 ) {
     companion object {
         private const val SYNC_WORK_NAME = "msaidizi_sync"
@@ -125,7 +124,7 @@ class SyncManager(
 
         // Prepare payload
         val payload = syncQueue.prepareSyncPayload()
-        val payloadJson = json.encodeToString(payload)
+        val payloadJson = json.toJson(payload)
 
         // Compress
         val compressed = compressData(payloadJson.toByteArray(Charsets.UTF_8))

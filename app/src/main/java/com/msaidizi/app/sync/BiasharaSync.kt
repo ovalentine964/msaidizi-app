@@ -83,7 +83,7 @@ object BiasharaSync {
 
         anonymizedTransactions.chunked(BATCH_SIZE).forEach { batch ->
             try {
-                val payload = SyncPayload(
+                val payload = BiasharaSyncPayload(
                     deviceId = hashDeviceId(deviceId),
                     workerType = "",  // Will be classified server-side
                     coarseLocation = coarseLocation,
@@ -347,7 +347,7 @@ data class AnonymizedTransaction(
  * Sync payload sent to Biashara Intelligence backend.
  */
 @Serializable
-data class SyncPayload(
+data class BiasharaSyncPayload(
     val deviceId: String,           // SHA-256 hashed
     val workerType: String,
     val coarseLocation: String,
