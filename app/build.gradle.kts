@@ -3,8 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.kapt")
     id("com.google.dagger.hilt.android")
-    // TEMPORARILY DISABLED to isolate kapt error
-    // id("org.jetbrains.kotlin.plugin.serialization")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {
@@ -203,13 +202,7 @@ dependencies {
 }
 
 kapt {
-    // correctErrorTypes removed — may mask real errors with 'Could not load module <Error module>'
-    javacOptions {
-        option("-Adiagnostic.note.verbosity=full")
-    }
-    arguments {
-        arg("kapt.verbose", "true")
-    }
+    correctErrorTypes = true
 }
 
 // Force ALL Kotlin deps to match Kotlin 1.9.22 (transitive deps from Ktor, coroutines, Hilt pull older versions)
