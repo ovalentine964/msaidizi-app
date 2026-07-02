@@ -26,6 +26,12 @@ jobs:
           chmod +x scripts/validate-build.sh
           ./scripts/validate-build.sh
 
+      - name: Check Room Entity Registration
+        run: python3 scripts/check-room-entities.py
+
+      - name: Check kapt Compatibility
+        run: python3 scripts/check-kapt-compat.py
+
   build:
     needs: validate
     runs-on: ubuntu-latest

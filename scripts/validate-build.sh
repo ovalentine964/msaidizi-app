@@ -1,6 +1,8 @@
 #!/bin/bash
 # Pre-commit build validation for Msaidizi
 # Run this BEFORE every commit to catch issues early
+# Includes: brace balance, XML checks, color/string resources,
+#           Room entity registration, kapt compatibility
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -88,6 +90,26 @@ if [ -n "$DUPES" ]; then
     ERRORS=$((ERRORS + 1))
 else
     echo "  ✅ No duplicate strings"
+fi
+
+# 7. Check Room entity registration
+echo ""
+echo "📋 Checking Room entity registration..."
+if python3 "$SCRIPT_DIR/check-room-entities.py" 2>&1; then
+    echo "  ✅ All Room entities registered"
+else
+    echo "  ❌ Room entity registration issues found"
+    ERRORS=$((ERRORS + 1))
+fi
+
+# 8. Check kapt compatibility
+echo ""
+echo "📋 Checking kapt compatibility..."
+if python3 "$SCRIPT_DIR/check-kapt-compat.py" 2>&1; then
+    echo "  ✅ kapt compatibility OK"
+else
+    echo "  ❌ kapt compatibility issues found"
+    ERRORS=$((ERRORS + 1))
 fi
 
 # Summary
