@@ -99,6 +99,127 @@ class ModelRegistry @Inject constructor(
                 requiredFor = listOf(Feature.LLM_INFERENCE),
                 tier = ModelTier.ON_DEMAND,
                 version = "1.0.0"
+            ),
+
+            // ── Meta MMS TTS Models ──────────────────────────────────
+            // MMS (Massively Multilingual Speech) supports 1,100+ languages.
+            // Each language has a separate VITS model (~65MB ONNX).
+            // Models are converted from facebook/mms-tts via sherpa-onnx.
+            // Download: https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models
+            //
+            // These models are ON_DEMAND — downloaded only when user needs
+            // a specific language. Swahili users get Piper (faster), but MMS
+            // is available as fallback or for other African languages.
+
+            "mms-tts-swa" to ModelDef(
+                id = "mms-tts-swa",
+                filename = "mms-tts-swa.onnx",
+                url = "$MODEL_CDN/mms/vits-mms-swa.onnx",
+                sha256 = "",  // TODO(security): Compute with sha256sum vits-mms-swa.onnx
+                sizeBytes = 65_000_000L,
+                priority = ModelPriority.OPTIONAL,
+                requiredFor = listOf(Feature.VOICE_OUTPUT),
+                tier = ModelTier.ON_DEMAND,
+                version = "1.0.0"
+            ),
+            "mms-tts-eng" to ModelDef(
+                id = "mms-tts-eng",
+                filename = "mms-tts-eng.onnx",
+                url = "$MODEL_CDN/mms/vits-mms-eng.onnx",
+                sha256 = "",  // TODO(security): Compute with sha256sum vits-mms-eng.onnx
+                sizeBytes = 65_000_000L,
+                priority = ModelPriority.OPTIONAL,
+                requiredFor = listOf(Feature.VOICE_OUTPUT),
+                tier = ModelTier.ON_DEMAND,
+                version = "1.0.0"
+            ),
+            "mms-tts-yor" to ModelDef(
+                id = "mms-tts-yor",
+                filename = "mms-tts-yor.onnx",
+                url = "$MODEL_CDN/mms/vits-mms-yor.onnx",
+                sha256 = "",  // TODO(security): Compute with sha256sum vits-mms-yor.onnx
+                sizeBytes = 65_000_000L,
+                priority = ModelPriority.OPTIONAL,
+                requiredFor = listOf(Feature.VOICE_OUTPUT),
+                tier = ModelTier.ON_DEMAND,
+                version = "1.0.0"
+            ),
+            "mms-tts-hau" to ModelDef(
+                id = "mms-tts-hau",
+                filename = "mms-tts-hau.onnx",
+                url = "$MODEL_CDN/mms/vits-mms-hau.onnx",
+                sha256 = "",  // TODO(security): Compute with sha256sum vits-mms-hau.onnx
+                sizeBytes = 65_000_000L,
+                priority = ModelPriority.OPTIONAL,
+                requiredFor = listOf(Feature.VOICE_OUTPUT),
+                tier = ModelTier.ON_DEMAND,
+                version = "1.0.0"
+            ),
+            "mms-tts-amh" to ModelDef(
+                id = "mms-tts-amh",
+                filename = "mms-tts-amh.onnx",
+                url = "$MODEL_CDN/mms/vits-mms-amh.onnx",
+                sha256 = "",  // TODO(security): Compute with sha256sum vits-mms-amh.onnx
+                sizeBytes = 65_000_000L,
+                priority = ModelPriority.OPTIONAL,
+                requiredFor = listOf(Feature.VOICE_OUTPUT),
+                tier = ModelTier.ON_DEMAND,
+                version = "1.0.0"
+            ),
+            "mms-tts-zul" to ModelDef(
+                id = "mms-tts-zul",
+                filename = "mms-tts-zul.onnx",
+                url = "$MODEL_CDN/mms/vits-mms-zul.onnx",
+                sha256 = "",  // TODO(security): Compute with sha256sum vits-mms-zul.onnx
+                sizeBytes = 65_000_000L,
+                priority = ModelPriority.OPTIONAL,
+                requiredFor = listOf(Feature.VOICE_OUTPUT),
+                tier = ModelTier.ON_DEMAND,
+                version = "1.0.0"
+            ),
+            "mms-tts-ibo" to ModelDef(
+                id = "mms-tts-ibo",
+                filename = "mms-tts-ibo.onnx",
+                url = "$MODEL_CDN/mms/vits-mms-ibo.onnx",
+                sha256 = "",  // TODO(security): Compute with sha256sum vits-mms-ibo.onnx
+                sizeBytes = 65_000_000L,
+                priority = ModelPriority.OPTIONAL,
+                requiredFor = listOf(Feature.VOICE_OUTPUT),
+                tier = ModelTier.ON_DEMAND,
+                version = "1.0.0"
+            ),
+            "mms-tts-xho" to ModelDef(
+                id = "mms-tts-xho",
+                filename = "mms-tts-xho.onnx",
+                url = "$MODEL_CDN/mms/vits-mms-xho.onnx",
+                sha256 = "",  // TODO(security): Compute with sha256sum vits-mms-xho.onnx
+                sizeBytes = 65_000_000L,
+                priority = ModelPriority.OPTIONAL,
+                requiredFor = listOf(Feature.VOICE_OUTPUT),
+                tier = ModelTier.ON_DEMAND,
+                version = "1.0.0"
+            ),
+            "mms-tts-sna" to ModelDef(
+                id = "mms-tts-sna",
+                filename = "mms-tts-sna.onnx",
+                url = "$MODEL_CDN/mms/vits-mms-sna.onnx",
+                sha256 = "",  // TODO(security): Compute with sha256sum vits-mms-sna.onnx
+                sizeBytes = 65_000_000L,
+                priority = ModelPriority.OPTIONAL,
+                requiredFor = listOf(Feature.VOICE_OUTPUT),
+                tier = ModelTier.ON_DEMAND,
+                version = "1.0.0"
+            ),
+            "mms-tts-nso" to ModelDef(
+                id = "mms-tts-nso",
+                filename = "mms-tts-nso.onnx",
+                url = "$MODEL_CDN/mms/vits-mms-nso.onnx",
+                sha256 = "",  // TODO(security): Compute with sha256sum vits-mms-nso.onnx
+                sizeBytes = 65_000_000L,
+                priority = ModelPriority.OPTIONAL,
+                requiredFor = listOf(Feature.VOICE_OUTPUT),
+                tier = ModelTier.ON_DEMAND,
+                version = "1.0.0"
             )
         )
 
