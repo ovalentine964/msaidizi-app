@@ -77,6 +77,33 @@ enum class IntentType {
     // Service-specific: job completed
     SERVICE_JOB,
 
+    // Giving/tithing: record giving
+    GIVING_RECORD,
+
+    // Giving/tithing: query giving report
+    GIVING_QUERY,
+
+    // Giving/tithing: set giving goal
+    GIVING_GOAL,
+
+    // Goal planning: "Lengo langu ni kununua friji"
+    GOAL_CREATE,
+
+    // Goal progress: "Nimefikia 50% ya lengo"
+    GOAL_PROGRESS,
+
+    // Goal report: "Ripoti ya malengo"
+    GOAL_REPORT,
+
+    // Time to goal: "Muda wa kufikia lengo"
+    GOAL_TIME_FORECAST,
+
+    // Goal adjustment: "Badilisha lengo"
+    GOAL_ADJUST,
+
+    // Goal encouragement: "Nisaidie na lengo"
+    GOAL_ENCOURAGEMENT,
+
     // Unknown/ambiguous intent
     UNKNOWN
 }

@@ -46,7 +46,8 @@ jobs:
       - name: Build Debug APK
         run: |
           set -o pipefail
-          gradle assembleDebug --stacktrace --info 2>&1 | tee build-debug.log
+          # Disable Kotlin daemon to get better error output
+          gradle assembleDebug --stacktrace --info -Dkotlin.daemon.enabled=false 2>&1 | tee build-debug.log
           echo "Gradle exit code: $?"
       
       - name: Upload build log on failure

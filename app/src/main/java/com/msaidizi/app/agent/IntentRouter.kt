@@ -227,6 +227,36 @@ class IntentRouter {
         Regex("""(?i)(ad\s*spend|matangazo|boost|promotion)\s+(\d+(?:\.\d+)?)""")
     )
 
+    // === GIVING/TITHING PATTERNS ===
+    private val givingRecordPatterns = listOf(
+        // "Nilitoa sadaka KSh 200"
+        Regex("""(?i)(nilitoa|nimetoa|nimechangia|nimeketoa|nikatoa)\s+(sadaka|zaka|zaka\s+ya\s+kumi|sadaqah|misaada|mchango)\s*(?:ksh|sh|kwa)?\s*(\d+(?:\.\d+)?)"""),
+        // "Sadaka 200" / "Zaka 500"
+        Regex("""(?i)(sadaka|zaka\s+ya\s+kumi|zaka|sadaqah|misaada|mchango)\s+(?:ksh|sh|kwa)?\s*(\d+(?:\.\d+)?)"""),
+        // "Nilitoa 200 kanisani"
+        Regex("""(?i)(nilitoa|nimetoa|nimechangia)\s+(?:ksh|sh)?\s*(\d+(?:\.\d+)?)\s+(kanisani|msikitini|kwa)"""),
+        // "Toa sadaka 200" / "Give offering 200"
+        Regex("""(?i)(toa|give|changia)\s+(sadaka|zaka|sadaqah|misaada|mchango)\s+(?:ksh|sh|kwa)?\s*(\d+(?:\.\d+)?)"""),
+        // "Nimeketoa sadaka 200" (Sheng-inflected)
+        Regex("""(?i)(nimeketoa|nikadonate)\s+(sadaka|zaka|sadaqah|mchango)\s*(\d+(?:\.\d+)?)""")
+    )
+
+    private val givingQueryPatterns = listOf(
+        Regex("""(?i)(ripoti|report|summary|jumla)\s+(ya\s+)?(sadaka|zaka|kutoa|giving)"""),
+        Regex("""(?i)(sadaka|zaka|kutoa|giving)\s+(ya\s+)?(leo|today|wiki|week|mwezi|month)"""),
+        Regex("""(?i)(nime|nimetoa)\s+(kiasi\s+gani|ngapi)\s+(sadaka|zaka)"""),
+        Regex("""(?i)(how\s+much|ngapi)\s+(have\s+i\s+)?(given|donated|tithe)"""),
+        Regex("""(?i)(historia|history|rekodi)\s+(ya\s+)?(sadaka|zaka|kutoa)"""),
+        Regex("""(?i)(abundance|mapato|income)\s+(baada|after)\s+(ya\s+)?(kutoa|giving)""")
+    )
+
+    private val givingGoalPatterns = listOf(
+        Regex("""(?i)(lengo|goal|target)\s+(la\s+)?(kutoa|sadaka|zaka|giving)"""),
+        Regex("""(?i)(weka|set|badilisha)\s+(lengo|goal)\s+(la\s+)?(kutoa|sadaka|zaka)"""),
+        Regex("""(?i)(nataka\s+kutoa|want\s+to\s+give)\s+(ksh|sh)?\s*(\d+(?:\.\d+)?)"""),
+        Regex("""(?i)(lengo\s+la\s+sadaka|giving\s+goal)\s+(\d+(?:\.\d+)?)""")
+    )
+
     // === SERVICE-SPECIFIC PATTERNS ===
     private val servicePatterns = listOf(
         // "Nimenyolewa mteja 5" / "Clients 8"
