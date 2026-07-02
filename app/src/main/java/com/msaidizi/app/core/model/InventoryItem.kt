@@ -2,14 +2,13 @@ package com.msaidizi.app.core.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import kotlinx.serialization.Serializable
 
 /**
  * Inventory item entity.
  * Tracks stock levels, costs, and restocking patterns.
  */
 @Entity(tableName = "inventory")
-@Serializable
+
 data class InventoryItem(
     @PrimaryKey
     val item: String,

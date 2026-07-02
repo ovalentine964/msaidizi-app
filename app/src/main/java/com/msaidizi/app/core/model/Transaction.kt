@@ -23,7 +23,6 @@ import kotlinx.serialization.Serializable
         Index(value = ["syncedAt"])
     ]
 )
-@Serializable
 data class Transaction(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,

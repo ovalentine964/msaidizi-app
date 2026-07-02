@@ -11,7 +11,7 @@ import kotlinx.serialization.Serializable
 @Entity(
     tableName = "patterns"
 )
-@Serializable
+
 data class BusinessPattern(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
@@ -60,7 +60,7 @@ enum class PatternType {
  * Vocabulary mapping: user's spoken term → canonical business term.
  */
 @Entity(tableName = "vocabulary")
-@Serializable
+
 data class VocabularyEntry(
     @PrimaryKey
     val spokenForm: String,
@@ -82,7 +82,7 @@ data class VocabularyEntry(
  * Daily summary for quick dashboard display.
  */
 @Entity(tableName = "daily_summaries")
-@Serializable
+
 data class DailySummary(
     @PrimaryKey
     val date: String, // YYYY-MM-DD format

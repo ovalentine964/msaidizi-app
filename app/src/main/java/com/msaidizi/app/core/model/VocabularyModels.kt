@@ -23,7 +23,6 @@ import kotlinx.serialization.Serializable
         Index(value = ["canonicalForm"])
     ]
 )
-@Serializable
 data class LearnedWord(
     @PrimaryKey
     val word: String,
