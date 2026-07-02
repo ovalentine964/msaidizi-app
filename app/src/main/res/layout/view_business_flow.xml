@@ -21,14 +21,14 @@
             android:orientation="horizontal"
             android:layout_marginBottom="8dp">
 
-            <com.msaidizi.app.ui.flow.BusinessFlowView$FlowMetricCard
+            <com.msaidizi.app.ui.flow.BusinessFlowView.FlowMetricCard
                 android:id="@+id/card_revenue"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginEnd="4dp" />
 
-            <com.msaidizi.app.ui.flow.BusinessFlowView$FlowMetricCard
+            <com.msaidizi.app.ui.flow.BusinessFlowView.FlowMetricCard
                 android:id="@+id/card_expenses"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -42,14 +42,14 @@
             android:orientation="horizontal"
             android:layout_marginBottom="16dp">
 
-            <com.msaidizi.app.ui.flow.BusinessFlowView$FlowMetricCard
+            <com.msaidizi.app.ui.flow.BusinessFlowView.FlowMetricCard
                 android:id="@+id/card_profit"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginEnd="4dp" />
 
-            <com.msaidizi.app.ui.flow.BusinessFlowView$FlowMetricCard
+            <com.msaidizi.app.ui.flow.BusinessFlowView.FlowMetricCard
                 android:id="@+id/card_savings"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -82,7 +82,7 @@
                     android:textColor="@color/text_primary"
                     android:layout_marginBottom="12dp" />
 
-                <com.msaidizi.app.ui.flow.BusinessFlowView$FlowDiagramView
+                <com.msaidizi.app.ui.flow.BusinessFlowView.FlowDiagramView
                     android:id="@+id/flow_diagram"
                     android:layout_width="match_parent"
                     android:layout_height="140dp" />
@@ -192,13 +192,13 @@
                     android:textColor="@color/text_primary"
                     android:layout_marginBottom="12dp" />
 
-                <com.msaidizi.app.ui.flow.BusinessFlowView$HealthScoreView
+                <com.msaidizi.app.ui.flow.BusinessFlowView.HealthScoreView
                     android:id="@+id/health_score_bar"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="12dp" />
 
-                <com.msaidizi.app.ui.flow.BusinessFlowView$HealthScoreView
+                <com.msaidizi.app.ui.flow.BusinessFlowView.HealthScoreView
                     android:id="@+id/credit_readiness_bar"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content" />
