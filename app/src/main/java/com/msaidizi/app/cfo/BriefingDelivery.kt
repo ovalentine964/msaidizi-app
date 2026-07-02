@@ -334,7 +334,7 @@ class BriefingDelivery(
         // Update gamification streak on evening check
         gamificationEngine?.let { ge ->
             try {
-                kotlinx.coroutines.runBlocking { ge.onDailyActivity() }
+                ge.onDailyActivity()
             } catch (_: Exception) {}
         }
 

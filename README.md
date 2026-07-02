@@ -1,10 +1,22 @@
 ![Biashara Intelligence](docs/logo-banner.svg)
 
-# Msaidizi — The CFO for Africa's 600M+ Informal Workers
+# Msaidizi — The AI Employee for Africa's 600M+ Informal Workers
 
 **Not an assistant. A CFO. Proactive, voice-first, offline-first. Speaks your language.**
 
+**"The monopoly that serves 600M+ informal workers. Not competing. Just operating."**
+
 **Version:** 0.1.0
+
+---
+
+## Vision
+
+Msaidizi is the AI employee for informal workers — the one team member they never could afford. Every informal worker has an AI CFO that speaks their language, tracks their money, and helps them build wealth.
+
+We are not competing with M-Pesa, banks, or fintechs. We are building infrastructure for a market that has no infrastructure. There is no competition because there is no market — we are creating it.
+
+> *"What used to take months, we do in days."*
 
 ## What Is Msaidizi?
 
@@ -20,6 +32,59 @@ Msaidizi is the on-device app that captures data from informal workers and deliv
 - 🤲 **Tithe & Giving** — track tithes, offerings, and charitable giving with voice commands
 - 🎯 **Goals & Loans** — set savings goals, track loan repayments, monitor progress
 - 🔒 **Privacy-first** — data stays on device, federated learning for improvements
+
+## AI In-House Strategy
+
+While Western enterprises pay per API call to OpenAI, Msaidizi's AI runs directly on the worker's phone — for free.
+
+### On-Device LLM Stack
+
+| Component | Technology | Advantage |
+|---|---|---|
+| LLM Engine | llama.cpp via NDK | 2-5x faster than pure Java, ARM NEON optimized |
+| Model | Qwen 0.5B (GGUF, ~300 MB) | Runs on $50 Android phones |
+| Inference Cost | $0.00 | We own the model, no API dependency |
+| Connectivity | Optional | Full offline capability |
+| Privacy | On-device | Data never leaves the phone |
+
+### Why In-House AI Matters
+
+At 200M users, renting AI costs $10-20M/month. Our approach costs $60-100K/month. That's **100-200x cheaper** — the difference between burning cash and building a sustainable platform.
+
+### Federated Learning
+
+- Worker's phone trains a small model locally
+- Only anonymous model improvements sent to server
+- Differential privacy (ε=0.1) prevents reverse-engineering
+- K-anonymity (k≥5) ensures individual identification is impossible
+- Data never centralizes, preserving privacy while enabling learning
+
+## Data Center Roadmap
+
+Each phase unlocks as worker count grows — infrastructure scales when the data justifies it.
+
+| Phase | Trigger | Infrastructure | Capacity |
+|---|---|---|---|
+| **Phase 1** | 1,000 workers | Oracle Cloud Free Tier | 10K transactions/day |
+| **Phase 2** | 10,000 workers | ARM server + solar panels | 100K transactions/day |
+| **Phase 3** | 100,000 workers | Mini DC (3-5 ARM servers, 10-20 kW solar array) | 1M transactions/day |
+| **Phase 4** | 1,000,000 workers | Containerized pan-African DC | 10M+ transactions/day |
+
+### Why Solar + ARM?
+
+- Kenya solar: $0.03-0.04/kWh (vs US $0.10-0.15/kWh)
+- ARM servers: 3-5x better performance/watt, 70-80% lower cost
+- Geothermal (Olkaria): $0.05/kWh — cheaper than China's coal
+- Solar-friendly: low power draw matches solar generation profiles
+
+## Accelerated Timelines
+
+| Initiative | Old Timeline | AI-Accelerated | Multiplier |
+|---|---|---|---|
+| Msaidizi v1.0 Launch | 18 months | 6 months | 3x faster |
+| 15 Intelligence Products | 3–5 years | 8–12 months | 4x faster |
+| Pan-African Expansion (5 markets) | 10 years | 3 years | 3x faster |
+| 200M Worker Reach | 20 years | 5–7 years | 3–4x faster |
 
 ## Bootstrap: Name Your CFO
 
@@ -181,12 +246,12 @@ Each adapter maps phonemes, provides business vocabulary, handles number formats
 
 | Component | Technology | Purpose |
 |-----------|-----------|---------|
-| Language | Kotlin 1.9.22 | Android app development |
+| Language | **Kotlin 1.9.22** | Android app development |
 | Architecture | MVVM + Clean Architecture | Code organization |
-| DI | Hilt | Dependency injection |
-| Database | Room + SQLCipher | Encrypted local storage |
+| DI | **Hilt** | Dependency injection |
+| Database | **Room** + SQLCipher | Encrypted local storage |
 | ML Inference | ONNX Runtime | Voice models (Whisper, Piper, Silero) |
-| LLM | llama.cpp NDK | On-device large language model |
+| LLM | **llama.cpp NDK** | On-device large language model |
 | HTTP | Ktor | Network client |
 | Async | Coroutines | Asynchronous operations |
 | Serialization | kotlinx.serialization | Data models |

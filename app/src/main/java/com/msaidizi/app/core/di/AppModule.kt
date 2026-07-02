@@ -445,7 +445,7 @@ object AppModule {
         install(ContentNegotiation) {
             json(json)
         }
-        install(Loging) {
+        install(Logging) {
             level = if (com.msaidizi.app.BuildConfig.DEBUG) LogLevel.BODY else LogLevel.NONE
             logger = object : Logger {
                 override fun log(message: String) {
