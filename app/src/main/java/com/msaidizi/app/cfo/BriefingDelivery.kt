@@ -4,6 +4,7 @@ import com.msaidizi.app.agent.BusinessAgent
 import com.msaidizi.app.agent.WorkerType
 import com.msaidizi.app.core.model.Transaction
 import com.msaidizi.app.core.model.TransactionType
+import com.msaidizi.app.finance.LoanManager
 import timber.log.Timber
 import java.time.LocalTime
 import java.time.LocalDate
@@ -41,7 +42,8 @@ import java.time.DayOfWeek
  */
 class BriefingDelivery(
     private val cfoEngine: CFOEngine,
-    private val businessAgent: BusinessAgent
+    private val businessAgent: BusinessAgent,
+    private val loanManager: LoanManager = LoanManager()
 ) {
     companion object {
         private const val TAG = "BriefingDelivery"
@@ -100,9 +102,21 @@ class BriefingDelivery(
         // Add restock alerts if relevant
         val restockAlert = generateRestockAlert(recentTransactions)
 
+        // Add loan status reminders
+        val loanStatus = loanManager.getBriefingLoanStatus()
+        val overdueMessages = loanManager.checkOverduePayments()
+
         // Combine into full morning message
         val fullMessage = buildString {
             append(briefing.message)
+
+            // Loan reminders (critical — shown before other tips)
+            if (overdueMessages.isNotEmpty()) {
+                append("\n\n🚨 Mikopo:")
+                overdueMessages.forEach { append("\n$it") }
+            } else if (loanStatus != null) {
+                append("\n\n🏦 $loanStatus")
+            }
 
             if (tailoredTip.isNotBlank()) {
                 append("\n\n💡 $tailoredTip")

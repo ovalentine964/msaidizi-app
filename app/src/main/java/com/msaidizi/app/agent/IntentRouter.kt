@@ -426,6 +426,43 @@ class IntentRouter {
         Regex("""(?i)^(good\s+(morning|afternoon|evening)|siku\s+njema)""")
     )
 
+    // === LOAN PATTERNS ===
+    private val loanRecordPatterns = listOf(
+        // "Nimechukua mkopo wa KSh 10,000"
+        Regex("""(?i)(nimechukua|nimetake|nimepata)\s+(mkopo|loan|deni)\s+(wa\s+)?(?:sh|ksh|kshs)?\s*(\d+(?:,\d{3})*(?:\.)?\d*)"""),
+        // "Mkopo 10000 kutoka M-Shwari"
+        Regex("""(?i)(mkopo|loan)\s+(?:sh|ksh)?\s*(\d+(?:,\d{3})*(?:\.)?\d*)\s+(kutoka|from)\s+(.+)"""),
+        // "Nimechukua mkopo 5000"
+        Regex("""(?i)(nimechukua|nimetake|nimepata|nimeomba)\s+(mkopo|loan)\s+(\d+(?:,\d{3})*(?:\.)?\d*)"""),
+        // "Loan 10000"
+        Regex("""(?i)(loan|mkopo)\s+(?:sh|ksh)?\s*(\d+(?:,\d{3})*(?:\.)?\d*)""")
+    )
+
+    private val loanQueryPatterns = listOf(
+        // "Malipo ya mkopo"
+        Regex("""(?i)(malipo|payment|lipa|pay)\s+(ya\s+)?(mkopo|loan)"""),
+        // "Mkopo wangu" / "Loan yangu"
+        Regex("""(?i)(mkopo|loan)\s+(wangu|yangu|status)"""),
+        // "Salio la mkopo"
+        Regex("""(?i)(salio|balance)\s+(la\s+)?(mkopo|loan)""")
+    )
+
+    private val loanReportPatterns = listOf(
+        // "Ripoti ya mkopo"
+        Regex("""(?i)(ripoti|report|summary)\s+(ya\s+)?(mkopo|loan)"""),
+        // "Mkopo report"
+        Regex("""(?i)(mkopo|loan)\s+(ripoti|report)""")
+    )
+
+    private val loanDeadlinePatterns = listOf(
+        // "Muda wa kulipa"
+        Regex("""(?i)(muda|wakati|time|when)\s+(wa\s+)?(kulipa|pay|malipo)"""),
+        // "Nini lipa mkopo?"
+        Regex("""(?i)(nini|when|lini)\s+(ni)?l(ipa|ipa)\s+(mkopo|loan)"""),
+        // "Due date ya mkopo"
+        Regex("""(?i)(due\s*date|deadline|tarehe)\s+(ya\s+)?(mkopo|loan)""")
+    )
+
     // === CORRECTION PATTERNS ===
     private val correctionPatterns = listOf(
         Regex("""(?i)(hapana|siyo|si|wrong|incorrect|badilisha|rekebisha|change|correct)"""),
@@ -722,6 +759,92 @@ class IntentRouter {
             }
         }
 
+        // === GOAL PLANNING PATTERNS ===
+
+        // Check goal creation patterns ("Lengo langu ni kununua friji")
+        for (pattern in goalCreatePatterns) {
+            val match = pattern.find(cleaned)
+            if (match != null) {
+                val groups = match.groupValues
+                val amount = groups.lastOrNull { it.replace(",", "").toDoubleOrNull() != null }
+                    ?.replace(",", "") ?: "0"
+                val description = groups.getOrNull(groups.size - 2) ?: groups.lastOrNull() ?: ""
+                return IntentResult(
+                    intent = IntentType.GOAL_CREATE,
+                    confidence = 0.90,
+                    extractedData = mapOf(
+                        "description" to description.trim(),
+                        "amount" to amount,
+                        "rawText" to cleaned
+                    )
+                )
+            }
+        }
+
+        // Check goal progress patterns ("Nimefikia 50% ya lengo")
+        for (pattern in goalProgressPatterns) {
+            val match = pattern.find(cleaned)
+            if (match != null) {
+                val groups = match.groupValues
+                val percentOrAmount = groups.firstOrNull { it.toDoubleOrNull() != null || it.toIntOrNull() != null } ?: "0"
+                val isPercent = cleaned.contains("%")
+                return IntentResult(
+                    intent = IntentType.GOAL_PROGRESS,
+                    confidence = 0.90,
+                    extractedData = mapOf(
+                        "value" to percentOrAmount,
+                        "isPercent" to isPercent.toString(),
+                        "rawText" to cleaned
+                    )
+                )
+            }
+        }
+
+        // Check goal report patterns ("Ripoti ya malengo")
+        if (goalReportPatterns.any { it.containsMatchIn(cleaned) }) {
+            return IntentResult(
+                intent = IntentType.GOAL_REPORT,
+                confidence = 0.90,
+                extractedData = mapOf("rawText" to cleaned)
+            )
+        }
+
+        // Check goal time-forecast patterns ("Muda wa kufikia lengo")
+        if (goalTimeForecastPatterns.any { it.containsMatchIn(cleaned) }) {
+            return IntentResult(
+                intent = IntentType.GOAL_TIME_FORECAST,
+                confidence = 0.90,
+                extractedData = mapOf("rawText" to cleaned)
+            )
+        }
+
+        // Check goal adjustment patterns ("Badilisha lengo")
+        for (pattern in goalAdjustPatterns) {
+            val match = pattern.find(cleaned)
+            if (match != null) {
+                val groups = match.groupValues
+                val amount = groups.lastOrNull { it.replace(",", "").toDoubleOrNull() != null }
+                    ?.replace(",", "") ?: "0"
+                return IntentResult(
+                    intent = IntentType.GOAL_ADJUST,
+                    confidence = 0.85,
+                    extractedData = mapOf(
+                        "amount" to amount,
+                        "rawText" to cleaned
+                    )
+                )
+            }
+        }
+
+        // Check goal encouragement patterns ("Nisaidie na lengo")
+        if (goalEncouragementPatterns.any { it.containsMatchIn(cleaned) }) {
+            return IntentResult(
+                intent = IntentType.GOAL_ENCOURAGEMENT,
+                confidence = 0.85,
+                extractedData = mapOf("rawText" to cleaned)
+            )
+        }
+
         // Try query patterns (use normalized text for Sheng support)
         if (profitPatterns.any { it.containsMatchIn(normalized) }) {
             return IntentResult(
@@ -809,6 +932,45 @@ class IntentRouter {
             return IntentResult(
                 intent = IntentType.HELP,
                 confidence = 0.80
+            )
+        }
+
+        // Try loan patterns
+        for (pattern in loanRecordPatterns) {
+            val match = pattern.find(cleaned)
+            if (match != null) {
+                val groups = match.groupValues
+                val amount = groups.lastOrNull { it.replace(",", "").toDoubleOrNull() != null } ?: "0"
+                val lender = groups.lastOrNull { it.isNotBlank() && it.replace(",", "").toDoubleOrNull() == null && it.length > 2 } ?: ""
+                return IntentResult(
+                    intent = IntentType.LOAN_RECORD,
+                    confidence = 0.90,
+                    extractedData = mapOf(
+                        "amount" to amount.replace(",", ""),
+                        "lender" to lender
+                    )
+                )
+            }
+        }
+
+        if (loanReportPatterns.any { it.containsMatchIn(cleaned) }) {
+            return IntentResult(
+                intent = IntentType.LOAN_REPORT,
+                confidence = 0.90
+            )
+        }
+
+        if (loanDeadlinePatterns.any { it.containsMatchIn(cleaned) }) {
+            return IntentResult(
+                intent = IntentType.LOAN_DEADLINE,
+                confidence = 0.85
+            )
+        }
+
+        if (loanQueryPatterns.any { it.containsMatchIn(cleaned) }) {
+            return IntentResult(
+                intent = IntentType.LOAN_QUERY,
+                confidence = 0.90
             )
         }
 
@@ -1021,6 +1183,17 @@ class IntentRouter {
         // Weekly summary
         if (weeklySummaryPatterns.any { it.containsMatchIn(text) }) {
             return IntentResult(intent = IntentType.WEEKLY_SUMMARY, confidence = 0.85)
+        }
+
+        // Loan queries
+        if (loanReportPatterns.any { it.containsMatchIn(text) }) {
+            return IntentResult(intent = IntentType.LOAN_REPORT, confidence = 0.90)
+        }
+        if (loanDeadlinePatterns.any { it.containsMatchIn(text) }) {
+            return IntentResult(intent = IntentType.LOAN_DEADLINE, confidence = 0.85)
+        }
+        if (loanQueryPatterns.any { it.containsMatchIn(text) }) {
+            return IntentResult(intent = IntentType.LOAN_QUERY, confidence = 0.90)
         }
 
         // Advice

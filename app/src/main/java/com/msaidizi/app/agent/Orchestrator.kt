@@ -335,7 +335,20 @@ class Orchestrator(
                 IntentType.DIGITAL_COMMISSION,
                 IntentType.DIGITAL_TRANSACTION,
                 IntentType.SERVICE_CLIENT,
-                IntentType.SERVICE_JOB -> handleDomainIntent(intentResult, language)
+                IntentType.SERVICE_JOB,
+                IntentType.GIVING_RECORD,
+                IntentType.GIVING_QUERY,
+                IntentType.GIVING_GOAL,
+                IntentType.GOAL_CREATE,
+                IntentType.GOAL_PROGRESS,
+                IntentType.GOAL_REPORT,
+                IntentType.GOAL_TIME_FORECAST,
+                IntentType.GOAL_ADJUST,
+                IntentType.GOAL_ENCOURAGEMENT,
+                IntentType.LOAN_RECORD,
+                IntentType.LOAN_QUERY,
+                IntentType.LOAN_REPORT,
+                IntentType.LOAN_DEADLINE -> handleDomainIntent(intentResult, language)
             }
         } catch (e: OutOfMemoryError) {
             // Critical: OME means the device is under severe memory pressure
