@@ -673,9 +673,9 @@ JSON:"""
                 ?.groupValues?.get(1)?.toDoubleOrNull()
             val wrongAmount = Regex(""""wrong":\s*(\d+\.?\d*)""").find(output)
                 ?.groupValues?.get(1)?.toDoubleOrNull()
-            val correctItem = Regex(""""correct_item":\s*"([^"]+)"""").find(output)
+            val correctItem = Regex("\"correct_item\":\\s*\"([^\"]+)\"").find(output)
                 ?.groupValues?.get(1)
-            val wrongItem = Regex(""""wrong_item":\s*"([^"]+)"""").find(output)
+            val wrongItem = Regex("\"wrong_item\":\\s*\"([^\"]+)\"").find(output)
                 ?.groupValues?.get(1)
 
             if (correctAmount != null || correctItem != null) {
@@ -724,7 +724,6 @@ JSON:"""
         val cpuCores = Runtime.getRuntime().availableProcessors()
         return (cpuCores / 2).coerceIn(1, 4)  // Use half cores, max 4
     }
-    } // companion object
 } // LlmEngine
 
 // ────────────────────── Data Classes ──────────────────────

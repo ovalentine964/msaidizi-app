@@ -12,12 +12,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      
       - name: Validate Build
         run: |
           chmod +x scripts/validate-build.sh
           ./scripts/validate-build.sh
       
-      - name: Check Kotlin Compilation
+      - name: Check Kotlin files exist
         run: |
-          # Quick syntax check without full build
-          find app/src -name "*.kt" -exec grep -l "import\|class\|fun" {} \; | wc -l
+          count=$(find app/src -name "*.kt" -exec grep -l "import\|class\|fun" {} \; | wc -l)
+          echo "Found $count Kotlin source files"
+          [ "$count" -gt 0 ]

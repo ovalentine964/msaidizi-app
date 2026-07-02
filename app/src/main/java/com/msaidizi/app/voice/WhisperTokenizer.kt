@@ -48,7 +48,7 @@ class WhisperTokenizer @Inject constructor(
                 .bufferedReader().readText()
             val map = mutableMapOf<Int, String>()
             // Parse simple key-value JSON mapping: {"0": "token", "1": "token", ...}
-            val pattern = Regex(""""(\d+)":\s*"([^"]*?)"""")
+            val pattern = Regex("\"(\\d+)\":\\s*\"([^\"]*?)\"")
             for (match in pattern.findAll(json)) {
                 val id = match.groupValues[1].toIntOrNull() ?: continue
                 map[id] = match.groupValues[2]
