@@ -74,6 +74,7 @@
     <string name="nav_home">Home</string>
     <string name="nav_record">Record</string>
     <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_flow">Biashara</string>
     <string name="nav_history">History</string>
     <string name="nav_settings">Settings</string>
     <string name="nav_models">Models</string>

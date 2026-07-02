@@ -30,6 +30,12 @@
         tools:layout="@layout/fragment_history" />
 
     <fragment
+        android:id="@+id/businessFlowFragment"
+        android:name="com.msaidizi.app.ui.flow.BusinessFlowFragment"
+        android:label="Biashara"
+        tools:layout="@layout/fragment_business_flow" />
+
+    <fragment
         android:id="@+id/settingsFragment"
         android:name="com.msaidizi.app.ui.settings.SettingsFragment"
         android:label="Mipangilio"
