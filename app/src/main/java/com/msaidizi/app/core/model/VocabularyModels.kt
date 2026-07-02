@@ -3,7 +3,6 @@ package com.msaidizi.app.core.model
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import kotlinx.serialization.Serializable
 
 /**
  * A word the user spoke that wasn't in the built-in dictionary.

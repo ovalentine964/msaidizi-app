@@ -25,6 +25,8 @@ import com.msaidizi.app.core.database.RichHabitsDao
 import com.msaidizi.app.core.database.MindsetLessonDao
 import com.msaidizi.app.evolution.FeedbackCollector
 import com.msaidizi.app.evolution.FeatureRequestTracker
+import com.msaidizi.app.evolution.SelfEvolutionManager
+import com.msaidizi.app.agent.PreferenceLearner
 import com.msaidizi.app.core.database.TitheDao
 import com.msaidizi.app.core.database.GoalDao
 import com.msaidizi.app.core.database.LoanDao
@@ -553,6 +555,14 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun providePreferenceLearner(
+        patternDao: PatternDao,
+        userCorrectionDao: UserCorrectionDao,
+        userVocabularyDao: UserVocabularyDao
+    ): PreferenceLearner = PreferenceLearner(patternDao, userCorrectionDao, userVocabularyDao)
+
+    @Provides
+    @Singleton
     fun provideOrchestrator(
         intentRouter: IntentRouter,
         businessAgent: BusinessAgent,
@@ -573,12 +583,16 @@ object AppModule {
         briefingDelivery: BriefingDelivery,
         morningBriefingLoop: MorningBriefingLoop,
         streakProtectionLoop: StreakProtectionLoop,
-        variableRewardsLoop: VariableRewardsLoop
+        variableRewardsLoop: VariableRewardsLoop,
+        selfEvolution: SelfEvolutionManager,
+        preferenceLearner: PreferenceLearner,
+        adaptiveVocabulary: AdaptiveVocabulary
     ): Orchestrator = Orchestrator(
         intentRouter, businessAgent, analysisAgent, advisorAgent, learningAgent, adaptiveLearning,
         gamificationEngine, ahaMomentFlow, richHabitsScore, mindsetAcademy,
         titheTracker, goalPlanner, loanManager, titheDao, goalDao, loanDao,
-        briefingDelivery, morningBriefingLoop, streakProtectionLoop, variableRewardsLoop
+        briefingDelivery, morningBriefingLoop, streakProtectionLoop, variableRewardsLoop,
+        selfEvolution, preferenceLearner, adaptiveVocabulary
     )
 
     // === SYNC ===
