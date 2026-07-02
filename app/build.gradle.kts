@@ -209,13 +209,7 @@ dependencies {
 }
 
 kapt {
-    correctErrorTypes = true
-    javacOptions {
-        option("-Adiagnostic.note.verbosity=full")
-    }
-    arguments {
-        arg("kapt.verbose", "true")
-    }
+    correctErrorTypes = false
 }
 
 // Force ALL Kotlin deps to match Kotlin 1.9.22 (transitive deps from Ktor, coroutines, Hilt pull older versions)
@@ -225,16 +219,6 @@ configurations.all {
         force("org.jetbrains.kotlin:kotlin-stdlib:1.9.22")
         force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.22")
         force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22")
-        force("org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable:1.9.22")
-        force("org.jetbrains.kotlin:kotlin-scripting-jvm:1.9.22")
-        force("org.jetbrains.kotlin:kotlin-compiler-embeddable:1.9.22")
-        force("org.jetbrains.kotlin:kotlin-annotation-processing-embeddable:1.9.22")
-        // KSP version must match Kotlin version exactly
-        force("com.google.devtools.ksp:symbol-processing-api:1.9.22-1.0.17")
-        force("com.google.devtools.ksp:symbol-processing:1.9.22-1.0.17")
-        force("com.google.devtools.ksp:symbol-processing-cmd:1.9.22-1.0.17")
-        force("com.google.devtools.ksp:symbol-processing-common-deps:1.9.22-1.0.17")
-        force("com.google.devtools.ksp:symbol-processing-gradle-plugin:1.9.22-1.0.17")
     }
 }
 

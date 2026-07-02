@@ -59,7 +59,6 @@ import com.msaidizi.app.skills.SkillBridge
 import com.msaidizi.app.loops.MorningBriefingLoop
 import com.msaidizi.app.loops.StreakProtectionLoop
 import com.msaidizi.app.loops.VariableRewardsLoop
-import com.msaidizi.app.cfo.CFOEngine
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import dagger.Module
 import dagger.Provides
@@ -733,6 +732,10 @@ object AppModule {
     fun provideAhaMomentFlow(
         businessAgent: BusinessAgent
     ): AhaMomentFlow = AhaMomentFlow(businessAgent)
+
+    @Provides
+    @Singleton
+    fun provideCFOEngine(): CFOEngine = CFOEngine()
 
     @Provides
     @Singleton
