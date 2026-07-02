@@ -12,7 +12,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(FetchContent)
 
 # Pin to a known stable tag — update manually after testing
-set(LLAMA_CPP_TAG "b4650")
+set(LLAMA_CPP_TAG "b4651")
 FetchContent_Declare(
     llama_cpp
     GIT_REPOSITORY https://github.com/ggerganov/llama.cpp.git
