@@ -1,6 +1,8 @@
 package com.msaidizi.app.agent
 
 import com.msaidizi.app.core.model.CashFlow
+import com.msaidizi.app.core.model.IntentResult
+import com.msaidizi.app.core.model.IntentType
 import com.msaidizi.app.core.model.Trend
 import timber.log.Timber
 
@@ -487,6 +489,44 @@ class AdvisorAgent(
      * Uses concrete examples ("Nimeuza mandazi kumi kwa 500") rather
      * than abstract descriptions.
      */
+    fun getDomainAdvice(intentResult: IntentResult, language: String = "sw"): String {
+        val item = intentResult.extractedData["item"] ?: ""
+        val amount = intentResult.extractedData["amount"]
+        val queryType = intentResult.extractedData["queryType"]
+
+        return when (intentResult.intent) {
+            IntentType.TRANSPORT_TRIP -> if (language == "sw") {
+                "🚗 Taarifa za safari: ${item.ifBlank { "safari" }}" +
+                if (amount != null) " — KSh $amount" else ""
+            } else {
+                "🚗 Trip info: ${item.ifBlank { "trip" }}" +
+                if (amount != null) " — KSh $amount" else ""
+            }
+            IntentType.FARMING_ACTIVITY -> if (language == "sw") {
+                "🌱 Shughuli ya kilimo: ${item.ifBlank { "mazao" }}"
+            } else {
+                "🌱 Farming activity: ${item.ifBlank { "crop" }}"
+            }
+            IntentType.DIGITAL_TRANSACTION,
+            IntentType.DIGITAL_COMMISSION -> if (language == "sw") {
+                "📱 Shughuli ya kidijitali: ${item.ifBlank { "transaction" }}" +
+                if (amount != null) " — KSh $amount" else ""
+            } else {
+                "📱 Digital transaction: ${item.ifBlank { "transaction" }}" +
+                if (amount != null) " — KSh $amount" else ""
+            }
+            IntentType.SERVICE_CLIENT,
+            IntentType.SERVICE_JOB -> if (language == "sw") {
+                "💇 Huduma: ${item.ifBlank { "mteja" }}" +
+                if (amount != null) " — KSh $amount" else ""
+            } else {
+                "💇 Service: ${item.ifBlank { "client" }}" +
+                if (amount != null) " — KSh $amount" else ""
+            }
+            else -> if (language == "sw") "Taarifa" else "Information"
+        }
+    }
+
     fun getHelp(language: String = "sw"): String {
         return if (language == "sw") {
             """

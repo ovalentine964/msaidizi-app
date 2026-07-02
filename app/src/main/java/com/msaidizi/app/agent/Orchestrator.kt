@@ -73,6 +73,18 @@ class Orchestrator(
     private var lastTransaction: Transaction? = null
     private var lastResponse: String = ""
 
+    // Conversation memory for multi-turn context
+    private val conversationMemory = ConversationMemory()
+
+    // Confidence thresholds for escalation
+    companion object {
+        /** Above this threshold: auto-proceed */
+        private const val CONFIDENCE_AUTO = 0.90
+        /** Above this threshold: confirm with user */
+        private const val CONFIDENCE_CONFIRM = 0.70
+        /** Below CONFIDENCE_CONFIRM: ask for clarification */
+    }
+
     // ═══════════════════════════════════════════════════════════════
     // STA 443 §1.2 — PROBABILITY SPACES: Intent classification
     // ═══════════════════════════════════════════════════════════════
@@ -99,7 +111,7 @@ class Orchestrator(
     suspend fun processInput(text: String, language: String = "sw"): AgentResponse {
         Timber.d("Processing input: '%s' (lang=%s)", text, language)
 
-        // Step 0: Check if this is a correction to the last transaction
+        // ═══ Step 0: Check for corrections ═══
         if (lastTransaction != null) {
             val isCorrection = adaptiveLearning.parseAndRecordCorrection(
                 text = text,
@@ -116,43 +128,68 @@ class Orchestrator(
                     },
                     type = ResponseType.CONFIRMATION
                 )
+                conversationMemory.addTurn("msaidizi", response.text)
+                lastResponse = response.text
                 _responses.emit(response)
                 return response
             }
         }
 
-        // Step 1: Classify intent
+        // ═══ Step 1: Classify intent with context ═══
         var intentResult = intentRouter.classify(text)
 
         Timber.d("Intent: %s (confidence=%.2f, needsLLM=%b)",
             intentResult.intent, intentResult.confidence, intentResult.needsLLM)
 
-        // Step 2: Enhance intent with adaptive learning
+        // ═══ Step 2: Apply conversation context for reference resolution ═══
+        // If this looks like a follow-up, resolve pronouns/references
+        if (conversationMemory.isFollowUp(text)) {
+            intentResult = conversationMemory.resolveReferences(text, intentResult)
+            Timber.d("Context-resolved intent: %s (data=%s)", intentResult.intent, intentResult.extractedData)
+        }
+
+        // ═══ Step 3: Enhance intent with adaptive learning ═══
         // STA 443 §1.2.5: Bayesian updating of intent classification
         intentResult = adaptiveLearning.enhanceIntentWithLearning(intentResult, text)
 
         Timber.d("Enhanced intent: %s (data=%s)", intentResult.intent, intentResult.extractedData)
 
-        // Step 3: Route to appropriate agent
-        // ECO 104 §1.2: This is the optimization step — choose the agent
-        // that maximizes expected response quality for this intent.
-        val response = when (intentResult.intent) {
-            IntentType.SALE -> handleSale(intentResult, language)
-            IntentType.PURCHASE -> handlePurchase(intentResult, language)
-            IntentType.EXPENSE -> handleExpense(intentResult, language)
-            IntentType.PROFIT_QUERY -> handleProfitQuery(language)
-            IntentType.CHECK_BALANCE -> handleBalanceQuery(language)
-            IntentType.STOCK_QUERY -> handleStockQuery(intentResult, language)
-            IntentType.DAILY_SUMMARY -> handleDailySummary(language)
-            IntentType.WEEKLY_SUMMARY -> handleWeeklySummary(language)
-            IntentType.ASK_ADVICE -> handleAdvice(language)
-            IntentType.GREETING -> handleGreeting(language)
-            IntentType.HELP -> handleHelp(language)
-            IntentType.CORRECTION -> handleCorrection(text, language)
-            IntentType.UNKNOWN -> handleUnknown(text, language)
+        // ═══ Step 4: Confidence escalation ═══
+        // When confidence is low, ask for clarification instead of guessing.
+        // This prevents false recordings that could corrupt the worker's data.
+        val response = if (intentResult.confidence < CONFIDENCE_CONFIRM &&
+            intentResult.intent != IntentType.UNKNOWN &&
+            intentResult.intent != IntentType.GREETING &&
+            intentResult.intent != IntentType.HELP
+        ) {
+            // Low confidence: ask for clarification
+            handleLowConfidence(intentResult, text, language)
+        } else if (intentResult.confidence < CONFIDENCE_AUTO &&
+            intentResult.intent != IntentType.UNKNOWN &&
+            intentResult.intent != IntentType.GREETING &&
+            intentResult.intent != IntentType.HELP
+        ) {
+            // Medium confidence: confirm before proceeding
+            handleMediumConfidence(intentResult, text, language)
+        } else {
+            // High confidence or non-transactional: proceed normally
+            // ECO 104 §1.2: Route to agent that maximizes response quality
+            routeToAgent(intentResult, text, language)
         }
 
-        // Step 4: Record vocabulary for learning
+        // ═══ Step 5: Record in conversation memory ═══
+        conversationMemory.addTurn(
+            speaker = "worker",
+            text = text,
+            intent = intentResult,
+            extractedData = intentResult.extractedData
+        )
+        conversationMemory.addTurn(
+            speaker = "msaidizi",
+            text = response.text
+        )
+
+        // ═══ Step 6: Record vocabulary for learning ═══
         // STA 347: Each interaction is a data point for on-device ML
         learningAgent.recordPattern(
             PatternType.VOCABULARY,
@@ -167,6 +204,225 @@ class Orchestrator(
         _responses.emit(response)
 
         return response
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // CONFIDENCE ESCALATION
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * Handle low-confidence intent classification.
+     * Asks the user for clarification instead of guessing.
+     * This prevents false recordings that could corrupt data.
+     */
+    private fun handleLowConfidence(
+        intentResult: IntentResult,
+        text: String,
+        language: String
+    ): AgentResponse {
+        val intentName = when (intentResult.intent) {
+            IntentType.SALE -> if (language == "sw") "mauzo" else "a sale"
+            IntentType.PURCHASE -> if (language == "sw") "ununuzi" else "a purchase"
+            IntentType.EXPENSE -> if (language == "sw") "matumizi" else "an expense"
+            else -> if (language == "sw") "kitu" else "something"
+        }
+
+        return AgentResponse(
+            text = if (language == "sw") {
+                "🤔 Sijaelewa vizuri. Unamaanisha $intentName? " +
+                "Sema tena kwa uwazi zaidi, mfano: 'Nimeuza mandazi kwa 500'"
+            } else {
+                "🤔 I'm not sure I understood. Did you mean $intentName? " +
+                "Please say it again more clearly, e.g. 'I sold mandazi for 500'"
+            },
+            type = ResponseType.CLARIFICATION,
+            data = mapOf(
+                "originalText" to text,
+                "detectedIntent" to intentResult.intent.name,
+                "confidence" to intentResult.confidence.toString()
+            )
+        )
+    }
+
+    /**
+     * Handle medium-confidence intent classification.
+     * Confirms with the user before recording.
+     * "You want to record a sale of mandazi for KSh 500, right?"
+     */
+    private fun handleMediumConfidence(
+        intentResult: IntentResult,
+        text: String,
+        language: String
+    ): AgentResponse {
+        val item = intentResult.extractedData["item"] ?: ""
+        val amount = intentResult.extractedData["amount"] ?: ""
+
+        val confirmationText = when (intentResult.intent) {
+            IntentType.SALE -> if (language == "sw") {
+                "🤔 Unamaanisha umefanya mauzo ya ${item.ifBlank { "bidhaa" }}" +
+                if (amount.isNotBlank()) " kwa KSh $amount?" else "? Sema 'ndio' au 'hapana'."
+            } else {
+                "🤔 Did you record a sale of ${item.ifBlank { "an item" }}" +
+                if (amount.isNotBlank()) " for KSh $amount?" else "? Say 'yes' or 'no'."
+            }
+            IntentType.PURCHASE -> if (language == "sw") {
+                "🤔 Unamaanisha umenunua ${item.ifBlank { "bidhaa" }}" +
+                if (amount.isNotBlank()) " kwa KSh $amount?" else "? Sema 'ndio' au 'hapana'."
+            } else {
+                "🤔 Did you buy ${item.ifBlank { "an item" }}" +
+                if (amount.isNotBlank()) " for KSh $amount?" else "? Say 'yes' or 'no'."
+            }
+            IntentType.EXPENSE -> if (language == "sw") {
+                "🤔 Unamaanisha umetumia KSh $amount kwa ${item.ifBlank { "matumizi" }}? " +
+                "Sema 'ndio' au 'hapana'."
+            } else {
+                "🤔 Did you spend KSh $amount on ${item.ifBlank { "an expense" }}? " +
+                "Say 'yes' or 'no'."
+            }
+            else -> if (language == "sw") {
+                "🤔 Sijaelewa vizuri. Sema tena kwa uwazi zaidi."
+            } else {
+                "🤔 I'm not sure. Please say it again more clearly."
+            }
+        }
+
+        return AgentResponse(
+            text = confirmationText,
+            type = ResponseType.CLARIFICATION,
+            data = mapOf(
+                "originalText" to text,
+                "detectedIntent" to intentResult.intent.name,
+                "confidence" to intentResult.confidence.toString(),
+                "item" to item,
+                "amount" to amount
+            )
+        )
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // AGENT ROUTING WITH ERROR RECOVERY
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * Route the intent to the appropriate agent with error recovery.
+     * Wraps all agent calls in try-catch to prevent crashes.
+     * Returns a user-friendly Swahili error message on failure.
+     */
+    private suspend fun routeToAgent(
+        intentResult: IntentResult,
+        text: String,
+        language: String
+    ): AgentResponse {
+        return try {
+            when (intentResult.intent) {
+                IntentType.SALE -> handleSale(intentResult, language)
+                IntentType.PURCHASE -> handlePurchase(intentResult, language)
+                IntentType.EXPENSE -> handleExpense(intentResult, language)
+                IntentType.PROFIT_QUERY -> handleProfitQuery(language)
+                IntentType.CHECK_BALANCE -> handleBalanceQuery(language)
+                IntentType.STOCK_QUERY -> handleStockQuery(intentResult, language)
+                IntentType.DAILY_SUMMARY -> handleDailySummary(language)
+                IntentType.WEEKLY_SUMMARY -> handleWeeklySummary(language)
+                IntentType.ASK_ADVICE -> handleAdvice(language)
+                IntentType.GREETING -> handleGreeting(language)
+                IntentType.HELP -> handleHelp(language)
+                IntentType.CORRECTION -> handleCorrection(text, language)
+                IntentType.UNKNOWN -> handleUnknown(text, language)
+                IntentType.TRANSPORT_TRIP,
+                IntentType.TRANSPORT_EXPENSE,
+                IntentType.FARMING_ACTIVITY,
+                IntentType.FARMING_INPUT,
+                IntentType.DIGITAL_COMMISSION,
+                IntentType.DIGITAL_TRANSACTION,
+                IntentType.SERVICE_CLIENT,
+                IntentType.SERVICE_JOB -> handleDomainIntent(intentResult, language)
+            }
+        } catch (e: OutOfMemoryError) {
+            // Critical: OME means the device is under severe memory pressure
+            Timber.e(e, "OOM during agent routing for intent: %s", intentResult.intent)
+            AgentResponse(
+                text = if (language == "sw") {
+                    "⚠️ Kuna tatizo la kumbukumbu. Funga app nyingine jaribu tena."
+                } else {
+                    "⚠️ Memory issue. Close other apps and try again."
+                },
+                type = ResponseType.ERROR
+            )
+        } catch (e: Exception) {
+            // General error recovery — log and return friendly message
+            Timber.e(e, "Error during agent routing for intent: %s", intentResult.intent)
+            AgentResponse(
+                text = if (language == "sw") {
+                    "⚠️ Kuna tatizo. Jaribu tena. " +
+                    "Sema: 'Nimeuza [bidhaa] kwa [bei]' kurekodi mauzo."
+                } else {
+                    "⚠️ Something went wrong. Try again. " +
+                    "Say: 'I sold [item] for [price]' to record a sale."
+                },
+                type = ResponseType.ERROR,
+                data = mapOf(
+                    "error" to (e.message ?: "unknown"),
+                    "intent" to intentResult.intent.name
+                )
+            )
+        }
+    }
+
+    /**
+     * Handle domain-specific intents (transport, farming, digital, service).
+     * These are treated as specialized sale/expense transactions.
+     */
+    private suspend fun handleDomainIntent(
+        intentResult: IntentResult,
+        language: String
+    ): AgentResponse {
+        return try {
+            when (intentResult.intent) {
+                IntentType.TRANSPORT_TRIP,
+                IntentType.FARMING_ACTIVITY,
+                IntentType.DIGITAL_TRANSACTION,
+                IntentType.SERVICE_CLIENT -> {
+                    // These are informational queries about domain-specific data
+                    val text = advisorAgent.getDomainAdvice(intentResult, language)
+                    AgentResponse(text = text, type = ResponseType.INFORMATION)
+                }
+                IntentType.TRANSPORT_EXPENSE,
+                IntentType.FARMING_INPUT,
+                IntentType.DIGITAL_COMMISSION,
+                IntentType.SERVICE_JOB -> {
+                    // These are recordable transactions
+                    val item = intentResult.extractedData["item"] ?: "service"
+                    val amount = intentResult.extractedData["amount"]?.toDoubleOrNull() ?: 0.0
+                    if (amount > 0) {
+                        val txn = businessAgent.recordSale(item, 1.0, amount, language)
+                        AgentResponse(
+                            text = if (language == "sw") {
+                                "✅ Umerekodi: $item, KSh ${"%.0f".format(amount)}"
+                            } else {
+                                "✅ Recorded: $item, KSh ${"%.0f".format(amount)}"
+                            },
+                            type = ResponseType.CONFIRMATION
+                        )
+                    } else {
+                        AgentResponse(
+                            text = if (language == "sw") "Bei ni ngapi?" else "What price?",
+                            type = ResponseType.CLARIFICATION
+                        )
+                    }
+                }
+                else -> handleUnknown("", language)
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error handling domain intent: %s", intentResult.intent)
+            AgentResponse(
+                text = if (language == "sw") {
+                    "⚠️ Kuna tatizo. Jaribu tena."
+                } else {
+                    "⚠️ Something went wrong. Try again."
+                },
+                type = ResponseType.ERROR
+            )
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -194,38 +450,50 @@ class Orchestrator(
                 type = ResponseType.CLARIFICATION
             )
 
-        val transaction = businessAgent.recordSale(item, quantity, amount, language)
-        lastTransaction = transaction
+        return try {
+            val transaction = businessAgent.recordSale(item, quantity, amount, language)
+            lastTransaction = transaction
 
-        // Learn from this transaction
-        adaptiveLearning.learnFromTransaction(transaction)
+            // Learn from this transaction
+            adaptiveLearning.learnFromTransaction(transaction)
 
-        // Record sale time for pattern learning
-        learningAgent.recordSaleTime(
-            java.time.LocalTime.now().hour,
-            java.time.LocalDate.now().dayOfWeek.value - 1
-        )
-
-        // ECO 101 §1.4: Calculate profit for this transaction
-        val profit = transaction.totalAmount - transaction.costBasis
-
-        return AgentResponse(
-            text = if (language == "sw") {
-                "✅ Umeuza ${item} x${quantity.toInt()}, KSh ${"%.0f".format(amount)}. " +
-                "Faida: KSh ${"%.0f".format(profit)}"
-            } else {
-                "✅ Sold ${item} x${quantity.toInt()}, KSh ${"%.0f".format(amount)}. " +
-                "Profit: KSh ${"%.0f".format(profit)}"
-            },
-            type = ResponseType.CONFIRMATION,
-            data = mapOf(
-                "transactionId" to transaction.id.toString(),
-                "item" to item,
-                "quantity" to quantity.toString(),
-                "amount" to amount.toString(),
-                "profit" to profit.toString()
+            // Record sale time for pattern learning
+            learningAgent.recordSaleTime(
+                java.time.LocalTime.now().hour,
+                java.time.LocalDate.now().dayOfWeek.value - 1
             )
-        )
+
+            // ECO 101 §1.4: Calculate profit for this transaction
+            val profit = transaction.totalAmount - transaction.costBasis
+
+            AgentResponse(
+                text = if (language == "sw") {
+                    "✅ Umeuza ${item} x${quantity.toInt()}, KSh ${"%.0f".format(amount)}. " +
+                    "Faida: KSh ${"%.0f".format(profit)}"
+                } else {
+                    "✅ Sold ${item} x${quantity.toInt()}, KSh ${"%.0f".format(amount)}. " +
+                    "Profit: KSh ${"%.0f".format(profit)}"
+                },
+                type = ResponseType.CONFIRMATION,
+                data = mapOf(
+                    "transactionId" to transaction.id.toString(),
+                    "item" to item,
+                    "quantity" to quantity.toString(),
+                    "amount" to amount.toString(),
+                    "profit" to profit.toString()
+                )
+            )
+        } catch (e: Exception) {
+            Timber.e(e, "Error recording sale: %s x%.0f @ %.0f", item, quantity, amount)
+            AgentResponse(
+                text = if (language == "sw") {
+                    "⚠️ Imeshindikana kurekodi mauzo. Jaribu tena."
+                } else {
+                    "⚠️ Failed to record sale. Please try again."
+                },
+                type = ResponseType.ERROR
+            )
+        }
     }
 
     /**
@@ -246,25 +514,36 @@ class Orchestrator(
             type = ResponseType.CLARIFICATION
         )
 
-        val transaction = businessAgent.recordPurchase(item, quantity, amount, language)
-        lastTransaction = transaction
+        return try {
+            val transaction = businessAgent.recordPurchase(item, quantity, amount, language)
+            lastTransaction = transaction
+            adaptiveLearning.learnFromTransaction(transaction)
 
-        adaptiveLearning.learnFromTransaction(transaction)
-
-        return AgentResponse(
-            text = if (language == "sw") {
-                "✅ Umenunua ${item} x${quantity.toInt()}, KSh ${"%.0f".format(amount)}"
-            } else {
-                "✅ Bought ${item} x${quantity.toInt()}, KSh ${"%.0f".format(amount)}"
-            },
-            type = ResponseType.CONFIRMATION,
-            data = mapOf(
-                "transactionId" to transaction.id.toString(),
-                "item" to item,
-                "quantity" to quantity.toString(),
-                "amount" to amount.toString()
+            AgentResponse(
+                text = if (language == "sw") {
+                    "✅ Umenunua ${item} x${quantity.toInt()}, KSh ${"%.0f".format(amount)}"
+                } else {
+                    "✅ Bought ${item} x${quantity.toInt()}, KSh ${"%.0f".format(amount)}"
+                },
+                type = ResponseType.CONFIRMATION,
+                data = mapOf(
+                    "transactionId" to transaction.id.toString(),
+                    "item" to item,
+                    "quantity" to quantity.toString(),
+                    "amount" to amount.toString()
+                )
             )
-        )
+        } catch (e: Exception) {
+            Timber.e(e, "Error recording purchase: %s x%.0f @ %.0f", item, quantity, amount)
+            AgentResponse(
+                text = if (language == "sw") {
+                    "⚠️ Imeshindikana kurekodi ununuzi. Jaribu tena."
+                } else {
+                    "⚠️ Failed to record purchase. Please try again."
+                },
+                type = ResponseType.ERROR
+            )
+        }
     }
 
     /**
@@ -279,21 +558,33 @@ class Orchestrator(
             type = ResponseType.CLARIFICATION
         )
 
-        val transaction = businessAgent.recordExpense(category, amount, language = language)
+        return try {
+            val transaction = businessAgent.recordExpense(category, amount, language = language)
 
-        return AgentResponse(
-            text = if (language == "sw") {
-                "✅ Umerekodi matumizi: $category, KSh ${"%.0f".format(amount)}"
-            } else {
-                "✅ Recorded expense: $category, KSh ${"%.0f".format(amount)}"
-            },
-            type = ResponseType.CONFIRMATION,
-            data = mapOf(
-                "transactionId" to transaction.id.toString(),
-                "category" to category,
-                "amount" to amount.toString()
+            AgentResponse(
+                text = if (language == "sw") {
+                    "✅ Umerekodi matumizi: $category, KSh ${"%.0f".format(amount)}"
+                } else {
+                    "✅ Recorded expense: $category, KSh ${"%.0f".format(amount)}"
+                },
+                type = ResponseType.CONFIRMATION,
+                data = mapOf(
+                    "transactionId" to transaction.id.toString(),
+                    "category" to category,
+                    "amount" to amount.toString()
+                )
             )
-        )
+        } catch (e: Exception) {
+            Timber.e(e, "Error recording expense: %s %.0f", category, amount)
+            AgentResponse(
+                text = if (language == "sw") {
+                    "⚠️ Imeshindikana kurekodi matumizi. Jaribu tena."
+                } else {
+                    "⚠️ Failed to record expense. Please try again."
+                },
+                type = ResponseType.ERROR
+            )
+        }
     }
 
     /**
@@ -527,6 +818,18 @@ class Orchestrator(
      */
     fun triggerBackgroundLearning() {
         adaptiveLearning.launchBackgroundLearning()
+    }
+
+    /**
+     * Get conversation memory for debugging or UI display.
+     */
+    fun getConversationMemory(): ConversationMemory = conversationMemory
+
+    /**
+     * Clear conversation memory (e.g., on new session).
+     */
+    fun clearConversationMemory() {
+        conversationMemory.clear()
     }
 }
 
