@@ -1,5 +1,6 @@
 package com.msaidizi.app.agent
 
+import com.msaidizi.app.core.model.DialectRegion
 import com.msaidizi.app.core.model.Transaction
 import com.msaidizi.app.core.model.TransactionType
 import timber.log.Timber
@@ -430,6 +431,13 @@ object ValueDelivery {
  * Aggregates data from multiple sources for value computation.
  */
 data class Worker(
+    val id: String = "",
+    val name: String = "",              // Worker's name (from bootstrap)
+    val assistantName: String = "Msaidizi",  // What worker calls Msaidizi (e.g., "Rafiki")
+    val language: String = "sw",
+    val dialect: DialectRegion = DialectRegion.STANDARD,
+    val onboardedAt: Long = 0L,
+    val cfoLevel: CFOLevel = CFOLevel.JUNIOR,  // Based on data maturity
     val activeDays: Int = 0,
     val workerType: WorkerType = WorkerType.UNKNOWN,
 
@@ -456,6 +464,22 @@ data class Worker(
     val alamaScore: Int = 0,
     val formalizationScore: Double = 0.0
 )
+
+/**
+ * CFO maturity level — determines how sophisticated the advice is.
+ * Starts basic, grows as more data comes in.
+ *
+ * Like a real CFO joining a new company: they learn the business first,
+ * then start providing strategic value.
+ */
+enum class CFOLevel {
+    /** First week — learning the business, recording basics */
+    JUNIOR,
+    /** Month 1-3 — providing basic insights, daily briefings */
+    MID,
+    /** Month 3+ — full CFO capabilities, forecasting, credit readiness */
+    SENIOR
+}
 
 /**
  * A single value item delivered to the worker.
