@@ -1384,6 +1384,66 @@ class Orchestrator(
     fun clearConversationMemory() {
         conversationMemory.clear()
     }
+
+    // ═══════════════ SELF-EVOLUTION LIFECYCLE ═══════════════
+
+    /**
+     * Trigger self-evolution cycle.
+     * Runs correction pattern analysis, feedback processing, and metric computation.
+     * Call during heartbeats or when device is idle.
+     */
+    fun triggerEvolutionCycle() {
+        selfEvolution?.launchEvolutionCycle()
+    }
+
+    /**
+     * Get current worker preferences (learned from interactions).
+     */
+    fun getWorkerPreferences(): com.msaidizi.app.evolution.WorkerPreferences? =
+        selfEvolution?.getPreferences()
+
+    /**
+     * Get evolution metrics showing how much the system has learned.
+     */
+    fun getEvolutionMetrics(): com.msaidizi.app.evolution.EvolutionMetrics? =
+        selfEvolution?.evolutionMetrics?.value
+
+    /**
+     * Get goal adaptation suggestion based on worker's actual progress.
+     */
+    suspend fun getGoalAdaptation(
+        goalId: Long,
+        currentTarget: Double,
+        actualProgress: Double,
+        daysElapsed: Int,
+        totalDays: Int
+    ): com.msaidizi.app.evolution.GoalAdaptationSuggestion? =
+        selfEvolution?.analyzeGoalAdaptation(goalId, currentTarget, actualProgress, daysElapsed, totalDays)
+
+    /**
+     * Record that worker acted on advice (positive satisfaction signal).
+     */
+    suspend fun recordAdviceFollowed(adviceId: String) {
+        selfEvolution?.recordAdviceOutcome(adviceId, followed = true, outcomeScore = 0.9)
+    }
+
+    /**
+     * Get preferred report format based on learned preferences.
+     */
+    suspend fun getPreferredReportFormat(): String =
+        preferenceLearner?.getPreferredReportFormat() ?: "daily"
+
+    /**
+     * Get preferred voice speed based on learned preferences.
+     */
+    suspend fun getPreferredVoiceSpeed(): Float =
+        preferenceLearner?.getPreferredVoiceSpeed() ?: 1.0f
+
+    /**
+     * Get preferred language based on learned preferences.
+     */
+    suspend fun getPreferredLanguage(): String =
+        preferenceLearner?.getPreferredLanguage() ?: "sw"
 }
 
 /**
