@@ -256,8 +256,7 @@ object WorkerClassifier {
             type = bestType,
             confidence = confidence,
             transactionsAnalyzed = transactions.size,
-            featureBreakdown = confidenceScores.toMap(),
-            features = features
+            featureBreakdown = confidenceScores.toMap()
         )
     }
 
