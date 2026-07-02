@@ -53,6 +53,30 @@ enum class IntentType {
     // Correction to previous transaction
     CORRECTION,
 
+    // Transport-specific: record trip
+    TRANSPORT_TRIP,
+
+    // Transport-specific: fuel/expense
+    TRANSPORT_EXPENSE,
+
+    // Farming-specific: planting/harvesting
+    FARMING_ACTIVITY,
+
+    // Farming-specific: input purchase
+    FARMING_INPUT,
+
+    // Digital/gig: commission earned
+    DIGITAL_COMMISSION,
+
+    // Digital/gig: transaction volume
+    DIGITAL_TRANSACTION,
+
+    // Service-specific: client served
+    SERVICE_CLIENT,
+
+    // Service-specific: job completed
+    SERVICE_JOB,
+
     // Unknown/ambiguous intent
     UNKNOWN
 }

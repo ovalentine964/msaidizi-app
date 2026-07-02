@@ -188,6 +188,11 @@ class BusinessAgent(
             "prepared_food" -> 0.20  // Mandazi, chapati must sell same day
             "cooking" -> 0.02    // Oil, sugar, salt are shelf-stable
             "household" -> 0.01  // Non-food items rarely spoil
+            "transport" -> 0.00  // Services don't spoil
+            "agriculture" -> 0.08 // Post-harvest losses for farm produce
+            "digital" -> 0.00    // Digital transactions don't spoil
+            "service" -> 0.00    // Services don't spoil
+            "manufacturing" -> 0.02 // Some material waste
             else -> 0.05         // Default estimate
         }
     }
@@ -550,6 +555,225 @@ class BusinessAgent(
     }
 
     // ═══════════════════════════════════════════════════════════════
+    // TRANSPORT-SPECIFIC: Trip and fare recording
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * Record a transport trip with fare and optional route data.
+     *
+     * **ECO 201 §1.2 (Transport):** Trip revenue = fare × passengers.
+     * Key metrics: earnings per hour, fuel cost ratio, trips per day.
+     *
+     * @param fare Fare amount per trip/passenger
+     * @param tripCount Number of trips (default 1)
+     * @param route Route description (e.g., "CBD - Thika")
+     * @param passengers Number of passengers (for matatu)
+     * @param language Language of input
+     */
+    suspend fun recordTrip(
+        fare: Double,
+        tripCount: Int = 1,
+        route: String = "",
+        passengers: Int = 1,
+        language: String = "sw"
+    ): Transaction {
+        val totalAmount = fare * tripCount
+        val notes = buildString {
+            if (route.isNotBlank()) append("route=$route")
+            if (passengers > 1) append(", passengers=$passengers")
+            append(", trips=$tripCount")
+        }
+
+        val transaction = Transaction(
+            type = TransactionType.SALE,
+            item = "trip",
+            category = "transport",
+            quantity = tripCount.toDouble(),
+            unitPrice = fare,
+            totalAmount = totalAmount,
+            notes = notes,
+            language = language
+        )
+
+        val id = transactionDao.insert(transaction)
+        Timber.d("Recorded transport: %d trips × KSh %.0f = KSh %.0f (id=%d)",
+            tripCount, fare, totalAmount, id)
+        return transaction.copy(id = id)
+    }
+
+    /**
+     * Record fuel expense for transport workers.
+     *
+     * @param amount Fuel cost
+     * @param fuelType Type of fuel (petrol, diesel)
+     * @param language Language of input
+     */
+    suspend fun recordFuelExpense(
+        amount: Double,
+        fuelType: String = "petrol",
+        language: String = "sw"
+    ): Transaction {
+        val transaction = Transaction(
+            type = TransactionType.EXPENSE,
+            item = "fuel_$fuelType",
+            category = "transport",
+            totalAmount = amount,
+            notes = "fuel_type=$fuelType",
+            language = language
+        )
+
+        val id = transactionDao.insert(transaction)
+        Timber.d("Recorded fuel: %s = KSh %.0f (id=%d)", fuelType, amount, id)
+        return transaction.copy(id = id)
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // AGRICULTURE-SPECIFIC: Planting, harvest, input recording
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * Record a farming activity (planting, harvesting, input purchase).
+     *
+     * **ECO 100 §1.7 / ECO 401:** Agriculture is the backbone of Kenya's
+     * informal economy. Tracking planting→harvest cycles enables yield
+     * optimization and post-harvest loss reduction.
+     *
+     * @param activity Type of activity: "plant", "harvest", "input"
+     * @param crop Crop name (e.g., "mahindi", "nyanya")
+     * @param quantity Quantity (kg for harvest, units for inputs)
+     * @param area Area in acres (for planting)
+     * @param amount Cost (for inputs) or revenue (for harvest sales)
+     * @param language Language of input
+     */
+    suspend fun recordFarmingActivity(
+        activity: String,
+        crop: String,
+        quantity: Double = 0.0,
+        area: Double = 0.0,
+        amount: Double = 0.0,
+        language: String = "sw"
+    ): Transaction {
+        val type = when (activity) {
+            "harvest" -> TransactionType.SALE
+            "input" -> TransactionType.PURCHASE
+            else -> TransactionType.OTHER
+        }
+
+        val notes = buildString {
+            append("activity=$activity")
+            if (area > 0) append(", area=${area}acres")
+            if (quantity > 0) append(", quantity=${quantity}kg")
+        }
+
+        val transaction = Transaction(
+            type = type,
+            item = crop,
+            category = "agriculture",
+            quantity = quantity,
+            totalAmount = amount,
+            notes = notes,
+            language = language
+        )
+
+        val id = transactionDao.insert(transaction)
+        Timber.d("Recorded farming: %s %s (qty=%.0f, area=%.1f, KSh %.0f, id=%d)",
+            activity, crop, quantity, area, amount, id)
+        return transaction.copy(id = id)
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // DIGITAL/GIG-SPECIFIC: Commission, transaction volume
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * Record a digital/gig transaction (commission, deposit, withdrawal).
+     *
+     * @param transactionType Type: "commission", "deposit", "withdrawal", "sale"
+     * @param amount Amount in KSh
+     * @param volume Number of transactions (for M-Pesa agents)
+     * @param platform Platform (mpesa", "tiktok", "instagram")
+     * @param language Language of input
+     */
+    suspend fun recordDigitalTransaction(
+        transactionType: String,
+        amount: Double,
+        volume: Int = 1,
+        platform: String = "mpesa",
+        language: String = "sw"
+    ): Transaction {
+        val type = when (transactionType) {
+            "commission" -> TransactionType.SALE
+            "deposit" -> TransactionType.DEPOSIT
+            "withdrawal" -> TransactionType.WITHDRAWAL
+            "sale" -> TransactionType.SALE
+            else -> TransactionType.OTHER
+        }
+
+        val transaction = Transaction(
+            type = type,
+            item = "${platform}_$transactionType",
+            category = "digital",
+            quantity = volume.toDouble(),
+            unitPrice = if (volume > 0) amount / volume else amount,
+            totalAmount = amount,
+            paymentMethod = platform,
+            notes = "platform=$platform, volume=$volume",
+            language = language
+        )
+
+        val id = transactionDao.insert(transaction)
+        Timber.d("Recorded digital: %s %s KSh %.0f (vol=%d, id=%d)",
+            platform, transactionType, amount, volume, id)
+        return transaction.copy(id = id)
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // SERVICE-SPECIFIC: Client and job recording
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * Record a service job (haircut, repair, laundry, etc.).
+     *
+     * @param serviceType Type of service
+     * @param amount Amount charged
+     * @param clientCount Number of clients served
+     * @param partsCost Cost of parts/materials (for mechanics, etc.)
+     * @param language Language of input
+     */
+    suspend fun recordServiceJob(
+        serviceType: String,
+        amount: Double,
+        clientCount: Int = 1,
+        partsCost: Double = 0.0,
+        language: String = "sw"
+    ): Transaction {
+        val laborRevenue = amount - partsCost
+        val notes = buildString {
+            append("service=$serviceType")
+            if (clientCount > 1) append(", clients=$clientCount")
+            if (partsCost > 0) append(", parts_cost=$partsCost")
+            append(", labor_revenue=$laborRevenue")
+        }
+
+        val transaction = Transaction(
+            type = TransactionType.SALE,
+            item = serviceType,
+            category = "service",
+            quantity = clientCount.toDouble(),
+            unitPrice = if (clientCount > 0) amount / clientCount else amount,
+            totalAmount = amount,
+            costBasis = partsCost,
+            notes = notes,
+            language = language
+        )
+
+        val id = transactionDao.insert(transaction)
+        Timber.d("Recorded service: %s KSh %.0f (clients=%d, parts=KSh %.0f, id=%d)",
+            serviceType, amount, clientCount, partsCost, id)
+        return transaction.copy(id = id)
+    }
+
+    // ═══════════════════════════════════════════════════════════════
     // QUERIES
     // ═══════════════════════════════════════════════════════════════
 
@@ -716,30 +940,78 @@ class BusinessAgent(
     private fun classifyItem(item: String): String {
         val lower = item.lowercase()
         return when {
+            // Fresh produce
             lower.contains("nyanya") || lower.contains("viazi") ||
             lower.contains("vitunguu") || lower.contains("karoti") ||
-            lower.contains("sukuma") || lower.contains("mboga") -> "produce"
+            lower.contains("sukuma") || lower.contains("mboga") ||
+            lower.contains("matunda") || lower.contains("embe") ||
+            lower.contains("ndizi") || lower.contains("machungwa") -> "produce"
 
+            // Grains and staples
             lower.contains("unga") || lower.contains("mchele") ||
             lower.contains("mahindi") || lower.contains("maharagwe") ||
-            lower.contains("dengu") -> "grains"
+            lower.contains("dengu") || lower.contains("ngano") -> "grains"
 
+            // Protein
             lower.contains("nyama") || lower.contains("kuku") ||
-            lower.contains("samaki") || lower.contains("mayai") -> "protein"
+            lower.contains("samaki") || lower.contains("mayai") ||
+            lower.contains("maziwa") -> "protein"
 
+            // Cooking essentials
             lower.contains("mafuta") || lower.contains("sukari") ||
-            lower.contains("chumvi") || lower.contains("chai") ||
-            lower.contains("maziwa") -> "cooking"
+            lower.contains("chumvi") || lower.contains("chai") -> "cooking"
 
+            // Prepared food
             lower.contains("mandazi") || lower.contains("chapati") ||
-            lower.contains("mkate") || lower.contains("ugali") -> "prepared_food"
+            lower.contains("mkate") || lower.contains("ugali") ||
+            lower.contains("nyama\s*choma") || lower.contains("chipsi") -> "prepared_food"
 
+            // Household items
             lower.contains("sabuni") || lower.contains("dawa") ||
-            lower.contains("pampers") || lower.contains("mshumaa") -> "household"
+            lower.contains("pampers") || lower.contains("mshumaa") ||
+            lower.contains("toothpaste") -> "household"
 
-            lower.contains("usafiri") || lower.contains("rent") ||
-            lower.contains("kodi") || lower.contains("stima") ||
-            lower.contains("umeme") || lower.contains("data") -> "expense"
+            // Transport-related
+            lower.contains("usafiri") || lower.contains("fare") ||
+            lower.contains("trip") || lower.contains("abiria") ||
+            lower.contains("pikipiki") || lower.contains("matatu") ||
+            lower.contains("boda") || lower.contains("nduthi") ||
+            lower.contains("passenger") || lower.contains("delivery") -> "transport"
+
+            // Agriculture/Farming
+            lower.contains("mbegu") || lower.contains("mbolea") ||
+            lower.contains("fertilizer") || lower.contains("dawa\s*ya\s*mashamba") ||
+            lower.contains("pesticide") || lower.contains("harvest") ||
+            lower.contains("mazao") || lower.contains("shamba") ||
+            lower.contains("ekari") || lower.contains("crop") -> "agriculture"
+
+            // Digital/Gig economy
+            lower.contains("commission") || lower.contains("komisheni") ||
+            lower.contains("float") || lower.contains("airtime") ||
+            lower.contains("bundle") || lower.contains("data") ||
+            lower.contains("deposit") || lower.contains("withdrawal") ||
+            lower.contains("transaction") || lower.contains("boost") ||
+            lower.contains("matangazo") || lower.contains("advert") -> "digital"
+
+            // Services
+            lower.contains("kunyolewa") || lower.contains("salon") ||
+            lower.contains("haircut") || lower.contains("fundi") ||
+            lower.contains("mechanic") || lower.contains("repair") ||
+            lower.contains("service") || lower.contains("ushona") ||
+            lower.contains("tailor") || lower.contains("laundry") ||
+            lower.contains("fua") -> "service"
+
+            // Manufacturing/Artisan
+            lower.contains("chuma") || lower.contains("mbao") ||
+            lower.contains("furniture") || lower.contains("meza") ||
+            lower.contains("kiti") || lower.contains("bed") ||
+            lower.contains("welding") || lower.contains("fabric") ||
+            lower.contains("nguo") || lower.contains("brick") ||
+            lower.contains("tofali") -> "manufacturing"
+
+            // General expenses
+            lower.contains("rent") || lower.contains("kodi") ||
+            lower.contains("stima") || lower.contains("umeme") -> "expense"
 
             else -> "other"
         }
