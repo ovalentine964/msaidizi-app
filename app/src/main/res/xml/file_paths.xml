@@ -6,4 +6,8 @@
     <files-path
         name="models_staging"
         path="models_staging/" />
+    <!-- For APK update downloads -->
+    <external-files-path
+        name="downloads"
+        path="Downloads/" />
 </paths>

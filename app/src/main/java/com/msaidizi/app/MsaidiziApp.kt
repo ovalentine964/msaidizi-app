@@ -6,6 +6,7 @@ import android.content.Context
 import android.os.Build
 import com.msaidizi.app.core.model.ModelTier
 import com.msaidizi.app.sync.NetworkMonitor
+import com.msaidizi.app.update.UpdateCheckWorker
 import com.msaidizi.app.voice.ModelRegistry
 import com.msaidizi.app.voice.work.ModelDownloadWorker
 import androidx.hilt.work.HiltWorkerFactory
@@ -68,6 +69,9 @@ class MsaidiziApp : Application(), Configuration.Provider {
 
         // Schedule tiered model downloads
         scheduleModelDownloads()
+
+        // Schedule background update checks (silent, 24h interval)
+        UpdateCheckWorker.schedule(this)
 
         // Register memory trim callback
         registerComponentCallbacks(object : android.content.ComponentCallbacks2 {

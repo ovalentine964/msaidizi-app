@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#FF25D366</color>
-    <color name="primary_dark">#FF128C7E</color>
-    <color name="primary_light">#FF34B77B</color>
-    <color name="primary_variant">#FF075E54</color>
-    <color name="secondary">#FFFFC107</color>
-    <color name="secondary_dark">#FFFFA000</color>
+    <color name="primary">#FF1B2A4A</color>      <!-- Deep Navy -->
+    <color name="primary_dark">#FF0D1929</color>  <!-- Midnight -->
+    <color name="primary_light">#FF2A4070</color> <!-- Light Navy -->
+    <color name="primary_variant">#FFE8853D</color> <!-- African Orange -->
+    <color name="secondary">#FFE8853D</color>     <!-- African Orange -->
+    <color name="secondary_dark">#FFD06B2A</color> <!-- Dark Orange -->
     <color name="background">#FFFFFFFF</color>
     <color name="surface">#FFF5F5F5</color>
     <color name="text_primary">#FF212121</color>
@@ -16,13 +16,13 @@
     <color name="error">#FFF44336</color>
     <color name="warning">#FFFF9800</color>
     <color name="info">#FF2196F3</color>
-    <color name="whatsapp_green">#FF25D366</color>
+    <color name="whatsapp_green">#FF25D366</color>  <!-- WhatsApp brand (kept for integration UI) -->
     <color name="whatsapp_dark">#FF075E54</color>
     <color name="whatsapp_teal">#FF128C7E</color>
     <color name="divider">#FFE0E0E0</color>
     <color name="transparent">#00000000</color>
-    <color name="accent">#FFFFC107</color>
-    <color name="accent_dark">#FFFFA000</color>
+    <color name="accent">#FFF5A623</color>         <!-- Warm Gold -->
+    <color name="accent_dark">#FFE8853D</color>     <!-- African Orange -->
     <color name="white">#FFFFFFFF</color>
     <color name="profit_positive">#FF4CAF50</color>
     <color name="profit_negative">#FFF44336</color>
