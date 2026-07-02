@@ -1,6 +1,8 @@
 package com.msaidizi.app.data.api
 
 import com.msaidizi.app.data.model.*
+import com.msaidizi.app.ui.infrastructure.DataCenterRoadmap
+import com.msaidizi.app.ui.infrastructure.WorkerContribution
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -25,4 +27,21 @@ interface MsaidiziApi {
 
     @POST("api/v1/whatsapp/send-report")
     suspend fun sendReport(@Body request: SendReportRequest): Response<SendReportResponse>
+
+    // ---------------------------------------------------------------------------
+    // Infrastructure / Data Center Roadmap
+    // ---------------------------------------------------------------------------
+
+    @GET("api/v1/infrastructure/roadmap")
+    suspend fun getInfrastructureRoadmap(): Response<DataCenterRoadmap>
+
+    @GET("api/v1/infrastructure/worker-value/{workerId}")
+    suspend fun getWorkerValue(@Path("workerId") workerId: String): Response<WorkerContribution>
+
+    @GET("api/v1/infrastructure/fund")
+    suspend fun getInfrastructureFund(): Response<Any>
+
+    // Convenience: get current worker's contribution (uses stored worker ID)
+    @GET("api/v1/infrastructure/worker-value/me")
+    suspend fun getWorkerContribution(): Response<WorkerContribution>
 }
