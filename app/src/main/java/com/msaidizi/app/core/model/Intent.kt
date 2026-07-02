@@ -152,5 +152,41 @@ enum class DialectRegion {
     // Tanzania — standard Kiswahili with Bongo flavor
     TANZANIA,
     // Uganda — Luganda substrate
-    UGANDA
+    UGANDA,
+
+    // ── East Africa ──
+    // Kikuyu — Central Kenya (Nyeri, Murang'a, Kiambu)
+    KIKUYU,
+    // Dholuo — Western Kenya (Kisumu, Siaya, Homa Bay)
+    DHOLUO,
+    // Luhya — Western Kenya (Kakamega, Bungoma, Busia)
+    LUHYA,
+    // Kalenjin — Rift Valley (Nandi, Baringo, Uasin Gishu)
+    KALENJIN,
+    // Maasai — Southern Kenya / Northern Tanzania (Kajiado, Narok)
+    MAASAI,
+
+    // ── Horn of Africa ──
+    // Somali — Somalia, Djibouti, NE Kenya
+    SOMALI,
+    // Amharic — Ethiopia (romanized input from ASR)
+    AMHARIC,
+
+    // ── West Africa ──
+    // Yoruba — Southwestern Nigeria
+    YORUBA,
+    // Igbo — Southeastern Nigeria
+    IGBO,
+    // Hausa — West Africa (Nigeria, Niger, Ghana, Chad)
+    HAUSA,
+
+    // ── Southern Africa ──
+    // Zulu — South Africa (KwaZulu-Natal, Gauteng)
+    ZULU,
+    // Xhosa — South Africa (Eastern Cape, Western Cape)
+    XHOSA,
+
+    // ── Urban slang ──
+    // Sheng — Kenyan urban slang (Nairobi, Mombasa)
+    SHENG
 }
