@@ -257,6 +257,92 @@ class IntentRouter {
         Regex("""(?i)(lengo\s+la\s+sadaka|giving\s+goal)\s+(\d+(?:\.\d+)?)""")
     )
 
+    // === GOAL PLANNING PATTERNS ===
+    /**
+     * Goal creation patterns — "Lengo langu ni kununua friji"
+     * "Nataka kusave KSh 50,000 kwa shule"
+     */
+    private val goalCreatePatterns = listOf(
+        // "Lengo langu ni kununua friji"
+        Regex("""(?i)(lengo\s+langu|nataka|ninataka|nina\s*hitaji)\s+(?:ni\s+)?(ku|kusave|kununua|kulipa|kupanua)\s+(.+)"""),
+        // "Ninataka kusave KSh 50,000"
+        Regex("""(?i)(nataka|ninataka)\s+(kusave|kununua|kulipa|kupanua)\s+(.+?)\s+(?:ksh|sh)?\s*(\d+(?:,\d{3})*(?:\.\d+)?)"""),
+        // "Weka lengo la kununua friji"
+        Regex("""(?i)(weka|unda|fanya)\s+lengo\s+(la|la\s+ku)(.+)"""),
+        // "Lengo la kuuza KSh 10,000 kwa siku"
+        Regex("""(?i)(lengo|goal)\s+(la|ni)\s+(kuuza|kupata|kufikia)\s+(?:ksh|sh)?\s*(\d+(?:,\d{3})*(?:\.\d+)?)"""),
+        // "Nataka kununua friji mpya"
+        Regex("""(?i)(nataka|ninataka|nina\s*hitaji)\s+(kununua|kusave|kulipa|kupanua)\s+(.+?)(?:\s+(?:ksh|sh)?\s*(\d+(?:,\d{3})*(?:\.\d+)?)?)?$"""),
+        // Sheng: "Nataka kuprocure friji"
+        Regex("""(?i)(nika-buy|niprocure|nikaget)\s+(.+?)\s+(?:ksh|sh)?\s*(\d+(?:,\d{3})*(?:\.\d+)?)?""")
+    )
+
+    /**
+     * Goal progress patterns — "Nimefikia 50% ya lengo"
+     */
+    private val goalProgressPatterns = listOf(
+        // "Nimefikia 50% ya lengo"
+        Regex("""(?i)(nimefikia|nimeweka|nimekuwa)\s+(\d+)%?\s*(ya\s+lengo)?"""),
+        // "Nimeweka 2000 leo"
+        Regex("""(?i)(nimeweka|nimehifadhi|nimesave)\s+(?:ksh\s*)?(\d+)\s*(leo|wiki\s+hii)?"""),
+        // "Progress ya lengo ni 60%"
+        Regex("""(?i)(lengo\s+limefikia|progress\s+ni)\s+(\d+)%"""),
+        // "Nimenunua friji" (goal complete)
+        Regex("""(?i)(nimenunua|nimepata|nimefanikiwa)\s+(.+?)(?:\s+lengo\s+limeisha)?$""")
+    )
+
+    /**
+     * Goal report patterns — "Ripoti ya malengo"
+     */
+    private val goalReportPatterns = listOf(
+        // "Ripoti ya malengo"
+        Regex("""(?i)(ripoti|report|hali|summary)\s+ya\s+malengo"""),
+        // "Malengo yangu"
+        Regex("""(?i)(malengo\s+yangu|goals?\s+zangu|malengo)"""),
+        // "Nina malengo gani"
+        Regex("""(?i)(nina\s+malengo|what\s+are\s+my\s+goals?)"""),
+        // "Goal report"
+        Regex("""(?i)(goal\s+report|report\s+ya\s+goals?)""")
+    )
+
+    /**
+     * Time-to-goal forecast patterns — "Muda wa kufikia lengo"
+     */
+    private val goalTimeForecastPatterns = listOf(
+        // "Muda wa kufikia lengo"
+        Regex("""(?i)(muda|wakati)\s+wa\s+kufikia\s+lengo"""),
+        // "Lengo litafikiwa lini"
+        Regex("""(?i)(lengo\s+litafikiwa|goal\s+will\s+be\s+reached)\s+(lini|wakati\s+gani)"""),
+        // "Nitafikia lengo lini"
+        Regex("""(?i)(nitafikia|nita\s*fikia)\s+lengo\s+(lini|wakati\s+gani)"""),
+        // "When will I reach my goal"
+        Regex("""(?i)(when\s+will|how\s+long)\s+(to\s+)?(reach|achieve|complete)\s+(my\s+)?goal""")
+    )
+
+    /**
+     * Goal adjustment patterns — "Badilisha lengo"
+     */
+    private val goalAdjustPatterns = listOf(
+        // "Badilisha lengo"
+        Regex("""(?i)(badilisha|change|adjust|sogeza)\s+lengo"""),
+        // "Ongeza lengo hadi KSh 100,000"
+        Regex("""(?i)(ongeza|punguza|badilisha)\s+lengo\s+(hadi|kuwa)\s+(?:ksh|sh)?\s*(\d+(?:,\d{3})*(?:\.\d+)?)"""),
+        // "Extend deadline ya lengo"
+        Regex("""(?i)(extend|sogeza|ongeza)\s+(tarehe|deadline|muda)\s+(ya\s+)?(lengo|mwisho)""")
+    )
+
+    /**
+     * Goal encouragement patterns — "Nisaidie na lengo"
+     */
+    private val goalEncouragementPatterns = listOf(
+        // "Nisaidie na lengo"
+        Regex("""(?i)(nisaidie|encourage|motivation|saidia)\s+(na\s+)?lengo"""),
+        // "Sijisikii kufikia lengo"
+        Regex("""(?i)(sijisikii|nimechoka|nimemotivation|nikatae\s+tamaa)\s+(kufikia|na)\s+lengo"""),
+        // "Niko\s+nje\s+ya\s+mpango"
+        Regex("""(?i)(niko\s+nje|off\s+track|siko\s+sawa)\s+(ya\s+)?(mpango|lengo)""")
+    )
+
     // === SERVICE-SPECIFIC PATTERNS ===
     private val servicePatterns = listOf(
         // "Nimenyolewa mteja 5" / "Clients 8"
@@ -578,6 +664,61 @@ class IntentRouter {
                     )
                     else -> null
                 } ?: continue
+            }
+        }
+
+        // === GIVING/TITHING PATTERNS ===
+        // Check giving record patterns ("Nilitoa sadaka KSh 200")
+        for (pattern in givingRecordPatterns) {
+            val match = pattern.find(cleaned)
+            if (match != null) {
+                val groups = match.groupValues
+                val amount = groups.lastOrNull { it.toDoubleOrNull() != null } ?: continue
+                // Determine giving type keyword
+                val givingKeyword = groups.getOrNull(2)?.lowercase() ?: "sadaka"
+                val type = when {
+                    givingKeyword.contains("zaka ya kumi") || givingKeyword.contains("tithe") -> "TITHE"
+                    givingKeyword.contains("zaka") || givingKeyword.contains("zakat") -> "ZAKAT"
+                    givingKeyword.contains("sadaqah") || givingKeyword.contains("sadaqa") -> "SADAQAH"
+                    givingKeyword.contains("sadaka") -> "OFFERING"
+                    givingKeyword.contains("misaada") || givingKeyword.contains("mchango") -> "CHARITY"
+                    else -> "OFFERING"
+                }
+                return IntentResult(
+                    intent = IntentType.GIVING_RECORD,
+                    confidence = 0.95,
+                    extractedData = mapOf(
+                        "amount" to amount,
+                        "givingType" to type,
+                        "rawText" to cleaned
+                    )
+                )
+            }
+        }
+
+        // Check giving query patterns ("Ripoti ya sadaka")
+        if (givingQueryPatterns.any { it.containsMatchIn(cleaned) }) {
+            return IntentResult(
+                intent = IntentType.GIVING_QUERY,
+                confidence = 0.90,
+                extractedData = mapOf("rawText" to cleaned)
+            )
+        }
+
+        // Check giving goal patterns ("Lengo la kutoa")
+        for (pattern in givingGoalPatterns) {
+            val match = pattern.find(cleaned)
+            if (match != null) {
+                val groups = match.groupValues
+                val amount = groups.lastOrNull { it.toDoubleOrNull() != null } ?: "0"
+                return IntentResult(
+                    intent = IntentType.GIVING_GOAL,
+                    confidence = 0.90,
+                    extractedData = mapOf(
+                        "amount" to amount,
+                        "rawText" to cleaned
+                    )
+                )
             }
         }
 

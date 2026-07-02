@@ -104,6 +104,22 @@ enum class IntentType {
     // Goal encouragement: "Nisaidie na lengo"
     GOAL_ENCOURAGEMENT,
 
+    // Loan management: record a new loan
+    // "Nimechukua mkopo wa KSh 10,000"
+    LOAN_RECORD,
+
+    // Loan management: check loan payments
+    // "Malipo ya mkopo"
+    LOAN_QUERY,
+
+    // Loan management: get loan report
+    // "Ripoti ya mkopo"
+    LOAN_REPORT,
+
+    // Loan management: check payment deadline
+    // "Muda wa kulipa"
+    LOAN_DEADLINE,
+
     // Unknown/ambiguous intent
     UNKNOWN
 }
