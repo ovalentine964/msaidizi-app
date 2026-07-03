@@ -69,10 +69,13 @@ jobs:
           restore-keys: |
             android-sdk-${{ runner.os }}-
 
+      - name: Clean Kotlin daemon cache
+        run: rm -rf ~/.kotlin ~/.gradle/caches/journal-1 ~/.gradle/caches/kotlin-dsl
+
       - name: Build Debug APK
         run: |
           set -o pipefail
-          gradle assembleDebug --stacktrace --info -Dkotlin.daemon.enabled=false 2>&1 | tee build-debug.log
+          gradle assembleDebug --stacktrace --info --no-daemon -Dkotlin.daemon.enabled=false -Dkapt.use.worker.api=false 2>&1 | tee build-debug.log
           echo "Gradle exit code: $?"
 
       - name: Upload build log on failure
