@@ -3,6 +3,7 @@ package com.msaidizi.app.agent
 import timber.log.Timber
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.min
 
 /**
  * Error Compactor — Factor 9: Compact Errors into Context.

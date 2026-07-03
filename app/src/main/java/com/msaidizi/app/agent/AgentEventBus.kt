@@ -72,9 +72,11 @@ class AgentEventBus(
     val events: SharedFlow<AgentEvent> = _events.asSharedFlow()
 
     /** Event history ring buffer for debugging. */
+    @PublishedApi
     internal val _history = ArrayDeque<AgentEvent>(historySize)
 
     /** Per-type subscriber count for metrics. */
+    @PublishedApi
     internal val _subscriberCounts = ConcurrentHashMap<String, AtomicLong>()
 
     /** Total events published. */
@@ -84,6 +86,7 @@ class AgentEventBus(
     private val _totalDropped = AtomicLong(0)
 
     /** Coroutine scope for async event dispatch. */
+    @PublishedApi
     internal val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     // ── Publishing ────────────────────────────────────────────────

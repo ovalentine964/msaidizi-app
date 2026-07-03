@@ -115,7 +115,7 @@ class PreferenceLearner @Inject constructor(
         val currentSpeed = existing?.data?.toFloatOrNull() ?: 1.0f
         // EMA: smooth update
         val newSpeed = (currentSpeed * (1 - EMA_ALPHA) + (currentSpeed + speedAdjustment) * EMA_ALPHA)
-            .coerceIn(0.5f, 2.0f)
+            .coerceIn(0.5, 2.0)
 
         if (existing != null) {
             patternDao.updatePattern(existing.copy(

@@ -149,7 +149,7 @@ class CFOEngine {
             if (todayProfit > 0) {
                 val savingsAmount = (todayProfit * SAVINGS_TARGET_PERCENT).roundToInt()
                 append("\n\nUshauri: weka KSh $savingsAmount kwenye akiba ya dharura. ")
-                append("(Lengo: KSh ${formatAmount(EMERGENCY_FUND_TARGET.toInt())})")
+                append("(Lengo: KSh ${formatAmount(EMERGENCY_FUND_TARGET)})")
             }
         }
 
@@ -283,7 +283,7 @@ class CFOEngine {
                         append("• ${item.item.replaceFirstChar { it.uppercase() }}: ")
                         append("imabaki siku ${item.daysOfStockRemaining.toInt()}. ")
                         append("Nunua vipande ${item.suggestedQuantity} ")
-                        append("(~KSh ${formatAmount(item.estimatedCost.toInt())})\n")
+                        append("(~KSh ${formatAmount(item.estimatedCost)})\n")
                     }
                 }
                 val others = recommendations.filter { it.urgency != RestockUrgency.CRITICAL }
@@ -336,8 +336,8 @@ class CFOEngine {
                 "Sasa fikiria kuwekeza kwenye biashara yako."
 
             recommendedAmount > 0 ->
-                "Leo, weka KSh ${formatAmount(recommendedAmount.toInt())} kwenye akiba. " +
-                "Umefikia $progressPercent% ya lengo la KSh ${formatAmount(EMERGENCY_FUND_TARGET.toInt())}."
+                "Leo, weka KSh ${formatAmount(recommendedAmount)} kwenye akiba. " +
+                "Umefikia $progressPercent% ya lengo la KSh ${formatAmount(EMERGENCY_FUND_TARGET)}."
 
             else ->
                 "Akiba yako iko njiani! Umefikia $progressPercent% ya lengo."
@@ -429,7 +429,7 @@ class CFOEngine {
 
         val message = if (isReady) {
             "Alama yako ya mkopo ni $totalScore/100. " +
-            "Uko tayari kwa mkopo wa hadi KSh ${formatAmount(estimatedLoanAmount)}! " +
+            "Uko tayari kwa mkopo wa hadi KSh ${formatAmount(estimatedLoanAmount.toDouble())}! " +
             "Rekodi zako nzuri zitakusaidia."
         } else {
             "Alama yako ya mkopo ni $totalScore/100. " +
@@ -491,7 +491,7 @@ class CFOEngine {
             .filter { it.type == TransactionType.SALE }
             .groupBy { it.createdAt / 86400 }
             .maxByOrNull { it.value.sumOf { t -> t.totalAmount } }
-            ?.let { "Siku bora zaidi: mauzo ya KSh ${formatAmount(it.value.sumOf { t -> t.totalAmount }.toInt())}" }
+            ?.let { "Siku bora zaidi: mauzo ya KSh ${formatAmount(it.value.sumOf { t -> t.totalAmount })}" }
             ?: ""
 
         val topProduct = thisWeek

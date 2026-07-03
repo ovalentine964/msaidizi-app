@@ -232,8 +232,9 @@ class ContextManager(
 
             // Remove original items
             val idsToRemove = patternItemList.map { it.itemId }.toSet()
-            val removed = items.removeAll { it.itemId in idsToRemove }
-            evictionCount += removed
+            val toRemove = items.filter { it.itemId in idsToRemove }
+            items.removeAll(toRemove)
+            evictionCount += toRemove.size
 
             summaries.add(summary)
 
@@ -271,8 +272,9 @@ class ContextManager(
         )
 
         val idsToRemove = toSummarize.map { it.itemId }.toSet()
-        val removed = items.removeAll { it.itemId in idsToRemove }
-        evictionCount += removed
+        val toRemove = items.filter { it.itemId in idsToRemove }
+        items.removeAll(toRemove)
+        evictionCount += toRemove.size
 
         summaries.add(summary)
 

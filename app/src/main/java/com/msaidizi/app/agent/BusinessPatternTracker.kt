@@ -487,7 +487,7 @@ class BusinessPatternTracker(
             if (products.isNotEmpty()) {
                 context.append("Bidhaa za mteja: ")
                 context.append(products.take(5).joinToString(", ") {
-                    "${it.item} (margin ${it.marginPercent.toInt()}%)"
+                    "${it.item} (margin ${it.profitMargin.toInt()}%)"
                 })
                 context.append(". ")
             }
