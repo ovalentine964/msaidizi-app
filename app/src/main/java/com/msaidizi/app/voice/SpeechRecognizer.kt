@@ -94,7 +94,7 @@ class SpeechRecognizer @Inject constructor(
                 )
             }
 
-            ortSession = ortEnvironment!!.createSession(
+            ortSession = requireNotNull(ortEnvironment) { "ORT environment not initialized" }.createSession(
                 modelFile.absolutePath,
                 sessionOptions
             )
@@ -163,37 +163,37 @@ class SpeechRecognizer @Inject constructor(
 
             // 3. Create input tensors
             val audioTensor = OnnxTensor.createTensor(
-                ortEnvironment!!,
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
                 FloatBuffer.wrap(paddedAudio),
                 longArrayOf(1, paddedAudio.size.toLong())
             )
 
             val maxLengthTensor = OnnxTensor.createTensor(
-                ortEnvironment!!,
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
                 IntBuffer.wrap(intArrayOf(MAX_TOKENS)),
                 longArrayOf(1)
             )
 
             val minLengthTensor = OnnxTensor.createTensor(
-                ortEnvironment!!,
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
                 IntBuffer.wrap(intArrayOf(MIN_TOKENS)),
                 longArrayOf(1)
             )
 
             val numBeamsTensor = OnnxTensor.createTensor(
-                ortEnvironment!!,
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
                 IntBuffer.wrap(intArrayOf(NUM_BEAMS)),
                 longArrayOf(1)
             )
 
             val lengthPenaltyTensor = OnnxTensor.createTensor(
-                ortEnvironment!!,
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
                 FloatBuffer.wrap(floatArrayOf(LENGTH_PENALTY)),
                 longArrayOf(1)
             )
 
             val repetitionPenaltyTensor = OnnxTensor.createTensor(
-                ortEnvironment!!,
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
                 FloatBuffer.wrap(floatArrayOf(REPETITION_PENALTY)),
                 longArrayOf(1)
             )
@@ -208,7 +208,7 @@ class SpeechRecognizer @Inject constructor(
                 "repetition_penalty" to repetitionPenaltyTensor
             )
 
-            val results = ortSession!!.run(inputs)
+            val results = requireNotNull(ortSession) { "ORT session not initialized" }.run(inputs)
 
             // 5. Decode output tokens to text
             val sequences = results.get("sequences")

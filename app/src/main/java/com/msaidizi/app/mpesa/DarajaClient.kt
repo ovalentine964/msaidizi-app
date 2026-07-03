@@ -1,6 +1,8 @@
 package com.msaidizi.app.mpesa
 
 import android.content.Context
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.ktor.client.*
 import io.ktor.client.request.*
@@ -9,7 +11,6 @@ import io.ktor.http.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import timber.log.Timber
-import com.msaidizi.app.BuildConfig
 import java.text.SimpleDateFormat
 import java.util.Base64
 import java.util.Date
@@ -48,7 +49,8 @@ class DarajaClient @Inject constructor(
         private const val SANDBOX_BASE = "https://sandbox.safaricom.co.ke"
         private const val PRODUCTION_BASE = "https://api.safaricom.co.ke"
 
-        // Passkey loaded from BuildConfig (set via env var MPESA_PASSKEY at build time).
+        // SECURITY FIX: Passkey is stored in EncryptedSharedPreferences, NOT BuildConfig.
+        // Use setPasskey() to configure, or inject via server-side proxy.
         // NEVER commit passkeys to source control.
 
         // Sandbox shortcode
@@ -163,7 +165,7 @@ class DarajaClient @Inject constructor(
         val token = getAccessToken()
         val timestamp = dateFormat.format(Date())
         val password = Base64.getEncoder().encodeToString(
-            "${getShortCode()}${BuildConfig.MPESA_PASSKEY}$timestamp".toByteArray()
+            "${getShortCode()}${getPasskey()}$timestamp".toByteArray()
         )
 
         val request = StkPushRequest(
@@ -220,7 +222,7 @@ class DarajaClient @Inject constructor(
         val token = getAccessToken()
         val timestamp = dateFormat.format(Date())
         val password = Base64.getEncoder().encodeToString(
-            "${getShortCode()}${BuildConfig.MPESA_PASSKEY}$timestamp".toByteArray()
+            "${getShortCode()}${getPasskey()}$timestamp".toByteArray()
         )
 
         val request = StkQueryRequest(
@@ -323,6 +325,46 @@ class DarajaClient @Inject constructor(
             DarajaCredentials("", "")
         }
     }
+
+    /**
+     * Get M-Pesa passkey from EncryptedSharedPreferences.
+     * Falls back to empty string if not configured.
+     */
+    private fun getPasskey(): String {
+        return try {
+            getEncryptedPrefs().getString("mpesa_passkey", "") ?: ""
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to read M-Pesa passkey from encrypted storage")
+            ""
+        }
+    }
+
+    /**
+     * Store M-Pesa passkey securely in EncryptedSharedPreferences.
+     * Call this during setup/onboarding after receiving the passkey.
+     */
+    fun setPasskey(passkey: String) {
+        try {
+            getEncryptedPrefs().edit().putString("mpesa_passkey", passkey).apply()
+            Timber.d("M-Pesa passkey stored securely")
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to store M-Pesa passkey")
+        }
+    }
+
+    /**
+     * Get or create EncryptedSharedPreferences instance.
+     * Uses Android Keystore-backed master key for encryption.
+     */
+    private fun getEncryptedPrefs() = EncryptedSharedPreferences.create(
+        context,
+        "mpesa_secure_config",
+        MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build(),
+        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+    )
 
     /**
      * Validate phone number format (254XXXXXXXXX).

@@ -66,6 +66,7 @@ jobs:
             - Removed @Serializable from @Entity classes
             - Registered missing Room entities in @Database
             - Renamed duplicate class names
+            - Removed duplicate string resources
             - Bumped database version
 
             [skip ci]"
@@ -88,6 +89,16 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: '8.5'
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
 
       - name: Build Debug APK
         run: |

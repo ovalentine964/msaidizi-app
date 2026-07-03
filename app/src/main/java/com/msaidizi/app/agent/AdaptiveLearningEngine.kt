@@ -470,7 +470,7 @@ class AdaptiveLearningEngine(
 
         // Try to suggest price if missing
         if (enhancedData["amount"] == null && enhancedData["item"] != null) {
-            val suggestedPrice = suggestPrice(enhancedData["item"]!!)
+            val suggestedPrice = suggestPrice(requireNotNull(enhancedData["item"]) { "Item must not be null at price suggestion" })
             if (suggestedPrice != null) {
                 enhancedData["suggestedPrice"] = suggestedPrice.toInt().toString()
                 Timber.d("Price suggestion for %s: KSh %d", enhancedData["item"], suggestedPrice.toInt())

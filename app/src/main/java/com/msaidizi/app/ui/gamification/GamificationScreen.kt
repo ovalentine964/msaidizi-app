@@ -43,7 +43,7 @@ import timber.log.Timber
 class GamificationScreen : Fragment() {
 
     private var _binding: FragmentGamificationBinding? = null
-    private val binding get() = _binding!!
+    private val binding get() = requireNotNull(_binding) { "Fragment binding accessed before onCreateView or after onDestroyView" }
 
     private val viewModel: GamificationViewModel by viewModels()
 

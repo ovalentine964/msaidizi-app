@@ -211,10 +211,11 @@ object SwahiliParser {
             if (part1 != null && part2 != null) {
                 // If part1 is a base (mia, elfu, kumi), multiply then add
                 val base1 = part1.toLong()
-                if (base1 >= 100 || (base1 >= 10 && part2!! < 10)) {
-                    return base1 + part2!!
+                val p2 = requireNotNull(part2) { "Compound number part2 must not be null" }
+                if (base1 >= 100 || (base1 >= 10 && p2 < 10)) {
+                    return base1 + p2
                 }
-                return part1 + part2!!
+                return part1 + p2
             }
         }
 

@@ -181,7 +181,7 @@ class MMSTextToSpeech @Inject constructor(
                 )
             }
 
-            ortSession = ortEnvironment!!.createSession(
+            ortSession = requireNotNull(ortEnvironment) { "ORT environment not initialized" }.createSession(
                 modelFile.absolutePath,
                 sessionOptions
             )
@@ -275,31 +275,31 @@ class MMSTextToSpeech @Inject constructor(
             val tokenCount = tokenIdArray.size.toLong()
 
             val xTensor = OnnxTensor.createTensor(
-                ortEnvironment!!,
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
                 LongBuffer.wrap(tokenIdArray),
                 longArrayOf(1, tokenCount)
             )
 
             val xLengthsTensor = OnnxTensor.createTensor(
-                ortEnvironment!!,
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
                 LongBuffer.wrap(longArrayOf(tokenCount)),
                 longArrayOf(1)
             )
 
             val noiseScaleTensor = OnnxTensor.createTensor(
-                ortEnvironment!!,
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
                 FloatBuffer.wrap(floatArrayOf(DEFAULT_NOISE_SCALE)),
                 longArrayOf(1)
             )
 
             val lengthScaleTensor = OnnxTensor.createTensor(
-                ortEnvironment!!,
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
                 FloatBuffer.wrap(floatArrayOf(1.0f / speed)),
                 longArrayOf(1)
             )
 
             val noiseWTensor = OnnxTensor.createTensor(
-                ortEnvironment!!,
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
                 FloatBuffer.wrap(floatArrayOf(DEFAULT_NOISE_W)),
                 longArrayOf(1)
             )
@@ -314,7 +314,7 @@ class MMSTextToSpeech @Inject constructor(
             )
 
             val startTime = System.currentTimeMillis()
-            val results = ortSession!!.run(inputs)
+            val results = requireNotNull(ortSession) { "ORT session not initialized" }.run(inputs)
             val inferenceTime = System.currentTimeMillis() - startTime
 
             // 4. Extract audio samples (float32 [-1, 1])

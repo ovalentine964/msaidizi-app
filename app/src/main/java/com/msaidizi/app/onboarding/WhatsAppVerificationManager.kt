@@ -101,7 +101,7 @@ class WhatsAppVerificationManager(
             try {
                 val response = api.verifyWhatsApp(WhatsAppVerifyRequest(verificationId = verificationId))
                 if (response.isSuccessful && response.body()?.status == "connected") {
-                    val body = response.body()!!
+                    val body = requireNotNull(response.body()) { "WhatsApp verify response body must not be null" }
                     _state.value = VerificationState.Connected(
                         (_state.value as? VerificationState.WaitingForConfirmation)?.phone ?: "",
                         body.whatsappId ?: ""
@@ -161,9 +161,10 @@ class WhatsAppVerificationManager(
                 _state.value = VerificationState.Polling(verificationId, ((elapsed / POLL_INTERVAL_MS) + 1).toInt())
                 val response = api.checkVerificationStatus(verificationId)
                 if (response.isSuccessful && response.body() != null) {
-                    when (response.body()!!.status) {
+                    val pollBody = requireNotNull(response.body()) { "WhatsApp poll response body must not be null" }
+                    when (pollBody.status) {
                         "connected" -> {
-                            _state.value = VerificationState.Connected(phone, response.body()!!.whatsappId ?: "")
+                            _state.value = VerificationState.Connected(phone, pollBody.whatsappId ?: "")
                             return
                         }
                         "expired" -> {

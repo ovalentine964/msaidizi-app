@@ -354,7 +354,7 @@ class GamificationEngine(
     suspend fun getState(): GamificationEntity {
         return gamificationDao.getGamification() ?: run {
             initialize()
-            gamificationDao.getGamification()!!
+            requireNotNull(gamificationDao.getGamification()) { "Gamification entity must exist after initialization" }
         }
     }
 

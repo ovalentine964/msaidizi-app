@@ -341,7 +341,7 @@ object MigoriDialectAdapter {
 
         // Apply pronunciation variations (Migori → standard)
         for ((key, regex) in PRONUNCIATION_REGEXES) {
-            normalized = regex.replace(normalized, pronunciationVariations[key]!!)
+            normalized = regex.replace(normalized, pronunciationVariations[key] ?: key)
         }
         return normalized
     }

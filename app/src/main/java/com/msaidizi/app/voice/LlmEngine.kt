@@ -372,7 +372,7 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
         context: String = "",
         language: String = "sw"
     ): String {
-        val systemPrompt = SYSTEM_PROMPTS[language] ?: SYSTEM_PROMPTS["sw"]!!
+        val systemPrompt = SYSTEM_PROMPTS[language] ?: requireNotNull(SYSTEM_PROMPTS["sw"]) { "Missing fallback Swahili system prompt" }
 
         val fullPrompt = buildString {
             append(systemPrompt)
@@ -419,7 +419,7 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
         language: String = "sw",
         learnedContext: String? = null
     ): String {
-        val systemPrompt = SYSTEM_PROMPTS[language] ?: SYSTEM_PROMPTS["sw"]!!
+        val systemPrompt = SYSTEM_PROMPTS[language] ?: requireNotNull(SYSTEM_PROMPTS["sw"]) { "Missing fallback Swahili system prompt" }
 
         // Build learned context from available sources
         val enrichedContext = buildLearnedContext(businessContext, language, learnedContext)
@@ -579,7 +579,7 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
         businessContext: String = "",
         language: String = "sw"
     ): String {
-        val systemPrompt = SYSTEM_PROMPTS[language] ?: SYSTEM_PROMPTS["sw"]!!
+        val systemPrompt = SYSTEM_PROMPTS[language] ?: requireNotNull(SYSTEM_PROMPTS["sw"]) { "Missing fallback Swahili system prompt" }
 
         val fullPrompt = buildString {
             append(systemPrompt)

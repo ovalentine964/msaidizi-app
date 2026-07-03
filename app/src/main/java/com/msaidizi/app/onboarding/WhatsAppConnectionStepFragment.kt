@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
 
 class WhatsAppConnectionStepFragment : Fragment() {
     private var _binding: FragmentWhatsAppConnectionBinding? = null
-    private val binding get() = _binding!!
+    private val binding get() = requireNotNull(_binding) { "Fragment binding accessed before onCreateView or after onDestroyView" }
     private lateinit var viewModel: WhatsAppConnectionStep
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {

@@ -109,7 +109,7 @@ class TextToSpeech @Inject constructor(
                 )
             }
 
-            ortSession = ortEnvironment!!.createSession(
+            ortSession = requireNotNull(ortEnvironment) { "ORT environment not initialized" }.createSession(
                 modelFile.absolutePath,
                 sessionOptions
             )
@@ -174,32 +174,32 @@ class TextToSpeech @Inject constructor(
             val phonemeIdArray = phonemeIds.map { it.toLong() }.toLongArray()
 
             val phonemeTensor = OnnxTensor.createTensor(
-                ortEnvironment!!,
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
                 LongBuffer.wrap(phonemeIdArray),
                 longArrayOf(1, phonemeIdArray.size.toLong())
             )
 
             val speakerTensor = OnnxTensor.createTensor(
-                ortEnvironment!!,
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
                 LongBuffer.wrap(longArrayOf(DEFAULT_SPEAKER_ID)),
                 longArrayOf(1)
             )
 
             // Speed control: length_scale = 1.0/speed (higher speed = shorter duration)
             val lengthScaleTensor = OnnxTensor.createTensor(
-                ortEnvironment!!,
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
                 FloatBuffer.wrap(floatArrayOf(1.0f / speed)),
                 longArrayOf(1)
             )
 
             val noiseScaleTensor = OnnxTensor.createTensor(
-                ortEnvironment!!,
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
                 FloatBuffer.wrap(floatArrayOf(DEFAULT_NOISE_SCALE)),
                 longArrayOf(1)
             )
 
             val noiseWTensor = OnnxTensor.createTensor(
-                ortEnvironment!!,
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
                 FloatBuffer.wrap(floatArrayOf(DEFAULT_NOISE_W)),
                 longArrayOf(1)
             )
@@ -214,7 +214,7 @@ class TextToSpeech @Inject constructor(
             )
 
             val startTime = System.currentTimeMillis()
-            val results = ortSession!!.run(inputs)
+            val results = requireNotNull(ortSession) { "ORT session not initialized" }.run(inputs)
             val inferenceTime = System.currentTimeMillis() - startTime
 
             // 4. Extract audio samples (float32 [-1, 1])

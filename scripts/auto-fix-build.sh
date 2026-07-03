@@ -5,7 +5,9 @@
 #   1. @Serializable on @Entity classes (Room kapt conflicts with kotlinx.serialization)
 #   2. Missing @Database registrations (new @Entity not in AppDatabase)
 #   3. Duplicate class names in the same package
-#   4. Missing imports (report only)
+#   4. Duplicate string resources in strings.xml
+#   5. Missing imports (report only)
+#   6. Build config drift detection (report only)
 #
 # Exit code: 0 = no fixes needed, 1 = fixes applied (caller should re-commit), 2 = fatal error
 
@@ -16,6 +18,8 @@ cd "$SCRIPT_DIR/.."
 
 SRC_ROOT="app/src/main/java"
 DB_FILE="app/src/main/java/com/msaidizi/app/core/database/AppDatabase.kt"
+STRINGS_FILE="app/src/main/res/values/strings.xml"
+BUILD_FILE="app/build.gradle.kts"
 FIXES_APPLIED=0
 
 RED='\033[0;31m'
@@ -289,10 +293,84 @@ else
 fi
 
 # ─────────────────────────────────────────────
-# FIX 4: Missing imports (report only)
+# FIX 4: Duplicate string resources in strings.xml
 # ─────────────────────────────────────────────
 echo ""
-echo "📋 Fix 4: Missing import detection (report only)..."
+echo "📋 Fix 4: Duplicate string resources..."
+
+FIX4_COUNT=0
+
+if [[ -f "$STRINGS_FILE" ]]; then
+    DUPES_STRINGS=$(python3 -c "
+import re
+from collections import defaultdict
+
+with open('$STRINGS_FILE') as f:
+    content = f.read()
+
+# Find all <string name=\"...\"> entries
+names = re.findall(r'<string\s+name=\"([^\"]+)\"', content)
+seen = defaultdict(int)
+for n in names:
+    seen[n] += 1
+
+for name, count in sorted(seen.items()):
+    if count > 1:
+        print(f'{name}|{count}')
+" 2>/dev/null || true)
+
+    if [[ -n "$DUPES_STRINGS" ]]; then
+        while IFS='|' read -r dup_name dup_count; do
+            if [[ -z "$dup_name" ]]; then continue; fi
+            echo -e "  ${YELLOW}⚠️  Duplicate string:${NC} \"$dup_name\" appears $dup_count times"
+
+            # Remove duplicate entries, keeping only the first occurrence
+            python3 -c "
+import re
+
+with open('$STRINGS_FILE') as f:
+    content = f.read()
+
+# Split into lines, process to remove duplicate string entries
+lines = content.split('\n')
+seen_names = set()
+output = []
+in_string = False
+current_name = None
+
+for line in lines:
+    # Check for single-line string entry
+    m = re.search(r'<string\s+name=\"([^\"]+)\"', line)
+    if m:
+        name = m.group(1)
+        if name == '$dup_name':
+            if name in seen_names:
+                # Skip this duplicate line
+                continue
+            else:
+                seen_names.add(name)
+                output.append(line)
+        else:
+            output.append(line)
+    else:
+        output.append(line)
+
+with open('$STRINGS_FILE', 'w') as f:
+    f.write('\n'.join(output))
+" 2>/dev/null && log_fix "Removed duplicate string \"$dup_name\" from strings.xml" && FIX4_COUNT=$((FIX4_COUNT + 1))
+        done <<< "$DUPES_STRINGS"
+    else
+        log_ok "No duplicate string resources"
+    fi
+else
+    log_ok "strings.xml not found — skipping"
+fi
+
+# ─────────────────────────────────────────────
+# FIX 5: Missing imports (report only)
+# ─────────────────────────────────────────────
+echo ""
+echo "📋 Fix 5: Missing import detection (report only)..."
 
 MISSING_IMPORT_COUNT=0
 
@@ -331,24 +409,69 @@ else
 fi
 
 # ─────────────────────────────────────────────
+# FIX 6: Build config drift detection (report only)
+# ─────────────────────────────────────────────
+echo ""
+echo "📋 Fix 6: Build config validation..."
+
+CONFIG_ISSUES=0
+
+if [[ -f "$BUILD_FILE" ]]; then
+    # Check that compileSdk and targetSdk match
+    COMPILE_SDK=$(grep -oP 'compileSdk\s*=\s*\K\d+' "$BUILD_FILE" | head -1)
+    TARGET_SDK=$(grep -oP 'targetSdk\s*=\s*\K\d+' "$BUILD_FILE" | head -1)
+
+    if [[ -n "$COMPILE_SDK" && -n "$TARGET_SDK" && "$COMPILE_SDK" != "$TARGET_SDK" ]]; then
+        log_err "compileSdk ($COMPILE_SDK) != targetSdk ($TARGET_SDK) — may cause build warnings"
+        CONFIG_ISSUES=$((CONFIG_ISSUES + 1))
+    fi
+
+    # Check for deprecated APIs
+    if grep -q "android.enableR8.fullMode=true" "$BUILD_FILE" 2>/dev/null; then
+        log_err "android.enableR8.fullMode=true is deprecated in AGP 8.x"
+        CONFIG_ISSUES=$((CONFIG_ISSUES + 1))
+    fi
+
+    # Verify minSdk < targetSdk
+    MIN_SDK=$(grep -oP 'minSdk\s*=\s*\K\d+' "$BUILD_FILE" | head -1)
+    if [[ -n "$MIN_SDK" && -n "$TARGET_SDK" && "$MIN_SDK" -ge "$TARGET_SDK" ]]; then
+        log_err "minSdk ($MIN_SDK) >= targetSdk ($TARGET_SDK) — invalid config"
+        CONFIG_ISSUES=$((CONFIG_ISSUES + 1))
+    fi
+
+    if [[ $CONFIG_ISSUES -eq 0 ]]; then
+        log_ok "Build config looks healthy (compileSdk=$COMPILE_SDK, targetSdk=$TARGET_SDK, minSdk=$MIN_SDK)"
+    fi
+else
+    log_err "build.gradle.kts not found at $BUILD_FILE"
+fi
+
+# ─────────────────────────────────────────────
 # Summary
 # ─────────────────────────────────────────────
-TOTAL_FIXES=$((FIX1_COUNT + FIX2_COUNT + FIX3_COUNT))
+TOTAL_FIXES=$((FIX1_COUNT + FIX2_COUNT + FIX3_COUNT + FIX4_COUNT))
 echo ""
 echo "=================================="
 if [[ $TOTAL_FIXES -gt 0 ]]; then
     echo -e "${YELLOW}🔧 Applied ${TOTAL_FIXES} auto-fix(es)${NC}"
     echo "   - @Serializable removals: $FIX1_COUNT"
     echo "   - @Database registrations: $FIX2_COUNT"
-    echo "   - Duplicate renames: $FIX3_COUNT"
+    echo "   - Duplicate class renames: $FIX3_COUNT"
+    echo "   - Duplicate string removals: $FIX4_COUNT"
     if [[ $MISSING_IMPORT_COUNT -gt 0 ]]; then
         echo "   - Missing imports (manual): $MISSING_IMPORT_COUNT"
+    fi
+    if [[ $CONFIG_ISSUES -gt 0 ]]; then
+        echo "   - Build config issues (manual): $CONFIG_ISSUES"
     fi
     exit 1  # Fixes were applied — caller should re-commit
 else
     echo -e "${GREEN}✅ No auto-fixes needed${NC}"
     if [[ $MISSING_IMPORT_COUNT -gt 0 ]]; then
         echo -e "   ${YELLOW}⚠️  ${MISSING_IMPORT_COUNT} missing import(s) need manual fix${NC}"
+    fi
+    if [[ $CONFIG_ISSUES -gt 0 ]]; then
+        echo -e "   ${YELLOW}⚠️  ${CONFIG_ISSUES} build config issue(s) need manual fix${NC}"
     fi
     exit 0
 fi

@@ -42,9 +42,18 @@ class PinnedHttpClient @Inject constructor(
         //     | openssl pkey -pubin -outform DER \
         //     | openssl dgst -sha256 -binary \
         //     | base64
+        // TODO(SECURITY): Replace placeholder pins with real SHA-256 hashes before production release.
+        // Generate pin hash with:
+        //   openssl s_client -connect models.msaidizi.app:443 2>/dev/null \
+        //     | openssl x509 -pubkey -noout \
+        //     | openssl pkey -pubin -outform DER \
+        //     | openssl dgst -sha256 -binary \
+        //     | base64
+        //
+        // TODO: Rotate backup pin when CDN certificate rotates (update via OTA or app update).
         private val CERTIFICATE_PINS = listOf<String>(
-            // "sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="  // TODO: primary pin
-            // "sha256/BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB="  // TODO: backup pin
+            "sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",  // TODO(PRODUCTION): primary pin
+            "sha256/BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=",  // TODO(PRODUCTION): backup pin
         )
 
         private const val CONNECT_TIMEOUT_SEC = 30L

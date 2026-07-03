@@ -208,7 +208,7 @@ class ErrorCompactor(
                 mapOf(
                     "errorType" to error.errorType,
                     "fingerprint" to error.fingerprint.take(8),
-                    "resolution" to error.resolution!!,
+                    "resolution" to requireNotNull(error.resolution) { "Resolution should be non-null after filter" },
                     "occurrences" to error.occurrenceCount
                 )
             }

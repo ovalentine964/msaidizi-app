@@ -241,7 +241,7 @@ object HausaDialectAdapter {
     fun normalize(text: String): String {
         var normalized = text
         for ((key, regex) in PRONUNCIATION_REGEXES) {
-            normalized = regex.replace(normalized, pronunciationVariations[key]!!)
+            normalized = regex.replace(normalized, pronunciationVariations[key] ?: key)
         }
         return normalized
     }

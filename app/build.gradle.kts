@@ -36,12 +36,11 @@ android {
         buildConfigField("String", "TTS_MODEL", "\"piper-swahili.onnx\"")
         buildConfigField("String", "VAD_MODEL", "\"silero_vad.onnx\"")
 
-        // M-Pesa passkey — set via MPESA_PASSKEY env var at build time
-        // NEVER commit production passkeys to source control
-        val mpesaPasskey = project.findProperty("MPESA_PASSKEY") as? String
-            ?: System.getenv("MPESA_PASSKEY")
-            ?: ""
-        buildConfigField("String", "MPESA_PASSKEY", "\"$mpesaPasskey\"")
+        // SECURITY FIX: M-Pesa passkey removed from BuildConfig.
+        // Passkey is now stored in EncryptedSharedPreferences at runtime.
+        // See DarajaClient.getPasskey() for the secure retrieval path.
+        // To set the passkey on first run, use the server-side proxy or
+        // inject via EncryptedSharedPreferences during onboarding.
 
         // NDK/CMake flags for llama.cpp JNI bridge (temporarily disabled)
         // externalNativeBuild {
@@ -172,6 +171,9 @@ dependencies {
 
     // DataStore (preferences)
     implementation("androidx.datastore:datastore-preferences:1.0.0")
+
+    // EncryptedSharedPreferences (for secure credential storage)
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
     // WorkManager (background sync + model downloads)
     implementation("androidx.work:work-runtime-ktx:2.9.0")

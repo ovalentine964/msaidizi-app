@@ -109,7 +109,7 @@ class VoiceActivityDetector @Inject constructor(
                 setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
             }
 
-            ortSession = ortEnvironment!!.createSession(
+            ortSession = requireNotNull(ortEnvironment) { "ORT environment not initialized" }.createSession(
                 modelFile.absolutePath,
                 sessionOptions
             )
@@ -330,25 +330,25 @@ class VoiceActivityDetector @Inject constructor(
 
             // Create input tensors
             val inputTensor = OnnxTensor.createTensor(
-                ortEnvironment!!,
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
                 FloatBuffer.wrap(floatAudio),
                 longArrayOf(1, WINDOW_SIZE_SAMPLES.toLong())
             )
 
             val srTensor = OnnxTensor.createTensor(
-                ortEnvironment!!,
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
                 LongBuffer.wrap(longArrayOf(SAMPLE_RATE.toLong())),
                 longArrayOf(1)
             )
 
             val hTensor = OnnxTensor.createTensor(
-                ortEnvironment!!,
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
                 FloatBuffer.wrap(hState),
                 longArrayOf(2, 1, 64)
             )
 
             val cTensor = OnnxTensor.createTensor(
-                ortEnvironment!!,
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
                 FloatBuffer.wrap(cState),
                 longArrayOf(2, 1, 64)
             )
@@ -361,7 +361,7 @@ class VoiceActivityDetector @Inject constructor(
             )
 
             // Run inference
-            val results = ortSession!!.run(inputs)
+            val results = requireNotNull(ortSession) { "ORT session not initialized" }.run(inputs)
 
             // Extract speech probability
             val output = results.get("output")

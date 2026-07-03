@@ -161,7 +161,7 @@ class RecordFragment : Fragment() {
         if (state.showPronunciationFeedback && state.pronunciationConfidence != null) {
             pronunciationFeedback.showFeedback(
                 transcription = state.transcribedText,
-                confidence = state.pronunciationConfidence!!,
+                confidence = requireNotNull(state.pronunciationConfidence) { "Pronunciation confidence must be non-null when feedback is shown" },
                 expectedText = state.expectedText,
                 alternatives = state.pronunciationAlternatives
             )

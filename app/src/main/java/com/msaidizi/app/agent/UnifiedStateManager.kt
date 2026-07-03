@@ -303,7 +303,7 @@ class UnifiedStateManager(
 
         for (event in replayEvents) {
             when (event.operation) {
-                StateOperation.SET -> state[event.key] = event.value!!
+                StateOperation.SET -> state[event.key] = requireNotNull(event.value) { "SET operation requires non-null value for key '${'$'}{event.key}" }
                 StateOperation.UPDATE -> {
                     val current = state[event.key]
                     if (current is Map<*, *> && event.value is Map<*, *>) {
