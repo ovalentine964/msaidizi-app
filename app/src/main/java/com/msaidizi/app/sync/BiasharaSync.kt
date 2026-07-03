@@ -9,8 +9,8 @@ import timber.log.Timber
 import java.security.MessageDigest
 
 /**
- * Biashara Intelligence Sync Protocol.
- * Syncs anonymized worker data to the Biashara Intelligence backend
+ * Angavu Intelligence Sync Protocol.
+ * Syncs anonymized worker data to the Angavu Intelligence backend
  * and pulls back intelligence products (price benchmarks, credit readiness, etc.).
  *
  * ## Protocol Design
@@ -47,7 +47,7 @@ object BiasharaSync {
     // ═══════════════════════════════════════════════════════════════
 
     /**
-     * Sync unsynchronized transactions to Biashara Intelligence backend.
+     * Sync unsynchronized transactions to Angavu Intelligence backend.
      *
      * **Protocol:**
      * 1. Fetch unsynced transactions from local DB
@@ -71,7 +71,7 @@ object BiasharaSync {
             return SyncResult(success = true, syncedCount = 0, message = "Nothing to sync")
         }
 
-        Timber.d("Syncing %d transactions to Biashara Intelligence", transactions.size)
+        Timber.d("Syncing %d transactions to Angavu Intelligence", transactions.size)
 
         // Anonymize all transactions
         val anonymizedTransactions = transactions.map { anonymizeTransaction(it, deviceId, coarseLocation) }
@@ -120,12 +120,12 @@ object BiasharaSync {
     // ═══════════════════════════════════════════════════════════════
 
     /**
-     * Pull intelligence products from Biashara Intelligence backend.
+     * Pull intelligence products from Angavu Intelligence backend.
      *
      * **Intelligence products available:**
      * - Soko Pulse: Price benchmarks for worker's area and products
      * - Alama Score: Credit readiness assessment
-     * - Biashara Pulse: Business health vs. peers
+     * - Angavu Pulse: Business health vs. peers
      * - Jamii Insights: Community economic context
      *
      * @param deviceId Worker's device ID
@@ -344,7 +344,7 @@ data class AnonymizedTransaction(
 )
 
 /**
- * Sync payload sent to Biashara Intelligence backend.
+ * Sync payload sent to Angavu Intelligence backend.
  */
 @Serializable
 data class BiasharaSyncPayload(
@@ -372,7 +372,7 @@ data class SyncResult(
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Complete intelligence update from Biashara Intelligence.
+ * Complete intelligence update from Angavu Intelligence.
  */
 data class IntelligenceUpdate(
     val sokoPulse: SokoPulseData,
@@ -412,7 +412,7 @@ data class AlamaScoreData(
 )
 
 /**
- * Biashara Pulse — Business health intelligence.
+ * Angavu Pulse — Business health intelligence.
  */
 data class BiasharaPulseData(
     val healthScore: Double,        // 0-100

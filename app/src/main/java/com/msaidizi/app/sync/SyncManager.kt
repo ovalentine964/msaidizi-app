@@ -2,6 +2,7 @@ package com.msaidizi.app.sync
 
 import android.content.Context
 import androidx.work.*
+import com.msaidizi.app.MsaidiziApp
 import com.msaidizi.app.core.util.CryptoUtils
 import io.ktor.client.*
 import io.ktor.client.request.*
@@ -108,6 +109,45 @@ class SyncManager(
 
         syncJob?.join()
         return if (_syncState.value == SyncState.SUCCESS) SyncStatus.SUCCESS else SyncStatus.ERROR
+    }
+
+    /**
+     * Check if network is available (for SyncWorker pre-check).
+     */
+    fun isNetworkAvailable(): Boolean {
+        return networkMonitor.isConnected()
+    }
+
+    /**
+     * Get count of unsynced transactions (for SyncWorker pre-check).
+     */
+    suspend fun getUnsyncedCount(): Int {
+        return syncQueue.getUnsyncedCount()
+    }
+
+    /**
+     * Perform background sync — called by SyncWorker.
+     * Wraps performSync with state management.
+     *
+     * @return Number of transactions successfully synced.
+     * @throws Exception if sync fails after all retries.
+     */
+    suspend fun performBackgroundSync(): Int {
+        if (_syncState.value == SyncState.SYNCING) {
+            Timber.w("Sync already in progress, skipping background sync")
+            return 0
+        }
+
+        _syncState.value = SyncState.SYNCING
+        return try {
+            val unsyncedCount = syncQueue.getUnsyncedCount()
+            performSync()
+            _syncState.value = SyncState.SUCCESS
+            unsyncedCount
+        } catch (e: Exception) {
+            _syncState.value = SyncState.ERROR
+            throw e
+        }
     }
 
     /**
@@ -240,27 +280,79 @@ enum class SyncStatus {
 
 /**
  * WorkManager worker for background sync.
+ *
+ * Retrieves SyncManager from the Application's Hilt component
+ * and delegates to SyncManager.performSync() for actual sync logic.
+ * Uses exponential backoff on transient failures.
  */
 class SyncWorker(
     appContext: Context,
     workerParams: WorkerParameters
 ) : CoroutineWorker(appContext, workerParams) {
 
+    companion object {
+        /** Input key: force sync even if nothing unsynced (for pull-intelligence). */
+        const val KEY_FORCE_SYNC = "force_sync"
+        /** Output key: number of transactions synced. */
+        const val KEY_SYNCED_COUNT = "synced_count"
+        /** Output key: error message on failure. */
+        const val KEY_ERROR_MESSAGE = "error_message"
+    }
+
     override suspend fun doWork(): Result {
-        Timber.d("SyncWorker: Starting background sync")
+        Timber.d("SyncWorker: Starting background sync (attempt %d)", runAttemptCount)
+
+        val app = applicationContext as? MsaidiziApp
+            ?: return Result.failure(
+                workDataOf(KEY_ERROR_MESSAGE to "Application is not MsaidiziApp")
+            )
+
+        val syncManager = app.syncManager
+            ?: return Result.failure(
+                workDataOf(KEY_ERROR_MESSAGE to "SyncManager not available")
+            )
 
         return try {
-            // This would be injected via Hilt in a real implementation
-            // For now, we'll just return success
-            // TODO: Inject SyncManager via HiltWorkerFactory
-            Timber.d("SyncWorker: Background sync completed")
-            Result.success()
+            // Check network connectivity before attempting sync
+            if (!syncManager.isNetworkAvailable()) {
+                Timber.d("SyncWorker: No network, will retry")
+                return Result.retry()
+            }
+
+            // Check if there's anything to sync (unless forced)
+            val forceSync = inputData.getBoolean(KEY_FORCE_SYNC, false)
+            if (!forceSync && syncManager.getUnsyncedCount() == 0) {
+                Timber.d("SyncWorker: Nothing to sync")
+                return Result.success(workDataOf(KEY_SYNCED_COUNT to 0))
+            }
+
+            // Perform the actual sync via SyncManager
+            val syncedCount = syncManager.performBackgroundSync()
+
+            Timber.d("SyncWorker: Background sync completed — %d transactions synced", syncedCount)
+            Result.success(
+                workDataOf(
+                    KEY_SYNCED_COUNT to syncedCount
+                )
+            )
+        } catch (e: java.io.IOException) {
+            // Network error — retry with backoff
+            Timber.w(e, "SyncWorker: Network error, will retry")
+            if (runAttemptCount < 5) {
+                Result.retry()
+            } else {
+                Result.failure(
+                    workDataOf(KEY_ERROR_MESSAGE to (e.message ?: "Network error"))
+                )
+            }
         } catch (e: Exception) {
             Timber.e(e, "SyncWorker: Background sync failed")
             if (runAttemptCount < 3) {
                 Result.retry()
             } else {
-                Result.failure()
+                Result.failure(
+                    workDataOf(KEY_ERROR_MESSAGE to (e.message ?: "Unknown error"))
+                )
             }
         }
     }
@@ -268,12 +360,25 @@ class SyncWorker(
 
 /**
  * Boot receiver to reschedule sync after device restart.
+ *
+ * Ensures background sync continues after device reboot by
+ * re-enqueuing the periodic sync work via SyncManager.
  */
 class BootReceiver : android.content.BroadcastReceiver() {
     override fun onReceive(context: Context, intent: android.content.Intent) {
         if (intent.action == android.content.Intent.ACTION_BOOT_COMPLETED) {
             Timber.d("Boot completed, rescheduling sync")
-            // TODO: Schedule sync via WorkManager
+            try {
+                val app = context.applicationContext as? MsaidiziApp
+                if (app != null) {
+                    app.syncManager?.scheduleBackgroundSync(context)
+                    Timber.d("Sync rescheduled after boot")
+                } else {
+                    Timber.w("Could not reschedule sync: MsaidiziApp not available")
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to reschedule sync after boot")
+            }
         }
     }
 }

@@ -43,6 +43,9 @@ class MsaidiziApp : Application(), Configuration.Provider {
     @Inject
     lateinit var federatedLearningClient: com.msaidizi.app.core.language.FederatedLearningClient
 
+    @Inject
+    lateinit var syncManager: com.msaidizi.app.sync.SyncManager
+
     override fun onCreate() {
         super.onCreate()
 

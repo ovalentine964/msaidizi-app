@@ -55,7 +55,7 @@ Msaidizi occupies empty space. There is no substitute for an AI CFO that:
 │  ├── Task matching, pricing, demand forecast│
 │  └── Trained via federated aggregation      │
 ├─────────────────────────────────────────────┤
-│  Layer 2: Biashara Cloud (Oracle Free → DC) │
+│  Layer 2: Angavu Cloud (Oracle Free → DC) │
 │  ├── Model training & aggregation           │
 │  ├── Inference API for heavier models       │
 │  └── Data pipeline & analytics              │
@@ -137,4 +137,4 @@ Worker uses Msaidizi daily
 
 *This document is a living strategic asset. Review quarterly.*
 
-**Biashara Intelligence © 2026**
+**Angavu Intelligence © 2026**

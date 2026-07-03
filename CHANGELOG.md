@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Self-Evolution System** — feedback collection, feature tracking, evolution dashboard
 - **Infrastructure Dashboard** — workers see their data center impact
 - **WhatsApp Integration** — onboarding, verification, report delivery, command handlers
-- **Biashara Sync** — on-device to cloud synchronization pipeline
+- **Angavu Sync** — on-device to cloud synchronization pipeline
 - **Worker Classification** — auto-detect worker type from transactions
 - **Business Pattern Tracker** — identify trends and anomalies in business data
 
@@ -32,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SyncResult rename** — renamed to SyncStatus to resolve duplicate class name conflict
 - **@Serializable removal** — removed from Room @Entity classes to fix kapt stub generation
 - **llama.cpp tag** — corrected b4650 → b4651
-- **App theme colors** — Biashara Intelligence palette instead of WhatsApp green
+- **App theme colors** — Angavu Intelligence palette instead of WhatsApp green
 - **SVG resource cleanup** — removed invalid SVG files from mipmap resources
 - **Retrofit + Gson dependencies** — added missing dependencies causing kapt failure
 - **Sheng support** — conversation memory and error recovery for Sheng dialect

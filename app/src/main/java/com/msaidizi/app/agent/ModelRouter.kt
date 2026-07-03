@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicLong
  * Routes inference requests between:
  * - On-device models (llama.cpp NDK) — offline, free, low-latency
  * - Cloud API (Groq, DeepSeek) — higher quality, needs connectivity
- * - Backend proxy (Biashara Intelligence) — full agent capabilities
+ * - Backend proxy (Angavu Intelligence) — full agent capabilities
  *
  * Features:
  * - Automatic offline/online detection and routing
@@ -114,7 +114,7 @@ class ModelRouter(
         put("backend", Provider(
             id = "backend",
             type = ProviderType.BACKEND,
-            displayName = "Biashara Backend",
+            displayName = "Angavu Backend",
             models = listOf("biashara-agent"),
             costPer1kInput = 0.0,
             costPer1kOutput = 0.0,
@@ -267,7 +267,7 @@ class ModelRouter(
         // This is where actual provider integration goes:
         // - On-device: JNI call to llama.cpp
         // - Cloud: HTTP call to Groq/DeepSeek API
-        // - Backend: HTTP call to Biashara Intelligence API
+        // - Backend: HTTP call to Angavu Intelligence API
 
         val model = request.model ?: provider.models.firstOrNull() ?: "default"
 
@@ -300,7 +300,7 @@ class ModelRouter(
                 )
             }
             ProviderType.BACKEND -> {
-                // TODO: HTTP call to Biashara backend
+                // TODO: HTTP call to Angavu backend
                 // val backend = BackendClient()
                 // backend.infer(request)
                 InferenceResponse(

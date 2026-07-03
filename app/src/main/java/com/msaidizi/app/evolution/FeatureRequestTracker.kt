@@ -13,7 +13,7 @@ import javax.inject.Singleton
  * 1. Cluster requests by semantic similarity
  * 2. Count frequency across worker segments
  * 3. Prioritize by impact (frequency × urgency × worker diversity)
- * 4. Send prioritized requests to Biashara Intelligence for implementation
+ * 4. Send prioritized requests to Angavu Intelligence for implementation
  *
  * STA 442 (Multivariate): Cluster analysis of feedback requests
  * STA 341 (Estimation): Bayesian prioritization with sparse data
@@ -90,7 +90,7 @@ class FeatureRequestTracker @Inject constructor(
     }
 
     /**
-     * Update request status (e.g., when Biashara Intelligence starts building).
+     * Update request status (e.g., when Angavu Intelligence starts building).
      */
     suspend fun updateStatus(requestId: String, status: RequestStatus) {
         requestDao.updateStatus(requestId, status.name, System.currentTimeMillis())
@@ -227,7 +227,7 @@ class FeatureRequestTracker @Inject constructor(
 
     enum class RequestStatus {
         NEW,          // Just detected
-        ANALYZING,    // Biashara Intelligence is analyzing
+        ANALYZING,    // Angavu Intelligence is analyzing
         PLANNED,      // Accepted, in roadmap
         IN_PROGRESS,  // Being built
         SHIPPED       // Live in production

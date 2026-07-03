@@ -12,7 +12,7 @@ import java.time.ZoneOffset
  *
  * ## Value-First Principle
  * Workers must get 5-10x more value from Msaidizi than their data
- * is worth to Biashara Intelligence. If a worker's data generates
+ * is worth to Angavu Intelligence. If a worker's data generates
  * KSh 500/month in intelligence revenue, the worker must save or
  * earn at least KSh 2,500-5,000/month from using Msaidizi.
  *

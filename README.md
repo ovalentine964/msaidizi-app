@@ -1,4 +1,4 @@
-![Biashara Intelligence](docs/logo-banner.svg)
+![Angavu Intelligence](docs/logo-banner.svg)
 
 # Msaidizi — The AI Employee for Africa's 600M+ Informal Workers
 
@@ -20,7 +20,7 @@ We are not competing with M-Pesa, banks, or fintechs. We are building infrastruc
 
 ## What Is Msaidizi?
 
-Msaidizi is the on-device app that captures data from informal workers and delivers economic intelligence. It's the data source for Biashara Intelligence (cloud platform).
+Msaidizi is the on-device app that captures data from informal workers and delivers economic intelligence. It's the data source for Angavu Intelligence (cloud platform).
 
 - 🎤 **Voice-first** — record transactions by speaking in your language
 - 📴 **Offline-first** — works without internet, syncs when connected
@@ -109,7 +109,7 @@ This creates psychological ownership — it's YOUR CFO, not just an app.
 │  Gharama:  KSh 1,800            │
 │  Faida:    KSh 1,400 ↑          │
 │                                 │
-│  📊 Biashara Flow               │
+│  📊 Angavu Flow               │
 │  ┌─💰─→ 🏪 ─→ 📈─→ 💵─→ 🏦    │
 │                                 │
 │  ⚠️ Arifu: Nyanya zinaisha     │
@@ -126,7 +126,7 @@ Worker speaks → Whisper STT → Intent Classification →
   Transaction recorded (Room DB) →
   Business Flow updated →
   CFO Engine generates advice →
-  When online: Sync to Biashara Intelligence →
+  When online: Sync to Angavu Intelligence →
   Intelligence returned → Displayed in worker's language
 ```
 
@@ -296,4 +296,4 @@ Target: Samsung Galaxy A03 (2GB RAM, ARM, Android 11+)
 
 ## License
 
-Proprietary — Biashara Intelligence
+Proprietary — Angavu Intelligence

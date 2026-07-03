@@ -151,7 +151,7 @@ class GamificationViewModel @Inject constructor(
                 earnedCount = items.count { it.earned },
                 totalCount = items.size,
                 badges = items
-            }
+            )
         }
     }
 

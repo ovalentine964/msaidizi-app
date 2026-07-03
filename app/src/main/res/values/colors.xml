@@ -58,7 +58,7 @@
     <color name="badge_locked_icon">#FF9E9E9E</color>     <!-- Gray lock icon -->
     <color name="badge_earned_indicator">#FF4CAF50</color> <!-- Green checkmark -->
 
-    <!-- App Icon background (Biashara Intelligence brand Deep Navy) -->
+    <!-- App Icon background (Angavu Intelligence brand Deep Navy) -->
     <color name="icon_bg">#FF1B2A4A</color>
 
     <!-- Business Flow colors -->

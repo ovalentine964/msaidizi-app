@@ -23,7 +23,7 @@ import javax.inject.Singleton
  * - "Show me my business flow like M-Pesa"
  * - "Help me save money"
  *
- * Feedback is stored locally (Room) and synced to Biashara Intelligence
+ * Feedback is stored locally (Room) and synced to Angavu Intelligence
  * for pattern analysis and feature development.
  *
  * STA 343 (Experimental Design): A/B test new features based on feedback
@@ -92,7 +92,7 @@ class FeedbackCollector @Inject constructor(
     }
 
     /**
-     * Sync local feedback to Biashara Intelligence backend.
+     * Sync local feedback to Angavu Intelligence backend.
      * Anonymizes before upload — no PII leaves the device.
      * Returns sync result with counts.
      */

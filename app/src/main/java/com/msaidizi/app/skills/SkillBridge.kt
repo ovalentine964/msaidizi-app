@@ -17,7 +17,7 @@ import javax.inject.Singleton
 /**
  * SkillBridge — Bridge between on-device processing and backend skills.
  *
- * Connects Msaidizi Android app to Biashara Intelligence backend skills.
+ * Connects Msaidizi Android app to Angavu Intelligence backend skills.
  * Each skill maps a university course unit into an executable capability.
  *
  * Features:
