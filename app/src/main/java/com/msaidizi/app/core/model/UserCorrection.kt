@@ -1,8 +1,6 @@
 package com.msaidizi.app.core.model
 
 import androidx.room.*
-import kotlinx.serialization.Serializable
-
 /**
  * Tracks user corrections to system interpretations.
  * When the user says "no, that was X not Y", we store the correction
@@ -56,7 +54,6 @@ data class UserCorrection(
     val createdAt: Long = System.currentTimeMillis() / 1000
 )
 
-@Serializable
 enum class CorrectionType {
     /** Wrong item identified */
     ITEM,

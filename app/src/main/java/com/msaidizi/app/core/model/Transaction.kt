@@ -3,7 +3,6 @@ package com.msaidizi.app.core.model
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import kotlinx.serialization.Serializable
 
 /**
  * Core transaction entity for business records.
@@ -70,7 +69,6 @@ data class Transaction(
     val language: String = "sw"
 )
 
-@Serializable
 enum class TransactionType {
     SALE,
     PURCHASE,

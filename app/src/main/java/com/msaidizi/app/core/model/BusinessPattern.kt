@@ -2,7 +2,6 @@ package com.msaidizi.app.core.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import kotlinx.serialization.Serializable
 
 /**
  * Business patterns learned from user behavior.
@@ -32,7 +31,6 @@ data class BusinessPattern(
     val updatedAt: Long = System.currentTimeMillis() / 1000
 )
 
-@Serializable
 enum class PatternType {
     // User's vocabulary (spoken → canonical mapping)
     VOCABULARY,
