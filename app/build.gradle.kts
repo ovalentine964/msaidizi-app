@@ -1,7 +1,21 @@
+// ============================================================
+// OPTION B: KSP Migration — app/build.gradle.ksp
+// ============================================================
+// To use: rename app/build.gradle.kts → app/build.gradle.kts.kapt-backup
+//         rename this file → app/build.gradle.kts
+//
+// Changes from original:
+//   - Replaced `id("org.jetbrains.kotlin.kapt")` with `id("com.google.devtools.ksp")`
+//   - All `kapt(...)` → `ksp(...)`
+//   - Room schema export uses KSP arguments (not javaCompileOptions)
+//   - Removed `kapt { correctErrorTypes = true }` (KSP doesn't need it)
+//   - Removed kapt-specific gradle.properties settings
+// ============================================================
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.kapt")
+    id("com.google.devtools.ksp")  // replaces: id("org.jetbrains.kotlin.kapt")
     id("com.google.dagger.hilt.android")
     id("org.jetbrains.kotlin.plugin.serialization")
     id("io.gitlab.arturbosch.detekt")
@@ -12,7 +26,6 @@ detekt {
     buildUponDefaultConfig = true
     allRules = false
     disableDefaultRuleSets = false
-    // Skip detekt during debug builds to avoid kapt interference
     ignoredBuildTypes = listOf("debug")
 
     reports {
@@ -36,36 +49,12 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Room schema export
-        javaCompileOptions {
-            annotationProcessorOptions {
-                arguments += mapOf(
-                    "room.schemaLocation" to "$projectDir/schemas",
-                    "room.incremental" to "true"
-                )
-            }
-        }
-
         // Build config fields for model paths
         buildConfigField("String", "MODEL_DIR", "\"models\"")
         buildConfigField("String", "WHISPER_MODEL", "\"whisper-tiny-int4.onnx\"")
         buildConfigField("String", "LLM_MODEL", "\"qwen-0.5b-q4_k_m.gguf\"")
         buildConfigField("String", "TTS_MODEL", "\"piper-swahili.onnx\"")
         buildConfigField("String", "VAD_MODEL", "\"silero_vad.onnx\"")
-
-        // SECURITY FIX: M-Pesa passkey removed from BuildConfig.
-        // Passkey is now stored in EncryptedSharedPreferences at runtime.
-        // See DarajaClient.getPasskey() for the secure retrieval path.
-        // To set the passkey on first run, use the server-side proxy or
-        // inject via EncryptedSharedPreferences during onboarding.
-
-        // NDK/CMake flags for llama.cpp JNI bridge (temporarily disabled)
-        // externalNativeBuild {
-        //     cmake {
-        //         cppFlags += "-std=c++17"
-        //         abiFilters += listOf("arm64-v8a", "armeabi-v7a")
-        //     }
-        // }
     }
 
     buildTypes {
@@ -101,36 +90,12 @@ android {
         viewBinding = true
     }
 
-    // Do NOT include Compose — we use XML Views for 2GB targets
-    // This saves ~15-20MB of APK size and runtime overhead
-
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
-            // Don't compress model files — they need to be memory-mapped
             jniLibs.useLegacyPackaging = true
         }
     }
-
-    // ABI filter for 2GB devices — only ship ARM (temporarily disabled)
-    // splits {
-    //     abi {
-    //         isEnable = true
-    //         reset()
-    //         include("arm64-v8a", "armeabi-v7a")
-    //         isUniversalApk = false
-    //     }
-    // }
-
-    // NDK config for native model inference (temporarily disabled for kapt fix)
-    // ndkVersion = "25.2.9519653"
-
-    // externalNativeBuild {
-    //     cmake {
-    //         path = file("src/main/cpp/CMakeLists.txt")
-    //         version = "3.22.1"
-    //     }
-    // }
 }
 
 dependencies {
@@ -151,20 +116,20 @@ dependencies {
     implementation("androidx.navigation:navigation-fragment-ktx:2.7.6")
     implementation("androidx.navigation:navigation-ui-ktx:2.7.6")
 
-    // Room Database
+    // Room Database — KSP replaces kapt for annotation processing
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
-    kapt("androidx.room:room-compiler:2.6.1")
+    ksp("androidx.room:room-compiler:2.6.1")  // was: kapt(...)
 
     // SQLCipher for Room database encryption
     implementation("net.zetetic:android-database-sqlcipher:4.5.4")
     implementation("androidx.sqlite:sqlite:2.4.0")
 
-    // Hilt DI
+    // Hilt DI — KSP replaces kapt
     implementation("com.google.dagger:hilt-android:2.50")
-    kapt("com.google.dagger:hilt-android-compiler:2.50")
+    ksp("com.google.dagger:hilt-android-compiler:2.50")  // was: kapt(...)
 
-    // Kotlin reflect — must match Kotlin version (transitive dep pulls 1.6.10)
+    // Kotlin reflect
     implementation("org.jetbrains.kotlin:kotlin-reflect:1.9.24")
 
     // Coroutines
@@ -174,7 +139,7 @@ dependencies {
     // Kotlin Serialization (for JSON)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
 
-    // Retrofit + Gson (for API interface — MsaidiziApi)
+    // Retrofit + Gson
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.google.code.gson:gson:2.10.1")
@@ -189,22 +154,19 @@ dependencies {
     // DataStore (preferences)
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 
-    // EncryptedSharedPreferences (for secure credential storage)
-    // Note: 1.1.0-alpha06 causes kapt 'Could not load module <Error module>' on CI
+    // EncryptedSharedPreferences
     implementation("androidx.security:security-crypto:1.0.0")
 
-    // WorkManager (background sync + model downloads)
+    // WorkManager — KSP replaces kapt for Hilt worker injection
     implementation("androidx.work:work-runtime-ktx:2.9.0")
     implementation("androidx.hilt:hilt-work:1.1.0")
-    kapt("androidx.hilt:hilt-compiler:1.1.0")
+    ksp("androidx.hilt:hilt-compiler:1.1.0")  // was: kapt(...)
 
     // zstd compression for sync
     implementation("com.github.luben:zstd-jni:1.5.5-11@aar")
 
     // ONNX Runtime for ML models
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.16.3")
-
-    // Memory-mapped file support (part of Java NIO, already available)
 
     // Lottie for animations
     implementation("com.airbnb.android:lottie:6.3.0")
@@ -231,11 +193,15 @@ dependencies {
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.4")
 }
 
-kapt {
-    correctErrorTypes = true
+// KSP configuration — Room schema export
+// (replaces javaCompileOptions.annotationProcessorOptions for kapt)
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+    arg("room.incremental", "true")
+    arg("room.generateKotlin", "true")
 }
 
-// Force ALL Kotlin deps to match Kotlin 1.9.24 (transitive deps from Ktor, coroutines, Hilt pull older versions)
+// Force ALL Kotlin deps to match Kotlin 1.9.24
 configurations.all {
     resolutionStrategy {
         force("org.jetbrains.kotlin:kotlin-reflect:1.9.24")
@@ -244,5 +210,3 @@ configurations.all {
         force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.24")
     }
 }
-
-
