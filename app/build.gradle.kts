@@ -117,9 +117,9 @@ dependencies {
     implementation("androidx.navigation:navigation-ui-ktx:2.7.6")
 
     // Room Database — KSP replaces kapt for annotation processing
-    implementation("androidx.room:room-runtime:2.6.2")
-    implementation("androidx.room:room-ktx:2.6.2")
-    ksp("androidx.room:room-compiler:2.6.2")  // was: kapt(...)
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    ksp("androidx.room:room-compiler:2.6.1")  // was: kapt(...)
 
     // SQLCipher for Room database encryption
     implementation("net.zetetic:android-database-sqlcipher:4.5.4")
@@ -186,7 +186,7 @@ dependencies {
     testImplementation("io.mockk:mockk:1.13.9")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    androidTestImplementation("androidx.room:room-testing:2.6.2")
+    androidTestImplementation("androidx.room:room-testing:2.6.1")
     androidTestImplementation("androidx.test:runner:1.5.2")
 
     // Detekt linting
