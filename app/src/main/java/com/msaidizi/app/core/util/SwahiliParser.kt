@@ -64,7 +64,7 @@ object SwahiliParser {
         // Vegetables
         "nyanya" to "tomatoes", "vitunguu" to "onions", "viazi" to "potatoes",
         "karoti" to "carrots", "sukuma_wiki" to "kale", "spinachi" to "spinach",
-        "mboga" to "vegetables", "hoho" to "capsicum", "ng"o"ng"o" to "okra",
+        "mboga" to "vegetables", "hoho" to "capsicum", "ngo_ngo" to "okra",
 
         // Fruits
         "maembe" to "mangoes", "machungwa" to "oranges", "ndizi" to "bananas",
@@ -76,7 +76,7 @@ object SwahiliParser {
 
         // Proteins
         "nyama" to "meat", "kuku" to "chicken", "samaki" to "fish",
-        "mayai" to "eggs", "ng"ombe" to "beef", "mbuzi" to "goat_meat",
+        "mayai" to "eggs", "ngombe" to "beef", "mbuzi" to "goat_meat",
 
         // Prepared food
         "mandazi" to "mandazi", "chapati" to "chapati", "ugali" to "ugali",
