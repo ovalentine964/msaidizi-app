@@ -264,3 +264,6 @@
     <string name="your_avg_label">Wastani wako</string>
     <string name="peer_avg_label">Wastani wa wafanyabiashara</string>
 </resources>
+<resources>
+    <string name="appbar_scrolling_view_behavior" translatable="false">com.google.android.material.appbar.AppBarLayout\$ScrollingViewBehavior</string>
+</resources>
