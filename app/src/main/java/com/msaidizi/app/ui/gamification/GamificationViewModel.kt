@@ -4,8 +4,6 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.msaidizi.app.core.model.Badge
-import com.msaidizi.app.core.model.GamificationEntity
 import com.msaidizi.app.gamification.BadgeStatus
 import com.msaidizi.app.gamification.GamificationEngine
 import com.msaidizi.app.gamification.LevelInfo

@@ -12,6 +12,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -703,8 +704,4 @@ class CircularScoreGauge @JvmOverloads constructor(
     }
 }
 
-/**
- * FrameLayout wrapper for the circular gauge.
- * Used in XML layouts as a container.
- */
 

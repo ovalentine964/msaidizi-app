@@ -237,4 +237,30 @@
     <string name="pronunciation_training_ready">Mfumo unaanza kujifunza kutoka kwa marekebisho yako…</string>
     <string name="pronunciation_lora_training">Inafundisha mfumo… (%1$d%%)</string>
     <string name="pronunciation_lora_complete">✅ Mfumo umesasishwa!</string>
+
+    <!-- Gamification Screen -->
+    <string name="gamification_title">🏆 Mafanikio Yako</string>
+    <string name="level_max_reached">⭐ Umefika kiwango cha juu!</string>
+    <string name="xp_format">%1$d / %2$d XP</string>
+    <string name="current_perks">Vipengele vya sasa:</string>
+    <string name="next_level_title">%1$s Level ijayo: %2$s</string>
+    <string name="points_to_next">Pointi %1$d zaidi</string>
+    <string name="legend_celebration">⭐ Umeifikia Legend! Wewe ni mfano bora!</string>
+    <string name="streak_title">🔥 Streak</string>
+    <string name="longest_streak">Rekodi yako bora: siku %1$d</string>
+    <string name="streak_protection">Kinga ya Streak</string>
+    <string name="protection_count">Kinga %1$d ya %2$d wiki hii</string>
+    <string name="protection_shield">Kinga ya streak</string>
+    <string name="protection_explanation">Kinga moja ya bure kila wiki — ukikosa siku moja, streak yako haijavunjika!</string>
+    <string name="badge_gallery_title">🏅 Badges</string>
+    <string name="badge_summary">%1$d/%2$d</string>
+    <string name="category_badge_count">%1$d/%2$d</string>
+    <string name="badge_locked">Bado haijapatikana</string>
+    <string name="badge_earned">Imepatikana!</string>
+    <string name="social_proof_title">👥 Jinsi Wengine Wanavyofanya</string>
+    <string name="social_proof_privacy">Maelezo ni ya jumla — hakuna majina yanayotumika</string>
+    <string name="your_avg">Wastani wako: %1$s/siku</string>
+    <string name="peer_avg">Wastani wa wafanyabiashara: %1$s/siku</string>
+    <string name="your_avg_label">Wastani wako</string>
+    <string name="peer_avg_label">Wastani wa wafanyabiashara</string>
 </resources>

@@ -4,11 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.msaidizi.app.core.model.MindsetLessonEntity
 import com.msaidizi.app.mindset.AcademyProgress
-import com.msaidizi.app.mindset.CategoryProgress
 import com.msaidizi.app.mindset.HabitStatus
 import com.msaidizi.app.mindset.MindsetAcademy
 import com.msaidizi.app.mindset.RichHabitsScore
-import com.msaidizi.app.mindset.VoiceLesson
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

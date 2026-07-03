@@ -3,7 +3,6 @@ package com.msaidizi.app.ui.loans
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.msaidizi.app.core.database.LoanDao
-import com.msaidizi.app.core.model.LoanRecord
 import com.msaidizi.app.core.model.LoanRepayment
 import com.msaidizi.app.finance.LoanManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -11,11 +10,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
 /**

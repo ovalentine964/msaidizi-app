@@ -2,7 +2,6 @@ package com.msaidizi.app.ui.gamification
 
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
-import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -11,17 +10,13 @@ import android.view.animation.OvershootInterpolator
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.airbnb.lottie.LottieAnimationView
-import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.msaidizi.app.R
 import com.msaidizi.app.databinding.FragmentGamificationBinding
 import com.msaidizi.app.databinding.ItemBadgeCategoryHeaderBinding
-import com.msaidizi.app.databinding.ItemSocialProofBinding
-import com.msaidizi.app.databinding.ViewBadgeCardBinding
 import dagger.hilt.android.AndroidEntryPoint
 import timber.log.Timber
 
@@ -270,12 +265,18 @@ class GamificationScreen : Fragment() {
 
         // Lottie animation based on reward type
         val lottieView = dialogView.findViewById<LottieAnimationView>(R.id.reward_animation)
-        if (reward.isJackpot) {
-            lottieView.setAnimation(R.raw.anim_jackpot)
-        } else {
-            lottieView.setAnimation(R.raw.anim_celebration)
+        try {
+            if (reward.isJackpot) {
+                lottieView.setAnimation(R.raw.anim_jackpot)
+            } else {
+                lottieView.setAnimation(R.raw.anim_celebration)
+            }
+            lottieView.playAnimation()
+        } catch (e: Exception) {
+            // Lottie animation files not yet bundled — hide gracefully
+            Timber.w(e, "Lottie animation not found, hiding animation view")
+            lottieView.visibility = View.GONE
         }
-        lottieView.playAnimation()
 
         val dialog = MaterialAlertDialogBuilder(requireContext())
             .setView(dialogView)

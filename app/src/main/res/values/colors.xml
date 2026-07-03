@@ -32,6 +32,32 @@
     <color name="speaking">#FF2196F3</color>
     <color name="holo_red_dark">#FFCC0000</color>
 
+    <!-- Gamification colors -->
+    <color name="streak_active">#FFFF6B35</color>       <!-- Vibrant Orange for streak -->
+    <color name="streak_inactive">#FFBDBDBD</color>     <!-- Gray when no streak -->
+    <color name="protection_active">#FF4CAF50</color>    <!-- Green for available shields -->
+    <color name="protection_used">#FFBDBDBD</color>      <!-- Gray for used shields -->
+    <color name="level_legend">#FFFFD700</color>          <!-- Gold for Legend level -->
+    <color name="level_perk_earned">#FF4CAF50</color>     <!-- Green checkmark -->
+    <color name="level_perk_locked">#FFBDBDBD</color>     <!-- Gray for locked perks -->
+    <color name="peer_bar">#FF9E9E9E</color>              <!-- Muted gray for peer comparison -->
+    <color name="variable_reward_points">#FFFF6B35</color> <!-- Vibrant orange for bonus points -->
+
+    <!-- Badge category colors -->
+    <color name="badge_onboarding">#FF4CAF50</color>      <!-- Green -->
+    <color name="badge_consistency">#FFFF6B35</color>     <!-- Orange -->
+    <color name="badge_growth">#FF2196F3</color>         <!-- Blue -->
+    <color name="badge_intelligence">#FF9C27B0</color>   <!-- Purple -->
+    <color name="badge_financial">#FFFFC107</color>       <!-- Gold -->
+    <color name="badge_social">#FF00BCD4</color>         <!-- Cyan -->
+    <color name="badge_loyalty">#FFE91E63</color>        <!-- Pink -->
+
+    <!-- Badge state colors -->
+    <color name="badge_locked_stroke">#FFE0E0E0</color>   <!-- Light gray border -->
+    <color name="badge_locked_bg">#FFF5F5F5</color>       <!-- Very light gray background -->
+    <color name="badge_locked_icon">#FF9E9E9E</color>     <!-- Gray lock icon -->
+    <color name="badge_earned_indicator">#FF4CAF50</color> <!-- Green checkmark -->
+
     <!-- App Icon background (Biashara Intelligence brand Deep Navy) -->
     <color name="icon_bg">#FF1B2A4A</color>
 
