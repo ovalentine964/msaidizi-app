@@ -45,7 +45,7 @@
                     android:layout_height="wrap_content"
                     android:src="@android:drawable/ic_btn_speak_now"
                     android:contentDescription="Rekodi sauti"
-                    app:fabSize="large"
+                    app:fabSize="normal"
                     app:backgroundTint="@color/primary"
                     app:tint="@color/white"
                     android:layout_marginBottom="12dp" />
@@ -237,7 +237,7 @@
                         android:textSize="18sp"
                         android:textStyle="bold"
                         android:textColor="@color/primary"
-                        android:layout_marginStart="auto" />
+                        android:layout_marginStart="0dp" />
                 </LinearLayout>
 
                 <ProgressBar

@@ -329,7 +329,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="12dp"
-                    android:helpText="Siku za kufikia lengo (chaguo-msingi: 90)">
+                    android:hint="Siku za kufikia lengo (chaguo-msingi: 90)">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/goal_deadline_input"
