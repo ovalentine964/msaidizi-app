@@ -245,3 +245,10 @@ configurations.all {
     }
 }
 
+
+// Verbose Kotlin compiler output for debugging kapt issues
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    kotlinOptions {
+        freeCompilerArgs = listOf("-verbose")
+    }
+}
