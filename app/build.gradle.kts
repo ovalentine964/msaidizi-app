@@ -188,7 +188,8 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 
     // EncryptedSharedPreferences (for secure credential storage)
-    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    // Note: 1.1.0-alpha06 causes kapt 'Could not load module <Error module>' on CI
+    implementation("androidx.security:security-crypto:1.0.0")
 
     // WorkManager (background sync + model downloads)
     implementation("androidx.work:work-runtime-ktx:2.9.0")
@@ -229,7 +230,7 @@ dependencies {
 }
 
 kapt {
-    correctErrorTypes = false
+    correctErrorTypes = true
 }
 
 // Force ALL Kotlin deps to match Kotlin 1.9.22 (transitive deps from Ktor, coroutines, Hilt pull older versions)
