@@ -1,0 +1,152 @@
+// ============================================================
+// OPTION C: Minimal Build — Dependency Bisection
+// ============================================================
+// Purpose: Strip to absolute minimum to isolate the kapt error.
+//
+// Strategy:
+//   1. Remove ALL non-essential dependencies
+//   2. Keep only Room + Hilt (the kapt users)
+//   3. If this builds, add deps back in batches to find culprit
+//
+// To use: rename app/build.gradle.kts → app/build.gradle.kts.full
+//         rename this file → app/build.gradle.kts
+// ============================================================
+
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.kapt")
+    id("com.google.dagger.hilt.android")
+    // REMOVED: kotlinx-serialization (known to conflict with kapt on @Entity)
+    // REMOVED: detekt (can interfere with kapt)
+}
+
+android {
+    namespace = "com.msaidizi.app"
+    compileSdk = 34
+
+    defaultConfig {
+        applicationId = "com.msaidizi.app"
+        minSdk = 26
+        targetSdk = 34
+        versionCode = 1
+        versionName = "0.1.0-minimal"
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        javaCompileOptions {
+            annotationProcessorOptions {
+                arguments += mapOf(
+                    "room.schemaLocation" to "$projectDir/schemas",
+                    "room.incremental" to "true"
+                )
+            }
+        }
+
+        // Minimal build config
+        buildConfigField("String", "MODEL_DIR", "\"models\"")
+        buildConfigField("String", "WHISPER_MODEL", "\"whisper-tiny-int4.onnx\"")
+        buildConfigField("String", "LLM_MODEL", "\"qwen-0.5b-q4_k_m.gguf\"")
+        buildConfigField("String", "TTS_MODEL", "\"piper-swahili.onnx\"")
+        buildConfigField("String", "VAD_MODEL", "\"silero_vad.onnx\"")
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false  // disabled for minimal test
+        }
+        debug {
+            isMinifyEnabled = false
+            applicationIdSuffix = ".debug"
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+
+    kotlinOptions {
+        jvmTarget = "11"
+        freeCompilerArgs += listOf("-opt-in=kotlin.RequiresOptIn")
+    }
+
+    buildFeatures {
+        buildConfig = true
+        viewBinding = true
+    }
+}
+
+dependencies {
+    // === ABSOLUTE MINIMUM ===
+
+    // Core Android (required for compilation)
+    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("com.google.android.material:material:1.11.0")
+    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+    implementation("androidx.fragment:fragment-ktx:1.6.2")
+
+    // Lifecycle (ViewModel needed by all fragments)
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
+
+    // Navigation (needed by all fragments)
+    implementation("androidx.navigation:navigation-fragment-ktx:2.7.6")
+    implementation("androidx.navigation:navigation-ui-ktx:2.7.6")
+
+    // Room Database (kapt user #1)
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    kapt("androidx.room:room-compiler:2.6.1")
+
+    // SQLCipher (Room dependency)
+    implementation("net.zetetic:android-database-sqlcipher:4.5.4")
+    implementation("androidx.sqlite:sqlite:2.4.0")
+
+    // Hilt DI (kapt user #2)
+    implementation("com.google.dagger:hilt-android:2.50")
+    kapt("com.google.dagger:hilt-android-compiler:2.50")
+
+    // Kotlin reflect (forced to match)
+    implementation("org.jetbrains.kotlin:kotlin-reflect:1.9.22")
+
+    // Coroutines (required by ViewModels)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+    // WorkManager + Hilt worker (kapt user #3)
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation("androidx.hilt:hilt-work:1.1.0")
+    kapt("androidx.hilt:hilt-compiler:1.1.0")
+
+    // Timber (used everywhere)
+    implementation("com.jakewharton.timber:timber:5.0.1")
+
+    // === REMOVED (batch back one by one if minimal builds) ===
+    // REMOVED: kotlinx-serialization-json (suspect #1 — @Serializable + @Entity conflict)
+    // REMOVED: Retrofit + Gson
+    // REMOVED: Ktor client (5 artifacts)
+    // REMOVED: DataStore
+    // REMOVED: security-crypto (EncryptedSharedPreferences)
+    // REMOVED: zstd-jni
+    // REMOVED: ONNX Runtime
+    // REMOVED: Lottie
+    // REMOVED: SwipeRefreshLayout
+    // REMOVED: MPAndroidChart
+    // REMOVED: detekt
+}
+
+kapt {
+    correctErrorTypes = true
+}
+
+configurations.all {
+    resolutionStrategy {
+        force("org.jetbrains.kotlin:kotlin-reflect:1.9.22")
+        force("org.jetbrains.kotlin:kotlin-stdlib:1.9.22")
+        force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.22")
+        force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22")
+    }
+}
