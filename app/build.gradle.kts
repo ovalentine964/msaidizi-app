@@ -165,7 +165,7 @@ dependencies {
     kapt("com.google.dagger:hilt-android-compiler:2.50")
 
     // Kotlin reflect — must match Kotlin version (transitive dep pulls 1.6.10)
-    implementation("org.jetbrains.kotlin:kotlin-reflect:1.9.23")
+    implementation("org.jetbrains.kotlin:kotlin-reflect:1.9.24")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
@@ -235,13 +235,13 @@ kapt {
     correctErrorTypes = true
 }
 
-// Force ALL Kotlin deps to match Kotlin 1.9.23 (transitive deps from Ktor, coroutines, Hilt pull older versions)
+// Force ALL Kotlin deps to match Kotlin 1.9.24 (transitive deps from Ktor, coroutines, Hilt pull older versions)
 configurations.all {
     resolutionStrategy {
-        force("org.jetbrains.kotlin:kotlin-reflect:1.9.23")
-        force("org.jetbrains.kotlin:kotlin-stdlib:1.9.23")
-        force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.23")
-        force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.23")
+        force("org.jetbrains.kotlin:kotlin-reflect:1.9.24")
+        force("org.jetbrains.kotlin:kotlin-stdlib:1.9.24")
+        force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.24")
+        force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.24")
     }
 }
 
