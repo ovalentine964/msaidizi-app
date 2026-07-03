@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1B4965"/>
+      <stop offset="100%" stop-color="#0F2D42"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="46%" r="36%">
+      <stop offset="0%" stop-color="#E8A838" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#E8A838" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Rounded square background (Android icon shape) -->
+  <rect width="512" height="512" rx="108" ry="108" fill="url(#bgGrad)"/>
+  <rect width="512" height="512" rx="108" ry="108" fill="url(#glow)"/>
+
+  <!-- Eye centered -->
+  <g transform="translate(256, 248)">
+    <!-- Outer arc -->
+    <path d="M-155,0 A155,120 0 0 1 155,0" fill="none" stroke="#E8A838" stroke-width="4.5" opacity="0.25"/>
+    <!-- Second arc -->
+    <path d="M-125,0 A125,97 0 0 1 125,0" fill="none" stroke="#E8A838" stroke-width="5" opacity="0.4"/>
+    <!-- Third arc -->
+    <path d="M-96,0 A96,74 0 0 1 96,0" fill="none" stroke="#E8A838" stroke-width="5.5" opacity="0.6"/>
+    <!-- Fourth arc -->
+    <path d="M-70,0 A70,54 0 0 1 70,0" fill="none" stroke="#E8A838" stroke-width="6" opacity="0.8"/>
+    <!-- Inner arc -->
+    <path d="M-48,0 A48,37 0 0 1 48,0" fill="none" stroke="#E8A838" stroke-width="6.5" opacity="0.95"/>
+
+    <!-- Iris circle -->
+    <circle cx="0" cy="0" r="28" fill="none" stroke="#E8A838" stroke-width="5.5"/>
+
+    <!-- Pupil -->
+    <circle cx="0" cy="0" r="13" fill="#E8A838"/>
+
+    <!-- Highlight -->
+    <circle cx="7" cy="-7" r="4.5" fill="#FFFFFF" opacity="0.55"/>
+    <circle cx="-3.5" cy="3.5" r="2.2" fill="#FFFFFF" opacity="0.25"/>
+
+    <!-- Lower arcs (mirror, subtle) -->
+    <path d="M-155,0 A155,120 0 0 0 155,0" fill="none" stroke="#E8A838" stroke-width="2.5" opacity="0.08"/>
+    <path d="M-125,0 A125,97 0 0 0 125,0" fill="none" stroke="#E8A838" stroke-width="2.5" opacity="0.12"/>
+    <path d="M-96,0 A96,74 0 0 0 96,0" fill="none" stroke="#E8A838" stroke-width="2.5" opacity="0.15"/>
+  </g>
+</svg>
