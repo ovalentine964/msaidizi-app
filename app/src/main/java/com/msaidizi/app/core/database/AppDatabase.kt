@@ -79,29 +79,4 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun briefingDeliveryDao(): BriefingDeliveryDao
 }
 
-/**
- * Type converters for Room.
- * Handles enum serialization and nullable types.
- */
-class Converters {
-    @androidx.room.TypeConverter
-    fun fromTransactionType(value: TransactionType): String = value.name
-
-    @androidx.room.TypeConverter
-    fun toTransactionType(value: String): TransactionType =
-        TransactionType.valueOf(value)
-
-    @androidx.room.TypeConverter
-    fun fromPatternType(value: PatternType): String = value.name
-
-    @androidx.room.TypeConverter
-    fun toPatternType(value: String): PatternType =
-        PatternType.valueOf(value)
-
-    @androidx.room.TypeConverter
-    fun fromCorrectionType(value: CorrectionType): String = value.name
-
-    @androidx.room.TypeConverter
-    fun toCorrectionType(value: String): CorrectionType =
-        CorrectionType.valueOf(value)
-}
+// Converters class moved to Converters.kt
