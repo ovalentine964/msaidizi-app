@@ -197,8 +197,9 @@ dependencies {
 // (replaces javaCompileOptions.annotationProcessorOptions for kapt)
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
-    arg("room.incremental", "true")
+    arg("room.incremental", "false")
     arg("room.generateKotlin", "true")
+    arg("room.verbose", "true")
 }
 
 // Force ALL Kotlin deps to match Kotlin 1.9.24
