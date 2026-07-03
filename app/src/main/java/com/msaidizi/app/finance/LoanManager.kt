@@ -38,7 +38,7 @@ import kotlin.math.roundToInt
  * - FIN 201 (Corporate Finance): Debt service coverage ratio, amortization
  */
 class LoanManager(
-    private val loanDao: LoanDao
+    private val loanDao: LoanDao? = null
 ) {
 
     companion object {
@@ -197,11 +197,11 @@ class LoanManager(
             createdAt = System.currentTimeMillis() / 1000,
             updatedAt = System.currentTimeMillis() / 1000
         )
-        val roomId = loanDao.insertLoan(entity)
+        val roomId = loanDao?.insertLoan(entity) ?: 0L
 
         // Persist repayment schedule
         for (repayment in loan.repaymentSchedule) {
-            loanDao.insertRepayment(
+            loanDao?.insertRepayment(
                 LoanRepayment(
                     loanId = roomId,
                     amount = repayment.amount,
@@ -342,11 +342,11 @@ class LoanManager(
         // Persist repayment to Room
         val roomId = loanId.toLongOrNull()
         if (roomId != null) {
-            loanDao.addRepayment(roomId, amount - remainingPayment)
+            loanDao?.addRepayment(roomId, amount - remainingPayment)
             if (allPaid) {
-                loanDao.updateStatus(roomId, "PAID")
+                loanDao?.updateStatus(roomId, "PAID")
             } else if (hasOverdue) {
-                loanDao.updateStatus(roomId, "OVERDUE")
+                loanDao?.updateStatus(roomId, "OVERDUE")
             }
         }
 
@@ -444,12 +444,12 @@ class LoanManager(
      */
     suspend fun getActiveLoans(): List<Loan> {
         // Load from Room first
-        val entities = loanDao.getActive()
+        val entities = loanDao?.getActive() ?: emptyList()
         return entities.mapNotNull { entity ->
             val cached = loans[entity.id.toString()]
             if (cached != null) return@mapNotNull cached
 
-            val repayments = loanDao.getRepayments(entity.id).map { r ->
+            val repayments = (loanDao?.getRepayments(entity.id) ?: emptyList()).map { r ->
                 Repayment(
                     id = r.id.toString(),
                     amount = r.amount,
@@ -481,8 +481,8 @@ class LoanManager(
     suspend fun getLoan(loanId: String): Loan? {
         loans[loanId]?.let { return it }
         val roomId = loanId.toLongOrNull() ?: return null
-        val entity = loanDao.getById(roomId) ?: return null
-        val repayments = loanDao.getRepayments(entity.id).map { r ->
+        val entity = loanDao?.getById(roomId) ?: return null
+        val repayments = (loanDao?.getRepayments(entity.id) ?: emptyList()).map { r ->
             Repayment(
                 id = r.id.toString(),
                 amount = r.amount,
@@ -884,12 +884,12 @@ class LoanManager(
     // ═══════════════════════════════════════════════════════════════
 
     private suspend fun loadAllLoans(): List<Loan> {
-        val entities = loanDao.getAll()
+        val entities = loanDao?.getAll()
         return entities.mapNotNull { entity ->
             val cached = loans[entity.id.toString()]
             if (cached != null) return@mapNotNull cached
 
-            val repayments = loanDao.getRepayments(entity.id).map { r ->
+            val repayments = (loanDao?.getRepayments(entity.id) ?: emptyList()).map { r ->
                 Repayment(
                     id = r.id.toString(),
                     amount = r.amount,

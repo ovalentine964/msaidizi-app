@@ -1,6 +1,8 @@
 package com.msaidizi.app.mpesa
 
 import timber.log.Timber
+import com.msaidizi.app.core.model.TransactionType
+import com.msaidizi.app.core.model.Transaction
 import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader

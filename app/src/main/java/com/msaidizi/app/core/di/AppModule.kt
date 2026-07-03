@@ -59,7 +59,6 @@ import com.msaidizi.app.skills.SkillBridge
 import com.msaidizi.app.loops.MorningBriefingLoop
 import com.msaidizi.app.loops.StreakProtectionLoop
 import com.msaidizi.app.loops.VariableRewardsLoop
-import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -86,18 +85,12 @@ object AppModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
-        // Initialize SQLCipher for database encryption
-        net.zetetic.database.sqlcipher.SQLiteDatabase.loadLibs(context)
-        val passphrase = com.msaidizi.app.core.util.CryptoUtils.getOrCreateDatabaseKey(context)
-        val factory = SupportOpenHelperFactory(passphrase.toByteArray())
-
         return Room.databaseBuilder(
             context,
             AppDatabase::class.java,
             "msaidizi.db"
         )
-            .openHelperFactory(factory)
-            .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGING)
+            .setJournalMode(RoomDatabase.JournalMode.TRUNCATE)
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     super.onCreate(db)

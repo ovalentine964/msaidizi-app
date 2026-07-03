@@ -72,10 +72,10 @@ class AgentEventBus(
     val events: SharedFlow<AgentEvent> = _events.asSharedFlow()
 
     /** Event history ring buffer for debugging. */
-    private val _history = ArrayDeque<AgentEvent>(historySize)
+    internal val _history = ArrayDeque<AgentEvent>(historySize)
 
     /** Per-type subscriber count for metrics. */
-    private val _subscriberCounts = ConcurrentHashMap<String, AtomicLong>()
+    internal val _subscriberCounts = ConcurrentHashMap<String, AtomicLong>()
 
     /** Total events published. */
     private val _totalPublished = AtomicLong(0)
@@ -84,7 +84,7 @@ class AgentEventBus(
     private val _totalDropped = AtomicLong(0)
 
     /** Coroutine scope for async event dispatch. */
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    internal val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     // ── Publishing ────────────────────────────────────────────────
 
@@ -153,7 +153,8 @@ class AgentEventBus(
         val typeName = T::class.simpleName ?: "Unknown"
         _subscriberCounts.computeIfAbsent(typeName) { AtomicLong(0) }.incrementAndGet()
 
-        return events.filterIsInstance<T>()
+        @Suppress("UNCHECKED_CAST")
+        return events.filterIsInstance<T>() as SharedFlow<T>
     }
 
     /**
@@ -163,7 +164,7 @@ class AgentEventBus(
      *   eventBus.filterEvents { it.source == "BusinessAgent" }.collect { ... }
      */
     fun filterEvents(predicate: (AgentEvent) -> Boolean): SharedFlow<AgentEvent> {
-        return events.filter(predicate)
+        return events.filter(predicate) as SharedFlow<AgentEvent>
     }
 
     /**

@@ -964,7 +964,7 @@ class BusinessAgent(
             // Prepared food
             lower.contains("mandazi") || lower.contains("chapati") ||
             lower.contains("mkate") || lower.contains("ugali") ||
-            lower.contains("nyama\s*choma") || lower.contains("chipsi") -> "prepared_food"
+            lower.contains("nyama choma") || lower.contains("chipsi") -> "prepared_food"
 
             // Household items
             lower.contains("sabuni") || lower.contains("dawa") ||
@@ -980,7 +980,7 @@ class BusinessAgent(
 
             // Agriculture/Farming
             lower.contains("mbegu") || lower.contains("mbolea") ||
-            lower.contains("fertilizer") || lower.contains("dawa\s*ya\s*mashamba") ||
+            lower.contains("fertilizer") || lower.contains("dawa ya mashamba") ||
             lower.contains("pesticide") || lower.contains("harvest") ||
             lower.contains("mazao") || lower.contains("shamba") ||
             lower.contains("ekari") || lower.contains("crop") -> "agriculture"

@@ -651,13 +651,13 @@ class CFOEngine {
     // UTILITY
     // ═══════════════════════════════════════════════════════════════
 
-    private fun formatAmount(amount: Int): String {
+    private fun formatAmount(amount: Double): String {
         return if (amount >= 1_000_000) {
             String.format("%.1fM", amount / 1_000_000.0)
         } else if (amount >= 1_000) {
-            String.format("%,d", amount)
+            String.format("%,.0f", amount)
         } else {
-            amount.toString()
+            String.format("%.0f", amount)
         }
     }
 }
