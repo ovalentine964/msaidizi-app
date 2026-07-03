@@ -70,7 +70,7 @@
     <string name="settings_business_name">🏪 Jina la Biashara</string>
     <string name="settings_business_name_hint">Jina la biashara yako…</string>
     <string name="settings_business_type">📋 Aina ya Biashara</string>
-    <string name="settings_auto-sync">🔄 Ulandali Otomatiki</string>
+    <string name="settings_auto_sync">🔄 Ulandali Otomatiki</string>
     <string name="settings_wifi_only">📶 WiFi Tu</string>
     <string name="settings_sync_now">🔄 Landa Sasa</string>
     <string name="settings_models">📦 Mifano</string>
