@@ -12,6 +12,8 @@ detekt {
     buildUponDefaultConfig = true
     allRules = false
     disableDefaultRuleSets = false
+    // Skip detekt during debug builds to avoid kapt interference
+    ignoredBuildTypes = listOf("debug")
 
     reports {
         html.required.set(true)
