@@ -207,25 +207,4 @@ interface TransactionDao {
     suspend fun searchTransactions(query: String, limit: Int = 20): List<Transaction>
 }
 
-/**
- * Tuple classes for Room query results.
- * Room doesn't support data classes in some query results,
- * so we use these simple tuples.
- */
-data class ItemRankingTuple(
-    val item: String,
-    val totalQty: Double,
-    val totalRev: Double,
-    val txCount: Int
-)
-
-data class SalesHistoryTuple(
-    val createdAt: Long,
-    val quantity: Double,
-    val totalAmount: Double
-)
-
-data class DailyTotalTuple(
-    val day: Long,
-    val total: Double
-)
+// Tuple classes moved to QueryTuples.kt for KSP compatibility
