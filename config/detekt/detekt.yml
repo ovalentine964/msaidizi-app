@@ -1,0 +1,117 @@
+# Detekt configuration for Msaidizi Android
+# https://detekt.dev/docs/introduction/configurations
+
+build:
+  maxIssues: 0
+  excludeCorrectable: false
+  weights:
+    complexity: 2
+    LongParameterList: 1
+    comments: 1
+
+complexity:
+  LongParameterList:
+    active: true
+    functionThreshold: 8
+    constructorThreshold: 10
+    ignoreDefaultParameters: true
+    ignoreAnnotated: ['Composable', 'Preview']
+  LongMethod:
+    active: true
+    threshold: 60
+  ComplexMethod:
+    active: true
+    threshold: 15
+  TooManyFunctions:
+    active: true
+    thresholdInFiles: 25
+    thresholdInClasses: 20
+  LargeClass:
+    active: true
+    threshold: 600
+
+style:
+  MaxLineLength:
+    active: true
+    maxLineLength: 120
+    excludePackageStatements: true
+    excludeImportStatements: true
+    excludeCommentStatements: true
+  MagicNumber:
+    active: false
+  ReturnCount:
+    active: true
+    max: 3
+  ForbiddenComment:
+    active: false
+  WildcardImport:
+    active: false
+  UnusedImports:
+    active: true
+  UnusedPrivateMember:
+    active: true
+  ExpressionBodySyntax:
+    active: false
+  NestedBlockDepth:
+    active: true
+    threshold: 4
+
+naming:
+  FunctionNaming:
+    active: true
+    functionPattern: '[a-z][a-zA-Z0-9]*'
+    ignoreAnnotated: ['Composable', 'Preview', 'Test']
+  TopLevelPropertyNaming:
+    active: true
+    constantPattern: '[A-Z][_A-Z0-9]*'
+  ClassNaming:
+    active: true
+    classPattern: '[A-Z][a-zA-Z0-9]*'
+  MemberNaming:
+    active: true
+    memberPattern: '[a-z][a-zA-Z0-9]*'
+
+empty-blocks:
+  EmptyFunctionBlock:
+    active: true
+    ignoreOverridden: true
+  EmptyWhenBlock:
+    active: true
+  EmptyCatchBlock:
+    active: true
+    allowedExceptionNameRegex: 'expected|ignore|_'
+
+exceptions:
+  TooGenericExceptionCaught:
+    active: true
+    exceptionNames:
+      - ArrayIndexOutOfBoundsException
+      - Error
+      - Exception
+      - IllegalMonitorStateException
+      - NullPointerException
+      - RuntimeException
+      - Throwable
+    allowedExceptionNameRegex: 'expected|ignore|_'
+  TooGenericExceptionThrown:
+    active: true
+
+potential-bugs:
+  UnsafeCallOnNullableType:
+    active: true
+  UnsafeCast:
+    active: true
+  LateinitUsage:
+    active: false
+
+performance:
+  ForEachOnRange:
+    active: true
+  SpreadOperator:
+    active: true
+
+coroutines:
+  GlobalCoroutineUsage:
+    active: true
+  RedundantSuspendModifier:
+    active: true

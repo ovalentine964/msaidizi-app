@@ -104,7 +104,8 @@ class Orchestrator(
     private val adaptiveVocabulary: AdaptiveVocabulary? = null,
     private val reActLoop: ReActLoop = ReActLoop(),
     private val reflexionLoop: ReflexionLoop = ReflexionLoop(),
-    private val planExecuteLoop: PlanExecuteLoop = PlanExecuteLoop()
+    private val planExecuteLoop: PlanExecuteLoop = PlanExecuteLoop(),
+    private val eventBus: AgentEventBus = AgentEventBus.getInstance()
 ) {
     // Response flow for UI
     private val _responses = MutableSharedFlow<AgentResponse>(extraBufferCapacity = 8)
@@ -162,6 +163,15 @@ class Orchestrator(
 
         reActLoop.think(trace, "Received input: \"${text.take(50)}\" in language=$language")
 
+        // ═══ EventBus: Publish input received signal ═══
+        eventBus.publish(AgentEvent.AgentTaskStarted(
+            eventId = UUID.randomUUID().toString(),
+            timestamp = System.currentTimeMillis(),
+            source = "Orchestrator",
+            taskType = "process_input",
+            agentName = "Orchestrator"
+        ))
+
         // ═══ Self-Evolution: Record interaction signals ═══
         selfEvolution?.recordLanguageSignal(language)
         selfEvolution?.recordTimeSignal(java.time.LocalTime.now().hour)
@@ -215,6 +225,18 @@ class Orchestrator(
             "Intent classified: ${intentResult.intent} (confidence=${String.format("%.2f", intentResult.confidence)}, needsLLM=${intentResult.needsLLM})",
             intentResult.confidence
         )
+
+        // ═══ EventBus: Dispatch intent classified event ═══
+        eventBus.publish(AgentEvent.IntentClassified(
+            eventId = UUID.randomUUID().toString(),
+            timestamp = System.currentTimeMillis(),
+            source = "IntentRouter",
+            intent = intentResult.intent.name,
+            confidence = intentResult.confidence,
+            extractedData = intentResult.extractedData,
+            language = language,
+            rawText = vocabEnhancedText
+        ))
 
         Timber.d("Intent: %s (confidence=%.2f, needsLLM=%b)",
             intentResult.intent, intentResult.confidence, intentResult.needsLLM)
@@ -318,6 +340,17 @@ class Orchestrator(
         _responses.emit(response)
 
         reActLoop.complete(trace, response.type != ResponseType.ERROR, response.text)
+
+        // ═══ EventBus: Dispatch task completed event ═══
+        eventBus.publish(AgentEvent.AgentTaskCompleted(
+            eventId = UUID.randomUUID().toString(),
+            timestamp = System.currentTimeMillis(),
+            source = "Orchestrator",
+            taskType = "process_input",
+            agentName = "Orchestrator",
+            durationMs = System.currentTimeMillis() - trace.startedAt,
+            resultSummary = response.text.take(100)
+        ))
 
         return response
     }

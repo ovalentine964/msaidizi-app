@@ -1,5 +1,14 @@
 package com.msaidizi.app.core.dialect
 
+/**
+ * TODO(refactor): Migrate to data-driven [DialectAdapter] base class.
+ *
+ * This adapter follows the legacy pattern with inline data. To migrate:
+ * 1. Create '${f%Adapter.kt}Data.kt' with [DialectConfig] containing all maps/sets
+ * 2. Replace this file with: object ${f%.kt} : DialectAdapter(${f%Adapter.kt}Data.config)
+ * 3. See [ShengDialectAdapter], [AmharicDialectAdapter], or [DholuoDialectAdapter] for examples.
+ */
+
 import com.msaidizi.app.core.model.DialectRegion
 import timber.log.Timber
 

@@ -49,18 +49,35 @@ class ModelRegistry @Inject constructor(
         /**
          * Model definitions with SHA-256 checksums, tiers, and versions.
          *
-         * TODO(security): All sha256 fields below MUST be populated with real
-         * SHA-256 hashes computed from the distribution files before production release.
-         * Empty hashes mean integrity verification is skipped in debug builds.
+         * ⚠️  SECURITY WARNING — PLACEHOLDER HASHES ⚠️
          *
-         * Compute hashes with: sha256sum <model_file>
+         * ALL sha256 values below are PLACEHOLDER VALUES and MUST be replaced
+         * with real SHA-256 hashes computed from the actual distribution files
+         * before ANY production release.
+         *
+         * The first 4 models use well-known test hashes (SHA-256 of empty string,
+         * or known test vectors). The MMS models use empty strings.
+         *
+         * Using placeholder hashes means:
+         * - Model integrity verification is effectively disabled
+         * - Tampered or corrupted models will be accepted
+         * - This is a CRITICAL security risk in production
+         *
+         * To compute real hashes:
+         *   sha256sum <model_file>
+         *
+         * Or in CI/CD pipeline:
+         *   find models/ -name '*.onnx' -o -name '*.gguf' | xargs sha256sum
+         *
+         * @see <a href="https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models">sherpa-onnx TTS models</a>
          */
         val MODELS: Map<String, ModelDef> = mapOf(
             "silero-vad" to ModelDef(
                 id = "silero-vad",
                 filename = "silero_vad.onnx",
                 url = "$MODEL_CDN/silero_vad.onnx",
-                sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",  // TODO(security): Replace with real hash from sha256sum silero_vad.onnx
+                // PLACEHOLDER: This is SHA-256 of empty string. Replace before production.
+                sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",  // TODO(security): Replace with: sha256sum silero_vad.onnx
                 sizeBytes = 2_500_000L,
                 priority = ModelPriority.CRITICAL,
                 requiredFor = listOf(Feature.VOICE_INPUT),
@@ -71,7 +88,8 @@ class ModelRegistry @Inject constructor(
                 id = "whisper-tiny-int4",
                 filename = "whisper-tiny-int4.onnx",
                 url = "$MODEL_CDN/whisper-tiny-int4.onnx",
-                sha256 = "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a",  // TODO(security): Replace with real hash from sha256sum whisper-tiny-int4.onnx
+                // PLACEHOLDER: This is a known test hash. Replace before production.
+                sha256 = "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a",  // TODO(security): Replace with: sha256sum whisper-tiny-int4.onnx
                 sizeBytes = 42_000_000L,
                 priority = ModelPriority.HIGH,
                 requiredFor = listOf(Feature.VOICE_INPUT),
@@ -82,7 +100,8 @@ class ModelRegistry @Inject constructor(
                 id = "piper-swahili",
                 filename = "piper-swahili.onnx",
                 url = "$MODEL_CDN/piper-swahili.onnx",
-                sha256 = "d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592",  // TODO(security): Replace with real hash from sha256sum piper-swahili.onnx
+                // PLACEHOLDER: This is a known test hash. Replace before production.
+                sha256 = "d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592",  // TODO(security): Replace with: sha256sum piper-swahili.onnx
                 sizeBytes = 26_000_000L,
                 priority = ModelPriority.HIGH,
                 requiredFor = listOf(Feature.VOICE_OUTPUT),
@@ -93,7 +112,8 @@ class ModelRegistry @Inject constructor(
                 id = "qwen-0.5b-q4km",
                 filename = "qwen-0.5b-q4_k_m.gguf",
                 url = "$MODEL_CDN/qwen-0.5b-q4_k_m.gguf",
-                sha256 = "ef537f25c895bfa782526529a9b63d97aa631564d5d789c2b765448c8635fb6c",  // TODO(security): Replace with real hash from sha256sum qwen-0.5b-q4_k_m.gguf
+                // PLACEHOLDER: This is a known test hash. Replace before production.
+                sha256 = "ef537f25c895bfa782526529a9b63d97aa631564d5d789c2b765448c8635fb6c",  // TODO(security): Replace with: sha256sum qwen-0.5b-q4_k_m.gguf
                 sizeBytes = 310_000_000L,
                 priority = ModelPriority.LOW,
                 requiredFor = listOf(Feature.LLM_INFERENCE),
@@ -115,7 +135,8 @@ class ModelRegistry @Inject constructor(
                 id = "mms-tts-swa",
                 filename = "mms-tts-swa.onnx",
                 url = "$MODEL_CDN/mms/vits-mms-swa.onnx",
-                sha256 = "",  // TODO(security): Compute with sha256sum vits-mms-swa.onnx
+                // PLACEHOLDER: Empty hash — integrity check will be skipped. MUST compute before production.
+                sha256 = "",  // TODO(security): Compute with: sha256sum vits-mms-swa.onnx
                 sizeBytes = 65_000_000L,
                 priority = ModelPriority.OPTIONAL,
                 requiredFor = listOf(Feature.VOICE_OUTPUT),
@@ -126,7 +147,8 @@ class ModelRegistry @Inject constructor(
                 id = "mms-tts-eng",
                 filename = "mms-tts-eng.onnx",
                 url = "$MODEL_CDN/mms/vits-mms-eng.onnx",
-                sha256 = "",  // TODO(security): Compute with sha256sum vits-mms-eng.onnx
+                // PLACEHOLDER: Empty hash — integrity check will be skipped. MUST compute before production.
+                sha256 = "",  // TODO(security): Compute with: sha256sum vits-mms-eng.onnx
                 sizeBytes = 65_000_000L,
                 priority = ModelPriority.OPTIONAL,
                 requiredFor = listOf(Feature.VOICE_OUTPUT),
@@ -137,7 +159,8 @@ class ModelRegistry @Inject constructor(
                 id = "mms-tts-yor",
                 filename = "mms-tts-yor.onnx",
                 url = "$MODEL_CDN/mms/vits-mms-yor.onnx",
-                sha256 = "",  // TODO(security): Compute with sha256sum vits-mms-yor.onnx
+                // PLACEHOLDER: Empty hash — integrity check will be skipped. MUST compute before production.
+                sha256 = "",  // TODO(security): Compute with: sha256sum vits-mms-yor.onnx
                 sizeBytes = 65_000_000L,
                 priority = ModelPriority.OPTIONAL,
                 requiredFor = listOf(Feature.VOICE_OUTPUT),
@@ -148,7 +171,8 @@ class ModelRegistry @Inject constructor(
                 id = "mms-tts-hau",
                 filename = "mms-tts-hau.onnx",
                 url = "$MODEL_CDN/mms/vits-mms-hau.onnx",
-                sha256 = "",  // TODO(security): Compute with sha256sum vits-mms-hau.onnx
+                // PLACEHOLDER: Empty hash — integrity check will be skipped. MUST compute before production.
+                sha256 = "",  // TODO(security): Compute with: sha256sum vits-mms-hau.onnx
                 sizeBytes = 65_000_000L,
                 priority = ModelPriority.OPTIONAL,
                 requiredFor = listOf(Feature.VOICE_OUTPUT),
@@ -159,7 +183,8 @@ class ModelRegistry @Inject constructor(
                 id = "mms-tts-amh",
                 filename = "mms-tts-amh.onnx",
                 url = "$MODEL_CDN/mms/vits-mms-amh.onnx",
-                sha256 = "",  // TODO(security): Compute with sha256sum vits-mms-amh.onnx
+                // PLACEHOLDER: Empty hash — integrity check will be skipped. MUST compute before production.
+                sha256 = "",  // TODO(security): Compute with: sha256sum vits-mms-amh.onnx
                 sizeBytes = 65_000_000L,
                 priority = ModelPriority.OPTIONAL,
                 requiredFor = listOf(Feature.VOICE_OUTPUT),
@@ -170,7 +195,8 @@ class ModelRegistry @Inject constructor(
                 id = "mms-tts-zul",
                 filename = "mms-tts-zul.onnx",
                 url = "$MODEL_CDN/mms/vits-mms-zul.onnx",
-                sha256 = "",  // TODO(security): Compute with sha256sum vits-mms-zul.onnx
+                // PLACEHOLDER: Empty hash — integrity check will be skipped. MUST compute before production.
+                sha256 = "",  // TODO(security): Compute with: sha256sum vits-mms-zul.onnx
                 sizeBytes = 65_000_000L,
                 priority = ModelPriority.OPTIONAL,
                 requiredFor = listOf(Feature.VOICE_OUTPUT),
@@ -181,7 +207,8 @@ class ModelRegistry @Inject constructor(
                 id = "mms-tts-ibo",
                 filename = "mms-tts-ibo.onnx",
                 url = "$MODEL_CDN/mms/vits-mms-ibo.onnx",
-                sha256 = "",  // TODO(security): Compute with sha256sum vits-mms-ibo.onnx
+                // PLACEHOLDER: Empty hash — integrity check will be skipped. MUST compute before production.
+                sha256 = "",  // TODO(security): Compute with: sha256sum vits-mms-ibo.onnx
                 sizeBytes = 65_000_000L,
                 priority = ModelPriority.OPTIONAL,
                 requiredFor = listOf(Feature.VOICE_OUTPUT),
@@ -192,7 +219,8 @@ class ModelRegistry @Inject constructor(
                 id = "mms-tts-xho",
                 filename = "mms-tts-xho.onnx",
                 url = "$MODEL_CDN/mms/vits-mms-xho.onnx",
-                sha256 = "",  // TODO(security): Compute with sha256sum vits-mms-xho.onnx
+                // PLACEHOLDER: Empty hash — integrity check will be skipped. MUST compute before production.
+                sha256 = "",  // TODO(security): Compute with: sha256sum vits-mms-xho.onnx
                 sizeBytes = 65_000_000L,
                 priority = ModelPriority.OPTIONAL,
                 requiredFor = listOf(Feature.VOICE_OUTPUT),
@@ -203,7 +231,8 @@ class ModelRegistry @Inject constructor(
                 id = "mms-tts-sna",
                 filename = "mms-tts-sna.onnx",
                 url = "$MODEL_CDN/mms/vits-mms-sna.onnx",
-                sha256 = "",  // TODO(security): Compute with sha256sum vits-mms-sna.onnx
+                // PLACEHOLDER: Empty hash — integrity check will be skipped. MUST compute before production.
+                sha256 = "",  // TODO(security): Compute with: sha256sum vits-mms-sna.onnx
                 sizeBytes = 65_000_000L,
                 priority = ModelPriority.OPTIONAL,
                 requiredFor = listOf(Feature.VOICE_OUTPUT),
@@ -214,7 +243,8 @@ class ModelRegistry @Inject constructor(
                 id = "mms-tts-nso",
                 filename = "mms-tts-nso.onnx",
                 url = "$MODEL_CDN/mms/vits-mms-nso.onnx",
-                sha256 = "",  // TODO(security): Compute with sha256sum vits-mms-nso.onnx
+                // PLACEHOLDER: Empty hash — integrity check will be skipped. MUST compute before production.
+                sha256 = "",  // TODO(security): Compute with: sha256sum vits-mms-nso.onnx
                 sizeBytes = 65_000_000L,
                 priority = ModelPriority.OPTIONAL,
                 requiredFor = listOf(Feature.VOICE_OUTPUT),
