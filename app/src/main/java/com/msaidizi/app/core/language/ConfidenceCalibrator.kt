@@ -232,7 +232,7 @@ class ConfidenceCalibrator() {
         val bin = (rawConfidence * 10).toInt().coerceIn(0, 9)
         stat.binTotal[bin]++
         if (wasCorrect) stat.binCorrect[bin]++
-        stat.binConfidence[bin] += rawConfidence
+        stat.binConfidence[bin] = stat.binConfidence[bin] + rawConfidence.toDouble()
 
         // Online gradient descent on temperature (every 10 observations)
         if (stat.totalObservations % 10 == 0) {
