@@ -2,6 +2,7 @@ package com.msaidizi.app.evolution
 
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -79,7 +80,7 @@ class FeatureRequestTracker @Inject constructor(
      * Observe top requests for reactive UI.
      */
     fun observeTopRequests(limit: Int = 10): Flow<List<FeatureRequest>> {
-        return requestDao.observeTopByPriority(limit)
+        return requestDao.observeTopByPriority(limit).map { list -> list.map { it.toDomain() } }
     }
 
     /**

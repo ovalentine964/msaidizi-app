@@ -357,8 +357,8 @@ class ConfidenceCalibrator() {
             if (stat.binTotal[bin] == 0) continue
             val avgConf = stat.binConfidence[bin] / stat.binTotal[bin]
             val actualRate = stat.binCorrect[bin].toDouble() / stat.binTotal[bin]
-            val predicted = sigmoid(logitTransform(avgConf.coerceIn(0.01f, 0.99f)) / currentT)
-            val logit = logitTransform(avgConf.coerceIn(0.01f, 0.99f)).toDouble()
+            val predicted = sigmoid(logitTransform(avgConf.coerceIn(0.01, 0.99)) / currentT)
+            val logit = logitTransform(avgConf.coerceIn(0.01, 0.99)).toDouble()
 
             // ∂L/∂T contribution from this bin
             gradient += (predicted - actualRate) * logit / (currentT * currentT)

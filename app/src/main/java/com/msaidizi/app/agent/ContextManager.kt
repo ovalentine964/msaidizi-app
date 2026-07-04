@@ -243,7 +243,7 @@ class ContextManager(
             patternCounts[patternKey] = 0
 
             Timber.i("ContextManager[%s]: Compressed pattern '%s', removed %d items",
-                agentName, patternKey, removed)
+                agentName, patternKey, toRemove.size)
         }
     }
 

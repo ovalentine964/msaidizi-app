@@ -503,9 +503,9 @@ class CFOEngine {
         val message = buildString {
             append("📋 Ripoti ya Wiki — $workerName\n")
             append("Kutoka $assistantName wako\n\n")
-            append("Mauzo: KSh ${formatAmount(weekSales.toInt())}\n")
-            append("Gharama: KSh ${formatAmount(weekExpenses.toInt())}\n")
-            append("Faida: KSh ${formatAmount(weekProfit.toInt())}\n\n")
+            append("Mauzo: KSh ${formatAmount(weekSales)}\n")
+            append("Gharama: KSh ${formatAmount(weekExpenses)}\n")
+            append("Faida: KSh ${formatAmount(weekProfit)}\n\n")
 
             if (salesGrowth > 0) {
                 append("📈 Mauzo yaliongezeka $salesGrowth% kuliko wiki iliyopita!\n")

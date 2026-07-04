@@ -28,47 +28,45 @@ import timber.log.Timber
  * Designed for <1ms latency — pure code, no ML models.
  */
 object IgboDialectAdapter {
-    companion object {
-        private val MARKERS = mapOf(
-            "na" to Regex("\\bna\\b"),
-            "bụ" to Regex("\\bbụ\\b"),
-            "ga" to Regex("\\bga\\b"),
-            "nke" to Regex("\\bnke\\b"),
-            "ma" to Regex("\\bma\\b"),
-            "ọ bụrụ" to Regex("\\bọ bụrụ\\b"),
-            "n'ihi_na" to Regex("\\bn'ihi_na\\b"),
-            "otú_ọ_nọ" to Regex("\\botú_ọ_nọ\\b"),
-            "ịhụnanya" to Regex("\\bịhụnanya\\b"),
-            "ndewo" to Regex("\\bndewo\\b"),
-            "kedu" to Regex("\\bkedu\\b"),
-            "daalụ" to Regex("\\bdaalụ\\b"),
-            "biko" to Regex("\\bbiko\\b"),
-            "ọ_dị_mma" to Regex("\\bọ_dị_mma\\b"),
-            "ehee" to Regex("\\behee\\b"),
-            "mba" to Regex("\\bmba\\b"),
-            "mmadụ" to Regex("\\bmmadụ\\b"),
-            "ndị" to Regex("\\bndị\\b"),
-            "ụlọ" to Regex("\\bụlọ\\b"),
-            "ahịa" to Regex("\\bahịa\\b"),
-            "ego" to Regex("\\bego\\b"),
-            "ọrụ" to Regex("\\bọrụ\\b"),
-            "nri" to Regex("\\bnri\\b"),
-            "mmiri" to Regex("\\bmmiri\\b"),
-            "ọnwụ" to Regex("\\bọnwụ\\b"),
-            "afọ" to Regex("\\bafọ\\b"),
-            "ụbọchị" to Regex("\\bụbọchị\\b"),
-            "oge" to Regex("\\boge\\b")
-        )
-        private val PRONUNCIATION_REGEXES = mapOf(
-            "ọ" to Regex("\\bọ\\b", RegexOption.IGNORE_CASE),
-            "ụ" to Regex("\\bụ\\b", RegexOption.IGNORE_CASE),
-            "ị" to Regex("\\bị\\b", RegexOption.IGNORE_CASE),
-            "ẹ" to Regex("\\bẹ\\b", RegexOption.IGNORE_CASE),
-            "ụ" to Regex("\\bụ\\b", RegexOption.IGNORE_CASE),
-            "m̄" to Regex("\\bm̄\\b", RegexOption.IGNORE_CASE),
-            "n̄" to Regex("\\bn̄\\b", RegexOption.IGNORE_CASE)
-        )
-    }
+    private val MARKERS = mapOf(
+        "na" to Regex("\\bna\\b"),
+        "bụ" to Regex("\\bbụ\\b"),
+        "ga" to Regex("\\bga\\b"),
+        "nke" to Regex("\\bnke\\b"),
+        "ma" to Regex("\\bma\\b"),
+        "ọ bụrụ" to Regex("\\bọ bụrụ\\b"),
+        "n'ihi_na" to Regex("\\bn'ihi_na\\b"),
+        "otú_ọ_nọ" to Regex("\\botú_ọ_nọ\\b"),
+        "ịhụnanya" to Regex("\\bịhụnanya\\b"),
+        "ndewo" to Regex("\\bndewo\\b"),
+        "kedu" to Regex("\\bkedu\\b"),
+        "daalụ" to Regex("\\bdaalụ\\b"),
+        "biko" to Regex("\\bbiko\\b"),
+        "ọ_dị_mma" to Regex("\\bọ_dị_mma\\b"),
+        "ehee" to Regex("\\behee\\b"),
+        "mba" to Regex("\\bmba\\b"),
+        "mmadụ" to Regex("\\bmmadụ\\b"),
+        "ndị" to Regex("\\bndị\\b"),
+        "ụlọ" to Regex("\\bụlọ\\b"),
+        "ahịa" to Regex("\\bahịa\\b"),
+        "ego" to Regex("\\bego\\b"),
+        "ọrụ" to Regex("\\bọrụ\\b"),
+        "nri" to Regex("\\bnri\\b"),
+        "mmiri" to Regex("\\bmmiri\\b"),
+        "ọnwụ" to Regex("\\bọnwụ\\b"),
+        "afọ" to Regex("\\bafọ\\b"),
+        "ụbọchị" to Regex("\\bụbọchị\\b"),
+        "oge" to Regex("\\boge\\b")
+    )
+    private val PRONUNCIATION_REGEXES = mapOf(
+        "ọ" to Regex("\\bọ\\b", RegexOption.IGNORE_CASE),
+        "ụ" to Regex("\\bụ\\b", RegexOption.IGNORE_CASE),
+        "ị" to Regex("\\bị\\b", RegexOption.IGNORE_CASE),
+        "ẹ" to Regex("\\bẹ\\b", RegexOption.IGNORE_CASE),
+        "ụ" to Regex("\\bụ\\b", RegexOption.IGNORE_CASE),
+        "m̄" to Regex("\\bm̄\\b", RegexOption.IGNORE_CASE),
+        "n̄" to Regex("\\bn̄\\b", RegexOption.IGNORE_CASE)
+    )
 
 
     private const val TAG = "IgboDialect"

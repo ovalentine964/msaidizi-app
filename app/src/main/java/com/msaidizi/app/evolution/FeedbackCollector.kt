@@ -8,6 +8,7 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -81,7 +82,7 @@ class FeedbackCollector @Inject constructor(
      * Observe feedback as a Flow for reactive UI.
      */
     fun observeRecentFeedback(limit: Int = 100): Flow<List<Feedback>> {
-        return feedbackDao.observeRecent(limit)
+        return feedbackDao.observeRecent(limit).map { list -> list.map { it.toDomain() } }
     }
 
     /**

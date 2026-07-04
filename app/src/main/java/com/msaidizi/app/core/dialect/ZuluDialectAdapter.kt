@@ -28,54 +28,52 @@ import timber.log.Timber
  * Designed for <1ms latency — pure code, no ML models.
  */
 object ZuluDialectAdapter {
-    companion object {
-        private val MARKERS = mapOf(
-            "na" to Regex("\\bna\\b"),
-            "futhi" to Regex("\\bfuthi\\b"),
-            "kodwa" to Regex("\\bkodwa\\b"),
-            "noma" to Regex("\\bnoma\\b"),
-            "uma" to Regex("\\buma\\b"),
-            "ngoba" to Regex("\\bngoba\\b"),
-            "lapho" to Regex("\\blapho\\b"),
-            "lokhu" to Regex("\\blokhu\\b"),
-            "lowo" to Regex("\\blowo\\b"),
-            "namuhla" to Regex("\\bnamuhla\\b"),
-            "kusasa" to Regex("\\bkusasa\\b"),
-            "izolo" to Regex("\\bizolo\\b"),
-            "ngiyafuna" to Regex("\\bngiyafuna\\b"),
-            "ngiyabonga" to Regex("\\bngiyabonga\\b"),
-            "ngicela" to Regex("\\bngicela\\b"),
-            "yebo" to Regex("\\byebo\\b"),
-            "cha" to Regex("\\bcha\\b"),
-            "sawubona" to Regex("\\bsawubona\\b"),
-            "sanibonani" to Regex("\\bsanibonani\\b"),
-            "unjani" to Regex("\\bunjani\\b"),
-            "umuntu" to Regex("\\bumuntu\\b"),
-            "abantu" to Regex("\\babantu\\b"),
-            "indlu" to Regex("\\bindlu\\b"),
-            "imakethe" to Regex("\\bimakethe\\b"),
-            "imali" to Regex("\\bimali\\b"),
-            "umsebenzi" to Regex("\\bumsebenzi\\b"),
-            "ukudla" to Regex("\\bukudla\\b"),
-            "amanzi" to Regex("\\bamanzi\\b"),
-            "inyanga" to Regex("\\binyanga\\b"),
-            "unyaka" to Regex("\\bunyaka\\b"),
-            "usuku" to Regex("\\busuku\\b"),
-            "isikhathi" to Regex("\\bisikhathi\\b")
-        )
-        private val PRONUNCIATION_REGEXES = mapOf(
-            "c" to Regex("\\bc\\b", RegexOption.IGNORE_CASE),
-            "q" to Regex("\\bq\\b", RegexOption.IGNORE_CASE),
-            "x" to Regex("\\bx\\b", RegexOption.IGNORE_CASE),
-            "bh" to Regex("\\bbh\\b", RegexOption.IGNORE_CASE),
-            "dh" to Regex("\\bdh\\b", RegexOption.IGNORE_CASE),
-            "gh" to Regex("\\bgh\\b", RegexOption.IGNORE_CASE),
-            "mb" to Regex("\\bmb\\b", RegexOption.IGNORE_CASE),
-            "nd" to Regex("\\bnd\\b", RegexOption.IGNORE_CASE),
-            "ng" to Regex("\\bng\\b", RegexOption.IGNORE_CASE),
-            "nj" to Regex("\\bnj\\b", RegexOption.IGNORE_CASE)
-        )
-    }
+    private val MARKERS = mapOf(
+        "na" to Regex("\\bna\\b"),
+        "futhi" to Regex("\\bfuthi\\b"),
+        "kodwa" to Regex("\\bkodwa\\b"),
+        "noma" to Regex("\\bnoma\\b"),
+        "uma" to Regex("\\buma\\b"),
+        "ngoba" to Regex("\\bngoba\\b"),
+        "lapho" to Regex("\\blapho\\b"),
+        "lokhu" to Regex("\\blokhu\\b"),
+        "lowo" to Regex("\\blowo\\b"),
+        "namuhla" to Regex("\\bnamuhla\\b"),
+        "kusasa" to Regex("\\bkusasa\\b"),
+        "izolo" to Regex("\\bizolo\\b"),
+        "ngiyafuna" to Regex("\\bngiyafuna\\b"),
+        "ngiyabonga" to Regex("\\bngiyabonga\\b"),
+        "ngicela" to Regex("\\bngicela\\b"),
+        "yebo" to Regex("\\byebo\\b"),
+        "cha" to Regex("\\bcha\\b"),
+        "sawubona" to Regex("\\bsawubona\\b"),
+        "sanibonani" to Regex("\\bsanibonani\\b"),
+        "unjani" to Regex("\\bunjani\\b"),
+        "umuntu" to Regex("\\bumuntu\\b"),
+        "abantu" to Regex("\\babantu\\b"),
+        "indlu" to Regex("\\bindlu\\b"),
+        "imakethe" to Regex("\\bimakethe\\b"),
+        "imali" to Regex("\\bimali\\b"),
+        "umsebenzi" to Regex("\\bumsebenzi\\b"),
+        "ukudla" to Regex("\\bukudla\\b"),
+        "amanzi" to Regex("\\bamanzi\\b"),
+        "inyanga" to Regex("\\binyanga\\b"),
+        "unyaka" to Regex("\\bunyaka\\b"),
+        "usuku" to Regex("\\busuku\\b"),
+        "isikhathi" to Regex("\\bisikhathi\\b")
+    )
+    private val PRONUNCIATION_REGEXES = mapOf(
+        "c" to Regex("\\bc\\b", RegexOption.IGNORE_CASE),
+        "q" to Regex("\\bq\\b", RegexOption.IGNORE_CASE),
+        "x" to Regex("\\bx\\b", RegexOption.IGNORE_CASE),
+        "bh" to Regex("\\bbh\\b", RegexOption.IGNORE_CASE),
+        "dh" to Regex("\\bdh\\b", RegexOption.IGNORE_CASE),
+        "gh" to Regex("\\bgh\\b", RegexOption.IGNORE_CASE),
+        "mb" to Regex("\\bmb\\b", RegexOption.IGNORE_CASE),
+        "nd" to Regex("\\bnd\\b", RegexOption.IGNORE_CASE),
+        "ng" to Regex("\\bng\\b", RegexOption.IGNORE_CASE),
+        "nj" to Regex("\\bnj\\b", RegexOption.IGNORE_CASE)
+    )
 
 
     private const val TAG = "ZuluDialect"

@@ -31,11 +31,14 @@ class WhatsAppConnectionStep(
         val error: WhatsAppError? = null,
         val canRetry: Boolean = true,
         val elapsedSeconds: Int = 0,
-        val assistantName: String = onboardingData.assistantName ?: "Msaidizi",
-        val userName: String = onboardingData.userName ?: "mteja"
+        val assistantName: String = "Msaidizi",
+        val userName: String = "mteja"
     )
 
-    private val _uiState = MutableStateFlow(UiState())
+    private val _uiState = MutableStateFlow(UiState(
+        assistantName = onboardingData.assistantName ?: "Msaidizi",
+        userName = onboardingData.userName ?: "mteja"
+    ))
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     private val verificationManager = WhatsAppVerificationManager(api)

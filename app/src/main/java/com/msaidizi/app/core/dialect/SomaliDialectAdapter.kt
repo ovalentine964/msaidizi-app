@@ -28,51 +28,49 @@ import timber.log.Timber
  * Designed for <1ms latency — pure code, no ML models.
  */
 object SomaliDialectAdapter {
-    companion object {
-        private val MARKERS = mapOf(
-            "waa" to Regex("\\bwaa\\b"),
-            "oo" to Regex("\\boo\\b"),
-            "la" to Regex("\\bla\\b"),
-            "ka" to Regex("\\bka\\b"),
-            "ku" to Regex("\\bku\\b"),
-            "iyo" to Regex("\\biyo\\b"),
-            "ama" to Regex("\\bama\\b"),
-            "laakiin" to Regex("\\blaakiin\\b"),
-            "haddii" to Regex("\\bhaddii\\b"),
-            "maxaa" to Regex("\\bmaxaa\\b"),
-            "xagee" to Regex("\\bxagee\\b"),
-            "goorma" to Regex("\\bgoorma\\b"),
-            "sida" to Regex("\\bsida\\b"),
-            "ma" to Regex("\\bma\\b"),
-            "haye" to Regex("\\bhaye\\b"),
-            "mahadsanid" to Regex("\\bmahadsanid\\b"),
-            "fadlan" to Regex("\\bfadlan\\b"),
-            "waan" to Regex("\\bwaan\\b"),
-            "wuu" to Regex("\\bwuu\\b"),
-            "way" to Regex("\\bway\\b"),
-            "waxaa" to Regex("\\bwaxaa\\b"),
-            "qof" to Regex("\\bqof\\b"),
-            "dad" to Regex("\\bdad\\b"),
-            "guri" to Regex("\\bguri\\b"),
-            "suuq" to Regex("\\bsuuq\\b"),
-            "biyo" to Regex("\\bbiyo\\b"),
-            "caano" to Regex("\\bcaano\\b"),
-            "hilib" to Regex("\\bhilib\\b"),
-            "bariis" to Regex("\\bbariis\\b"),
-            "burr" to Regex("\\bburr\\b"),
-            "shaah" to Regex("\\bshaah\\b"),
-            "sonkor" to Regex("\\bsonkor\\b"),
-            "saliid" to Regex("\\bsaliid\\b"),
-            "dhar" to Regex("\\bdhar\\b"),
-            "lacag" to Regex("\\blacag\\b"),
-            "ganacsi" to Regex("\\bganacsi\\b")
-        )
-        private val PRONUNCIATION_REGEXES = mapOf(
-            "aka" to Regex("\\baka\\b", RegexOption.IGNORE_CASE),
-            "oka" to Regex("\\boka\\b", RegexOption.IGNORE_CASE),
-            "saafi" to Regex("\\bsaafi\\b", RegexOption.IGNORE_CASE)
-        )
-    }
+    private val MARKERS = mapOf(
+        "waa" to Regex("\\bwaa\\b"),
+        "oo" to Regex("\\boo\\b"),
+        "la" to Regex("\\bla\\b"),
+        "ka" to Regex("\\bka\\b"),
+        "ku" to Regex("\\bku\\b"),
+        "iyo" to Regex("\\biyo\\b"),
+        "ama" to Regex("\\bama\\b"),
+        "laakiin" to Regex("\\blaakiin\\b"),
+        "haddii" to Regex("\\bhaddii\\b"),
+        "maxaa" to Regex("\\bmaxaa\\b"),
+        "xagee" to Regex("\\bxagee\\b"),
+        "goorma" to Regex("\\bgoorma\\b"),
+        "sida" to Regex("\\bsida\\b"),
+        "ma" to Regex("\\bma\\b"),
+        "haye" to Regex("\\bhaye\\b"),
+        "mahadsanid" to Regex("\\bmahadsanid\\b"),
+        "fadlan" to Regex("\\bfadlan\\b"),
+        "waan" to Regex("\\bwaan\\b"),
+        "wuu" to Regex("\\bwuu\\b"),
+        "way" to Regex("\\bway\\b"),
+        "waxaa" to Regex("\\bwaxaa\\b"),
+        "qof" to Regex("\\bqof\\b"),
+        "dad" to Regex("\\bdad\\b"),
+        "guri" to Regex("\\bguri\\b"),
+        "suuq" to Regex("\\bsuuq\\b"),
+        "biyo" to Regex("\\bbiyo\\b"),
+        "caano" to Regex("\\bcaano\\b"),
+        "hilib" to Regex("\\bhilib\\b"),
+        "bariis" to Regex("\\bbariis\\b"),
+        "burr" to Regex("\\bburr\\b"),
+        "shaah" to Regex("\\bshaah\\b"),
+        "sonkor" to Regex("\\bsonkor\\b"),
+        "saliid" to Regex("\\bsaliid\\b"),
+        "dhar" to Regex("\\bdhar\\b"),
+        "lacag" to Regex("\\blacag\\b"),
+        "ganacsi" to Regex("\\bganacsi\\b")
+    )
+    private val PRONUNCIATION_REGEXES = mapOf(
+        "aka" to Regex("\\baka\\b", RegexOption.IGNORE_CASE),
+        "oka" to Regex("\\boka\\b", RegexOption.IGNORE_CASE),
+        "saafi" to Regex("\\bsaafi\\b", RegexOption.IGNORE_CASE)
+    )
 
 
     private const val TAG = "SomaliDialect"

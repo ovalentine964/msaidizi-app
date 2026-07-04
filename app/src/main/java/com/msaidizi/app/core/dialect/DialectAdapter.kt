@@ -28,9 +28,7 @@ import timber.log.Timber
  */
 open class DialectAdapter(private val config: DialectConfig) {
 
-    companion object {
-        private const val TAG_PREFIX = "Dialect"
-    }
+    private const val TAG_PREFIX = "Dialect"
 
     private val tag = "$TAG_PREFIX:${config.name}"
 

@@ -28,48 +28,46 @@ import timber.log.Timber
  * Designed for <1ms latency — pure code, no ML models.
  */
 object MaasaiDialectAdapter {
-    companion object {
-        private val MARKERS = mapOf(
-            "sopa" to Regex("\\bsopa\\b"),
-            "yeyo" to Regex("\\byeyo\\b"),
-            "iko" to Regex("\\biko\\b"),
-            "meita" to Regex("\\bmeita\\b"),
-            "naikai" to Regex("\\bnaikai\\b"),
-            "enaiki" to Regex("\\benaiki\\b"),
-            "kioku" to Regex("\\bkioku\\b"),
-            "ai" to Regex("\\bai\\b"),
-            "aiye" to Regex("\\baiye\\b"),
-            "keju" to Regex("\\bkeju\\b"),
-            "ashe" to Regex("\\bashe\\b"),
-            "oleng" to Regex("\\boleng\\b"),
-            "ilkeek" to Regex("\\bilkeek\\b"),
-            "enkang'" to Regex("\\benkang'\\b"),
-            "enkaji" to Regex("\\benkaji\\b"),
-            "olchani" to Regex("\\bolchani\\b"),
-            "laibon" to Regex("\\blaibon\\b"),
-            "ilmurran" to Regex("\\bilmurran\\b"),
-            "inkajijik" to Regex("\\binkajijik\\b"),
-            "olotuno" to Regex("\\bolotuno\\b"),
-            "enkare" to Regex("\\benkare\\b"),
-            "olari" to Regex("\\bolari\\b"),
-            "enk'ee" to Regex("\\benk'ee\\b"),
-            "ore" to Regex("\\bore\\b"),
-            "enk'ositon" to Regex("\\benk'ositon\\b"),
-            "entit" to Regex("\\bentit\\b"),
-            "ork'oiyotap" to Regex("\\bork'oiyotap\\b"),
-            "enkejuk" to Regex("\\benkejuk\\b"),
-            "oret" to Regex("\\boret\\b"),
-            "enk'ariak" to Regex("\\benk'ariak\\b"),
-            "entulelei" to Regex("\\bentulelei\\b"),
-            "shuka" to Regex("\\bshuka\\b")
-        )
-        private val PRONUNCIATION_REGEXES = mapOf(
-            "aka" to Regex("\\baka\\b", RegexOption.IGNORE_CASE),
-            "oka" to Regex("\\boka\\b", RegexOption.IGNORE_CASE),
-            "iga" to Regex("\\biga\\b", RegexOption.IGNORE_CASE),
-            "saafi" to Regex("\\bsaafi\\b", RegexOption.IGNORE_CASE)
-        )
-    }
+    private val MARKERS = mapOf(
+        "sopa" to Regex("\\bsopa\\b"),
+        "yeyo" to Regex("\\byeyo\\b"),
+        "iko" to Regex("\\biko\\b"),
+        "meita" to Regex("\\bmeita\\b"),
+        "naikai" to Regex("\\bnaikai\\b"),
+        "enaiki" to Regex("\\benaiki\\b"),
+        "kioku" to Regex("\\bkioku\\b"),
+        "ai" to Regex("\\bai\\b"),
+        "aiye" to Regex("\\baiye\\b"),
+        "keju" to Regex("\\bkeju\\b"),
+        "ashe" to Regex("\\bashe\\b"),
+        "oleng" to Regex("\\boleng\\b"),
+        "ilkeek" to Regex("\\bilkeek\\b"),
+        "enkang'" to Regex("\\benkang'\\b"),
+        "enkaji" to Regex("\\benkaji\\b"),
+        "olchani" to Regex("\\bolchani\\b"),
+        "laibon" to Regex("\\blaibon\\b"),
+        "ilmurran" to Regex("\\bilmurran\\b"),
+        "inkajijik" to Regex("\\binkajijik\\b"),
+        "olotuno" to Regex("\\bolotuno\\b"),
+        "enkare" to Regex("\\benkare\\b"),
+        "olari" to Regex("\\bolari\\b"),
+        "enk'ee" to Regex("\\benk'ee\\b"),
+        "ore" to Regex("\\bore\\b"),
+        "enk'ositon" to Regex("\\benk'ositon\\b"),
+        "entit" to Regex("\\bentit\\b"),
+        "ork'oiyotap" to Regex("\\bork'oiyotap\\b"),
+        "enkejuk" to Regex("\\benkejuk\\b"),
+        "oret" to Regex("\\boret\\b"),
+        "enk'ariak" to Regex("\\benk'ariak\\b"),
+        "entulelei" to Regex("\\bentulelei\\b"),
+        "shuka" to Regex("\\bshuka\\b")
+    )
+    private val PRONUNCIATION_REGEXES = mapOf(
+        "aka" to Regex("\\baka\\b", RegexOption.IGNORE_CASE),
+        "oka" to Regex("\\boka\\b", RegexOption.IGNORE_CASE),
+        "iga" to Regex("\\biga\\b", RegexOption.IGNORE_CASE),
+        "saafi" to Regex("\\bsaafi\\b", RegexOption.IGNORE_CASE)
+    )
 
 
     private const val TAG = "MaasaiDialect"

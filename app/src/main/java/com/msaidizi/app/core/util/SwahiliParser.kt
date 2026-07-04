@@ -17,7 +17,7 @@ object SwahiliParser {
 
     // === NUMBER WORD MAPPINGS ===
 
-    private val swahiliNumbers = mapOf(
+    private val swahiliNumbers: Map<String, Double> = mapOf(
         // Units
         "moja" to 1, "mbili" to 2, "tatu" to 3, "nne" to 4, "tano" to 5,
         "sita" to 6, "saba" to 7, "nane" to 8, "tisa" to 9,

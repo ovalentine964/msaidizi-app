@@ -28,45 +28,43 @@ import timber.log.Timber
  * Designed for <1ms latency — pure code, no ML models.
  */
 object KalenjinDialectAdapter {
-    companion object {
-        private val MARKERS = mapOf(
-            "amit" to Regex("\\bamit\\b"),
-            "mamit" to Regex("\\bmamit\\b"),
-            "kogo" to Regex("\\bkogo\\b"),
-            "kogoich" to Regex("\\bkogoich\\b"),
-            "koitoich" to Regex("\\bkoitoich\\b"),
-            "mising" to Regex("\\bmising\\b"),
-            "chamgei" to Regex("\\bchamgei\\b"),
-            "chengo" to Regex("\\bchengo\\b"),
-            "kainet" to Regex("\\bkainet\\b"),
-            "kongoi" to Regex("\\bkongoi\\b"),
-            "murio" to Regex("\\bmurio\\b"),
-            "ende" to Regex("\\bende\\b"),
-            "amuno" to Regex("\\bamuno\\b"),
-            "kipto" to Regex("\\bkipto\\b"),
-            "kipsigis" to Regex("\\bkipsigis\\b"),
-            "tugen" to Regex("\\btugen\\b"),
-            "nandi" to Regex("\\bnandi\\b"),
-            "kapkoros" to Regex("\\bkapkoros\\b"),
-            "kapchumba" to Regex("\\bkapchumba\\b"),
-            "kaptich" to Regex("\\bkaptich\\b"),
-            "kapsirwet" to Regex("\\bkapsirwet\\b"),
-            "murenik" to Regex("\\bmurenik\\b"),
-            "tuiyotich" to Regex("\\btuiyotich\\b"),
-            "mursik" to Regex("\\bmursik\\b"),
-            "kimiet" to Regex("\\bkimiet\\b"),
-            "kabotet" to Regex("\\bkabotet\\b"),
-            "ng'atuny" to Regex("\\bng'atuny\\b"),
-            "moit" to Regex("\\bmoit\\b")
-        )
-        private val PRONUNCIATION_REGEXES = mapOf(
-            "aka" to Regex("\\baka\\b", RegexOption.IGNORE_CASE),
-            "oka" to Regex("\\boka\\b", RegexOption.IGNORE_CASE),
-            "iga" to Regex("\\biga\\b", RegexOption.IGNORE_CASE),
-            "saafi" to Regex("\\bsaafi\\b", RegexOption.IGNORE_CASE),
-            "twaa" to Regex("\\btwaa\\b", RegexOption.IGNORE_CASE)
-        )
-    }
+    private val MARKERS = mapOf(
+        "amit" to Regex("\\bamit\\b"),
+        "mamit" to Regex("\\bmamit\\b"),
+        "kogo" to Regex("\\bkogo\\b"),
+        "kogoich" to Regex("\\bkogoich\\b"),
+        "koitoich" to Regex("\\bkoitoich\\b"),
+        "mising" to Regex("\\bmising\\b"),
+        "chamgei" to Regex("\\bchamgei\\b"),
+        "chengo" to Regex("\\bchengo\\b"),
+        "kainet" to Regex("\\bkainet\\b"),
+        "kongoi" to Regex("\\bkongoi\\b"),
+        "murio" to Regex("\\bmurio\\b"),
+        "ende" to Regex("\\bende\\b"),
+        "amuno" to Regex("\\bamuno\\b"),
+        "kipto" to Regex("\\bkipto\\b"),
+        "kipsigis" to Regex("\\bkipsigis\\b"),
+        "tugen" to Regex("\\btugen\\b"),
+        "nandi" to Regex("\\bnandi\\b"),
+        "kapkoros" to Regex("\\bkapkoros\\b"),
+        "kapchumba" to Regex("\\bkapchumba\\b"),
+        "kaptich" to Regex("\\bkaptich\\b"),
+        "kapsirwet" to Regex("\\bkapsirwet\\b"),
+        "murenik" to Regex("\\bmurenik\\b"),
+        "tuiyotich" to Regex("\\btuiyotich\\b"),
+        "mursik" to Regex("\\bmursik\\b"),
+        "kimiet" to Regex("\\bkimiet\\b"),
+        "kabotet" to Regex("\\bkabotet\\b"),
+        "ng'atuny" to Regex("\\bng'atuny\\b"),
+        "moit" to Regex("\\bmoit\\b")
+    )
+    private val PRONUNCIATION_REGEXES = mapOf(
+        "aka" to Regex("\\baka\\b", RegexOption.IGNORE_CASE),
+        "oka" to Regex("\\boka\\b", RegexOption.IGNORE_CASE),
+        "iga" to Regex("\\biga\\b", RegexOption.IGNORE_CASE),
+        "saafi" to Regex("\\bsaafi\\b", RegexOption.IGNORE_CASE),
+        "twaa" to Regex("\\btwaa\\b", RegexOption.IGNORE_CASE)
+    )
 
 
     private const val TAG = "KalenjinDialect"

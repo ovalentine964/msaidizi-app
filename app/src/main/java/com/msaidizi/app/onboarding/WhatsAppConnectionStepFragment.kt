@@ -110,8 +110,9 @@ class WhatsAppConnectionStepFragment : Fragment() {
         binding.buttonReceiptConfirmed.isEnabled = true
         binding.buttonReceiptConfirmed.text = "✅ Nimepokea!"
         binding.buttonSkip.visibility = View.VISIBLE
-        val pulse = AlphaAnimation(0.4f, 1.0f).apply { duration = 1200; interpolator = LinearInterpolator(); repeatMode = Animation.REVERSE; repeatCount = Animation.INFINITE }
-        binding.imageviewWhatsAppIcon.startAnimation(pulse)
+        // TODO: Add WhatsApp icon view to layout and animate it
+        // val pulse = AlphaAnimation(0.4f, 1.0f).apply { duration = 1200; interpolator = LinearInterpolator(); repeatMode = Animation.REVERSE; repeatCount = Animation.INFINITE }
+        // binding.imageviewWhatsAppIcon.startAnimation(pulse)
     }
 
     private fun showConnected(state: WhatsAppConnectionStep.UiState) {
