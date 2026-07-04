@@ -43,7 +43,7 @@ import kotlin.coroutines.resume
  */
 @Singleton
 class AutoUpdater @Inject constructor(
-    private val context: Context
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: Context
 ) {
     companion object {
         private const val UPDATE_CHECK_URL =
