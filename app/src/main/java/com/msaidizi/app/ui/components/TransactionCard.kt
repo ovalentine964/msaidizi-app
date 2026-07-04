@@ -43,6 +43,10 @@ class TransactionCard @JvmOverloads constructor(
             TransactionType.PURCHASE -> "🛒"
             TransactionType.EXPENSE -> "💸"
             TransactionType.OTHER -> "📝"
+            TransactionType.WITHDRAWAL -> "🏧"
+            TransactionType.DEPOSIT -> "💵"
+            TransactionType.FEE -> "🏷️"
+            TransactionType.REFUND -> "↩️"
         }
 
         itemName.text = transaction.item
@@ -65,6 +69,10 @@ class TransactionCard @JvmOverloads constructor(
             TransactionType.PURCHASE -> context.getColor(R.color.profit_negative)
             TransactionType.EXPENSE -> context.getColor(R.color.profit_negative)
             TransactionType.OTHER -> context.getColor(R.color.text_primary)
+            TransactionType.WITHDRAWAL -> context.getColor(R.color.profit_negative)
+            TransactionType.DEPOSIT -> context.getColor(R.color.profit_positive)
+            TransactionType.FEE -> context.getColor(R.color.profit_negative)
+            TransactionType.REFUND -> context.getColor(R.color.profit_positive)
         }
         amount.setTextColor(amountColor)
     }

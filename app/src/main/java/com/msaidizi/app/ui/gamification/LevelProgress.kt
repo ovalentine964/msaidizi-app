@@ -37,7 +37,7 @@ class LevelProgress @JvmOverloads constructor(
 ) : LinearLayout(context, attrs, defStyleAttr) {
 
     private val binding: ViewLevelProgressBinding =
-        ViewLevelProgressBinding.inflate(LayoutInflater.from(context), this, true)
+        ViewLevelProgressBinding.inflate(LayoutInflater.from(context), this)
 
     private var currentLevel: LevelInfo? = null
 

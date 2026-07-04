@@ -19,29 +19,29 @@ object SwahiliParser {
 
     private val swahiliNumbers: Map<String, Double> = mapOf(
         // Units
-        "moja" to 1, "mbili" to 2, "tatu" to 3, "nne" to 4, "tano" to 5,
-        "sita" to 6, "saba" to 7, "nane" to 8, "tisa" to 9,
-        "one" to 1, "two" to 2, "three" to 3, "four" to 4, "five" to 5,
-        "six" to 6, "seven" to 7, "eight" to 8, "nine" to 9, "ten" to 10,
+        "moja" to 1.0, "mbili" to 2.0, "tatu" to 3.0, "nne" to 4.0, "tano" to 5.0,
+        "sita" to 6.0, "saba" to 7.0, "nane" to 8.0, "tisa" to 9.0,
+        "one" to 1.0, "two" to 2.0, "three" to 3.0, "four" to 4.0, "five" to 5.0,
+        "six" to 6.0, "seven" to 7.0, "eight" to 8.0, "nine" to 9.0, "ten" to 10.0,
 
         // Tens
-        "kumi" to 10, "ishirini" to 20, "thelathini" to 30, "arobaini" to 40,
-        "hamsini" to 50, "sitini" to 60, "sabini" to 70, "themanini" to 80,
-        "tisini" to 90,
+        "kumi" to 10.0, "ishirini" to 20.0, "thelathini" to 30.0, "arobaini" to 40.0,
+        "hamsini" to 50.0, "sitini" to 60.0, "sabini" to 70.0, "themanini" to 80.0,
+        "tisini" to 90.0,
 
         // Hundreds
-        "mia" to 100, "mia_mbili" to 200, "mia_tatu" to 300, "mia_nne" to 400,
-        "mia_tano" to 500, "mia_sita" to 600, "mia_saba" to 700,
-        "mia_nane" to 800, "mia_tisa" to 900,
+        "mia" to 100.0, "mia_mbili" to 200.0, "mia_tatu" to 300.0, "mia_nne" to 400.0,
+        "mia_tano" to 500.0, "mia_sita" to 600.0, "mia_saba" to 700.0,
+        "mia_nane" to 800.0, "mia_tisa" to 900.0,
 
         // Thousands
-        "elfu" to 1000, "elfu_mbili" to 2000, "elfu_tatu" to 3000,
-        "elfu_nne" to 4000, "elfu_tano" to 5000,
+        "elfu" to 1000.0, "elfu_mbili" to 2000.0, "elfu_tatu" to 3000.0,
+        "elfu_nne" to 4000.0, "elfu_tano" to 5000.0,
 
         // Common compounds
-        "kumi_na_moja" to 11, "kumi_na_mbili" to 12, "kumi_na_tatu" to 13,
-        "kumi_na_nne" to 14, "kumi_na_tano" to 15, "kumi_na_sita" to 16,
-        "kumi_na_saba" to 17, "kumi_na_nane" to 18, "kumi_na_tisa" to 19,
+        "kumi_na_moja" to 11.0, "kumi_na_mbili" to 12.0, "kumi_na_tatu" to 13.0,
+        "kumi_na_nne" to 14.0, "kumi_na_tano" to 15.0, "kumi_na_sita" to 16.0,
+        "kumi_na_saba" to 17.0, "kumi_na_nane" to 18.0, "kumi_na_tisa" to 19.0,
 
         // Sheng / informal
         "nusu" to 0.5, "quarter" to 0.25
@@ -441,7 +441,7 @@ object SwahiliParser {
         // Normalize number formats
         corrected = corrected.replace(Regex("""(\d),(\d)"""), "$1$2")  // Remove commas in numbers
         corrected = corrected.replace(Regex("""KES?\s*"""), "KSh ")  // Normalize currency
-        corrected = corrected.replace(Regex("""bob"""), "KSh", ignoreCase = true)
+        corrected = corrected.replace(Regex("""bob""", RegexOption.IGNORE_CASE), "KSh")
 
         // Normalize Migori currency slang to KSh amounts
         corrected = normalizeCurrencySlang(corrected)

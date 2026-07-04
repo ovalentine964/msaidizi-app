@@ -885,7 +885,7 @@ class LoanManager(
 
     private suspend fun loadAllLoans(): List<Loan> {
         val entities = loanDao?.getAll()
-        return entities.mapNotNull { entity ->
+        return entities?.mapNotNull { entity ->
             val cached = loans[entity.id.toString()]
             if (cached != null) return@mapNotNull cached
 
@@ -912,7 +912,7 @@ class LoanManager(
                 status = try { LoanStatus.valueOf(entity.status) } catch (_: Exception) { LoanStatus.ACTIVE },
                 totalRepaid = entity.totalRepaid
             ).also { loans[it.id] = it }
-        }
+        } ?: emptyList()
     }
 
     private fun formatAmount(amount: Int): String {
