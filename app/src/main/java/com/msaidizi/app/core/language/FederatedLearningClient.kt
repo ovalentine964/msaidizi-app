@@ -238,7 +238,7 @@ class FederatedLearningClient(
             val response = httpClient.newCall(request).execute()
 
             if (response.isSuccessful) {
-                val body = response.body()?.string()
+                val body = response.body?.string()
                 if (body != null) {
                     val download = json.decodeFromString<FederatedDownload>(body)
                     _syncState.value = SyncState.Idle
@@ -482,7 +482,7 @@ class FederatedLearningClient(
                 val success = response.isSuccessful
 
                 if (!success) {
-                    Timber.tag(TAG).w("Upload failed: HTTP %d", response.code())
+                    Timber.tag(TAG).w("Upload failed: HTTP %d", response.code)
                 }
 
                 success

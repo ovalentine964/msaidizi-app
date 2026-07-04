@@ -723,12 +723,12 @@ class ModelRegistry @Inject constructor(
                     404 -> "Model haipatikani kwenye server (not found on server)"
                     403 -> "Access imekatazwa (access denied)"
                     500, 502, 503 -> "Server ya models ina hitilafu (server error)"
-                    else -> "HTTP ${response.code}: ${response.message()}"
+                    else -> "HTTP ${response.code}: ${response.message}"
                 }
                 throw Exception(errorMsg)
             }
 
-            val body = response.body() ?: throw Exception("Response tupu (empty response)")
+            val body = response.body ?: throw Exception("Response tupu (empty response)")
             var downloaded = 0L
 
             body.byteStream().use { input ->

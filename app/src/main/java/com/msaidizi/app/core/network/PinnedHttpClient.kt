@@ -6,6 +6,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import okhttp3.CertificatePinner
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import timber.log.Timber
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -81,18 +82,18 @@ class PinnedHttpClient @Inject constructor(
                     val response = chain.proceed(request)
 
                     // Manual redirect handling — only allow same-origin redirects
-                    if (response.isRedirect) {
+                    if (response.code in 301..308) {
                         val location = response.header("Location")
                         if (location != null) {
-                            val redirectUrl = HttpUrl.parse(location)
-                            if (redirectUrl != null && redirectUrl.host() != CDN_HOST) {
+                            val redirectUrl = location.toHttpUrlOrNull()
+                            if (redirectUrl != null && redirectUrl.host != CDN_HOST) {
                                 response.close()
                                 Timber.e(
                                     "Blocked redirect to non-CDN host: %s (from %s)",
-                                    redirectUrl.host(), request.url()
+                                    redirectUrl.host, request.url
                                 )
                                 throw IOException(
-                                    "Redirect to non-CDN host blocked: ${redirectUrl.host()}"
+                                    "Redirect to non-CDN host blocked: ${redirectUrl.host}"
                                 )
                             }
                         }
@@ -100,7 +101,7 @@ class PinnedHttpClient @Inject constructor(
 
                     response
                 } catch (e: SSLPeerUnverifiedException) {
-                    Timber.e(e, "CERT PIN FAILURE for %s — possible MITM attack", request.url())
+                    Timber.e(e, "CERT PIN FAILURE for %s — possible MITM attack", request.url)
                     throw IOException("Certificate verification failed. Download blocked for security.", e)
                 }
             }
