@@ -481,7 +481,7 @@ class LanguageLearningPipeline @Inject constructor(
                 language = language,
                 corrections = corrections,
                 adapterBytes = adapterBytes,
-                calibrationParams = FederatedLearningClient.CalibrationParams(
+                calibrationParams = CalibrationParams(
                     temperature = confidenceCalibrator.getTemperature(language),
                     plattA = 0.8f,
                     plattB = -0.3f,

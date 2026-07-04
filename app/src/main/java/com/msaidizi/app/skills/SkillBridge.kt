@@ -7,6 +7,8 @@ import io.ktor.http.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -243,7 +245,7 @@ class SkillBridge @Inject constructor(
             "microfinance_analyzer",
             "predict_default_risk",
             mapOf(
-                "repayment_history" to json.encodeToJsonElement(repaymentHistory),
+                "repayment_history" to json.encodeToJsonElement(ListSerializer(MapSerializer(String.serializer(), JsonElement.serializer())), repaymentHistory),
                 "loan_amount" to json.encodeToJsonElement(Double.serializer(), loanAmount),
                 "daily_income_estimate" to json.encodeToJsonElement(Double.serializer(), dailyIncomeEstimate),
                 "days_active" to json.encodeToJsonElement(Int.serializer(), daysActive),
@@ -264,7 +266,7 @@ class SkillBridge @Inject constructor(
             "time_series_forecaster",
             "forecast_prices",
             mapOf(
-                "prices" to json.encodeToJsonElement(prices),
+                "prices" to json.encodeToJsonElement(ListSerializer(Double.serializer()), prices),
                 "steps" to json.encodeToJsonElement(Int.serializer(), steps),
                 "method" to json.encodeToJsonElement(String.serializer(), method),
             )
@@ -282,7 +284,7 @@ class SkillBridge @Inject constructor(
             "time_series_forecaster",
             "detect_seasonality",
             mapOf(
-                "data" to json.encodeToJsonElement(data),
+                "data" to json.encodeToJsonElement(ListSerializer(Double.serializer()), data),
                 "period" to json.encodeToJsonElement(Int.serializer(), period),
             )
         )
@@ -300,9 +302,9 @@ class SkillBridge @Inject constructor(
             "statistical_estimator",
             "bayesian_estimate",
             mapOf(
-                "data" to json.encodeToJsonElement(data),
+                "data" to json.encodeToJsonElement(ListSerializer(Double.serializer()), data),
                 "distribution" to json.encodeToJsonElement(String.serializer(), distribution),
-                "prior_params" to json.encodeToJsonElement(priorParams),
+                "prior_params" to json.encodeToJsonElement(MapSerializer(String.serializer(), Double.serializer()), priorParams),
             )
         )
     }
@@ -319,8 +321,8 @@ class SkillBridge @Inject constructor(
             "worker_segmenter",
             "cluster_segment",
             mapOf(
-                "X" to json.encodeToJsonElement(features),
-                "feature_names" to json.encodeToJsonElement(featureNames),
+                "X" to json.encodeToJsonElement(ListSerializer(ListSerializer(Double.serializer())), features),
+                "feature_names" to json.encodeToJsonElement(ListSerializer(String.serializer()), featureNames),
                 "max_k" to json.encodeToJsonElement(Int.serializer(), maxK),
             )
         )

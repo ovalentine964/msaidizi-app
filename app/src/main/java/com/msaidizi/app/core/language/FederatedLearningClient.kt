@@ -606,7 +606,7 @@ class FederatedLearningClient(
                 var epochLoss = 0.0f
 
                 // Shuffle training pairs each epoch
-                val shuffled = trainPairs.shuffled(secureRandom.nextInt())
+                val shuffled = trainPairs.shuffled(kotlin.random.Random(secureRandom.nextInt()))
 
                 for ((inputIdx, targetIdx) in shuffled) {
                     // Forward pass: compute LoRA output
