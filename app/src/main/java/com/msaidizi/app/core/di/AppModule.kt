@@ -1,6 +1,7 @@
 package com.msaidizi.app.core.di
 
 import android.content.Context
+import com.msaidizi.app.data.api.MsaidiziApi
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
@@ -63,6 +64,8 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 import dagger.hilt.components.SingletonComponent
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
@@ -406,6 +409,16 @@ object AppModule {
             })
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideMsaidiziApi(): MsaidiziApi {
+        val retrofit = Retrofit.Builder()
+            .baseUrl("https://api.angavu.io/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+        return retrofit.create(MsaidiziApi::class.java)
     }
 
     @Provides
