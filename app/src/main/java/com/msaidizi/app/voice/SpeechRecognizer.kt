@@ -212,7 +212,7 @@ class SpeechRecognizer @Inject constructor(
 
             // 5. Decode output tokens to text
             val sequences = results.get("sequences")
-            val tokenIds = (sequences.value as Array<LongArray>)[0]
+            val tokenIds = ((sequences as OnnxTensor).value as Array<LongArray>)[0]
             val text = whisperTokenizer.decode(tokenIds)
 
             val elapsed = System.currentTimeMillis() - startTime

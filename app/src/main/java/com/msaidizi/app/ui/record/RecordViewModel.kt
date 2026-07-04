@@ -156,7 +156,7 @@ class RecordViewModel @Inject constructor(
             )
         }
         // Process the confirmed transcription
-        processTranscription(transcription)
+        viewModelScope.launch { processTranscription(transcription) }
     }
 
     /**
@@ -179,7 +179,7 @@ class RecordViewModel @Inject constructor(
             // This will be picked up by FederatedLearningClient
         }
         // Process the corrected transcription
-        processTranscription(corrected)
+        viewModelScope.launch { processTranscription(corrected) }
     }
 
     /**
@@ -191,7 +191,7 @@ class RecordViewModel @Inject constructor(
             transcribedText = alternative,
             statusMessage = "Processing..."
         )
-        processTranscription(alternative)
+        viewModelScope.launch { processTranscription(alternative) }
     }
 
     /**

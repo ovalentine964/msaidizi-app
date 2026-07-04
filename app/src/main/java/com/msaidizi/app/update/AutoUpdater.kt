@@ -121,7 +121,7 @@ class AutoUpdater @Inject constructor(
             val tagName = release["tag_name"]?.toString()?.trim('"') ?: ""
             val releaseVersionCode = tagName.removePrefix("v").replace(".", "").toIntOrNull() ?: 0
             val releaseVersionName = tagName.removePrefix("v")
-            val body = release["body"]?.toString()?.trim('"') ?: ""
+            val releaseNotes = release["body"]?.toString()?.trim('"') ?: ""
 
             // Find the APK asset
             val assets = release["assets"] as? kotlinx.serialization.json.JsonArray
@@ -149,7 +149,7 @@ class AutoUpdater @Inject constructor(
                         versionName = releaseVersionName,
                         downloadUrl = downloadUrl,
                         fileSize = fileSize,
-                        releaseNotes = body
+                        releaseNotes = releaseNotes
                     )
                 )
             } else {

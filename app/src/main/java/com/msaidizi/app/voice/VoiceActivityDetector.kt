@@ -365,13 +365,13 @@ class VoiceActivityDetector @Inject constructor(
 
             // Extract speech probability
             val output = results.get("output")
-            val prob = (output.value as Array<FloatArray>)[0][0]
+            val prob = ((output as OnnxTensor).value as Array<FloatArray>)[0][0]
 
             // Update RNN hidden state for next chunk
             val hn = results.get("hn")
             val cn = results.get("cn")
-            hState = flattenNestedArray(hn.value)
-            cState = flattenNestedArray(cn.value)
+            hState = flattenNestedArray((hn as OnnxTensor).value)
+            cState = flattenNestedArray((cn as OnnxTensor).value)
 
             // Cleanup tensors
             inputTensor.close()

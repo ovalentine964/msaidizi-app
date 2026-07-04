@@ -75,7 +75,8 @@ class WhisperTokenizer @Inject constructor(
     fun decode(tokenIds: LongArray): String {
         if (!isLoaded) return ""
         return tokenIds
-            .mapNotNull { vocab[it.toInt()] }
+            .map { vocab[it.toInt()] }
+            .filterNotNull()
             .joinToString("")
             .replace(SPIECE_SPACE, " ")
             .trim()

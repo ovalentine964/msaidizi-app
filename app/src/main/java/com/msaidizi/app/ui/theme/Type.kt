@@ -3,7 +3,6 @@ package com.msaidizi.app.ui.theme
 import android.content.Context
 import android.graphics.Typeface
 import android.util.TypedValue
-import androidx.core.content.res.ResourcesCompat
 
 /**
  * Typography definitions for Msaidizi app.
@@ -67,22 +66,8 @@ object AppTypography {
      */
     fun getTypeface(context: Context, weight: Int = Typeface.NORMAL): Typeface {
         return when (weight) {
-            Typeface.BOLD -> {
-                try {
-                    ResourcesCompat.getFont(context, com.msaidizi.app.R.font.roboto_bold)
-                        ?: Typeface.DEFAULT_BOLD
-                } catch (e: Exception) {
-                    Typeface.DEFAULT_BOLD
-                }
-            }
-            else -> {
-                try {
-                    ResourcesCompat.getFont(context, com.msaidizi.app.R.font.roboto_regular)
-                        ?: Typeface.DEFAULT
-                } catch (e: Exception) {
-                    Typeface.DEFAULT
-                }
-            }
+            Typeface.BOLD -> Typeface.create("sans-serif", Typeface.BOLD)
+            else -> Typeface.create("sans-serif", Typeface.NORMAL)
         }
     }
 }

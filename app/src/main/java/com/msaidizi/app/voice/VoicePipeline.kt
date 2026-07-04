@@ -87,7 +87,7 @@ class VoicePipeline @Inject constructor(
         // Collect audio chunks and process through VAD
         audioCollectionJob = scope.launch {
             audioRecorder.audioChunks.collect { chunk ->
-                val hasSpeech = vad.processChunk(chunk)
+                val hasSpeech = vad.processChunk(chunk) > 0.5f
 
                 if (hasSpeech && _pipelineState.value != PipelineState.PROCESSING) {
                     // Speech detected, wait for end of speech
@@ -129,7 +129,7 @@ class VoicePipeline @Inject constructor(
      * phoneme-aware post-processing, and Bayesian confidence calibration.
      */
     private suspend fun processEndOfSpeech() {
-        val speechAudio = vad.getSpeechAudio()
+        val speechAudio = vad.getAccumulatedAudio()
         if (speechAudio == null || speechAudio.isEmpty()) {
             _pipelineState.value = PipelineState.IDLE
             return

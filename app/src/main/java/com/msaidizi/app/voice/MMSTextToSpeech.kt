@@ -319,7 +319,7 @@ class MMSTextToSpeech @Inject constructor(
 
             // 4. Extract audio samples (float32 [-1, 1])
             val audioOutput = results.get("audio")
-            val samples = (audioOutput.value as Array<FloatArray>)[0]
+            val samples = ((audioOutput as OnnxTensor).value as Array<FloatArray>)[0]
 
             Timber.d(
                 "MMS TTS: Synthesized %d samples (%.1fs) in %dms [lang=%s]",
@@ -554,7 +554,7 @@ class MMSTextToSpeech @Inject constructor(
                 && audioTrack.playbackHeadPosition < pcm.size
                 && isCurrentlySpeaking
             ) {
-                delay(20)
+                Thread.sleep(20)
             }
         } catch (e: Exception) {
             Timber.e(e, "AudioTrack playback error")

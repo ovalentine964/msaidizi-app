@@ -57,7 +57,7 @@ class InfrastructureViewModel @Inject constructor(
                         _phaseBenefits.value = data.allPhases.map { phase ->
                             PhaseBenefit(
                                 phaseId = phase.phaseId,
-                                phaseName = phase.name,
+                                phaseName = phase.phaseName,
                                 status = phase.status,
                                 description = phase.description,
                                 workerBenefits = phase.workerBenefits,

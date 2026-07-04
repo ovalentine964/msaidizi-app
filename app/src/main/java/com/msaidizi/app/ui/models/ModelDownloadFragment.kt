@@ -232,7 +232,7 @@ class ModelDownloadFragment : Fragment() {
         android.app.AlertDialog.Builder(requireContext())
             .setTitle(getString(R.string.models_pick_send))
             .setItems(names) { _, which ->
-                viewModel.sendModelViaBluetooth(readyModels[which].id)
+                viewModel.sendModelViaBluetooth(requireActivity(), readyModels[which].id)
             }
             .setNegativeButton(getString(R.string.cancel), null)
             .show()

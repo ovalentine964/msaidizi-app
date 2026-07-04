@@ -129,9 +129,9 @@ class ModelDownloadViewModel @Inject constructor(
         }
     }
 
-    fun sendModelViaBluetooth(modelId: String) {
+    fun sendModelViaBluetooth(activity: android.app.Activity, modelId: String) {
         modelTransfer.sendModelViaBluetooth(
-            getApplication() as android.app.Activity,
+            activity,
             modelId
         )
     }
