@@ -155,7 +155,7 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 
     // EncryptedSharedPreferences
-    implementation("androidx.security:security-crypto:1.0.0")
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
     // WorkManager — KSP replaces kapt for Hilt worker injection
     implementation("androidx.work:work-runtime-ktx:2.9.0")
