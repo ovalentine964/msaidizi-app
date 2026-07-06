@@ -184,6 +184,10 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
     testImplementation("io.mockk:mockk:1.13.9")
+    testImplementation("io.mockk:mockk-junit5:1.13.9")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.1")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.10.1")
+    testImplementation("app.cash.turbine:turbine:1.0.0")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     androidTestImplementation("androidx.room:room-testing:2.6.1")
@@ -191,6 +195,11 @@ dependencies {
 
     // Detekt linting
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.4")
+}
+
+// JUnit 5 configuration
+tasks.withType<Test> {
+    useJUnitPlatform()
 }
 
 // KSP configuration — Room schema export
