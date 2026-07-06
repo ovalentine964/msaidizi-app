@@ -5,6 +5,7 @@ import com.msaidizi.app.core.util.SwahiliParser
 import com.msaidizi.app.core.database.TitheDao
 import com.msaidizi.app.core.database.GoalDao
 import com.msaidizi.app.core.database.LoanDao
+import com.msaidizi.app.voice.LlmEngine
 import com.msaidizi.app.finance.TitheTracker
 import com.msaidizi.app.finance.GoalPlanner
 import com.msaidizi.app.finance.LoanManager
@@ -105,7 +106,8 @@ class Orchestrator(
     private val reActLoop: ReActLoop = ReActLoop(),
     private val reflexionLoop: ReflexionLoop = ReflexionLoop(),
     private val planExecuteLoop: PlanExecuteLoop = PlanExecuteLoop(),
-    private val eventBus: AgentEventBus = AgentEventBus.getInstance()
+    private val eventBus: AgentEventBus = AgentEventBus.getInstance(),
+    private val llmEngine: LlmEngine? = null
 ) {
     // Response flow for UI
     private val _responses = MutableSharedFlow<AgentResponse>(extraBufferCapacity = 8)
@@ -274,6 +276,10 @@ class Orchestrator(
         ) {
             reActLoop.act(trace, "medium_confidence_confirm", "Confidence ${String.format("%.2f", intentResult.confidence)}, confirming with user")
             handleMediumConfidence(intentResult, vocabEnhancedText, language)
+        } else if (intentResult.needsLLM && llmEngine != null && llmEngine.isModelLoaded()) {
+            // ═══ LLM ESCALATION: Route complex/ambiguous intents to on-device LLM ═══
+            reActLoop.act(trace, "llm_escalation", "Intent needs LLM (${intentResult.intent}), escalating to on-device model")
+            handleLlmEscalation(intentResult, vocabEnhancedText, language)
         } else {
             reActLoop.act(trace, "route_to_agent", "Routing to agent for intent: ${intentResult.intent}")
             routeToAgent(intentResult, text, language)
@@ -1376,6 +1382,79 @@ class Orchestrator(
             },
             type = ResponseType.UNKNOWN
         )
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // LLM ESCALATION — Cloud/On-Device LLM for complex intents
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * Handle intents that require LLM generation.
+     * Uses the on-device LlmEngine (llama.cpp) for natural language generation.
+     *
+     * Escalation triggers:
+     * - needsLLM = true (ASK_ADVICE, CORRECTION, UNKNOWN)
+     * - LlmEngine is loaded and available
+     *
+     * Falls back to code-based agent routing if LLM fails.
+     */
+    private suspend fun handleLlmEscalation(
+        intentResult: IntentResult,
+        text: String,
+        language: String
+    ): AgentResponse {
+        val engine = llmEngine ?: return routeToAgent(intentResult, text, language)
+
+        return try {
+            // Build context from conversation memory and business data
+            val context = buildString {
+                val memCtx = conversationMemory.getContext()
+                if (memCtx.lastItem != null) {
+                    append("Bidhaa ya mwisho: ${memCtx.lastItem}. ")
+                }
+                if (memCtx.lastAmount != null) {
+                    append("Bei ya mwisho: KSh ${"%.0f".format(memCtx.lastAmount)}. ")
+                }
+                if (memCtx.topicChain.isNotEmpty()) {
+                    append("Mada: ${memCtx.topicChain.joinToString(", ")}. ")
+                }
+            }
+
+            // Generate response using LLM
+            val llmResponse = engine.generateResponse(
+                userInput = text,
+                context = context,
+                language = language
+            )
+
+            if (llmResponse.isNotBlank()) {
+                AgentResponse(
+                    text = llmResponse,
+                    type = when (intentResult.intent) {
+                        IntentType.ASK_ADVICE -> ResponseType.ADVICE
+                        IntentType.CORRECTION -> ResponseType.CONFIRMATION
+                        else -> ResponseType.INFORMATION
+                    },
+                    data = mapOf(
+                        "source" to "llm",
+                        "intent" to intentResult.intent.name
+                    )
+                )
+            } else {
+                // LLM returned empty — fall back to code-based routing
+                Timber.w("LLM returned empty response, falling back to agent routing")
+                routeToAgent(intentResult, text, language)
+            }
+        } catch (e: OutOfMemoryError) {
+            Timber.e(e, "OOM during LLM escalation")
+            // Unload LLM to free memory, fall back to code
+
+            engine.unloadModel()
+            routeToAgent(intentResult, text, language)
+        } catch (e: Exception) {
+            Timber.e(e, "LLM escalation failed, falling back to agent routing")
+            routeToAgent(intentResult, text, language)
+        }
     }
 
     // ═══════════════ LEARNING LIFECYCLE ═══════════════

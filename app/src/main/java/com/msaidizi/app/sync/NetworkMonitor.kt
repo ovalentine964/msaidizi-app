@@ -29,6 +29,7 @@ class NetworkMonitor(
     val connectionType: StateFlow<ConnectionType> = _connectionType
 
     private var isRegistered = false
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
     /**
      * Start monitoring network connectivity.
@@ -40,7 +41,7 @@ class NetworkMonitor(
             .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
             .build()
 
-        connectivityManager.registerNetworkCallback(networkRequest, object : ConnectivityManager.NetworkCallback() {
+        val callback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
                 _networkState.value = NetworkState.CONNECTED
                 _connectionType.value = getConnectionType(network)
@@ -57,7 +58,10 @@ class NetworkMonitor(
                 _connectionType.value = getConnectionTypeFromCapabilities(capabilities)
                 Timber.d("Network capabilities changed: ${_connectionType.value}")
             }
-        })
+        }
+
+        connectivityManager.registerNetworkCallback(networkRequest, callback)
+        networkCallback = callback
 
         // Check initial state
         val activeNetwork = connectivityManager.activeNetwork
@@ -72,14 +76,16 @@ class NetworkMonitor(
 
     /**
      * Stop monitoring network connectivity.
+     * Unregisters the SAME callback instance that was registered.
      */
     fun stopMonitoring() {
         if (!isRegistered) return
         try {
-            connectivityManager.unregisterNetworkCallback(object : ConnectivityManager.NetworkCallback() {})
+            networkCallback?.let { connectivityManager.unregisterNetworkCallback(it) }
         } catch (e: Exception) {
             Timber.w(e, "Error unregistering network callback")
         }
+        networkCallback = null
         isRegistered = false
     }
 

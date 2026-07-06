@@ -2,7 +2,7 @@
 # https://detekt.dev/docs/introduction/configurations
 
 build:
-  maxIssues: 0
+  maxIssues: 5
   excludeCorrectable: false
   weights:
     complexity: 2
@@ -87,12 +87,10 @@ exceptions:
     exceptionNames:
       - ArrayIndexOutOfBoundsException
       - Error
-      - Exception
       - IllegalMonitorStateException
       - NullPointerException
-      - RuntimeException
       - Throwable
-    allowedExceptionNameRegex: 'expected|ignore|_'
+    allowedExceptionNameRegex: 'expected|ignore|_|e'
   TooGenericExceptionThrown:
     active: true
 

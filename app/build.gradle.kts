@@ -180,10 +180,18 @@ dependencies {
     // MPAndroidChart for dashboard
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
 
-    // Testing
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    // Testing — Unit (JUnit 5 + MockK + Turbine)
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.1")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.10.1")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.10.1")
     testImplementation("io.mockk:mockk:1.13.9")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    testImplementation("app.cash.turbine:turbine:1.0.0")
+    // Keep JUnit 4 + vintage engine for backward compat
+    testImplementation("junit:junit:4.13.2")
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.10.1")
+
+    // Testing — Android Integration
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     androidTestImplementation("androidx.room:room-testing:2.6.1")
@@ -209,5 +217,19 @@ configurations.all {
         force("org.jetbrains.kotlin:kotlin-stdlib:1.9.24")
         force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.24")
         force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.24")
+    }
+}
+
+// JUnit 5 platform for all test tasks
+tasks.withType<Test> {
+    useJUnitPlatform()
+}
+
+// JaCoCo code coverage reporting
+apply(plugin = "jacoco")
+tasks.withType<JacocoReport> {
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
     }
 }

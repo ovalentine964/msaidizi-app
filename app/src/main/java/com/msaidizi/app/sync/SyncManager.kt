@@ -151,18 +151,30 @@ class SyncManager(
     }
 
     /**
-     * Perform the actual sync operation.
+     * Perform the actual sync operation (push + pull).
+     *
+     * Push: Upload unsynced local transactions to backend.
+     * Pull: Download remote changes since last sync.
      */
     private suspend fun performSync() = withContext(Dispatchers.IO) {
+        // ═══ PUSH: Upload unsynced transactions ═══
         val unsyncedCount = syncQueue.getUnsyncedCount()
-        if (unsyncedCount == 0) {
-            Timber.d("Nothing to sync")
-            return@withContext
+        if (unsyncedCount > 0) {
+            Timber.d("Pushing $unsyncedCount transactions")
+            pushTransactions()
+        } else {
+            Timber.d("Nothing to push")
         }
 
-        Timber.d("Syncing $unsyncedCount transactions")
+        // ═══ PULL: Download remote changes ═══
+        pullChanges()
+    }
 
-        // Prepare payload
+    /**
+     * Push unsynced local transactions to the backend.
+     * Uses compressed + encrypted payload with retry.
+     */
+    private suspend fun pushTransactions() {
         val payload = syncQueue.prepareSyncPayload()
         val payloadJson = json.toJson(payload)
 
@@ -178,7 +190,7 @@ class SyncManager(
 
         while (attempt < MAX_RETRY_ATTEMPTS && !success) {
             try {
-                val response = httpClient.post("https://api.msaidizi.app/v1/sync/upload") {
+                val response = httpClient.post("https://api.msaidizi.app/v1/sync/push") {
                     contentType(ContentType.Application.OctetStream)
                     header("X-Device-Id", getDeviceId())
                     header("X-Payload-Size", encrypted.size.toString())
@@ -190,18 +202,18 @@ class SyncManager(
                     // Mark as synced
                     val syncedIds = payload.transactions.map { it.id }
                     syncQueue.markAsSynced(syncedIds)
-                    Timber.d("Sync successful: ${syncedIds.size} transactions uploaded")
+                    Timber.d("Push successful: ${syncedIds.size} transactions uploaded")
                 } else {
-                    Timber.w("Sync failed with status: ${response.status}")
+                    Timber.w("Push failed with status: ${response.status}")
                     attempt++
                     if (attempt < MAX_RETRY_ATTEMPTS) {
                         val delay = BASE_RETRY_DELAY_MS * (1L shl attempt)
-                        Timber.d("Retrying sync in ${delay}ms (attempt $attempt)")
+                        Timber.d("Retrying push in ${delay}ms (attempt $attempt)")
                         delay(delay)
                     }
                 }
             } catch (e: Exception) {
-                Timber.e(e, "Sync attempt $attempt failed")
+                Timber.e(e, "Push attempt $attempt failed")
                 attempt++
                 if (attempt < MAX_RETRY_ATTEMPTS) {
                     val delay = BASE_RETRY_DELAY_MS * (1L shl attempt)
@@ -211,7 +223,32 @@ class SyncManager(
         }
 
         if (!success) {
-            throw Exception("Sync failed after $MAX_RETRY_ATTEMPTS attempts")
+            throw Exception("Push failed after $MAX_RETRY_ATTEMPTS attempts")
+        }
+    }
+
+    /**
+     * Pull remote changes from the backend.
+     * Downloads new intelligence products and server-side updates.
+     */
+    private suspend fun pullChanges() {
+        try {
+            val response = httpClient.get("https://api.msaidizi.app/v1/sync/pull") {
+                header("X-Device-Id", getDeviceId())
+            }
+
+            if (response.status.isSuccess()) {
+                val body = response.bodyAsText()
+                Timber.d("Pull successful: received changes")
+                // TODO: Parse and apply remote changes to local DB
+                // This would involve deserializing the response and upserting
+                // into Room DB via the appropriate DAOs
+            } else {
+                Timber.w("Pull failed with status: ${response.status}")
+            }
+        } catch (e: Exception) {
+            // Pull failure is non-critical — local data is still valid
+            Timber.w(e, "Pull failed (non-critical)")
         }
     }
 

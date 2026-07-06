@@ -47,6 +47,8 @@ import com.msaidizi.app.sync.SyncManager
 import com.google.gson.Gson
 import com.msaidizi.app.sync.SyncQueue
 import com.msaidizi.app.sync.NetworkMonitor
+import com.msaidizi.app.agent.ModelRouter
+import com.msaidizi.app.voice.LlmEngine
 import com.msaidizi.app.finance.TitheTracker
 import com.msaidizi.app.finance.GoalPlanner
 import com.msaidizi.app.finance.LoanManager
@@ -93,7 +95,7 @@ object AppModule {
             AppDatabase::class.java,
             "msaidizi.db"
         )
-            .setJournalMode(RoomDatabase.JournalMode.TRUNCATE)
+            .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     super.onCreate(db)
@@ -609,14 +611,32 @@ object AppModule {
         variableRewardsLoop: VariableRewardsLoop,
         selfEvolution: SelfEvolutionManager,
         preferenceLearner: PreferenceLearner,
-        adaptiveVocabulary: AdaptiveVocabulary
+        adaptiveVocabulary: AdaptiveVocabulary,
+        llmEngine: LlmEngine
     ): Orchestrator = Orchestrator(
         intentRouter, businessAgent, analysisAgent, advisorAgent, learningAgent, adaptiveLearning,
         gamificationEngine, ahaMomentFlow, richHabitsScore, mindsetAcademy,
         titheTracker, goalPlanner, loanManager, titheDao, goalDao, loanDao,
         briefingDelivery, morningBriefingLoop, streakProtectionLoop, variableRewardsLoop,
-        selfEvolution, preferenceLearner, adaptiveVocabulary
+        selfEvolution, preferenceLearner, adaptiveVocabulary,
+        llmEngine = llmEngine
     )
+
+    @Provides
+    @Singleton
+    fun provideLlmEngine(
+        @ApplicationContext context: Context,
+        languageModelRegistry: LanguageModelRegistry,
+        adaptiveAsrEngine: AdaptiveAsrEngine
+    ): LlmEngine = LlmEngine(context, languageModelRegistry, adaptiveAsrEngine)
+
+    @Provides
+    @Singleton
+    fun provideModelRouter(
+        @ApplicationContext context: Context,
+        llmEngine: LlmEngine,
+        api: MsaidiziApi
+    ): ModelRouter = ModelRouter(context, llmEngine = llmEngine, apiClient = api)
 
     // === SYNC ===
 
