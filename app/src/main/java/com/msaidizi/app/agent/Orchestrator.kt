@@ -169,14 +169,34 @@ class Orchestrator(
             }
         }
 
-        // Steps 5-8: Post-processing
-        val critiqueScore = conversationManager.postProcess(enhancedText, intentResult, response, language, trace)
-        _responses.emit(response)
-        reActLoop.complete(trace, response.type != ResponseType.ERROR, response.text)
+        // Steps 5-8: Post-processing + output sanitization (defense-in-depth)
+        val sanitizedResponse = sanitizeOutput(response, language)
+        val critiqueScore = conversationManager.postProcess(enhancedText, intentResult, sanitizedResponse, language, trace)
+        _responses.emit(sanitizedResponse)
+        reActLoop.complete(trace, sanitizedResponse.type != ResponseType.ERROR, sanitizedResponse.text)
 
         conversationManager.publishTaskCompleted(trace, response)
 
         return response
+    }
+
+    // ═══════════════ OUTPUT SANITIZATION — defense-in-depth ═══════════════
+
+    /**
+     * Sanitize agent response through 10-layer defense.
+     * Applied to ALL responses before emission.
+     *
+     * @see OutputSanitizer for layer details
+     */
+    private fun sanitizeOutput(response: AgentResponse, language: String): AgentResponse {
+        val sanitized = OutputSanitizer.sanitize(response.text, language)
+        return if (sanitized != response.text) {
+            Timber.w("Output sanitized for intent: %s (original=%d chars, sanitized=%d chars)",
+                response.type, response.text.length, sanitized.length)
+            response.copy(text = sanitized)
+        } else {
+            response
+        }
     }
 
     // ═══════════════ ROUTING — delegates to domain handlers ═══════════════

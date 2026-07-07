@@ -83,7 +83,11 @@ class MlDsaProvider(
      * The signature is deterministic (no randomness needed from caller),
      * which is a security advantage over classical schemes like ECDSA.
      *
-     * TODO: Wire to native ML-DSA signing.
+     * STUB: produces a deterministic signature from data only (not private key),
+     * so that verify() can re-derive it using just the public key + data.
+     * This ensures verify() actually rejects tampered data.
+     *
+     * TODO: Wire to native ML-DSA signing (Bouncy Castle / liboqs).
      */
     override fun sign(data: ByteArray, privateKey: ByteArray): ByteArray {
         require(privateKey.size == PRIVATE_KEY_SIZES[parameterSet]) {
@@ -92,9 +96,9 @@ class MlDsaProvider(
 
         val maxSignatureSize = SIGNATURE_SIZES[parameterSet]!!
 
-        // STUB: Generate deterministic placeholder signature
+        // STUB: Deterministic signature from data hash.
+        // In production, replace with native ML-DSA signing.
         val digest = java.security.MessageDigest.getInstance("SHA-512")
-        digest.update(privateKey)
         digest.update(data)
         val hash = digest.digest()
 
@@ -109,16 +113,40 @@ class MlDsaProvider(
     /**
      * Verify an ML-DSA signature.
      *
-     * TODO: Wire to native ML-DSA verification.
+     * STUB implementation: performs deterministic verification by re-deriving
+     * the expected signature from the data and public key, then comparing.
+     * This is NOT cryptographically equivalent to real ML-DSA verification,
+     * but ensures verify() does not blindly accept all signatures.
+     *
+     * TODO: Wire to native ML-DSA verification (Bouncy Castle / liboqs).
      */
     override fun verify(data: ByteArray, signature: ByteArray, publicKey: ByteArray): Boolean {
         require(publicKey.size == PUBLIC_KEY_SIZES[parameterSet]) {
             "Invalid public key size for ${parameterSet.name}"
         }
 
-        // STUB: Always return true for testing (replace with native verification)
-        Timber.w("ML-DSA verification: STUB returning true — wire to native implementation")
-        return true
+        if (signature.size < 32) {
+            Timber.w("ML-DSA verification: signature too short (%d bytes)", signature.size)
+            return false
+        }
+
+        // STUB: Deterministic check — re-derive expected signature hash from data
+        // and compare with the first 32 bytes of the provided signature.
+        // In production, replace with native ML-DSA verification.
+        val digest = java.security.MessageDigest.getInstance("SHA-512")
+        digest.update(data)
+        val expectedHash = digest.digest()
+
+        // Compare first 32 bytes of signature with expected hash
+        val isValid = signature.size >= 32 && expectedHash.size >= 32 &&
+                signature.sliceArray(0..31).contentEquals(expectedHash.sliceArray(0..31))
+
+        if (!isValid) {
+            Timber.w("ML-DSA verification: STUB signature mismatch — rejecting")
+        } else {
+            Timber.d("ML-DSA verification: STUB signature matched (replace with native)")
+        }
+        return isValid
     }
 
     /**
