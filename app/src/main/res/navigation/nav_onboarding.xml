@@ -1,51 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_onboarding"
     app:startDestination="@id/introductionFragment">
 
+    <!-- Step 1: Karibu! — Warm Welcome -->
     <fragment
         android:id="@+id/introductionFragment"
         android:name="com.msaidizi.app.onboarding.IntroductionFragment"
-        android:label="Introduction">
+        android:label="Karibu">
         <action
-            android:id="@+id/action_introduction_to_business"
+            android:id="@+id/action_introduction_to_naming"
+            app:destination="@id/agentNamingFragment" />
+    </fragment>
+
+    <!-- Step 2: Agent Naming — Worker names their Msaidizi -->
+    <fragment
+        android:id="@+id/agentNamingFragment"
+        android:name="com.msaidizi.app.onboarding.AgentNamingFragment"
+        android:label="Name Your Helper">
+        <action
+            android:id="@+id/action_naming_to_business_discovery"
             app:destination="@id/businessDiscoveryFragment" />
     </fragment>
 
+    <!-- Step 3: Business Discovery — Voice conversation to understand the business -->
     <fragment
         android:id="@+id/businessDiscoveryFragment"
         android:name="com.msaidizi.app.onboarding.BusinessDiscoveryFragment"
-        android:label="Business Discovery">
+        android:label="Getting to Know You">
         <action
-            android:id="@+id/action_business_to_whatsapp"
-            app:destination="@id/whatsappConnectionFragment" />
+            android:id="@+id/action_business_discovery_to_model_setup"
+            app:destination="@id/modelSetupFragment" />
+        <action
+            android:id="@+id/action_business_discovery_to_main"
+            app:destination="@id/mainActivity"
+            app:popUpTo="@id/nav_onboarding"
+            app:popUpToInclusive="true" />
     </fragment>
 
+    <!-- Step 4: Model Setup — Downloads happening in background -->
     <fragment
-        android:id="@+id/whatsappConnectionFragment"
-        android:name="com.msaidizi.app.onboarding.WhatsAppConnectionStepFragment"
-        android:label="WhatsApp Connection"
-        tools:layout="@layout/fragment_whats_app_connection">
+        android:id="@+id/modelSetupFragment"
+        android:name="com.msaidizi.app.onboarding.ModelSetupFragment"
+        android:label="Preparing AI">
         <action
-            android:id="@+id/action_whatsapp_to_personality"
-            app:destination="@id/personalityFragment" />
-    </fragment>
-
-    <fragment
-        android:id="@+id/personalityFragment"
-        android:name="com.msaidizi.app.onboarding.PersonalityFragment"
-        android:label="Personality">
-        <action
-            android:id="@+id/action_personality_to_first_use"
+            android:id="@+id/action_model_download_to_first_use"
             app:destination="@id/firstUseFragment" />
     </fragment>
 
+    <!-- Step 5: Ready! — First value delivered -->
     <fragment
         android:id="@+id/firstUseFragment"
         android:name="com.msaidizi.app.onboarding.FirstUseFragment"
-        android:label="First Use">
+        android:label="Ready!">
         <action
             android:id="@+id/action_first_use_to_main"
             app:destination="@id/mainActivity"
@@ -53,6 +61,7 @@
             app:popUpToInclusive="true" />
     </fragment>
 
+    <!-- Main Activity (destination after onboarding) -->
     <activity
         android:id="@+id/mainActivity"
         android:name="com.msaidizi.app.MainActivity"

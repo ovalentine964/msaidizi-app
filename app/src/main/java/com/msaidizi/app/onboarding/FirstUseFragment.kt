@@ -13,8 +13,10 @@ import com.msaidizi.app.MainActivity
 import com.msaidizi.app.R
 
 /**
- * Stub: First use / tutorial onboarding step.
- * TODO: Replace with full implementation including guided first transaction demo.
+ * "Msaidizi is ready!" screen — the final step of onboarding.
+ *
+ * Warm, celebratory. Valentine's mum has made it!
+ * "Tell me about your business" with a voice prompt.
  */
 class FirstUseFragment : Fragment() {
 
@@ -25,35 +27,95 @@ class FirstUseFragment : Fragment() {
     ): View {
         val layout = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(48, 48, 48, 48)
+            setPadding(64, 48, 64, 48)
             gravity = android.view.Gravity.CENTER
         }
 
+        // Celebration icon
+        val icon = TextView(requireContext()).apply {
+            text = "🎉"
+            textSize = 72f
+            gravity = android.view.Gravity.CENTER
+            setPadding(0, 0, 0, 24)
+        }
+        layout.addView(icon)
+
+        // Title
         val title = TextView(requireContext()).apply {
-            text = "Tayari!"
-            textSize = 24f
+            text = "Msaidizi is Ready!"
+            textSize = 28f
             gravity = android.view.Gravity.CENTER
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(resources.getColor(R.color.primary, null))
+            setPadding(0, 0, 0, 8)
         }
+        layout.addView(title)
 
+        // Subtitle
         val subtitle = TextView(requireContext()).apply {
-            text = "Sasa tuanze kufuatilia biashara yako.\nSema mauzo yako na nitakusaidia."
-            textSize = 16f
+            text = "Your AI business helper is here."
+            textSize = 18f
             gravity = android.view.Gravity.CENTER
-            setPadding(0, 32, 0, 32)
+            setPadding(0, 0, 0, 32)
+        }
+        layout.addView(subtitle)
+
+        // What she can do
+        val features = listOf(
+            "🎤  \"Nilizungumza nyanya tatu\" — record sales by voice",
+            "📊  \"Nimepata faida ngapi?\" — ask about your profit",
+            "📦  \"Stock yangu ikoje?\" — check your inventory",
+            "💡  \"Nifanye nini?\" — get business advice"
+        )
+
+        for (feature in features) {
+            val featureText = TextView(requireContext()).apply {
+                text = feature
+                textSize = 15f
+                setPadding(0, 12, 0, 12)
+            }
+            layout.addView(featureText)
         }
 
-        val button = Button(requireContext()).apply {
-            text = "Anza Biashara"
+        // Spacer
+        val spacer = View(requireContext()).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                48
+            )
+        }
+        layout.addView(spacer)
+
+        // "Start using Msaidizi" button
+        val startButton = Button(requireContext()).apply {
+            text = "🎤  Start Using Msaidizi"
+            textSize = 20f
+            setPadding(48, 24, 48, 24)
             setOnClickListener {
                 val intent = Intent(requireContext(), MainActivity::class.java)
                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 startActivity(intent)
             }
         }
+        layout.addView(startButton)
 
-        layout.addView(title)
-        layout.addView(subtitle)
-        layout.addView(button)
+        // Encouragement
+        val encouragement = TextView(requireContext()).apply {
+            text = "Just speak naturally — Msaidizi understands you.\nHakuna haja ya kujua teknolojia!"
+            textSize = 14f
+            gravity = android.view.Gravity.CENTER
+            setPadding(0, 24, 0, 0)
+            setTextColor(resources.getColor(android.R.color.darker_gray, null))
+        }
+        layout.addView(encouragement)
+
+        // Entrance animation
+        layout.alpha = 0f
+        layout.animate()
+            .alpha(1f)
+            .setDuration(600)
+            .setStartDelay(300)
+            .start()
 
         return layout
     }

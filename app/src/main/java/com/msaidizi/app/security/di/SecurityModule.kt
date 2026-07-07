@@ -9,6 +9,14 @@ import com.msaidizi.app.security.auth.SessionManager
 import com.msaidizi.app.security.crypto.EncryptedStorage
 import com.msaidizi.app.security.crypto.KeyManager
 import com.msaidizi.app.security.crypto.TlsConfig
+import com.msaidizi.app.security.crypto.pqc.AlgorithmRegistry
+import com.msaidizi.app.security.crypto.pqc.CryptoAuditLogger
+import com.msaidizi.app.security.crypto.pqc.DocumentSigner
+import com.msaidizi.app.security.crypto.pqc.HybridKeyExchange
+import com.msaidizi.app.security.crypto.pqc.MlDsaProvider
+import com.msaidizi.app.security.crypto.pqc.MlDsaParameterSet
+import com.msaidizi.app.security.crypto.pqc.MlKemProvider
+import com.msaidizi.app.security.crypto.pqc.MlKemParameterSet
 import com.msaidizi.app.security.privacy.ConsentManager
 import com.msaidizi.app.security.privacy.DataMinimizer
 import com.msaidizi.app.security.privacy.DataRetentionManager
@@ -82,8 +90,34 @@ object SecurityModule {
     @Provides
     @Singleton
     fun provideTlsConfig(
+        @ApplicationContext context: Context,
+        auditLogger: CryptoAuditLogger
+    ): TlsConfig = TlsConfig(context, auditLogger)
+
+    // === POST-QUANTUM CRYPTOGRAPHY ===
+
+    @Provides
+    @Singleton
+    fun provideCryptoAuditLogger(
         @ApplicationContext context: Context
-    ): TlsConfig = TlsConfig(context)
+    ): CryptoAuditLogger = CryptoAuditLogger(context)
+
+    @Provides
+    @Singleton
+    fun provideAlgorithmRegistry(): AlgorithmRegistry = AlgorithmRegistry()
+
+    @Provides
+    @Singleton
+    fun provideDocumentSigner(
+        algorithmRegistry: AlgorithmRegistry,
+        auditLogger: CryptoAuditLogger
+    ): DocumentSigner = DocumentSigner(algorithmRegistry, auditLogger)
+
+    @Provides
+    @Singleton
+    fun provideHybridKeyExchange(): HybridKeyExchange = HybridKeyExchange(
+        MlKemProvider(MlKemParameterSet.ML_KEM_768)
+    )
 
     // === SIM SWAP DEFENSE ===
 

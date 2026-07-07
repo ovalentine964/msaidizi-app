@@ -1,0 +1,17 @@
+#!/bin/bash
+# ================================================================
+# ANGAVU INTELLIGENCE — PRE-COMMIT HOOK
+# ================================================================
+# Runs the 8-dimension validation gate before every commit.
+# Install: cp .git/hooks/pre-commit scripts/pre-commit && chmod +x scripts/pre-commit
+# ================================================================
+
+echo "Running Angavu Intelligence 8-Dimension Validation..."
+echo ""
+
+# Run from repo root
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+cd "$REPO_ROOT"
+bash scripts/validate-all-dimensions.sh
