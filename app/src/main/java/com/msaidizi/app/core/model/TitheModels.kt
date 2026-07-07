@@ -8,7 +8,11 @@ import androidx.room.PrimaryKey
     tableName = "tithe_records",
     indices = [
         Index(value = ["date"]),
-        Index(value = ["type"])
+        Index(value = ["type"]),
+        // Composite: queries filter by type + date range
+        Index(value = ["type", "date"]),
+        // Composite: date range queries with amount aggregation
+        Index(value = ["date", "amount"])
     ]
 )
 data class TitheRecord(

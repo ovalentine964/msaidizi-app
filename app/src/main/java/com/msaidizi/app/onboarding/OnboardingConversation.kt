@@ -243,15 +243,71 @@ class OnboardingConversation {
             is ConversationStep.AskChallenge -> {
                 accumulated.biggestChallenge = response
 
-                // ── Phase 4: Setting Up ──
-                // Models are downloading in background during the conversation
-                ConversationStep.ModelDownloadStatus(
+                // ── Phase 3b: WhatsApp Setup ──
+                ConversationStep.AskWhatsApp(
                     prompt = buildPrompt(accumulated.language,
-                        "Sawa $workerName! Nimejifunza mengi kuhusu biashara yako. " +
-                            "Sasa ninajifunza lugha yako... dakika moja tu.",
-                        "Great $workerName! I've learned a lot about your business. " +
-                            "Now I'm learning your language... just a moment."
+                        "Sasa $workerName — unatumia WhatsApp?",
+                        "Now $workerName — do you use WhatsApp?"
                     )
+                )
+            }
+
+            is ConversationStep.AskWhatsApp -> {
+                val usesWhatsApp = parseYesNo(response)
+                accumulated.usesWhatsApp = usesWhatsApp
+
+                if (usesWhatsApp) {
+                    ConversationStep.ConfirmWhatsAppNumber(
+                        prompt = buildPrompt(accumulated.language,
+                            "Nzuri! Nitakutumia ripoti za biashara yako kupitia WhatsApp kila siku saa 7 usiku.\n\n" +
+                                "Namba yako ya WhatsApp ni ipi?",
+                            "Great! I'll send you business reports via WhatsApp every day at 7 PM.\n\n" +
+                                "What's your WhatsApp number?"
+                        )
+                    )
+                } else {
+                    // Skip WhatsApp — go to model download
+                    ConversationStep.ModelDownloadStatus(
+                        prompt = buildPrompt(accumulated.language,
+                            "Sawa! Tutakutumia ripoti kupitia app yako ya Msaidizi.\n\n" +
+                                "Sasa ninajifunza lugha yako... dakika moja tu.",
+                            "Okay! We'll send reports through your Msaidizi app.\n\n" +
+                                "Now I'm learning your language... just a moment."
+                        )
+                    )
+                }
+            }
+
+            is ConversationStep.ConfirmWhatsAppNumber -> {
+                val phone = extractPhoneNumber(response)
+                accumulated.whatsappPhone = phone
+
+                if (phone.isNotBlank()) {
+                    ConversationStep.WhatsAppConnected(
+                        prompt = buildPrompt(accumulated.language,
+                            "Sawa! Namba yako ni $phone.\n\n" +
+                                "Msaidizi imeunganishwa! Ripoti ya kwanza itafika saa 7 usiku.\n\n" +
+                                "Sasa ninajifunza lugha yako... dakika moja tu.",
+                            "Got it! Your number is $phone.\n\n" +
+                                "Msaidizi connected! First report arrives at 7 PM.\n\n" +
+                                "Now I'm learning your language... just a moment."
+                        )
+                    )
+                } else {
+                    // Couldn't extract phone — skip WhatsApp
+                    ConversationStep.ModelDownloadStatus(
+                        prompt = buildPrompt(accumulated.language,
+                            "Sawa, tutajaribu tena baadaye. Sasa ninajifunza lugha yako...",
+                            "Okay, we'll try again later. Now I'm learning your language..."
+                        )
+                    )
+                }
+            }
+
+            is ConversationStep.WhatsAppConnected -> {
+                // Proceed to model download
+                ConversationStep.ModelDownloadStatus(
+                    prompt = step.prompt
                 )
             }
 
@@ -496,6 +552,42 @@ class OnboardingConversation {
         }
     }
 
+    /** Parse yes/no response (Swahili + English). */
+    private fun parseYesNo(response: String): Boolean {
+        val lower = response.lowercase().trim()
+        return lower.contains("ndio") || lower.contains("yes") || lower.contains("sawa") ||
+            lower.contains("naam") || lower.contains("ntumia") || lower.contains("tumia") ||
+            lower.contains("natumia") || lower.contains("nitumie") ||
+            (lower.length <= 3 && !lower.contains("hapana") && !lower.contains("no") && !lower.contains("si") && lower.isNotBlank())
+    }
+
+    /** Extract phone number from response. Handles Kenyan formats. */
+    private fun extractPhoneNumber(response: String): String {
+        // Remove spaces, dashes, parentheses
+        val cleaned = response.replace(Regex("[\\s\\-()\\+]"), "")
+
+        // Match Kenyan phone patterns
+        val patterns = listOf(
+            Regex("(?:254|0)(7[0-9]{8})"),   // 2547XXXXXXXX or 07XXXXXXXX
+            Regex("(7[0-9]{8})"),               // 7XXXXXXXX
+            Regex("(1[0-9]{8})"),               // 1XXXXXXXX
+        )
+
+        for (pattern in patterns) {
+            val match = pattern.find(cleaned)
+            if (match != null) {
+                var number = match.groupValues[1]
+                // Normalize to 254 format
+                if (number.startsWith("7") || number.startsWith("1")) {
+                    number = "254$number"
+                }
+                return number
+            }
+        }
+
+        return ""
+    }
+
     // ═══════════════════════════════════════════════════════════════
     // FIRST INSIGHT GENERATION (Phase 5: First Value)
     // ═══════════════════════════════════════════════════════════════
@@ -605,6 +697,8 @@ class OnboardingConversation {
             paymentMethod = accumulated.paymentMethod,
             keepsRecords = accumulated.keepsRecords,
             biggestChallenge = accumulated.biggestChallenge,
+            usesWhatsApp = accumulated.usesWhatsApp,
+            whatsappPhone = accumulated.whatsappPhone,
             language = accumulated.language,
             dialect = accumulated.dialect,
             classificationConfidence = accumulated.classificationConfidence,
@@ -705,6 +799,17 @@ sealed class ConversationStep {
     /** Ask about biggest challenge */
     data class AskChallenge(val prompt: String) : ConversationStep()
 
+    // ── Phase 3b: WhatsApp Setup ──
+
+    /** Ask if worker uses WhatsApp */
+    data class AskWhatsApp(val prompt: String) : ConversationStep()
+
+    /** Confirm WhatsApp number */
+    data class ConfirmWhatsAppNumber(val prompt: String, val phone: String = "") : ConversationStep()
+
+    /** WhatsApp connected confirmation */
+    data class WhatsAppConnected(val prompt: String) : ConversationStep()
+
     // ── Phase 4: Setting Up ──
 
     /** Model download status — conversation continues while models download */
@@ -751,6 +856,8 @@ class AccumulatedProfileData {
     var paymentMethod: PaymentType = PaymentType.BOTH
     var keepsRecords: RecordMethod = RecordMethod.MEMORY
     var biggestChallenge: String = ""
+    var usesWhatsApp: Boolean = false
+    var whatsappPhone: String = ""
     var language: String = "sw"
     var dialect: String = "STANDARD"
     var classificationConfidence: Double = 0.0

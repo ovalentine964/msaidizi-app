@@ -19,7 +19,14 @@ import androidx.room.PrimaryKey
         Index(value = ["createdAt"]),
         Index(value = ["type"]),
         Index(value = ["item"]),
-        Index(value = ["syncedAt"])
+        Index(value = ["syncedAt"]),
+        // Composite indexes for frequent query patterns (EXPLAIN QUERY PLAN optimized)
+        // Used by: getSalesTotal, getPurchasesTotal, getExpensesTotal, getProfit
+        Index(value = ["type", "createdAt"]),
+        // Used by: getItemSalesHistory, getAverageCost, getTopSellingItems
+        Index(value = ["item", "type", "createdAt"]),
+        // Used by: getDailySalesTotals (GROUP BY day)
+        Index(value = ["type", "createdAt", "totalAmount"])
     ]
 )
 data class Transaction(

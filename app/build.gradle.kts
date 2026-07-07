@@ -38,12 +38,12 @@ detekt {
 
 android {
     namespace = "com.msaidizi.app"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.msaidizi.app"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
 
@@ -107,49 +107,51 @@ dependencies {
     implementation("androidx.fragment:fragment-ktx:1.6.2")
 
     // Lifecycle (ViewModel, LiveData)
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
-    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.7.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
-    implementation("androidx.lifecycle:lifecycle-process:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-process:2.8.7")
 
     // Navigation
     implementation("androidx.navigation:navigation-fragment-ktx:2.7.6")
     implementation("androidx.navigation:navigation-ui-ktx:2.7.6")
 
     // Room Database — KSP replaces kapt for annotation processing
-    implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
-    ksp("androidx.room:room-compiler:2.6.1")  // was: kapt(...)
+    // Updated 2.7.1: KMP support, improved paging, better KSP performance
+    implementation("androidx.room:room-runtime:2.7.1")
+    implementation("androidx.room:room-ktx:2.7.1")
+    implementation("androidx.room:room-paging:2.7.1")
+    ksp("androidx.room:room-compiler:2.7.1")  // was: kapt(...)
 
     // SQLCipher for Room database encryption
     implementation("net.zetetic:android-database-sqlcipher:4.5.4")
     implementation("androidx.sqlite:sqlite:2.4.0")
 
     // Hilt DI — KSP replaces kapt
-    implementation("com.google.dagger:hilt-android:2.50")
-    ksp("com.google.dagger:hilt-android-compiler:2.50")  // was: kapt(...)
+    implementation("com.google.dagger:hilt-android:2.53.1")
+    ksp("com.google.dagger:hilt-android-compiler:2.53.1")  // was: kapt(...)
 
     // Kotlin reflect
-    implementation("org.jetbrains.kotlin:kotlin-reflect:1.9.24")
+    implementation("org.jetbrains.kotlin:kotlin-reflect:2.1.0")
 
-    // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    // Coroutines — 1.9.0: improved structured concurrency, better debugging
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
     // Kotlin Serialization (for JSON)
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
     // Retrofit + Gson
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("com.google.code.gson:gson:2.10.1")
 
     // Network (Ktor client for sync)
-    implementation("io.ktor:ktor-client-core:2.3.7")
-    implementation("io.ktor:ktor-client-okhttp:2.3.7")
-    implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
-    implementation("io.ktor:ktor-client-logging:2.3.7")
+    implementation("io.ktor:ktor-client-core:3.0.3")
+    implementation("io.ktor:ktor-client-okhttp:3.0.3")
+    implementation("io.ktor:ktor-client-content-negotiation:3.0.3")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:3.0.3")
+    implementation("io.ktor:ktor-client-logging:3.0.3")
 
     // DataStore (preferences)
     implementation("androidx.datastore:datastore-preferences:1.0.0")
@@ -157,16 +159,16 @@ dependencies {
     // EncryptedSharedPreferences
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
-    // WorkManager — KSP replaces kapt for Hilt worker injection
-    implementation("androidx.work:work-runtime-ktx:2.9.0")
-    implementation("androidx.hilt:hilt-work:1.1.0")
-    ksp("androidx.hilt:hilt-compiler:1.1.0")  // was: kapt(...)
+    // WorkManager — 2.10.0: improved battery-aware scheduling
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
+    implementation("androidx.hilt:hilt-work:1.2.0")
+    ksp("androidx.hilt:hilt-compiler:1.2.0")  // was: kapt(...)
 
     // zstd compression for sync
     implementation("com.github.luben:zstd-jni:1.5.5-11@aar")
 
-    // ONNX Runtime for ML models
-    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.16.3")
+    // ONNX Runtime — 1.20.0: ARM inference optimization, NNAPI improvements
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.20.0")
 
     // Lottie for animations
     implementation("com.airbnb.android:lottie:6.3.0")
@@ -185,7 +187,7 @@ dependencies {
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.10.1")
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.10.1")
     testImplementation("io.mockk:mockk:1.13.9")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
     testImplementation("app.cash.turbine:turbine:1.0.0")
     // Keep JUnit 4 + vintage engine for backward compat
     testImplementation("junit:junit:4.13.2")
@@ -194,11 +196,11 @@ dependencies {
     // Testing — Android Integration
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    androidTestImplementation("androidx.room:room-testing:2.6.1")
+    androidTestImplementation("androidx.room:room-testing:2.7.1")
     androidTestImplementation("androidx.test:runner:1.5.2")
 
     // Detekt linting
-    detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.4")
+    detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.7")
 }
 
 // KSP configuration — Room schema export
@@ -210,13 +212,13 @@ ksp {
     arg("room.verbose", "true")
 }
 
-// Force ALL Kotlin deps to match Kotlin 1.9.24
+// Force ALL Kotlin deps to match Kotlin 2.1.0 (K2 compiler)
 configurations.all {
     resolutionStrategy {
-        force("org.jetbrains.kotlin:kotlin-reflect:1.9.24")
-        force("org.jetbrains.kotlin:kotlin-stdlib:1.9.24")
-        force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.24")
-        force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.24")
+        force("org.jetbrains.kotlin:kotlin-reflect:2.1.0")
+        force("org.jetbrains.kotlin:kotlin-stdlib:2.1.0")
+        force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.1.0")
+        force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.1.0")
     }
 }
 

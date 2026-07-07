@@ -9,7 +9,9 @@ import androidx.room.PrimaryKey
     tableName = "loan_records",
     indices = [
         Index(value = ["status"]),
-        Index(value = ["purpose"])
+        Index(value = ["purpose"]),
+        // Composite: active loans sorted by end date
+        Index(value = ["status", "endDate"])
     ]
 )
 data class LoanRecord(

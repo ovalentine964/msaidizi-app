@@ -97,6 +97,13 @@ data class WorkerProfile(
     /** Their biggest business challenge (free text) */
     val biggestChallenge: String = "",
 
+    // ── WhatsApp Report Delivery ──
+    /** Whether the worker uses WhatsApp for report delivery */
+    val usesWhatsApp: Boolean = false,
+
+    /** WhatsApp phone number for report delivery (254XXXXXXXXX format) */
+    val whatsappPhone: String = "",
+
     // ── Language & Communication (BCB 108) ──
     /** Primary language code (e.g., "sw", "en", "ha") */
     val language: String = "sw",

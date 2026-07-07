@@ -211,6 +211,53 @@ interface TransactionDao {
 
     @Query("SELECT * FROM transactions WHERE item LIKE '%' || :query || '%' ORDER BY createdAt DESC LIMIT :limit")
     suspend fun searchTransactions(query: String, limit: Int = 20): List<Transaction>
+
+    // === PAGINATION SUPPORT ===
+    // For large result sets (transaction history on long-running businesses)
+
+    /**
+     * Get paginated transaction history.
+     * Uses cursor-based pagination for efficient scrolling on 2GB devices.
+     * @param lastId ID of the last item from previous page (for cursor)
+     * @param pageSize Number of items per page (default 20)
+     */
+    @Query("""
+        SELECT * FROM transactions 
+        WHERE id < :lastId 
+        ORDER BY id DESC 
+        LIMIT :pageSize
+    """)
+    suspend fun getTransactionPage(lastId: Long, pageSize: Int = 20): List<Transaction>
+
+    /**
+     * Get first page of transactions.
+     */
+    @Query("""
+        SELECT * FROM transactions 
+        ORDER BY id DESC 
+        LIMIT :pageSize
+    """)
+    suspend fun getFirstPage(pageSize: Int = 20): List<Transaction>
+
+    /**
+     * Get total transaction count.
+     */
+    @Query("SELECT COUNT(*) FROM transactions")
+    suspend fun getTotalCount(): Int
+
+    /**
+     * Get paginated transactions for a date range.
+     * For daily/weekly reports with many transactions.
+     */
+    @Query("""
+        SELECT * FROM transactions 
+        WHERE createdAt >= :startDate AND createdAt <= :endDate 
+        ORDER BY createdAt DESC 
+        LIMIT :pageSize OFFSET :offset
+    """)
+    suspend fun getTransactionsInRangePaginated(
+        startDate: Long, endDate: Long, pageSize: Int = 20, offset: Int = 0
+    ): List<Transaction>
 }
 
 // Tuple classes moved to QueryTuples.kt for KSP compatibility

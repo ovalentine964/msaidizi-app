@@ -66,8 +66,10 @@ class ModelManager @Inject constructor(
         private const val LOW_MEMORY_PERCENT = 85  // Unload models when >85% RAM used
         private const val CRITICAL_MEMORY_PERCENT = 92 // Emergency unload
 
-        // Model IDs for LLM variants
+        // Model IDs for LLM variants — supports scaling from 0.5B → 0.8B → 2B
         private const val MODEL_QWEN_05B = "qwen-0.5b-q4km"
+        private const val MODEL_QWEN_08B = "qwen-0.8b-q4km"
+        private const val MODEL_QWEN_2B = "qwen-2b-q4km"
 
         // Auto-unload timeout: unload model after this many minutes of inactivity
         private const val AUTO_UNLOAD_MINUTES_IDLE = 10L
@@ -131,6 +133,38 @@ class ModelManager @Inject constructor(
     // Track loaded models for multi-model scenarios
     private val loadedModels = ConcurrentHashMap<String, LoadedModelInfo>()
 
+    // Performance monitoring — tracks latency and accuracy per model
+    private val modelPerformance = ConcurrentHashMap<String, ModelPerformanceMetrics>()
+
+    /**
+     * Performance metrics for a loaded model.
+     * Used for A/B testing and automatic model selection.
+     */
+    data class ModelPerformanceMetrics(
+        val modelId: String,
+        var totalInferences: Long = 0,
+        var totalLatencyMs: Long = 0,
+        var errorCount: Long = 0,
+        var lastInferenceMs: Long = 0,
+        var avgLatencyMs: Double = 0.0,
+        var p95LatencyMs: Long = 0
+    ) {
+        fun recordInference(latencyMs: Long, success: Boolean) {
+            totalInferences++
+            if (success) {
+                totalLatencyMs += latencyMs
+                avgLatencyMs = totalLatencyMs.toDouble() / totalInferences
+                // Simple P95 approximation: track max recent latency
+                if (latencyMs > p95LatencyMs) p95LatencyMs = latencyMs
+            } else {
+                errorCount++
+            }
+            lastInferenceMs = System.currentTimeMillis()
+        }
+
+        fun errorRate(): Double = if (totalInferences > 0) errorCount.toDouble() / totalInferences else 0.0
+    }
+
     // ────────────────────── Public API ──────────────────────
 
     /**
@@ -166,8 +200,110 @@ class ModelManager @Inject constructor(
     }
 
     /**
+     * Hot-swap the current LLM model without app restart.
+     * Unloads current model, loads new one, updates state atomically.
+     *
+     * @param targetModelId The model to swap to (e.g., MODEL_QWEN_08B)
+     * @return true if swap succeeded
+     */
+    suspend fun hotSwapModel(targetModelId: String): Boolean {
+        Timber.i(TAG, "Hot-swapping model: %s → %s", loadedModelId, targetModelId)
+        _modelState.value = ModelManagerState.LOADING
+
+        // Unload current model
+        val previousModel = loadedModelId
+        llmEngine.unloadModel()
+        loadedModels.remove(previousModel)
+
+        // Load new model
+        return try {
+            val loaded = loadSpecificModel(targetModelId, ModelBackend.LLAMA_CPP)
+            if (loaded) {
+                loadedModelId = targetModelId
+                activeBackend = ModelBackend.LLAMA_CPP
+                _modelState.value = ModelManagerState.LOADED
+                Timber.i(TAG, "Hot-swap complete: %s → %s", previousModel, targetModelId)
+                true
+            } else {
+                // Rollback to previous model
+                Timber.w(TAG, "Hot-swap failed, rolling back to %s", previousModel)
+                if (previousModel != null) {
+                    loadSpecificModel(previousModel, ModelBackend.LLAMA_CPP)
+                    loadedModelId = previousModel
+                }
+                _modelState.value = ModelManagerState.ERROR
+                false
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Hot-swap failed")
+            _modelState.value = ModelManagerState.ERROR
+            false
+        }
+    }
+
+    /**
+     * Record inference performance for model monitoring.
+     * Call after each LLM inference.
+     */
+    fun recordInferencePerformance(latencyMs: Long, success: Boolean) {
+        val modelId = loadedModelId ?: return
+        val metrics = modelPerformance.getOrPut(modelId) { ModelPerformanceMetrics(modelId) }
+        metrics.recordInference(latencyMs, success)
+        lastInferenceTimeMs = System.currentTimeMillis()
+    }
+
+    /**
+     * Get performance metrics for all loaded models.
+     */
+    fun getModelPerformanceMetrics(): Map<String, ModelPerformanceMetrics> {
+        return modelPerformance.toMap()
+    }
+
+    /**
+     * Get the best model for this device based on performance history.
+     * Falls back to device tier if no performance data available.
+     */
+    fun getBestModelForDevice(): String {
+        // Check if we have performance data
+        val bestByPerformance = modelPerformance.values
+            .filter { it.totalInferences >= 10 && it.errorRate() < 0.1 }
+            .minByOrNull { it.avgLatencyMs }
+
+        if (bestByPerformance != null) {
+            return bestByPerformance.modelId
+        }
+
+        // Fallback to device tier
+        return getOptimalModelId()
+    }
+
+    /**
+     * Check if a specific model variant can fit in current memory.
+     * Returns false if model would cause OOM.
+     */
+    fun canLoadModel(modelId: String): Boolean {
+        val modelSizeMb = getModelSizeMb(modelId)
+        val availableMb = getAvailableRamMb()
+        // Reserve 300MB for system + app heap
+        return availableMb - 300 >= modelSizeMb
+    }
+
+    /**
+     * Get estimated model size in MB.
+     */
+    private fun getModelSizeMb(modelId: String): Int {
+        return when (modelId) {
+            MODEL_QWEN_05B -> 250   // ~250MB Q4_0
+            MODEL_QWEN_08B -> 450   // ~450MB Q4_K_M
+            MODEL_QWEN_2B -> 1200   // ~1.2GB Q4_K_M
+            else -> 300
+        }
+    }
+
+    /**
      * Load the best available LLM for this device.
      * Handles fallback chain: preferred → smaller → cloud.
+     * Now with graceful degradation for oversized models.
      *
      * @param forceReload Force reload even if a model is already loaded
      * @return true if an on-device model was loaded successfully
@@ -229,9 +365,9 @@ class ModelManager @Inject constructor(
      */
     fun getOptimalModelId(): String {
         return when (deviceTier) {
-            DeviceTier.LOW -> MODEL_QWEN_05B  // Smallest quantization
-            DeviceTier.MID -> MODEL_QWEN_05B  // Q4_K_M is fine for 3GB+
-            DeviceTier.HIGH -> MODEL_QWEN_05B // Could use larger model when available
+            DeviceTier.LOW -> MODEL_QWEN_05B   // Smallest quantization
+            DeviceTier.MID -> MODEL_QWEN_08B    // Better quality, fits in 3-4GB
+            DeviceTier.HIGH -> MODEL_QWEN_2B    // Best quality for 6GB+ devices
         }
     }
 
@@ -367,12 +503,13 @@ class ModelManager @Inject constructor(
     /**
      * Get the list of LLM model candidates for this device, ordered by preference.
      * First element is the preferred model; later elements are fallbacks.
+     * Includes graceful degradation: tries larger models first on capable devices.
      */
     private fun getModelCandidates(): List<String> {
         return when (deviceTier) {
-            DeviceTier.LOW -> listOf(MODEL_QWEN_05B)
-            DeviceTier.MID -> listOf(MODEL_QWEN_05B)
-            DeviceTier.HIGH -> listOf(MODEL_QWEN_05B)
+            DeviceTier.LOW -> listOf(MODEL_QWEN_05B)  // Only smallest model
+            DeviceTier.MID -> listOf(MODEL_QWEN_08B, MODEL_QWEN_05B)  // Try 0.8B first
+            DeviceTier.HIGH -> listOf(MODEL_QWEN_2B, MODEL_QWEN_08B, MODEL_QWEN_05B)  // Try 2B first
         }
     }
 
@@ -607,5 +744,6 @@ data class ModelStatus(
     val storageUsedFormatted: String,
     val onDeviceFeasible: Boolean,
     val lastInferenceTimeMs: Long,
-    val loadedModelCount: Int
+    val loadedModelCount: Int,
+    val modelPerformance: Map<String, ModelManager.ModelPerformanceMetrics> = emptyMap()
 )

@@ -18,11 +18,19 @@ interface LoanDao {
     @Query("SELECT * FROM loan_records WHERE status IN ('ACTIVE', 'OVERDUE') ORDER BY endDate ASC")
     suspend fun getActive(): List<LoanRecord>
 
+    /** Paginated active loans */
+    @Query("SELECT * FROM loan_records WHERE status IN ('ACTIVE', 'OVERDUE') ORDER BY endDate ASC LIMIT :pageSize OFFSET :offset")
+    suspend fun getActivePaginated(pageSize: Int = 10, offset: Int = 0): List<LoanRecord>
+
     @Query("SELECT * FROM loan_records WHERE status = :status ORDER BY createdAt DESC")
     suspend fun getByStatus(status: String): List<LoanRecord>
 
     @Query("SELECT * FROM loan_records ORDER BY createdAt DESC")
     suspend fun getAll(): List<LoanRecord>
+
+    /** Paginated all loans */
+    @Query("SELECT * FROM loan_records ORDER BY createdAt DESC LIMIT :pageSize OFFSET :offset")
+    suspend fun getAllPaginated(pageSize: Int = 10, offset: Int = 0): List<LoanRecord>
 
     @Query("SELECT * FROM loan_records WHERE id = :loanId")
     suspend fun getById(loanId: Long): LoanRecord?

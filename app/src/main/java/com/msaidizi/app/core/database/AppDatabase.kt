@@ -34,6 +34,8 @@ import com.msaidizi.app.onboarding.WorkerProfile
  * Version 4: Added Feedback and FeatureRequest for self-evolution.
  * Version 5: Added gamification, rich habits, and mindset lessons.
  * Version 6: Added tithe records, goal records, and loan records.
+ * Version 7: Added composite indexes for query optimization.
+ * Version 9: Added composite indexes for tithe, goal, loan, briefing queries.
  */
 @Database(
     entities = [
@@ -59,7 +61,7 @@ import com.msaidizi.app.onboarding.WorkerProfile
         WorkerProfile::class,
         BriefingDeliveryEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

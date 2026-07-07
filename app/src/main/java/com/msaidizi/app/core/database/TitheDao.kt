@@ -12,8 +12,16 @@ interface TitheDao {
     @Query("SELECT * FROM tithe_records ORDER BY date DESC")
     suspend fun getAll(): List<TitheRecord>
 
+    /** Paginated: get tithe records with limit/offset */
+    @Query("SELECT * FROM tithe_records ORDER BY date DESC LIMIT :pageSize OFFSET :offset")
+    suspend fun getPage(pageSize: Int = 20, offset: Int = 0): List<TitheRecord>
+
     @Query("SELECT * FROM tithe_records WHERE date >= :since ORDER BY date DESC")
     suspend fun getSince(since: Long): List<TitheRecord>
+
+    /** Paginated: get tithe records since date */
+    @Query("SELECT * FROM tithe_records WHERE date >= :since ORDER BY date DESC LIMIT :pageSize OFFSET :offset")
+    suspend fun getSincePaginated(since: Long, pageSize: Int = 20, offset: Int = 0): List<TitheRecord>
 
     @Query("SELECT * FROM tithe_records WHERE date BETWEEN :startDate AND :endDate ORDER BY date DESC")
     suspend fun getByDateRange(startDate: Long, endDate: Long): List<TitheRecord>

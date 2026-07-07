@@ -19,11 +19,19 @@ interface GoalDao {
     @Query("SELECT * FROM goal_records WHERE status = 'ACTIVE' ORDER BY createdAt DESC")
     suspend fun getActive(): List<GoalRecord>
 
+    /** Paginated active goals */
+    @Query("SELECT * FROM goal_records WHERE status = 'ACTIVE' ORDER BY createdAt DESC LIMIT :pageSize OFFSET :offset")
+    suspend fun getActivePaginated(pageSize: Int = 10, offset: Int = 0): List<GoalRecord>
+
     @Query("SELECT * FROM goal_records WHERE status = 'COMPLETED' ORDER BY updatedAt DESC")
     suspend fun getCompleted(): List<GoalRecord>
 
     @Query("SELECT * FROM goal_records ORDER BY createdAt DESC")
     suspend fun getAll(): List<GoalRecord>
+
+    /** Paginated all goals */
+    @Query("SELECT * FROM goal_records ORDER BY createdAt DESC LIMIT :pageSize OFFSET :offset")
+    suspend fun getAllPaginated(pageSize: Int = 10, offset: Int = 0): List<GoalRecord>
 
     @Query("SELECT * FROM goal_records WHERE id = :goalId")
     suspend fun getById(goalId: Long): GoalRecord?

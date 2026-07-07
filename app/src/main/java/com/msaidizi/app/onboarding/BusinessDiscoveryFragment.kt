@@ -268,6 +268,24 @@ class BusinessDiscoveryFragment : Fragment() {
                 hintText.text = ""
                 updateProgress(10)
             }
+            is ConversationStep.AskWhatsApp -> {
+                promptText.text = step.prompt
+                hintText.text = ""
+                voiceButton.text = "🎤 Ndio / Hapana"
+                updateProgress(11)
+            }
+            is ConversationStep.ConfirmWhatsAppNumber -> {
+                promptText.text = step.prompt
+                hintText.text = "Kwa mfano: 0712345678 au 254712345678"
+                voiceButton.text = "🎤 Sema Namba"
+                updateProgress(12)
+            }
+            is ConversationStep.WhatsAppConnected -> {
+                promptText.text = step.prompt
+                hintText.text = ""
+                voiceButton.visibility = View.GONE
+                continueButton.visibility = View.VISIBLE
+            }
             is ConversationStep.ModelDownloadStatus -> {
                 promptText.text = step.prompt
                 hintText.text = "Models downloading in background..."
@@ -293,7 +311,8 @@ class BusinessDiscoveryFragment : Fragment() {
      * Update progress display.
      */
     private fun updateProgress(step: Int) {
-        progressText.text = "Swali $step kati ya 10"
+        progressText.text = "Swali $step kati ya 12"
+        progressBar.max = 12
         progressBar.progress = step
     }
 
@@ -359,6 +378,8 @@ class BusinessDiscoveryFragment : Fragment() {
             is ConversationStep.AskPaymentMethod -> "zote mbili"
             is ConversationStep.AskRecordKeeping -> "kichwani"
             is ConversationStep.AskChallenge -> "changamoto za kawaida"
+            is ConversationStep.AskWhatsApp -> "hapana"
+            is ConversationStep.ConfirmWhatsAppNumber -> ""
             else -> ""
         }
         processResponse(defaultResponse)

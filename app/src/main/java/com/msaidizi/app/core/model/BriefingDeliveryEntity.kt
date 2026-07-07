@@ -19,7 +19,11 @@ import androidx.room.PrimaryKey
     indices = [
         Index(value = ["briefingType"]),
         Index(value = ["deliveredAt"]),
-        Index(value = ["actedOn"])
+        Index(value = ["actedOn"]),
+        // Composite: recent briefings by type
+        Index(value = ["briefingType", "deliveredAt"]),
+        // Composite: acted-on briefings for outcome scoring
+        Index(value = ["actedOn", "deliveredAt"])
     ]
 )
 data class BriefingDeliveryEntity(
