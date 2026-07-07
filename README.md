@@ -1,299 +1,180 @@
-![Angavu Intelligence](docs/logo-banner.svg)
+![Msaidizi](docs/logo-banner.svg)
 
 # Msaidizi — The AI Employee for Africa's 600M+ Informal Workers
 
 **Not an assistant. A CFO. Proactive, voice-first, offline-first. Speaks your language.**
 
-**"The monopoly that serves 600M+ informal workers. Not competing. Just operating."**
-
-**Version:** 0.1.0
+**Version:** 0.2.0 | **Last Updated:** July 2026
 
 ---
 
-## Vision
-
-Msaidizi is the AI employee for informal workers — the one team member they never could afford. Every informal worker has an AI CFO that speaks their language, tracks their money, and helps them build wealth.
-
-We are not competing with M-Pesa, banks, or fintechs. We are building infrastructure for a market that has no infrastructure. There is no competition because there is no market — we are creating it.
-
-> *"What used to take months, we do in days."*
-
 ## What Is Msaidizi?
 
-Msaidizi is the on-device app that captures data from informal workers and delivers economic intelligence. It's the data source for Angavu Intelligence (cloud platform).
+Msaidizi is the on-device AI CFO for informal workers — the one team member they never could afford. Every informal worker has an AI CFO that speaks their language, tracks their money, and helps them build wealth.
 
+### Core Features
 - 🎤 **Voice-first** — record transactions by speaking in your language
 - 📴 **Offline-first** — works without internet, syncs when connected
 - 🧑‍💼 **CFO, not assistant** — proactive daily briefings, cash flow forecasting, credit readiness
-- 🌍 **14 dialects** — Swahili, Sheng, Kikuyu, Dholuo, Luhya, Kalenjin, Maasai, Migori, Somali, Amharic, Yoruba, Igbo, Hausa, Zulu, Xhosa
-- 📊 **Business Flow** — see your money flow like M-Pesa, but for your business
-- 🎮 **Gamification** — points, levels, streaks, and badges to build healthy financial habits
-- 💰 **Wealth Mindset** — 10 daily "Rich Habits" tracking to build wealth discipline
-- 🤲 **Tithe & Giving** — track tithes, offerings, and charitable giving with voice commands
-- 🎯 **Goals & Loans** — set savings goals, track loan repayments, monitor progress
-- 🔒 **Privacy-first** — data stays on device, federated learning for improvements
+- 🌍 **14 dialects** — Swahili, Sheng, Kikuyu, Dholuo, Luhya, Kalenjin, Maasai, Somali, Amharic, Yoruba, Igbo, Hausa, Zulu, Xhosa
+- 📊 **Business Flow** — M-Pesa-style cash flow visualization
+- 🎮 **Gamification** — points, levels, streaks, badges for healthy financial habits
+- 💰 **Wealth Mindset** — 10 daily "Rich Habits" tracking
+- 🤲 **Tithe & Giving** — track tithes and charitable giving
+- 🎯 **Goals & Loans** — savings goals and loan repayment tracking
+- 🔒 **Bank-grade security** — AES-256-GCM, TLS 1.3, post-quantum cryptography ready
 
-## AI In-House Strategy
-
-While Western enterprises pay per API call to OpenAI, Msaidizi's AI runs directly on the worker's phone — for free.
-
-### On-Device LLM Stack
-
-| Component | Technology | Advantage |
-|---|---|---|
-| LLM Engine | llama.cpp via NDK | 2-5x faster than pure Java, ARM NEON optimized |
-| Model | Qwen 0.5B (GGUF, ~300 MB) | Runs on $50 Android phones |
-| Inference Cost | $0.00 | We own the model, no API dependency |
-| Connectivity | Optional | Full offline capability |
-| Privacy | On-device | Data never leaves the phone |
-
-### Why In-House AI Matters
-
-At 200M users, renting AI costs $10-20M/month. Our approach costs $60-100K/month. That's **100-200x cheaper** — the difference between burning cash and building a sustainable platform.
-
-### Federated Learning
-
-- Worker's phone trains a small model locally
-- Only anonymous model improvements sent to server
-- Differential privacy (ε=0.1) prevents reverse-engineering
-- K-anonymity (k≥5) ensures individual identification is impossible
-- Data never centralizes, preserving privacy while enabling learning
-
-## Data Center Roadmap
-
-Each phase unlocks as worker count grows — infrastructure scales when the data justifies it.
-
-| Phase | Trigger | Infrastructure | Capacity |
-|---|---|---|---|
-| **Phase 1** | 1,000 workers | Oracle Cloud Free Tier | 10K transactions/day |
-| **Phase 2** | 10,000 workers | ARM server + solar panels | 100K transactions/day |
-| **Phase 3** | 100,000 workers | Mini DC (3-5 ARM servers, 10-20 kW solar array) | 1M transactions/day |
-| **Phase 4** | 1,000,000 workers | Containerized pan-African DC | 10M+ transactions/day |
-
-### Why Solar + ARM?
-
-- Kenya solar: $0.03-0.04/kWh (vs US $0.10-0.15/kWh)
-- ARM servers: 3-5x better performance/watt, 70-80% lower cost
-- Geothermal (Olkaria): $0.05/kWh — cheaper than China's coal
-- Solar-friendly: low power draw matches solar generation profiles
-
-## Accelerated Timelines
-
-| Initiative | Old Timeline | AI-Accelerated | Multiplier |
-|---|---|---|---|
-| Msaidizi v1.0 Launch | 18 months | 6 months | 3x faster |
-| 15 Intelligence Products | 3–5 years | 8–12 months | 4x faster |
-| Pan-African Expansion (5 markets) | 10 years | 3 years | 3x faster |
-| 200M Worker Reach | 20 years | 5–7 years | 3–4x faster |
-
-## Bootstrap: Name Your CFO
-
-When a worker first opens Msaidizi:
-1. Msaidizi introduces itself as their CFO
-2. Asks the worker's name
-3. Learns about their business
-4. **Worker names Msaidizi** (e.g., "Rafiki", "Msaada")
-5. First transaction recorded together
-
-This creates psychological ownership — it's YOUR CFO, not just an app.
-
-## Business Flow (Like M-Pesa for Business)
-
-```
-┌─────────────────────────────────┐
-│  Habari Maria! ☀️               │
-│  Rafiki wako wa biashara        │
-├─────────────────────────────────┤
-│  💰 LEO                         │
-│  Mauzo:    KSh 3,200 ↑          │
-│  Gharama:  KSh 1,800            │
-│  Faida:    KSh 1,400 ↑          │
-│                                 │
-│  📊 Angavu Flow               │
-│  ┌─💰─→ 🏪 ─→ 📈─→ 💵─→ 🏦    │
-│                                 │
-│  ⚠️ Arifu: Nyanya zinaisha     │
-│  🏦 Alama: 72/100 (mkopo tayari)│
-│  🎮 Pointi: 1,240  Lv.3        │
-│  🔥 Streak: siku 7 mfululizo   │
-└─────────────────────────────────┘
-```
+---
 
 ## Architecture
 
 ```
-Worker speaks → Whisper STT → Intent Classification →
-  Transaction recorded (Room DB) →
-  Business Flow updated →
-  CFO Engine generates advice →
-  When online: Sync to Angavu Intelligence →
-  Intelligence returned → Displayed in worker's language
+📱 Msaidizi App (Android)
+├── Voice-first (14 African dialects)
+├── Offline-first
+├── On-Device AI (Qwen 0.5B via llama.cpp NDK)
+├── Multi-Agent System (7 agents, 6 focused handlers)
+├── Federated Learning
+├── Smart Onboarding (voice conversation)
+├── WhatsApp Integration (OpenWA)
+└── 242 Kotlin source files
+
+☁️ Angavu Intelligence Backend (Python)
+├── 33+ AI Agents across 6 swarms
+├── Event Bus Architecture (Redis Streams)
+├── Domain-Specific Agents (8 domains)
+├── Intelligence Pipeline (real services)
+├── Federated Learning Service
+├── Prometheus Metrics (30 metrics)
+├── One-Command Oracle Cloud Deploy
+└── 318 Python source files
 ```
 
-### 5-Agent System
-| Agent | Role | Degree Units |
-|-------|------|-------------|
-| **Orchestrator** | Routes intents, manages agents | ECO 103/104, MAT 121/124 |
-| **BusinessAgent** | Records transactions, tracks business | ECO 101/201, BCB 108 |
-| **AnalysisAgent** | Statistics, trends, forecasting | STA 142/241, ECO 202/203, STA 244 |
-| **AdvisorAgent** | Financial advice, credit readiness | ECO 206/209/210/322 |
-| **LearningAgent** | Pattern learning, A/B testing | STA 342/343/347, ECO 315 |
-
-### CFO Engine (Proactive, Not Reactive)
-| Feature | What It Does | Degree Unit |
-|---------|-------------|-------------|
-| Daily Briefing | Morning P&L without asking | ECO 201 |
-| Cash Flow Forecast | "Your money runs out in 12 days" | STA 341 |
-| Restock Alerts | Velocity-based, before stockouts | ECO 210 |
-| Savings Advice | 20% of daily profit toward goals | ECO 206 |
-| Credit Readiness | 4-factor score out of 100 | STA 341 |
-| Risk Alerts | Revenue decline, margin compression | STA 342 |
-
-### Gamification System
-| Feature | What It Does |
-|---------|-------------|
-| Points | Earn points for recording transactions, checking reports, hitting streaks |
-| Levels | Progress through 6 levels (Beginner → Mogul) |
-| Streaks | Track consecutive days of business activity |
-| Badges | Unlock achievements for milestones |
-| Leaderboards | Compare with other workers (anonymized) |
-
-### Wealth Mindset — Rich Habits
-10 daily habits tracked to build financial discipline:
-1. Record all sales
-2. Check your balance
-3. Separate business & personal money
-4. Save before spending
-5. Track every expense
-6. Review weekly performance
-7. Set a financial goal
-8. Learn one new thing
-9. Help another business owner
-10. Rest and reflect
-
-### Tithe & Giving
-- **Voice commands**: "Nilichanga KSh 500 kanisani" → recorded
-- **Giving history**: Track tithes, offerings, charitable donations
-- **Reports**: Monthly giving summary, percentage of income
-- **Consistency tracking**: Streaks for regular giving
-
-### Goals & Loans
-- **Savings goals**: "Nataka kusave KSh 10,000 kwa duka jipya"
-- **Goal tracking**: Visual progress bars, daily contribution recommendations
-- **Loan tracking**: Record loans given and taken, repayment schedules
-- **Credit readiness**: 4-factor score (consistency, savings, revenue growth, stability)
-
-## Voice Pipeline
-
-```
-Audio → Silero VAD → Whisper STT (ONNX, INT4) →
-  Language Detection → Dialect Adapter (14 available) →
-  Intent Classification → Business Agent →
-  Piper TTS / MMS TTS → Audio Response
-```
-
-### On-Device LLM (llama.cpp NDK)
-| Component | Details |
-|-----------|---------|
-| Engine | llama.cpp via NDK (2-5x faster than pure Java) |
-| Model | Qwen 0.5B (GGUF, ~300 MB) |
-| Purpose | Intent classification, advice generation, conversation |
-| Inference | On-device, no cloud required |
-| Optimization | ARM NEON, quantized (Q4_K_M) |
-
-### Models
-| Model | Format | Size | Purpose |
-|-------|--------|------|---------|
-| Silero VAD | ONNX | 2.5 MB | Voice activity detection |
-| Whisper Tiny INT4 | ONNX | 40 MB | Speech-to-text |
-| Piper Swahili | ONNX | 25 MB | Text-to-speech |
-| Meta MMS | ONNX | 65 MB each | TTS for 10+ African languages |
-| Qwen 0.5B | GGUF | 300 MB | On-device LLM (optional) |
-
-## 14 Dialect Adapters
-
-| Region | Dialects |
-|--------|----------|
-| East Africa | Swahili (base), Sheng, Kikuyu, Dholuo, Luhya, Kalenjin, Maasai, Migori |
-| Horn of Africa | Somali, Amharic |
-| West Africa | Yoruba, Igbo, Hausa |
-| Southern Africa | Zulu, Xhosa |
-
-Each adapter maps phonemes, provides business vocabulary, handles number formats, and includes cultural greetings.
-
-## Worker Types Supported (25+)
-
-| Category | Workers |
-|----------|---------|
-| Trade | Mama mboga, dukawallah, cross-border traders, mitumba sellers, hawkers |
-| Transport | Boda boda, matatu, tuk-tuk, taxi/ride-hail |
-| Agriculture | Smallholder farmers, fish traders, food processors |
-| Services | Hairdressers, mechanics, tailors, laundry |
-| Manufacturing | Jua kali, furniture makers, brick makers |
-| Digital | M-Pesa agents, phone repair, social media sellers |
-
-## Reports Delivered via WhatsApp
-
-| Report | Frequency | Content |
-|--------|-----------|---------|
-| Daily | 7 PM | P&L, restock alerts, forecast |
-| Weekly | Mon 8 AM | Trends, customer insights, health score |
-| Monthly | 1st | Revenue growth, credit readiness, recommendations |
-| 6-Month | Jun/Dec | Business review, formalization pathway |
-| Yearly | Dec 31 | Annual review, tax summary, goals |
+---
 
 ## Tech Stack
 
-| Component | Technology | Purpose |
-|-----------|-----------|---------|
-| Language | **Kotlin 1.9.22** | Android app development |
-| Architecture | MVVM + Clean Architecture | Code organization |
-| DI | **Hilt** | Dependency injection |
-| Database | **Room** + SQLCipher | Encrypted local storage |
-| ML Inference | ONNX Runtime | Voice models (Whisper, Piper, Silero) |
-| LLM | **llama.cpp NDK** | On-device large language model |
-| HTTP | Ktor | Network client |
-| Async | Coroutines | Asynchronous operations |
-| Serialization | kotlinx.serialization | Data models |
-| Build | Gradle (Kotlin DSL) | Build system |
-| Target | Android SDK 34 | API level |
-| Min SDK | Android 11 (API 30) | Minimum supported |
+| Layer | Technology | Why |
+|-------|-----------|-----|
+| **Mobile** | Kotlin 2.1.0, Jetpack Compose, Room 2.7.1, Hilt | Native Android, modern UI, offline storage |
+| **On-Device AI** | llama.cpp NDK, Qwen 0.5B, Whisper, Piper TTS | $0 inference, works offline, ARM-optimized |
+| **Backend** | Python 3.12, FastAPI, Gunicorn (4 workers) | Async-first, ML ecosystem, rapid development |
+| **Database** | PostgreSQL 16, Redis 7, ClickHouse | OLTP, caching, analytics |
+| **Infrastructure** | Docker, Oracle Cloud, Nginx | One-command deploy, $0 Free Tier |
+| **Security** | AES-256-GCM, TLS 1.3, ML-KEM, ML-DSA, JWT RS256 | Bank-grade + quantum-ready |
+| **WhatsApp** | OpenWA (self-hosted) | Free, no Meta approval, full control |
+| **Monitoring** | Prometheus, structlog, Sentry | 30 metrics, structured logging |
 
-## Installation (For Users)
+---
 
-### Download & Install
-1. **Download** the APK from the link below (~380 MB, everything included)
-2. **Tap Install** when Android asks — no extra settings needed
-3. **Open Msaidizi** and start talking in your language
+## Quick Start
 
-**[⬇ Download Msaidizi APK](https://github.com/ovalentine964/msaidizi-app/releases/download/latest/msaidizi.apk)**
-
-> **Requirements:** Android 11+ · ARM processor · 2 GB RAM minimum
-
-## Build (For Developers)
-
+### One-Command Deploy (Oracle Cloud)
 ```bash
-# Clone the repository
-git clone https://github.com/ovalentine964/msaidizi-app.git
-cd msaidizi-app
-
-# Build debug APK
-./gradlew assembleDebug
-
-# The APK will be at:
-# app/build/outputs/apk/debug/app-debug.apk
+curl -sSL https://raw.githubusercontent.com/ovalentine964/angavu-intelligence-backend/main/deploy.sh | bash
 ```
 
-Target: Samsung Galaxy A03 (2GB RAM, ARM, Android 11+)
+### Manual Setup
+```bash
+# Backend
+cd angavu-intelligence-backend
+docker-compose up -d
+
+# App (Android Studio)
+cd msaidizi-app
+./gradlew assembleDebug
+```
+
+---
+
+## Products
+
+| Product | What It Does | Users |
+|---------|-------------|-------|
+| **Soko Pulse** | Real-time market intelligence — prices, demand, trends | Traders, farmers |
+| **Biashara Pulse** | AI CFO — cash flow, costs, daily briefings | All informal workers |
+| **Alama Score** | Credit scoring without formal records | Borrowers, lenders |
+| **Jamii Insights** | Community-level economic intelligence | Counties, NGOs, policy |
+
+---
+
+## Reports
+
+Workers receive reports at 5 frequencies:
+
+| Frequency | Channel | Content |
+|-----------|---------|---------|
+| Daily 7 PM | WhatsApp + App | Revenue, expenses, profit, cash flow, insight |
+| Weekly Monday 8 AM | WhatsApp + App | Trends, recommendations, business health score |
+| Monthly 1st 9 AM | WhatsApp + App | Cash flow statement, income statement, Alama Score |
+| 6-Month | WhatsApp + App | Growth trajectory, credit readiness certification |
+| Yearly | WhatsApp + App | Tax-ready statements, business valuation |
+
+---
+
+## Academic Framework
+
+Every feature is grounded in Economics & Statistics:
+
+| Feature | Academic Foundation |
+|---------|-------------------|
+| Price discovery | ECO 101 — Supply/Demand (Akerlof, Stiglitz) |
+| Credit scoring | ECO 321 — Information Economics |
+| Cash flow tracking | ECO 201 — Producer Theory |
+| Market forecasting | STA 244 — Time Series Analysis |
+| Business health score | ECO 206 — Microfinance |
+| Peer comparison | STA 341 — Estimation Theory |
+| Federated learning | STA 142 — Bayesian Inference |
+
+---
 
 ## Security
 
-- SQLCipher encrypted database
-- Certificate pinning
-- SHA-256 model integrity verification
-- Federated learning (data stays on device)
-- HMAC-SHA256 worker ID hashing
+- **AES-256-GCM** field-level encryption (unique IV per field)
+- **TLS 1.3** + certificate pinning
+- **Post-quantum ready** — ML-KEM (Kyber) + ML-DSA (Dilithium)
+- **JWT RS256** with token family theft detection
+- **12-layer output sanitization** (XSS, injection, PII masking)
+- **Differential privacy** (ε=0.1) for federated learning
+- **Zero-knowledge architecture** — data stays on device
+
+---
+
+## Scalability
+
+| Scale | Strategy | Cost |
+|-------|----------|------|
+| 1K users | Single Oracle Cloud instance | $0 (Free Tier) |
+| 10K users | Multi-process Gunicorn + Redis | ~$50-100/mo |
+| 100K users | Redis Streams + connection pooling | ~$200-500/mo |
+| 1M users | Go API gateway + Python ML | ~$500-1,000/mo |
+
+---
+
+## Research Compendium
+
+221-page thesis-grade research document covering:
+- Voice Models, Reasoning Models, Agentic Systems
+- Agent Loops, Quantum Computing, AGI Race
+- Emerging Systems, Humanity & Ethics
+- African Language Training, Missing Degree Units
+- Product Taxonomy (43 data products)
+- Training Architecture (on-device + cloud)
+
+📄 [ANGAVU_INTELLIGENCE_RESEARCH_COMPENDIUM.pdf](research/ANGAVU_INTELLIGENCE_RESEARCH_COMPENDIUM.pdf)
+
+---
+
+## Founder
+
+**Valentine Owuor** — BSc Economics & Statistics, Masinde Muliro University (December 2026)
+
+*"My mum is a micro retail trader. I watched her from class 1 to university. She's the reason this company exists."*
+
+---
 
 ## License
 
-Proprietary — Angavu Intelligence
+Proprietary — Angavu Intelligence Ltd.
+
+**Built for the workers the world forgot.** 🌍
