@@ -18,6 +18,7 @@ import com.msaidizi.app.core.model.GamificationEntity
 import com.msaidizi.app.core.model.RichHabitEntry
 import com.msaidizi.app.core.model.MindsetLessonEntity
 import com.msaidizi.app.core.model.BriefingDeliveryEntity
+import com.msaidizi.app.onboarding.WorkerProfile
 
 /**
  * Room database for Msaidizi.
@@ -55,9 +56,10 @@ import com.msaidizi.app.core.model.BriefingDeliveryEntity
         GoalMilestone::class,
         LoanRecord::class,
         LoanRepayment::class,
+        WorkerProfile::class,
         BriefingDeliveryEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

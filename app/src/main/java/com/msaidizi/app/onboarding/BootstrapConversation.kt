@@ -66,9 +66,9 @@ class BootstrapConversation {
      */
     fun startConversation(
         style: IntroductionStyle = IntroductionStyle.WARM
-    ): Flow<ConversationStep> = flow {
+    ): Flow<ConversationStepBootstrapConversation> = flow {
         // Step 1: Msaidizi introduces itself
-        emit(ConversationStep.Introduction(getIntroductionPrompt(style)))
+        emit(ConversationStepBootstrapConversation.Introduction(getIntroductionPrompt(style)))
 
         // Steps 2-6 are driven by worker responses
         // The Flow collector handles input and calls processResponse()
@@ -83,33 +83,33 @@ class BootstrapConversation {
      * @return Next step in the conversation
      */
     fun processResponse(
-        currentStep: ConversationStep,
+        currentStep: ConversationStepBootstrapConversation,
         workerResponse: String,
         accumulatedData: AccumulatedData
-    ): ConversationStep {
+    ): ConversationStepBootstrapConversation {
         return when (currentStep) {
-            is ConversationStep.Introduction -> {
+            is ConversationStepBootstrapConversation.Introduction -> {
                 // After intro, ask for name
-                ConversationStep.AskWorkerName(
+                ConversationStepBootstrapConversation.AskWorkerName(
                     prompt = "Jina lako nani?",
                     promptEn = "What's your name?"
                 )
             }
 
-            is ConversationStep.AskWorkerName -> {
+            is ConversationStepBootstrapConversation.AskWorkerName -> {
                 val name = extractName(workerResponse)
                 accumulatedData.workerName = name
-                ConversationStep.AskBusinessType(
+                ConversationStepBootstrapConversation.AskBusinessType(
                     prompt = "Karibu $name! Biashara yako ni gapi?",
                     promptEn = "Welcome $name! What's your business?"
                 )
             }
 
-            is ConversationStep.AskBusinessType -> {
+            is ConversationStepBootstrapConversation.AskBusinessType -> {
                 val businessType = classifyBusiness(workerResponse)
                 accumulatedData.businessType = businessType
                 accumulatedData.businessDescription = workerResponse
-                ConversationStep.AskAssistantName(
+                ConversationStepBootstrapConversation.AskAssistantName(
                     prompt = "Nzuri! Sasa, ungependa uniite jina gani?\n" +
                         "Mimi ni CFO wako — nitakusaidia kufuatilia pesa yako, " +
                         "kupanga biashara yako, na kukusaidia kukua.",
@@ -119,10 +119,10 @@ class BootstrapConversation {
                 )
             }
 
-            is ConversationStep.AskAssistantName -> {
+            is ConversationStepBootstrapConversation.AskAssistantName -> {
                 val assistantName = extractName(workerResponse)
                 accumulatedData.assistantName = assistantName
-                ConversationStep.ExplainCapabilities(
+                ConversationStepBootstrapConversation.ExplainCapabilities(
                     prompt = "$assistantName! Napenda jina hilo.\n\n" +
                         "Sasa hebu tuanze. Kila siku nitakupa:\n" +
                         "• Muhtasari wa mauzo na faida\n" +
@@ -140,9 +140,9 @@ class BootstrapConversation {
                 )
             }
 
-            is ConversationStep.ExplainCapabilities -> {
+            is ConversationStepBootstrapConversation.ExplainCapabilities -> {
                 // Transition to first transaction recording
-                ConversationStep.FirstTransaction(
+                ConversationStepBootstrapConversation.FirstTransaction(
                     prompt = "Sawa! Hebu tuandike mauzo yako ya kwanza.\n" +
                         "Niuzia nani? Bei ngapi?",
                     promptEn = "Great! Let's record your first sale.\n" +
@@ -150,9 +150,9 @@ class BootstrapConversation {
                 )
             }
 
-            is ConversationStep.FirstTransaction -> {
+            is ConversationStepBootstrapConversation.FirstTransaction -> {
                 // Bootstrap complete
-                ConversationStep.Complete(
+                ConversationStepBootstrapConversation.Complete(
                     result = BootstrapResult(
                         workerName = accumulatedData.workerName ?: "Biashara",
                         businessType = accumulatedData.businessType ?: WorkerType.TRADER,
@@ -164,7 +164,7 @@ class BootstrapConversation {
                 )
             }
 
-            is ConversationStep.Complete -> currentStep
+            is ConversationStepBootstrapConversation.Complete -> currentStep
         }
     }
 
@@ -309,41 +309,41 @@ class BootstrapConversation {
  * Introduction → AskWorkerName → AskBusinessType → AskAssistantName
  *     → ExplainCapabilities → FirstTransaction → Complete
  */
-sealed class ConversationStep {
+sealed class ConversationStepBootstrapConversation {
 
     /** Msaidizi introduces itself as CFO */
-    data class Introduction(val prompt: String) : ConversationStep()
+    data class Introduction(val prompt: String) : ConversationStepBootstrapConversation()
 
     /** Ask the worker's name */
     data class AskWorkerName(
         val prompt: String,
         val promptEn: String
-    ) : ConversationStep()
+    ) : ConversationStepBootstrapConversation()
 
     /** Ask about the worker's business */
     data class AskBusinessType(
         val prompt: String,
         val promptEn: String
-    ) : ConversationStep()
+    ) : ConversationStepBootstrapConversation()
 
     /** Worker gets to name Msaidizi — creates ownership */
     data class AskAssistantName(
         val prompt: String,
         val promptEn: String
-    ) : ConversationStep()
+    ) : ConversationStepBootstrapConversation()
 
     /** Msaidizi explains its CFO capabilities */
     data class ExplainCapabilities(
         val prompt: String,
         val promptEn: String
-    ) : ConversationStep()
+    ) : ConversationStepBootstrapConversation()
 
     /** Record the first transaction together */
     data class FirstTransaction(
         val prompt: String,
         val promptEn: String
-    ) : ConversationStep()
+    ) : ConversationStepBootstrapConversation()
 
     /** Bootstrap complete — return the result */
-    data class Complete(val result: BootstrapConversation.BootstrapResult) : ConversationStep()
+    data class Complete(val result: BootstrapConversation.BootstrapResult) : ConversationStepBootstrapConversation()
 }
