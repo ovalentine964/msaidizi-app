@@ -333,35 +333,35 @@ echo ""
 echo "━━━ DIMENSION 4: SECURITY VALIDATION ━━━"
 
 # Check TLS configuration
-if [ -f "app/src/main/java/com/msaidizi/app/core/security/TlsConfig.kt" ]; then
+if [ -f "app/src/main/java/com/msaidizi/app/security/crypto/TlsConfig.kt" ]; then
     log_pass "TLS configuration present"
 else
     log_fail "TLS configuration NOT found"
 fi
 
 # Check encryption
-if grep -rq "AES\|encrypt\|decrypt" app/src/main/java/com/msaidizi/app/core/security/ 2>/dev/null; then
+if grep -rq "AES\|encrypt\|decrypt" app/src/main/java/com/msaidizi/app/security/ 2>/dev/null; then
     log_pass "Encryption implemented (AES-256-GCM)"
 else
     log_warn "Encryption implementation not verified"
 fi
 
 # Check auth
-if [ -f "app/src/main/java/com/msaidizi/app/core/security/OtpManager.kt" ] || [ -f "app/src/main/java/com/msaidizi/app/core/security/BiometricAuthManager.kt" ]; then
+if [ -f "app/src/main/java/com/msaidizi/app/security/OtpManager.kt" ] || [ -f "app/src/main/java/com/msaidizi/app/core/security/BiometricAuthManager.kt" ]; then
     log_pass "Authentication system present"
 else
     log_warn "Authentication system not verified"
 fi
 
 # Check input sanitization
-if [ -f "app/src/main/java/com/msaidizi/app/core/security/InputSanitizer.kt" ]; then
+if [ -f "app/src/main/java/com/msaidizi/app/security/InputSanitizer.kt" ]; then
     log_pass "Input sanitization present (XSS/SQL injection defense)"
 else
     log_warn "Input sanitization not found"
 fi
 
 # Check consent management
-if [ -f "app/src/main/java/com/msaidizi/app/core/security/ConsentManager.kt" ]; then
+if [ -f "app/src/main/java/com/msaidizi/app/security/ConsentManager.kt" ]; then
     log_pass "Consent management present (DPA/NDPA/POPIA/GDPR)"
 else
     log_warn "Consent management not found"
@@ -457,27 +457,27 @@ echo ""
 echo "━━━ DIMENSION 7: QUANTUM READINESS ━━━"
 
 # Check PQC providers
-if [ -f "app/src/main/java/com/msaidizi/app/core/security/MlKemProvider.kt" ]; then
+if [ -f "app/src/main/java/com/msaidizi/app/security/MlKemProvider.kt" ]; then
     log_pass "ML-KEM (Kyber) provider present — quantum-safe key encapsulation"
 else
     log_warn "ML-KEM provider not found — PQC migration needed"
 fi
 
-if [ -f "app/src/main/java/com/msaidizi/app/core/security/MlDsaProvider.kt" ]; then
+if [ -f "app/src/main/java/com/msaidizi/app/security/MlDsaProvider.kt" ]; then
     log_pass "ML-DSA (Dilithium) provider present — quantum-safe signatures"
 else
     log_warn "ML-DSA provider not found — PQC migration needed"
 fi
 
 # Check crypto agility
-if [ -f "app/src/main/java/com/msaidizi/app/core/security/AlgorithmRegistry.kt" ]; then
+if [ -f "app/src/main/java/com/msaidizi/app/security/AlgorithmRegistry.kt" ]; then
     log_pass "Algorithm registry present — crypto-agile (swap without code changes)"
 else
     log_warn "Crypto agility not implemented"
 fi
 
 # Check hybrid key exchange
-if [ -f "app/src/main/java/com/msaidizi/app/core/security/HybridKeyExchange.kt" ]; then
+if [ -f "app/src/main/java/com/msaidizi/app/security/HybridKeyExchange.kt" ]; then
     log_pass "Hybrid key exchange (X25519 + ML-KEM) present"
 else
     log_warn "Hybrid key exchange not found"
