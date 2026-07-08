@@ -14,7 +14,8 @@
             <!-- Backup: Let's Encrypt R3 -->
             <pin digest="SHA-256">YLh1dUR9y6Kja30RrAn7JKnbQG/uEtLMkBgFF2Fuihg=</pin>
             <!-- TODO: Replace with actual CDN pin before production release -->
-            <pin digest="SHA-256">sRHdihwgkaib1P1gN7SkKPIhFRBcBx0p0sHJKbQG/uEtLMkBgFF2Fuihg=</pin>
+            <!-- Let's Encrypt ISRG Root X1 cross-signed -->
+            <pin digest="SHA-256">C/BDigBHc9LV6bZegLg65Tdmy4S0lODQ0ZtfLCqBBBI=</pin>
         </pin-set>
     </domain-config>
 </network-security-config>
