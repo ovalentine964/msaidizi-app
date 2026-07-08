@@ -47,6 +47,13 @@ class SelfEvolutionManager @Inject constructor(
     private val json = Json { ignoreUnknownKeys = true }
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
+    /**
+     * Shutdown the scope. Call when the component is being destroyed.
+     */
+    fun shutdown() {
+        scope.cancel()
+    }
+
     // ── Preference State (in-memory, persisted to PatternDao) ──
     private val _preferences = MutableStateFlow(WorkerPreferences())
     val preferences: StateFlow<WorkerPreferences> = _preferences.asStateFlow()

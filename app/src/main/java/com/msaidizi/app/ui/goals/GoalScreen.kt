@@ -30,6 +30,7 @@ import com.google.android.material.card.MaterialCardView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.msaidizi.app.R
 import com.msaidizi.app.finance.GoalPlanner
+import com.msaidizi.app.ui.accessibility.AccessibilityTtsHelper
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -91,6 +92,9 @@ class GoalFragment : Fragment() {
 
     private var isRecording = false
 
+    // ── Accessibility ──
+    private var ttsHelper: AccessibilityTtsHelper? = null
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -101,6 +105,7 @@ class GoalFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        ttsHelper = AccessibilityTtsHelper(requireContext())
         setupViews(view)
         setupCategorySpinner()
         observeState()
@@ -250,10 +255,11 @@ class GoalFragment : Fragment() {
             completedRecycler.adapter = CompletedGoalAdapter(state.completedGoals)
         }
 
-        // Celebration
+        // Celebration — spoken aloud for accessibility
         if (state.confirmationMessage != null) {
             celebrationCard.visibility = View.VISIBLE
             celebrationText.text = state.confirmationMessage
+            ttsHelper?.speakSuccess(state.confirmationMessage!!)
 
             // Set celebration emoji based on milestone
             celebrationEmoji.text = when (state.celebratingMilestone) {
@@ -276,10 +282,11 @@ class GoalFragment : Fragment() {
             celebrationCard.visibility = View.GONE
         }
 
-        // Error
+        // Error — spoken aloud for accessibility
         if (state.error != null) {
             errorCard.visibility = View.VISIBLE
             errorText.text = state.error
+            ttsHelper?.speakError(state.error!!)
         } else {
             errorCard.visibility = View.GONE
         }

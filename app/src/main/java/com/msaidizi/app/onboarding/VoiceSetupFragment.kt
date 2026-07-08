@@ -235,7 +235,7 @@ class VoiceSetupFragment : Fragment() {
             statusText.setTextColor(resources.getColor(R.color.primary, null))
 
             // Monitor volume
-            recordingJob = CoroutineScope(Dispatchers.IO).launch {
+            recordingJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
                 val buffer = ShortArray(bufferSize)
                 while (isRecording) {
                     val read = audioRecord?.read(buffer, 0, bufferSize) ?: 0
@@ -251,7 +251,7 @@ class VoiceSetupFragment : Fragment() {
             }
 
             // Auto-stop after 5 seconds
-            CoroutineScope(Dispatchers.Main).launch {
+            viewLifecycleOwner.lifecycleScope.launch {
                 delay(5000)
                 if (isRecording) {
                     stopRecording()

@@ -1,0 +1,31 @@
+{
+  "language": "ha",
+  "dialect": "Hausa (Standard)",
+  "version": "1.0.0",
+  "entries": [
+    {"spoken": "masara", "canonical": "maize", "category": "grains", "avg_price": 500, "unit": "kg"},
+    {"spoken": "wake", "canonical": "beans", "category": "grains", "avg_price": 800, "unit": "kg"},
+    {"spoken": "shinkafa", "canonical": "rice", "category": "grains", "avg_price": 1200, "unit": "kg"},
+    {"spoken": "gyada", "canonical": "groundnut", "category": "produce", "avg_price": 1000, "unit": "kg"},
+    {"spoken": "tumatir", "canonical": "tomato", "category": "produce", "avg_price": 600, "unit": "kg"},
+    {"spoken": "albasa", "canonical": "onion", "category": "produce", "avg_price": 800, "unit": "kg"},
+    {"spoken": "barkono", "canonical": "pepper", "category": "produce", "avg_price": 500, "unit": "kg"},
+    {"spoken": "mai", "canonical": "oil", "category": "cooking", "avg_price": 1500, "unit": "litre"},
+    {"spoken": "gishiri", "canonical": "salt", "category": "cooking", "avg_price": 100, "unit": "packet"},
+    {"spoken": "sukari", "canonical": "sugar", "category": "cooking", "avg_price": 800, "unit": "kg"},
+    {"spoken": "nama", "canonical": "meat", "category": "protein", "avg_price": 2000, "unit": "kg"},
+    {"spoken": "kifi", "canonical": "fish", "category": "protein", "avg_price": 1500, "unit": "kg"},
+    {"spoken": "kwai", "canonical": "egg", "category": "protein", "avg_price": 50, "unit": "piece"},
+    {"spoken": "madara", "canonical": "milk", "category": "dairy", "avg_price": 500, "unit": "litre"},
+    {"spoken": "fatake", "canonical": "okra", "category": "produce", "avg_price": 300, "unit": "kg"},
+    {"spoken": "kudi", "canonical": "money", "category": "money", "avg_price": 0, "unit": ""},
+    {"spoken": "abinci", "canonical": "food", "category": "general", "avg_price": 0, "unit": ""},
+    {"spoken": "sannu", "canonical": "hello", "category": "greeting", "avg_price": 0, "unit": ""},
+    {"spoken": "na gode", "canonical": "thank you", "category": "greeting", "avg_price": 0, "unit": ""},
+    {"spoken": "yaya kake", "canonical": "how are you", "category": "greeting", "avg_price": 0, "unit": ""},
+    {"spoken": "sai anjima", "canonical": "goodbye", "category": "greeting", "avg_price": 0, "unit": ""},
+    {"spoken": "mai sana'a", "canonical": "trader", "category": "business", "avg_price": 0, "unit": ""},
+    {"spoken": "sayarwa", "canonical": "selling", "category": "business", "avg_price": 0, "unit": ""},
+    {"spoken": "saye", "canonical": "buying", "category": "business", "avg_price": 0, "unit": ""}
+  ]
+}

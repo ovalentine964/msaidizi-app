@@ -38,6 +38,7 @@ class WhatsAppVerificationManager(
 
     private var verificationJob: Job? = null
     private var currentVerificationId: String? = null
+    private val defaultScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     fun connect(
         rawPhone: String,
@@ -46,7 +47,7 @@ class WhatsAppVerificationManager(
         assistantName: String,
         language: String = "sw",
         reportTime: String = "evening",
-        scope: CoroutineScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+        scope: CoroutineScope = defaultScope
     ) {
         verificationJob?.cancel()
         verificationJob = scope.launch {
@@ -95,7 +96,7 @@ class WhatsAppVerificationManager(
         }
     }
 
-    fun confirmReceipt(scope: CoroutineScope = CoroutineScope(Dispatchers.Main + SupervisorJob())) {
+    fun confirmReceipt(scope: CoroutineScope = defaultScope) {
         val verificationId = currentVerificationId ?: return
         scope.launch {
             try {
@@ -116,7 +117,7 @@ class WhatsAppVerificationManager(
         }
     }
 
-    fun retry(rawPhone: String, userId: String, userName: String, assistantName: String, language: String = "sw", reportTime: String = "evening", scope: CoroutineScope = CoroutineScope(Dispatchers.Main + SupervisorJob())) {
+    fun retry(rawPhone: String, userId: String, userName: String, assistantName: String, language: String = "sw", reportTime: String = "evening", scope: CoroutineScope = defaultScope) {
         reset()
         connect(rawPhone, userId, userName, assistantName, language, reportTime, scope)
     }
@@ -131,6 +132,7 @@ class WhatsAppVerificationManager(
     fun destroy() {
         verificationJob?.cancel()
         verificationJob = null
+        defaultScope.cancel()
     }
 
     private suspend fun sendConnectRequest(phone: String, userId: String, userName: String, assistantName: String, language: String, reportTime: String): WhatsAppConnectResponse? {

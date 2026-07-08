@@ -14,6 +14,8 @@ import androidx.work.Configuration
 import androidx.work.ExistingWorkPolicy
 import androidx.work.WorkManager
 import com.msaidizi.app.core.util.DeviceTier
+import com.msaidizi.app.cfo.BriefingDelivery
+import com.msaidizi.app.loops.BriefingNotificationWorker
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
 import javax.inject.Inject
@@ -46,6 +48,9 @@ class MsaidiziApp : Application(), Configuration.Provider {
     @Inject
     lateinit var syncManager: com.msaidizi.app.sync.SyncManager
 
+    @Inject
+    lateinit var briefingDelivery: BriefingDelivery
+
     override fun onCreate() {
         super.onCreate()
 
@@ -75,6 +80,9 @@ class MsaidiziApp : Application(), Configuration.Provider {
 
         // Schedule background update checks (silent, 24h interval)
         UpdateCheckWorker.schedule(this)
+
+        // Schedule daily briefing notifications (7 AM morning, 7 PM evening)
+        scheduleBriefingNotifications()
 
         // Register memory trim callback
         registerComponentCallbacks(object : android.content.ComponentCallbacks2 {
@@ -150,6 +158,17 @@ class MsaidiziApp : Application(), Configuration.Provider {
                 ExistingWorkPolicy.KEEP,
                 ModelDownloadWorker.tier2Request()
             )
+        }
+    }
+
+    /**
+     * Schedule morning/evening/weekly briefing notifications.
+     * Only schedules if onboarding is complete.
+     */
+    private fun scheduleBriefingNotifications() {
+        val prefs = getSharedPreferences("worker_profile", MODE_PRIVATE)
+        if (prefs.getBoolean("onboarding_complete", false)) {
+            BriefingNotificationWorker.scheduleAllBriefings(this)
         }
     }
 

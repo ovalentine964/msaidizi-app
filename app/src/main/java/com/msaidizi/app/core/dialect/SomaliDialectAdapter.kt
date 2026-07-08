@@ -27,7 +27,9 @@ import timber.log.Timber
  *
  * Designed for <1ms latency — pure code, no ML models.
  */
-object SomaliDialectAdapter {
+object SomaliDialectAdapter : IDialectAdapter {
+    override val asrLanguageHint: String = "so"  // Somali has its own Whisper token
+    override val ttsLanguage: String = "sw"       // Fallback to Swahili TTS (no Somali MMS model)
     private val MARKERS = mapOf(
         "waa" to Regex("\\bwaa\\b"),
         "oo" to Regex("\\boo\\b"),
@@ -187,7 +189,7 @@ object SomaliDialectAdapter {
 
     // ────────────────────── Code-Switching Detection ──────────────────────
 
-    fun detectCodeSwitching(text: String): CodeSwitchResult {
+    override fun detectCodeSwitching(text: String): CodeSwitchResult {
         val words = text.lowercase()
             .split(Regex("[^\\p{L}']+"))
             .filter { it.length > 1 }
@@ -229,7 +231,7 @@ object SomaliDialectAdapter {
 
     // ────────────────────── Normalization ──────────────────────
 
-    fun normalize(text: String): String {
+    override fun normalize(text: String): String {
         var normalized = text
         for ((key, regex) in PRONUNCIATION_REGEXES) {
             normalized = regex.replace(normalized, pronunciationVariations[key] ?: key)
@@ -237,7 +239,7 @@ object SomaliDialectAdapter {
         return normalized
     }
 
-    fun translateToStandard(term: String): String? {
+    override fun translateToStandard(term: String): String? {
         val lower = term.lowercase().trim()
 
         somaliBusinessTerms[lower]?.let { return it }
@@ -271,7 +273,7 @@ object SomaliDialectAdapter {
         return null
     }
 
-    fun detectRegion(text: String): DialectRegion {
+    override fun detectRegion(text: String): DialectRegion {
         val lower = text.lowercase()
         var somaliScore = 0
 
@@ -285,7 +287,7 @@ object SomaliDialectAdapter {
         return if (somaliScore > 5) DialectRegion.SOMALI else DialectRegion.STANDARD
     }
 
-    fun process(text: String): ProcessedResult {
+    override fun process(text: String): ProcessedResult {
         Timber.tag(TAG).d("Processing: '%s'", text)
 
         val codeSwitch = detectCodeSwitching(text)

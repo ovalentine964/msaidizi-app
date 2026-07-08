@@ -31,6 +31,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.msaidizi.app.R
 import com.msaidizi.app.core.model.TitheRecord
 import com.msaidizi.app.finance.TitheTracker
+import com.msaidizi.app.ui.accessibility.AccessibilityTtsHelper
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -102,6 +103,9 @@ class TitheFragment : Fragment() {
 
     private var isRecording = false
 
+    // ── Accessibility ──
+    private var ttsHelper: AccessibilityTtsHelper? = null
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -112,6 +116,7 @@ class TitheFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        ttsHelper = AccessibilityTtsHelper(requireContext())
         setupViews(view)
         setupTypeSpinner()
         observeState()
@@ -306,10 +311,11 @@ class TitheFragment : Fragment() {
             confirmationCard.visibility = View.GONE
         }
 
-        // Error message
+        // Error message — spoken aloud for accessibility
         if (state.error != null) {
             errorCard.visibility = View.VISIBLE
             errorText.text = state.error
+            ttsHelper?.speakError(state.error!!)
         } else {
             errorCard.visibility = View.GONE
         }

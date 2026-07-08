@@ -22,6 +22,8 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.msaidizi.app.R
+import com.msaidizi.app.ui.accessibility.AccessibilityTtsHelper
+import com.msaidizi.app.ui.accessibility.VoiceInputHelper
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -74,6 +76,11 @@ class LoanFragment : Fragment() {
     private lateinit var addLoanButton: MaterialButton
     private lateinit var loadingIndicator: View
 
+    // ── Accessibility ──
+    private var ttsHelper: AccessibilityTtsHelper? = null
+    private var amountVoiceHelper: VoiceInputHelper? = null
+    private var lenderVoiceHelper: VoiceInputHelper? = null
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -84,6 +91,7 @@ class LoanFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        ttsHelper = AccessibilityTtsHelper(requireContext())
         setupViews(view)
         setupFormDropdowns()
         setupClickListeners()
@@ -121,6 +129,23 @@ class LoanFragment : Fragment() {
 
         // Actions
         addLoanButton = view.findViewById(R.id.btn_add_loan)
+
+        // ACCESSIBILITY: Content descriptions
+        amountInput.contentDescription = "Kiasi cha mkopo (KSh)"
+        purposeDropdown.contentDescription = "Kusudi la mkopo"
+        lenderInput.contentDescription = "Jina la mkopaji"
+        interestInput.contentDescription = "Kiwango cha riba"
+        termInput.contentDescription = "Muda wa mkopo (miezi)"
+        addLoanButton.contentDescription = "Rekodi mkopo mpya"
+
+        // ACCESSIBILITY: Minimum touch targets
+        val minTouch = (48 * resources.displayMetrics.density).toInt()
+        addLoanButton.minimumHeight = minTouch
+        submitLoanButton.minimumHeight = minTouch
+        cancelFormButton.minimumHeight = minTouch
+
+        // ACCESSIBILITY: Voice input for amount and lender fields
+        setupVoiceInput()
     }
 
     private fun setupFormDropdowns() {
@@ -146,6 +171,48 @@ class LoanFragment : Fragment() {
         cancelFormButton.setOnClickListener {
             viewModel.toggleRecordForm()
         }
+    }
+
+    /**
+     * Set up voice input fallback for text fields.
+     * For non-literate users who cannot type amounts or lender names.
+     */
+    private fun setupVoiceInput() {
+        val minTouch = (48 * resources.displayMetrics.density).toInt()
+
+        // Voice input for amount
+        val amountMic = android.widget.ImageButton(requireContext()).apply {
+            setImageResource(android.R.drawable.ic_btn_speak_now)
+            contentDescription = "Gusa kusema kiasi badala ya kuandika"
+            background = null
+            minimumWidth = minTouch
+            minimumHeight = minTouch
+        }
+        val amountParent = amountInput.parent as? ViewGroup
+        amountParent?.addView(amountMic)
+        amountVoiceHelper = VoiceInputHelper.attach(
+            context = requireContext(),
+            editText = amountInput,
+            micButton = amountMic,
+            ttsHelper = ttsHelper
+        )
+
+        // Voice input for lender
+        val lenderMic = android.widget.ImageButton(requireContext()).apply {
+            setImageResource(android.R.drawable.ic_btn_speak_now)
+            contentDescription = "Gusa kusema jina la mkopaji badala ya kuandika"
+            background = null
+            minimumWidth = minTouch
+            minimumHeight = minTouch
+        }
+        val lenderParent = lenderInput.parent as? ViewGroup
+        lenderParent?.addView(lenderMic)
+        lenderVoiceHelper = VoiceInputHelper.attach(
+            context = requireContext(),
+            editText = lenderInput,
+            micButton = lenderMic,
+            ttsHelper = ttsHelper
+        )
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -196,13 +263,15 @@ class LoanFragment : Fragment() {
         // Repayment schedule
         updateRepaymentSchedule(state.repaymentSchedule)
 
-        // Messages
+        // Messages — spoken aloud for accessibility
         state.successMessage?.let { msg ->
             Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
+            ttsHelper?.speakSuccess(msg)
             viewModel.clearMessages()
         }
         state.error?.let { msg ->
             Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show()
+            ttsHelper?.speakError(msg)
             viewModel.clearMessages()
         }
     }

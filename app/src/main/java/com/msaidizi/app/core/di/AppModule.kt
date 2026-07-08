@@ -42,6 +42,7 @@ import com.msaidizi.app.core.language.ConfidenceCalibrator
 import com.msaidizi.app.core.language.PhonemeMapper
 import com.msaidizi.app.core.language.LanguageModelRegistry
 import com.msaidizi.app.core.language.FederatedLearningClient
+import com.msaidizi.app.security.privacy.ConsentManager
 import com.msaidizi.app.core.network.PinnedHttpClient
 import com.msaidizi.app.sync.SyncManager
 import com.google.gson.Gson
@@ -62,6 +63,12 @@ import com.msaidizi.app.skills.SkillBridge
 import com.msaidizi.app.loops.MorningBriefingLoop
 import com.msaidizi.app.loops.StreakProtectionLoop
 import com.msaidizi.app.loops.VariableRewardsLoop
+import com.msaidizi.app.agent.TransactionHandler
+import com.msaidizi.app.agent.QueryHandler
+import com.msaidizi.app.agent.AdviceHandler
+import com.msaidizi.app.agent.GamificationHandler
+import com.msaidizi.app.agent.DomainRouter
+import com.msaidizi.app.agent.ConversationManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -409,6 +416,33 @@ object AppModule {
                     db.execSQL("CREATE INDEX IF NOT EXISTS `index_briefing_deliveries_actedOn` ON `briefing_deliveries` (`actedOn`)")
                 }
             })
+            // Migration v7 → v8: Added WorkerProfile table and composite indexes for query optimization
+            .addMigrations(object : androidx.room.migration.Migration(7, 8) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `worker_profile` (
+                            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            `name` TEXT NOT NULL DEFAULT '',
+                            `businessType` TEXT NOT NULL DEFAULT '',
+                            `language` TEXT NOT NULL DEFAULT 'sw',
+                            `createdAt` INTEGER NOT NULL DEFAULT 0
+                        )
+                    """.trimIndent())
+                }
+            })
+            // Migration v8 → v9: Added composite indexes for tithe, goal, loan, briefing queries
+            .addMigrations(object : androidx.room.migration.Migration(8, 9) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    // Tithe composite indexes
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_tithe_records_type_date` ON `tithe_records` (`type`, `date`)")
+                    // Goal composite indexes
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_goal_records_status_category` ON `goal_records` (`status`, `category`)")
+                    // Loan composite indexes
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_loan_records_status_startDate` ON `loan_records` (`status`, `startDate`)")
+                    // Briefing composite indexes
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_briefing_deliveries_briefingType_deliveredAt` ON `briefing_deliveries` (`briefingType`, `deliveredAt`)")
+                }
+            })
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
     }
@@ -528,6 +562,10 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideAgentEventBus(): AgentEventBus = AgentEventBus.getInstance()
+
+    @Provides
+    @Singleton
     fun provideIntentRouter(): IntentRouter = IntentRouter()
 
     @Provides
@@ -586,6 +624,88 @@ object AppModule {
         userVocabularyDao: UserVocabularyDao
     ): PreferenceLearner = PreferenceLearner(patternDao, userCorrectionDao, userVocabularyDao)
 
+    // === DECOMPOSED HANDLERS ===
+
+    @Provides
+    @Singleton
+    fun provideTransactionHandler(
+        businessAgent: BusinessAgent,
+        adaptiveLearning: AdaptiveLearningEngine,
+        learningAgent: LearningAgent,
+        gamificationEngine: GamificationEngine,
+        ahaMomentFlow: AhaMomentFlow,
+        richHabitsScore: RichHabitsScore,
+        morningBriefingLoop: MorningBriefingLoop,
+        streakProtectionLoop: StreakProtectionLoop,
+        variableRewardsLoop: VariableRewardsLoop,
+        briefingDelivery: BriefingDelivery,
+        selfEvolution: SelfEvolutionManager
+    ): TransactionHandler = TransactionHandler(
+        businessAgent, adaptiveLearning, learningAgent,
+        gamificationEngine, ahaMomentFlow, richHabitsScore,
+        morningBriefingLoop, streakProtectionLoop, variableRewardsLoop,
+        briefingDelivery, selfEvolution
+    )
+
+    @Provides
+    @Singleton
+    fun provideQueryHandler(
+        businessAgent: BusinessAgent,
+        analysisAgent: AnalysisAgent,
+        advisorAgent: AdvisorAgent,
+        gamificationEngine: GamificationEngine,
+        richHabitsScore: RichHabitsScore
+    ): QueryHandler = QueryHandler(
+        businessAgent, analysisAgent, advisorAgent,
+        gamificationEngine, richHabitsScore
+    )
+
+    @Provides
+    @Singleton
+    fun provideAdviceHandler(
+        advisorAgent: AdvisorAgent,
+        adaptiveLearning: AdaptiveLearningEngine,
+        selfEvolution: SelfEvolutionManager,
+        preferenceLearner: PreferenceLearner
+    ): AdviceHandler = AdviceHandler(
+        advisorAgent, adaptiveLearning, selfEvolution, preferenceLearner
+    )
+
+    @Provides
+    @Singleton
+    fun provideGamificationHandler(
+        titheTracker: TitheTracker,
+        goalPlanner: GoalPlanner,
+        loanManager: LoanManager,
+        gamificationEngine: GamificationEngine,
+        richHabitsScore: RichHabitsScore
+    ): GamificationHandler = GamificationHandler(
+        titheTracker, goalPlanner, loanManager, gamificationEngine, richHabitsScore
+    )
+
+    @Provides
+    @Singleton
+    fun provideDomainRouter(
+        businessAgent: BusinessAgent,
+        advisorAgent: AdvisorAgent
+    ): DomainRouter = DomainRouter(businessAgent, advisorAgent)
+
+    @Provides
+    @Singleton
+    fun provideConversationManager(
+        adaptiveLearning: AdaptiveLearningEngine,
+        learningAgent: LearningAgent,
+        selfEvolution: SelfEvolutionManager,
+        preferenceLearner: PreferenceLearner,
+        llmEngine: LlmEngine
+    ): ConversationManager = ConversationManager(
+        llmEngine = llmEngine,
+        selfEvolution = selfEvolution,
+        adaptiveLearning = adaptiveLearning,
+        learningAgent = learningAgent,
+        preferenceLearner = preferenceLearner
+    )
+
     @Provides
     @Singleton
     fun provideOrchestrator(
@@ -595,6 +715,12 @@ object AppModule {
         advisorAgent: AdvisorAgent,
         learningAgent: LearningAgent,
         adaptiveLearning: AdaptiveLearningEngine,
+        transactionHandler: TransactionHandler,
+        queryHandler: QueryHandler,
+        adviceHandler: AdviceHandler,
+        gamificationHandler: GamificationHandler,
+        domainRouter: DomainRouter,
+        conversationManager: ConversationManager,
         gamificationEngine: GamificationEngine,
         ahaMomentFlow: AhaMomentFlow,
         richHabitsScore: RichHabitsScore,
@@ -614,11 +740,35 @@ object AppModule {
         adaptiveVocabulary: AdaptiveVocabulary,
         llmEngine: LlmEngine
     ): Orchestrator = Orchestrator(
-        intentRouter, businessAgent, analysisAgent, advisorAgent, learningAgent, adaptiveLearning,
-        gamificationEngine, ahaMomentFlow, richHabitsScore, mindsetAcademy,
-        titheTracker, goalPlanner, loanManager, titheDao, goalDao, loanDao,
-        briefingDelivery, morningBriefingLoop, streakProtectionLoop, variableRewardsLoop,
-        selfEvolution, preferenceLearner, adaptiveVocabulary,
+        intentRouter = intentRouter,
+        businessAgent = businessAgent,
+        analysisAgent = analysisAgent,
+        advisorAgent = advisorAgent,
+        learningAgent = learningAgent,
+        adaptiveLearning = adaptiveLearning,
+        transactionHandler = transactionHandler,
+        queryHandler = queryHandler,
+        adviceHandler = adviceHandler,
+        gamificationHandler = gamificationHandler,
+        domainRouter = domainRouter,
+        conversationManager = conversationManager,
+        gamificationEngine = gamificationEngine,
+        ahaMomentFlow = ahaMomentFlow,
+        richHabitsScore = richHabitsScore,
+        mindsetAcademy = mindsetAcademy,
+        titheTracker = titheTracker,
+        goalPlanner = goalPlanner,
+        loanManager = loanManager,
+        titheDao = titheDao,
+        goalDao = goalDao,
+        loanDao = loanDao,
+        briefingDelivery = briefingDelivery,
+        morningBriefingLoop = morningBriefingLoop,
+        streakProtectionLoop = streakProtectionLoop,
+        variableRewardsLoop = variableRewardsLoop,
+        selfEvolution = selfEvolution,
+        preferenceLearner = preferenceLearner,
+        adaptiveVocabulary = adaptiveVocabulary,
         llmEngine = llmEngine
     )
 
@@ -694,8 +844,9 @@ object AppModule {
     @Singleton
     fun provideFederatedLearningClient(
         @ApplicationContext context: Context,
-        pinnedHttpClient: PinnedHttpClient
-    ): FederatedLearningClient = FederatedLearningClient(context, pinnedHttpClient)
+        pinnedHttpClient: PinnedHttpClient,
+        consentManager: ConsentManager
+    ): FederatedLearningClient = FederatedLearningClient(context, pinnedHttpClient, consentManager)
 
     // === EVOLUTION / SELF-EVOLUTION ===
 

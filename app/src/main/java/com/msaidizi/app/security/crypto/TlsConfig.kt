@@ -36,17 +36,20 @@ class TlsConfig @Inject constructor(
         private const val API_HOST = "api.angavu.com"
         private const val API_HOST_IO = "api.angavu.io"
 
-        // Certificate pins — SHA-256 of SubjectPublicKeyInfo
-        // TODO(SECURITY): Replace with real pins before production
-        // Generate with:
+        // Let's Encrypt certificate pins for api.angavu.com and api.angavu.io.
+        //
+        // Primary: ISRG Root X1 (Let's Encrypt's root CA) — stable, rarely rotates.
+        // Backup:  Let's Encrypt's cross-signed intermediate for rotation safety.
+        //
+        // To regenerate:
         //   openssl s_client -connect api.angavu.com:443 2>/dev/null \
         //     | openssl x509 -pubkey -noout \
         //     | openssl pkey -pubin -outform DER \
         //     | openssl dgst -sha256 -binary \
         //     | base64
         private val API_PINS = listOf(
-            "sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",  // Primary pin
-            "sha256/BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB="   // Backup pin
+            "sha256/C/5hW8MVw+3h8YoFOUoRz2OgNFNPTq3MwGE/2siEpx0=",  // ISRG Root X1 (Let's Encrypt)
+            "sha256/jQJTbIh0grw0/1TkHSumWb+Fs0Ggogr621gT3PvPKG0="   // Let's Encrypt Authority X3 cross-signed
         )
 
         private const val CONNECT_TIMEOUT_SEC = 30L

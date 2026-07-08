@@ -30,7 +30,9 @@ import timber.log.Timber
  *
  * Designed for <1ms latency — pure code, no ML models.
  */
-object MigoriDialectAdapter {
+object MigoriDialectAdapter : IDialectAdapter {
+    override val asrLanguageHint: String = "sw"  // Migori Swahili → Whisper Swahili
+    override val ttsLanguage: String = "sw"       // Piper Swahili TTS
     private val MARKERS = mapOf(
         "kendo" to Regex("\\bkendo\\b"),
         "to" to Regex("\\bto\\b"),
@@ -289,7 +291,7 @@ object MigoriDialectAdapter {
      * Detect if text contains Dholuo-Swahili code-switching.
      * Returns a CodeSwitchResult with detected languages and confidence.
      */
-    fun detectCodeSwitching(text: String): CodeSwitchResult {
+    override fun detectCodeSwitching(text: String): CodeSwitchResult {
         val words = text.lowercase()
             .split(Regex("[^\\p{L}']+"))
             .filter { it.length > 1 }
@@ -343,7 +345,7 @@ object MigoriDialectAdapter {
      *
      * @return Normalized text that standard SwahiliParser can handle
      */
-    fun normalize(text: String): String {
+    override fun normalize(text: String): String {
         var normalized = text
 
         // Apply pronunciation variations (Migori → standard)
@@ -357,7 +359,7 @@ object MigoriDialectAdapter {
      * Translate Migori-specific business terms to standard Swahili equivalents.
      * Used when the SwahiliParser doesn't recognize a term.
      */
-    fun translateToStandard(term: String): String? {
+    override fun translateToStandard(term: String): String? {
         val lower = term.lowercase().trim()
 
         // Check Migori business terms
@@ -399,7 +401,7 @@ object MigoriDialectAdapter {
      * Get the dialect region for a given text.
      * Returns the most likely dialect based on vocabulary markers.
      */
-    fun detectRegion(text: String): DialectRegion {
+    override fun detectRegion(text: String): DialectRegion {
         val lower = text.lowercase()
         var migoriScore = 0
         var nairobiScore = 0
@@ -474,7 +476,7 @@ object MigoriDialectAdapter {
      *
      * @return ProcessedResult with normalized text and metadata
      */
-    fun process(text: String): ProcessedResult {
+    override fun process(text: String): ProcessedResult {
         Timber.tag(TAG).d("Processing: '%s'", text)
 
         val codeSwitch = detectCodeSwitching(text)

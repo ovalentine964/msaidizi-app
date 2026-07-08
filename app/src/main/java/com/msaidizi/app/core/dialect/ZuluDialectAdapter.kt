@@ -27,7 +27,9 @@ import timber.log.Timber
  *
  * Designed for <1ms latency — pure code, no ML models.
  */
-object ZuluDialectAdapter {
+object ZuluDialectAdapter : IDialectAdapter {
+    override val asrLanguageHint: String = "zu"  // Zulu has its own Whisper token
+    override val ttsLanguage: String = "zu"
     private val MARKERS = mapOf(
         "na" to Regex("\\bna\\b"),
         "futhi" to Regex("\\bfuthi\\b"),
@@ -197,7 +199,7 @@ object ZuluDialectAdapter {
 
     // ────────────────────── Code-Switching Detection ──────────────────────
 
-    fun detectCodeSwitching(text: String): CodeSwitchResult {
+    override fun detectCodeSwitching(text: String): CodeSwitchResult {
         val words = text.lowercase()
             .split(Regex("[^\\p{L}']+"))
             .filter { it.length > 1 }
@@ -239,7 +241,7 @@ object ZuluDialectAdapter {
 
     // ────────────────────── Normalization ──────────────────────
 
-    fun normalize(text: String): String {
+    override fun normalize(text: String): String {
         var normalized = text
         for ((key, regex) in PRONUNCIATION_REGEXES) {
             normalized = regex.replace(normalized, pronunciationVariations[key] ?: key)
@@ -247,7 +249,7 @@ object ZuluDialectAdapter {
         return normalized
     }
 
-    fun translateToStandard(term: String): String? {
+    override fun translateToStandard(term: String): String? {
         val lower = term.lowercase().trim()
 
         zuluBusinessTerms[lower]?.let { return it }
@@ -279,7 +281,7 @@ object ZuluDialectAdapter {
         return null
     }
 
-    fun detectRegion(text: String): DialectRegion {
+    override fun detectRegion(text: String): DialectRegion {
         val lower = text.lowercase()
         var zuluScore = 0
 
@@ -293,7 +295,7 @@ object ZuluDialectAdapter {
         return if (zuluScore > 5) DialectRegion.ZULU else DialectRegion.STANDARD
     }
 
-    fun process(text: String): ProcessedResult {
+    override fun process(text: String): ProcessedResult {
         Timber.tag(TAG).d("Processing: '%s'", text)
 
         val codeSwitch = detectCodeSwitching(text)

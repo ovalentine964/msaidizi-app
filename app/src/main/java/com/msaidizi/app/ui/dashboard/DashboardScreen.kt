@@ -12,17 +12,23 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.github.mikephil.charting.charts.BarChart
-import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.*
 import com.msaidizi.app.R
 import com.msaidizi.app.core.model.Trend
+import com.msaidizi.app.ui.accessibility.AccessibilityTtsHelper
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
 /**
  * Dashboard screen — business analytics and charts.
  * Shows sales trends, top items, and business health.
+ *
+ * ACCESSIBILITY:
+ * - "Sikiliza" button reads dashboard summary aloud via TTS
+ * - All content descriptions set for screen reader support
+ * - Errors are spoken, not just displayed as Toast
+ * - Minimum touch targets 48dp
  */
 @AndroidEntryPoint
 class DashboardFragment : Fragment() {
@@ -37,6 +43,10 @@ class DashboardFragment : Fragment() {
     private lateinit var salesChart: BarChart
     private lateinit var topItemsContainer: ViewGroup
 
+    // ── Accessibility ──
+    private var ttsHelper: AccessibilityTtsHelper? = null
+    private lateinit var listenButton: com.google.android.material.button.MaterialButton
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -48,6 +58,7 @@ class DashboardFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        ttsHelper = AccessibilityTtsHelper(requireContext())
         setupViews(view)
         observeState()
     }
@@ -60,6 +71,26 @@ class DashboardFragment : Fragment() {
         velocityText = view.findViewById(R.id.velocity_text)
         salesChart = view.findViewById(R.id.sales_chart)
         topItemsContainer = view.findViewById(R.id.top_items_container)
+
+        // ── Accessibility: Listen button for audio readout ──
+        listenButton = view.findViewById(R.id.listen_button)
+            ?: com.google.android.material.button.MaterialButton(requireContext()).apply {
+                text = "🔊 Sikiliza Muhtasari"
+                textSize = 18f
+                val minTouch = (48 * resources.displayMetrics.density).toInt()
+                minimumHeight = minTouch
+                minimumWidth = minTouch
+                contentDescription = "Sikiliza muhtasari wa biashara"
+                setOnClickListener { speakDashboardSummary() }
+            }
+        listenButton.setOnClickListener { speakDashboardSummary() }
+
+        // ── Accessibility: Content descriptions ──
+        cashFlowValue.contentDescription = "Mtaji wa wiki"
+        trendText.contentDescription = "Mwelekeo wa mauzo"
+        marginText.contentDescription = "Faida ya mauzo"
+        velocityText.contentDescription = "Kasi ya mauzo"
+        salesChart.contentDescription = "Chati ya mauzo ya kila siku"
 
         swipeRefresh.setOnRefreshListener {
             viewModel.refresh()
@@ -133,9 +164,10 @@ class DashboardFragment : Fragment() {
         // Top items
         updateTopItems(state.topItems)
 
-        // Error
+        // Error — speak it aloud, not just display
         state.error?.let { error ->
             android.widget.Toast.makeText(requireContext(), error, android.widget.Toast.LENGTH_SHORT).show()
+            ttsHelper?.speakError(error)
         }
     }
 
@@ -167,7 +199,32 @@ class DashboardFragment : Fragment() {
             itemView.findViewById<TextView>(R.id.item_name).text = item.item
             itemView.findViewById<TextView>(R.id.item_revenue).text =
                 "KSh ${"%.0f".format(item.totalRevenue)}"
+            // Accessibility: content description for each top item
+            itemView.contentDescription =
+                "Bidhaa ya ${index + 1}: ${item.item}, mauzo KSh ${"%.0f".format(item.totalRevenue)}"
             topItemsContainer.addView(itemView)
         }
+    }
+
+    /**
+     * Speak the full dashboard summary via TTS.
+     * For non-literate and visually impaired users.
+     */
+    private fun speakDashboardSummary() {
+        val state = viewModel.uiState.value
+        ttsHelper?.speakFlowSummary(
+            revenue = state.weeklyCashFlow.income,
+            expenses = state.weeklyCashFlow.expenses,
+            profit = state.weeklyCashFlow.net,
+            savings = 0.0,
+            healthScore = state.profitMargin.toInt().coerceIn(0, 100),
+            period = "wiki hii"
+        )
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        ttsHelper?.release()
+        ttsHelper = null
     }
 }

@@ -15,11 +15,17 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.msaidizi.app.R
 import com.msaidizi.app.core.model.Transaction
+import com.msaidizi.app.ui.accessibility.AccessibilityTtsHelper
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
 /**
  * History screen — view past transactions by date.
+ *
+ * ACCESSIBILITY:
+ * - Navigation buttons have content descriptions for screen readers
+ * - Minimum touch targets 48dp
+ * - Errors spoken aloud via TTS
  */
 @AndroidEntryPoint
 class HistoryFragment : Fragment() {
@@ -34,6 +40,9 @@ class HistoryFragment : Fragment() {
     private lateinit var purchasesTotal: TextView
     private lateinit var recyclerView: RecyclerView
 
+    // ── Accessibility ──
+    private var ttsHelper: AccessibilityTtsHelper? = null
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -45,6 +54,7 @@ class HistoryFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        ttsHelper = AccessibilityTtsHelper(requireContext())
         setupViews(view)
         observeState()
     }
@@ -59,6 +69,23 @@ class HistoryFragment : Fragment() {
         recyclerView = view.findViewById(R.id.transactions_recycler)
 
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
+
+        // ACCESSIBILITY: Content descriptions for navigation
+        prevButton.contentDescription = "Siku iliyopita"
+        nextButton.contentDescription = "Siku ijayo"
+        todayButton.contentDescription = "Rudi leo"
+        dateText.contentDescription = "Tarehe ya sasa"
+        salesTotal.contentDescription = "Jumla ya mauzo"
+        purchasesTotal.contentDescription = "Jumla ya manunuzi"
+
+        // ACCESSIBILITY: Minimum touch targets (48dp)
+        val minTouch = (48 * resources.displayMetrics.density).toInt()
+        prevButton.minimumWidth = minTouch
+        prevButton.minimumHeight = minTouch
+        nextButton.minimumWidth = minTouch
+        nextButton.minimumHeight = minTouch
+        todayButton.minimumWidth = minTouch
+        todayButton.minimumHeight = minTouch
 
         prevButton.setOnClickListener { viewModel.previousDay() }
         nextButton.setOnClickListener { viewModel.nextDay() }

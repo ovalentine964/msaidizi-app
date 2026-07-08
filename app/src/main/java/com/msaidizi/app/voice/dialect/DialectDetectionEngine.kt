@@ -248,11 +248,11 @@ class DialectDetectionEngine @Inject constructor() {
 
     /**
      * Register a dialect adapter.
-     * Wraps the existing [DialectAdapter] with detection capabilities.
+     * Wraps the existing [IDialectAdapter] with detection capabilities.
      */
     fun registerAdapter(
         dialectId: String,
-        adapter: DialectAdapter,
+        adapter: IDialectAdapter,
         parentLanguage: String,
         region: String
     ) {
@@ -395,7 +395,7 @@ data class AudioFeatures(
 )
 
 private data class DialectAdapterEntry(
-    val adapter: DialectAdapter,
+    val adapter: IDialectAdapter,
     val parentLanguage: String,
     val region: String
 )

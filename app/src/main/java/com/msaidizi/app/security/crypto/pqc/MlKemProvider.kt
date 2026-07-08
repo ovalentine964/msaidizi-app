@@ -27,6 +27,13 @@ class MlKemProvider(
     override val isPostQuantum: Boolean = true
     override val securityLevel: Int = parameterSet.securityLevel
 
+    /**
+     * Flag indicating this is a STUB implementation.
+     * Callers MUST check this and fall back to real AES-256-GCM if true.
+     * Do NOT rely on key exchange security from a stub.
+     */
+    val is_stub: Boolean = true
+
     companion object {
         /** Public key sizes in bytes for each parameter set */
         val PUBLIC_KEY_SIZES = mapOf(

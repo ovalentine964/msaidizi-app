@@ -26,6 +26,7 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.progressindicator.LinearProgressIndicator
 import com.msaidizi.app.R
+import com.msaidizi.app.ui.accessibility.AccessibilityTtsHelper
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -87,6 +88,9 @@ class MindsetFragment : Fragment() {
     // ── Loading ──
     private lateinit var loadingIndicator: View
 
+    // ── Accessibility ──
+    private var ttsHelper: AccessibilityTtsHelper? = null
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -97,6 +101,7 @@ class MindsetFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        ttsHelper = AccessibilityTtsHelper(requireContext())
         setupViews(view)
         setupClickListeners()
         observeState()
@@ -155,6 +160,11 @@ class MindsetFragment : Fragment() {
     private fun setupClickListeners() {
         lessonPlayButton.setOnClickListener {
             viewModel.deliverLesson()
+            // ACCESSIBILITY: Speak lesson title when play is pressed
+            val lesson = viewModel.uiState.value.dailyLesson
+            if (lesson != null) {
+                ttsHelper?.speak("Somo la leo: ${lesson.title}. Kutoka kitabu: ${lesson.sourceBook}")
+            }
         }
 
         lessonCompleteButton.setOnClickListener {
@@ -199,13 +209,15 @@ class MindsetFragment : Fragment() {
         // Modules
         updateModules(state.modules)
 
-        // Messages
+        // Messages — spoken aloud for accessibility
         state.successMessage?.let { msg ->
             Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
+            ttsHelper?.speakSuccess(msg)
             viewModel.clearMessages()
         }
         state.error?.let { msg ->
             Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show()
+            ttsHelper?.speakError(msg)
             viewModel.clearMessages()
         }
     }

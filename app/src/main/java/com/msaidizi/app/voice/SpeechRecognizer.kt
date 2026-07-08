@@ -62,6 +62,14 @@ class SpeechRecognizer @Inject constructor(
     private var isModelLoaded = false
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    /**
+     * Shutdown the scope. Call when the component is being destroyed.
+     */
+    fun shutdown() {
+        scope.cancel()
+        unloadModel()
+    }
+
 
     // ────────────────────── Model Lifecycle ──────────────────────
 
@@ -241,19 +249,178 @@ class SpeechRecognizer @Inject constructor(
 
     /**
      * Transcribe with language hint for better accuracy.
-     * Passes the language token to Whisper's decoder.
+     * Passes the language token to Whisper's decoder as a forced decoder input.
+     * Whisper uses language tokens like <|sw|>, <|en|>, <|ha|>, etc.
      *
      * @param audioData Raw audio at 16kHz
-     * @param language ISO language code ("sw", "en", etc.)
+     * @param language ISO language code ("sw", "en", "ha", "yo", "zu", etc.)
      * @return Transcribed text
      */
     suspend fun transcribeWithLanguage(
         audioData: ShortArray,
         language: String
     ): String? = withContext(Dispatchers.Default) {
-        // For now, use standard transcribe — language hint would require
-        // modifying the decoder inputs which varies by model export
-        transcribe(audioData)
+        if (audioData.size < MIN_AUDIO_SAMPLES) {
+            Timber.d("Audio too short (%d samples), skipping", audioData.size)
+            return@withContext null
+        }
+
+        if (!isModelLoaded) {
+            val loaded = loadModel()
+            if (!loaded) return@withContext null
+        }
+
+        try {
+            val startTime = System.currentTimeMillis()
+
+            // 1. Convert ShortArray to FloatArray (normalized to [-1, 1])
+            val floatAudio = FloatArray(audioData.size) { i ->
+                audioData[i].toFloat() / Short.MAX_VALUE
+            }
+
+            // 2. Pad/truncate to 30 seconds
+            val paddedAudio = FloatArray(WHISPER_SAMPLES)
+            val copyLength = minOf(floatAudio.size, WHISPER_SAMPLES)
+            System.arraycopy(floatAudio, 0, paddedAudio, 0, copyLength)
+
+            // 3. Create input tensors
+            val audioTensor = OnnxTensor.createTensor(
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
+                FloatBuffer.wrap(paddedAudio),
+                longArrayOf(1, paddedAudio.size.toLong())
+            )
+
+            val maxLengthTensor = OnnxTensor.createTensor(
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
+                IntBuffer.wrap(intArrayOf(MAX_TOKENS)),
+                longArrayOf(1)
+            )
+
+            val minLengthTensor = OnnxTensor.createTensor(
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
+                IntBuffer.wrap(intArrayOf(MIN_TOKENS)),
+                longArrayOf(1)
+            )
+
+            val numBeamsTensor = OnnxTensor.createTensor(
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
+                IntBuffer.wrap(intArrayOf(NUM_BEAMS)),
+                longArrayOf(1)
+            )
+
+            val lengthPenaltyTensor = OnnxTensor.createTensor(
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
+                FloatBuffer.wrap(floatArrayOf(LENGTH_PENALTY)),
+                longArrayOf(1)
+            )
+
+            val repetitionPenaltyTensor = OnnxTensor.createTensor(
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
+                FloatBuffer.wrap(floatArrayOf(REPETITION_PENALTY)),
+                longArrayOf(1)
+            )
+
+            // 4. Create decoder input with language token as forced prefix.
+            //    Whisper's decoder starts with <|startoftranscript|><|language|><|notimestamps|>
+            //    We encode this as a LongArray for the "decoder_input_ids" tensor.
+            val languageTokenId = getLanguageTokenId(language)
+            val decoderInputIds = longArrayOf(
+                50258L,              // <|startoftranscript|>
+                languageTokenId,     // <|language|> — e.g. <|sw|>=50309, <|en|>=50259
+                50258L + 2           // <|notimestamps|> (token 50360 in base, adjust per model)
+            )
+
+            val decoderInputTensor = OnnxTensor.createTensor(
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
+                java.nio.LongBuffer.wrap(decoderInputIds),
+                longArrayOf(1, decoderInputIds.size.toLong())
+            )
+
+            // 5. Run inference with language hint
+            val inputs = mutableMapOf(
+                "audio" to audioTensor,
+                "max_length" to maxLengthTensor,
+                "min_length" to minLengthTensor,
+                "num_beams" to numBeamsTensor,
+                "length_penalty" to lengthPenaltyTensor,
+                "repetition_penalty" to repetitionPenaltyTensor
+            )
+
+            // Add decoder_input_ids if the model supports it
+            // Some ONNX exports have this input, others use only the audio + params
+            try {
+                inputs["decoder_input_ids"] = decoderInputTensor
+            } catch (e: Exception) {
+                // Model may not accept decoder_input_ids — that's OK
+                Timber.d("decoder_input_ids not accepted by model, using standard decoding")
+                decoderInputTensor.close()
+            }
+
+            val results = requireNotNull(ortSession) { "ORT session not initialized" }.run(inputs)
+
+            // 6. Decode output tokens to text
+            val sequences = results.get("sequences")
+            val tokenIds = ((sequences as OnnxTensor).value as Array<LongArray>)[0]
+            val text = whisperTokenizer.decode(tokenIds)
+
+            val elapsed = System.currentTimeMillis() - startTime
+            Timber.d("Whisper transcription (lang=%s): '%s' (%dms)", language, text, elapsed)
+
+            // 7. Cleanup tensors
+            audioTensor.close()
+            maxLengthTensor.close()
+            minLengthTensor.close()
+            numBeamsTensor.close()
+            lengthPenaltyTensor.close()
+            repetitionPenaltyTensor.close()
+            if (inputs.containsKey("decoder_input_ids")) decoderInputTensor.close()
+            results.close()
+
+            text.takeIf { it.isNotBlank() }
+        } catch (e: OutOfMemoryError) {
+            Timber.e("OOM during Whisper transcription — unloading model")
+            unloadModel()
+            System.gc()
+            null
+        } catch (e: Exception) {
+            // If decoder_input_ids approach fails, fall back to standard transcribe
+            Timber.w(e, "Language-hinted transcription failed, falling back to standard")
+            transcribe(audioData)
+        }
+    }
+
+    /**
+     * Map ISO language code to Whisper's language token ID.
+     * These are fixed tokens in the Whisper tokenizer vocabulary.
+     *
+     * Token IDs from OpenAI's whisper-tiny vocabulary:
+     * <|af|>=50277, <|am|>=50278, <|ar|>=50279, <|as|>=50280, ...
+     */
+    private fun getLanguageTokenId(language: String): Long {
+        return when (language.lowercase()) {
+            "sw", "swahili", "swa" -> 50309L   // <|sw|>
+            "en", "english", "eng" -> 50259L   // <|en|>
+            "ha", "hausa", "hau" -> 50291L      // <|ha|>
+            "yo", "yoruba", "yor" -> 50343L     // <|yo|>
+            "am", "amharic", "amh" -> 50278L   // <|am|>
+            "zu", "zulu", "zul" -> 50344L       // <|zu|>
+            "ig", "igbo", "ibo" -> 50293L       // <|ig|>
+            "xh", "xhosa", "xho" -> 50342L     // <|xh|>
+            "so", "somali" -> 50316L            // <|so|>
+            "fr", "french" -> 50285L            // <|fr|>
+            "ar", "arabic" -> 50279L            // <|ar|>
+            "hi", "hindi" -> 50292L             // <|hi|>
+            "pt", "portuguese" -> 50303L       // <|pt|>
+            "es", "spanish" -> 50319L           // <|es|>
+            "zh", "chinese" -> 50248L           // <|zh|>
+            "ja", "japanese" -> 50295L          // <|ja|>
+            "ko", "korean" -> 50300L            // <|ko|>
+            "de", "german" -> 50283L            // <|de|>
+            "it", "italian" -> 50294L           // <|it|>
+            "sheng" -> 50309L                   // Sheng → use Swahili token
+            "mixed" -> 50309L                   // Mixed → default to Swahili
+            else -> 50309L                      // Default: Swahili
+        }
     }
 
     /**

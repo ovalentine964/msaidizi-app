@@ -46,6 +46,19 @@
 # Ktor
 -keep class io.ktor.** { *; }
 -dontwarn io.ktor.**
+-keep class io.ktor.client.engine.** { *; }
+-keep class io.ktor.serialization.** { *; }
+
+# Kotlin Coroutines
+-keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
+-keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
+-keepclassmembers class kotlinx.coroutines.** {
+    volatile <fields>;
+}
+-keepclassmembers class kotlinx.coroutines.flow.** {
+    volatile <fields>;
+}
+-dontwarn kotlinx.coroutines.**
 
 # zstd
 -keep class com.github.luben.zstd.** { *; }

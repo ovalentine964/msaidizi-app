@@ -3,6 +3,7 @@ package com.msaidizi.app.ui.components
 import android.content.Context
 import android.util.AttributeSet
 import android.view.LayoutInflater
+import android.view.accessibility.AccessibilityEvent
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -10,6 +11,11 @@ import com.msaidizi.app.R
 
 /**
  * Loading indicator with optional message.
+ *
+ * ACCESSIBILITY:
+ * - Announces loading state to screen readers
+ * - Content description set from message text
+ * - Minimum size for visibility
  */
 class LoadingIndicator @JvmOverloads constructor(
     context: Context,
@@ -29,16 +35,23 @@ class LoadingIndicator @JvmOverloads constructor(
 
     /**
      * Show loading with message.
+     * Announces to screen readers for accessibility.
      */
     fun show(message: String = "Loading...") {
         messageText.text = message
         visibility = VISIBLE
+        // ACCESSIBILITY: Announce loading state
+        contentDescription = message
+        announceForAccessibility(message)
     }
 
     /**
      * Hide loading indicator.
+     * Announces completion to screen readers.
      */
     fun hide() {
         visibility = GONE
+        // ACCESSIBILITY: Announce loading complete
+        announceForAccessibility("Imekamilika")
     }
 }

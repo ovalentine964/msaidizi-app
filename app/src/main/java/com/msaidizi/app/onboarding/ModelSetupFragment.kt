@@ -109,9 +109,9 @@ class ModelSetupFragment : Fragment() {
         }
         layout.addView(progressText)
 
-        // WiFi-only toggle
+        // Mobile data toggle — defaults to ALLOW mobile data (target users have no WiFi)
         wifiToggle = Button(requireContext()).apply {
-            text = "📶 Download on WiFi only (saves data)"
+            text = "📱 Pakia kwa data ya simu (inatumia ~500MB)"
             textSize = 14f
             setPadding(32, 16, 32, 16)
             setOnClickListener {

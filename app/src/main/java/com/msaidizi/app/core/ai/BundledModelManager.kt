@@ -47,6 +47,9 @@ class BundledModelManager @Inject constructor(
         const val FULL_MODEL_ID = "qwen-0.5b-q4km"
     }
 
+    /** Coroutine scope for background downloads */
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     private val prefs: SharedPreferences by lazy {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
@@ -190,7 +193,9 @@ class BundledModelManager @Inject constructor(
      * Get WiFi-only preference.
      */
     fun isWifiOnlyDownload(): Boolean {
-        return prefs.getBoolean(KEY_DOWNLOAD_WIFI_ONLY, true)
+        // Default to false — target users (mama mboga, boda boda) have no WiFi.
+        // They use Safaricom data bundles. Blocking on WiFi = blocking the app.
+        return prefs.getBoolean(KEY_DOWNLOAD_WIFI_ONLY, false)
     }
 
     /**
@@ -229,7 +234,7 @@ class BundledModelManager @Inject constructor(
     private fun startFullModelDownload() {
         _downloadState.value = FullModelDownloadState.DOWNLOADING
 
-        CoroutineScope(Dispatchers.IO).launch {
+        scope.launch {
             try {
                 // Observe download progress
                 val progressJob = launch {

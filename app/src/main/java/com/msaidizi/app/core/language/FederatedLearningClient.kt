@@ -37,7 +37,7 @@ import kotlin.math.sqrt
  * 1. Raw audio NEVER leaves the device
  * 2. Raw text NEVER leaves the device
  * 3. Only anonymized correction patterns are shared
- * 4. Differential privacy (ε=1.0, δ=1e-5) is applied to all shared data
+ * 4. Differential privacy (ε=0.1, δ=1e-5) is applied to all shared data
  * 5. LoRA weight deltas are encrypted in transit (TLS 1.3)
  * 6. Each update is signed with device-specific key
  *
@@ -73,6 +73,7 @@ import kotlin.math.sqrt
 class FederatedLearningClient(
     private val context: Context,
     private val pinnedHttpClient: PinnedHttpClient,
+    private val consentManager: com.msaidizi.app.security.privacy.ConsentManager? = null,
 ) {
     companion object {
         private const val TAG = "FederatedLearning"
@@ -80,7 +81,19 @@ class FederatedLearningClient(
         private const val MAX_UPLOAD_SIZE_BYTES = 20 * 1024 * 1024  // 20 MB max
 
         // Differential privacy parameters
-        private const val DP_EPSILON = 1.0        // Privacy budget
+        // ε=0.1 provides strong privacy guarantees (lower ε = more privacy).
+        // ε=0.1 means the probability of any outcome changes by at most e^0.1 ≈ 1.105x
+        // when any single user's data is added/removed.
+        //
+        // SERVER-SIDE REQUIREMENT: The federated server MUST also use ε=0.1
+        // when aggregating updates from devices. If the server uses a different
+        // epsilon, the composed privacy budget becomes ε_total = ε_client + ε_server,
+        // which weakens the overall privacy guarantee.
+        //
+        // The server should apply the same Gaussian mechanism:
+        //   σ_server = Δf · √(2 · ln(1.25/δ)) / ε = 49.1
+        // to the aggregated LoRA weights before distributing the global model.
+        private const val DP_EPSILON = 0.1         // Privacy budget (strong)
         private const val DP_DELTA = 1e-5          // Failure probability
         private const val DP_SENSITIVITY = 1.0      // L2 sensitivity of updates
 
@@ -144,9 +157,14 @@ class FederatedLearningClient(
      * - Location data
      * - Business details
      *
+     * PRIVACY AUDIT: This method's signature intentionally does NOT accept
+     * audio data (ShortArray, ByteArray of audio, etc). The only binary data
+     * accepted is adapterBytes (LoRA weights), which contain no audio content.
+     * This is a compile-time guarantee that raw voice cannot be uploaded.
+     *
      * @param language Language of the update
      * @param corrections Local corrections (anonymized before upload)
-     * @param adapterBytes LoRA adapter weights (if available)
+     * @param adapterBytes LoRA adapter weights (if available) — NOT audio
      * @param calibrationParams Calibration parameters to share
      */
     suspend fun uploadUpdate(
@@ -155,6 +173,15 @@ class FederatedLearningClient(
         adapterBytes: ByteArray?,
         calibrationParams: CalibrationParams
     ) = withContext(Dispatchers.IO) {
+
+        // Consent check — must have explicit FL consent before uploading
+        if (consentManager != null &&
+            !consentManager.hasConsent(com.msaidizi.app.security.privacy.ConsentManager.ConsentPurpose.ANALYTICS)) {
+            Timber.tag(TAG).w("Upload blocked: user has not granted analytics/FL consent")
+            _syncState.value = SyncState.Error("Consent required for federated learning")
+            return@withContext
+        }
+
         _syncState.value = SyncState.Uploading
 
         try {
@@ -181,7 +208,10 @@ class FederatedLearningClient(
                     vocabularySize = 0,  // Would come from vocabulary DAO
                     estimatedWer = 0.0f,
                     deviceTier = "basic"  // Would come from DeviceTier
-                )
+                ),
+                // Weight for federated averaging: n_k (number of local samples)
+                // Server computes: Δw_global = Σ (n_k / n_total) · Δw_k
+                sampleWeight = corrections.size
             )
 
             // Step 5: Compress and upload
@@ -270,6 +300,13 @@ class FederatedLearningClient(
      *
      * α is determined by the user's correction count:
      *   α = min(1.0, corrections / 100)
+     *
+     * SERVER-SIDE AGGREGATION (FedAvg):
+     * The server must compute weighted average:
+     *   Δw_global = Σ_k (n_k / n_total) · Δw_k
+     * where n_k = sampleWeight from each device upload.
+     * This ensures devices with more training data contribute
+     * proportionally more to the global model.
      */
     suspend fun applyGlobalUpdate(
         update: FederatedDownload,
@@ -349,8 +386,8 @@ class FederatedLearningClient(
      *   noisy_value = true_value + N(0, σ²)
      *   where σ = Δf · √(2 ln(1.25/δ)) / ε
      *
-     * For our parameters (ε=1.0, δ=1e-5, Δf=1.0):
-     *   σ = 1.0 · √(2 · ln(1.25 / 1e-5)) / 1.0 ≈ 4.91
+     * For our parameters (ε=0.1, δ=1e-5, Δf=1.0):
+     *   σ = 1.0 · √(2 · ln(1.25 / 1e-5)) / 0.1 ≈ 49.1
      *
      * This ensures ε-differential privacy for each uploaded pattern.
      */
@@ -1020,7 +1057,10 @@ data class FederatedUpload(
     val correctionPatterns: List<AnonymizedPattern>,
     val adapterDeltas: ByteArray? = null,
     val calibrationParams: CalibrationParams? = null,
-    val metadata: UploadMetadata? = null
+    val metadata: UploadMetadata? = null,
+    /** Number of local training samples (n_k) for weighted federated averaging.
+     * Server computes: Δw_global = Σ (n_k / n_total) · Δw_k */
+    val sampleWeight: Int = 1
 )
 
 /**

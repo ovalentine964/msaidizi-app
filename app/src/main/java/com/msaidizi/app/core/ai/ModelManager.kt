@@ -33,9 +33,9 @@ import javax.inject.Singleton
  *
  * | Tier | RAM   | CPU          | Model                     | Size   |
  * |------|-------|--------------|---------------------------|--------|
- * | LOW  | ≤2GB  | Helio A22    | qwen-0.5b Q4_0           | ~250MB |
- * | MID  | 3-4GB | Helio G25    | qwen-0.5b Q4_K_M         | ~300MB |
- * | HIGH | ≥6GB  | Dimensity 700| qwen-1.5b Q4_K_M         | ~900MB |
+ * | LOW  | ≤2GB  | Helio A22    | Qwen3.5-0.8B Q4_0        | ~500MB |
+ * | MID  | 3-4GB | Helio G25    | Qwen3-1.7B Q4_K_M        | ~1.1GB |
+ * | HIGH | ≥6GB  | Dimensity 700| Qwen3.5-2B Q4_K_M        | ~1.2GB |
  *
  * ## Integration Points
  *
@@ -66,10 +66,11 @@ class ModelManager @Inject constructor(
         private const val LOW_MEMORY_PERCENT = 85  // Unload models when >85% RAM used
         private const val CRITICAL_MEMORY_PERCENT = 92 // Emergency unload
 
-        // Model IDs for LLM variants — supports scaling from 0.5B → 0.8B → 2B
-        private const val MODEL_QWEN_05B = "qwen-0.5b-q4km"
-        private const val MODEL_QWEN_08B = "qwen-0.8b-q4km"
-        private const val MODEL_QWEN_2B = "qwen-2b-q4km"
+        // Model IDs for LLM variants — supports scaling from 0.8B → 1.7B → 2B
+        // Updated: Qwen3.5-0.8B as default (mobile-optimized reasoning)
+        private const val MODEL_QWEN_08B = "qwen3.5-0.8b-q4km"
+        private const val MODEL_QWEN_1_7B = "qwen3-1.7b-q4km"
+        private const val MODEL_QWEN_2B = "qwen3.5-2b-q4km"
 
         // Auto-unload timeout: unload model after this many minutes of inactivity
         private const val AUTO_UNLOAD_MINUTES_IDLE = 10L
@@ -118,6 +119,9 @@ class ModelManager @Inject constructor(
 
     /** Timestamp of last inference (for auto-unload) */
     private var lastInferenceTimeMs: Long = 0L
+
+    /** Coroutine scope for background tasks */
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /** Whether memory monitoring is active */
     private var memoryMonitorJob: Job? = null
@@ -293,10 +297,10 @@ class ModelManager @Inject constructor(
      */
     private fun getModelSizeMb(modelId: String): Int {
         return when (modelId) {
-            MODEL_QWEN_05B -> 250   // ~250MB Q4_0
-            MODEL_QWEN_08B -> 450   // ~450MB Q4_K_M
-            MODEL_QWEN_2B -> 1200   // ~1.2GB Q4_K_M
-            else -> 300
+            MODEL_QWEN_08B -> 500   // ~500MB Q4_0 (Qwen3.5-0.8B)
+            MODEL_QWEN_1_7B -> 1100  // ~1.1GB Q4_K_M (Qwen3-1.7B)
+            MODEL_QWEN_2B -> 1200   // ~1.2GB Q4_K_M (Qwen3.5-2B)
+            else -> 500
         }
     }
 
@@ -354,7 +358,7 @@ class ModelManager @Inject constructor(
         llmEngine.unloadModel()
         loadedModelId = null
         activeBackend = null
-        loadedModels.remove(MODEL_QWEN_05B)
+        loadedModels.remove(MODEL_QWEN_08B)
         _modelState.value = ModelManagerState.IDLE
         Timber.i(TAG, "LLM unloaded")
     }
@@ -365,9 +369,9 @@ class ModelManager @Inject constructor(
      */
     fun getOptimalModelId(): String {
         return when (deviceTier) {
-            DeviceTier.LOW -> MODEL_QWEN_05B   // Smallest quantization
-            DeviceTier.MID -> MODEL_QWEN_08B    // Better quality, fits in 3-4GB
-            DeviceTier.HIGH -> MODEL_QWEN_2B    // Best quality for 6GB+ devices
+            DeviceTier.LOW -> MODEL_QWEN_08B    // Qwen3.5-0.8B — mobile-optimized reasoning
+            DeviceTier.MID -> MODEL_QWEN_1_7B   // Qwen3-1.7B — thinking mode, strong reasoning
+            DeviceTier.HIGH -> MODEL_QWEN_2B    // Qwen3.5-2B — edge-optimized, best quality
         }
     }
 
@@ -507,9 +511,9 @@ class ModelManager @Inject constructor(
      */
     private fun getModelCandidates(): List<String> {
         return when (deviceTier) {
-            DeviceTier.LOW -> listOf(MODEL_QWEN_05B)  // Only smallest model
-            DeviceTier.MID -> listOf(MODEL_QWEN_08B, MODEL_QWEN_05B)  // Try 0.8B first
-            DeviceTier.HIGH -> listOf(MODEL_QWEN_2B, MODEL_QWEN_08B, MODEL_QWEN_05B)  // Try 2B first
+            DeviceTier.LOW -> listOf(MODEL_QWEN_08B)  // Qwen3.5-0.8B only
+            DeviceTier.MID -> listOf(MODEL_QWEN_1_7B, MODEL_QWEN_08B)  // Try 1.7B first
+            DeviceTier.HIGH -> listOf(MODEL_QWEN_2B, MODEL_QWEN_1_7B, MODEL_QWEN_08B)  // Try 2B first
         }
     }
 
@@ -521,7 +525,7 @@ class ModelManager @Inject constructor(
             "silero-vad",
             "whisper-tiny-int4",
             "piper-swahili"
-        ) + if (isOnDeviceLlmFeasible()) listOf(MODEL_QWEN_05B) else emptyList()
+        ) + if (isOnDeviceLlmFeasible()) listOf(MODEL_QWEN_08B) else emptyList()
     }
 
     // ────────────────────── Private: Model Loading ──────────────────────
@@ -610,7 +614,7 @@ class ModelManager @Inject constructor(
      */
     private fun startMemoryMonitor() {
         memoryMonitorJob?.cancel()
-        memoryMonitorJob = CoroutineScope(Dispatchers.IO).launch {
+        memoryMonitorJob = scope.launch {
             while (isActive) {
                 try {
                     val info = collectMemoryInfo()

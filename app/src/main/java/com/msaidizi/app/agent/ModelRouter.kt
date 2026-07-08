@@ -452,8 +452,8 @@ class ModelRouter(
         put("on-device", Provider(
             id = "on-device",
             type = ProviderType.ON_DEVICE,
-            displayName = "On-Device Qwen 0.5B (llama.cpp)",
-            models = listOf("qwen-0.5b-fl-sw", "qwen3-1.7b", "phi-2"),
+            displayName = "On-Device Qwen3.5-0.8B (llama.cpp)",
+            models = listOf("qwen3.5-0.8b", "qwen3-1.7b", "phi-2"),
             costPer1kInput = 0.0,
             costPer1kOutput = 0.0,
             maxContextTokens = 4096,
@@ -508,12 +508,12 @@ class ModelRouter(
                 "financial_document_processing"
             )
         ))
-        // Backend: Angavu Intelligence (full agent capabilities)
+        // Backend: Angavu Intelligence — AfriqueQwen-14B for African language support
         put("backend", Provider(
             id = "backend",
             type = ProviderType.BACKEND,
-            displayName = "Angavu Backend",
-            models = listOf("biashara-agent"),
+            displayName = "Angavu Backend (AfriqueQwen-14B)",
+            models = listOf("AfriqueQwen-14B", "biashara-agent"),
             costPer1kInput = 0.0,
             costPer1kOutput = 0.0,
             maxContextTokens = 32_768,

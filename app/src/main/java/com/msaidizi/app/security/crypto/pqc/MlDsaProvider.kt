@@ -26,6 +26,13 @@ class MlDsaProvider(
     override val isPostQuantum: Boolean = true
     override val securityLevel: Int = parameterSet.securityLevel
 
+    /**
+     * Flag indicating this is a STUB implementation.
+     * Callers MUST check this and fall back to AES-256-GCM if true.
+     * Do NOT rely on signature verification results from a stub.
+     */
+    val is_stub: Boolean = true
+
     companion object {
         /** Public key sizes in bytes */
         val PUBLIC_KEY_SIZES = mapOf(

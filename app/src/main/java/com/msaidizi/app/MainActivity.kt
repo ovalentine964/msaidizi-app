@@ -10,9 +10,11 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.msaidizi.app.core.util.DeviceTier
+import com.msaidizi.app.onboarding.bootstrap.BootstrapActivity
 import com.msaidizi.app.update.AutoUpdater
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -37,6 +39,16 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Safety net: redirect to onboarding if not completed
+        val prefs = getSharedPreferences("worker_profile", 0)
+        if (!prefs.getBoolean("onboarding_complete", false)) {
+            Timber.i("Onboarding not complete — redirecting to BootstrapActivity")
+            startActivity(Intent(this, BootstrapActivity::class.java))
+            finish()
+            return
+        }
+
         setContentView(R.layout.activity_main)
 
         setupNavigation()
@@ -120,7 +132,7 @@ class MainActivity : AppCompatActivity() {
             .setMessage("Version $version is ready to install.\n\n${notes.take(300)}")
             .setPositiveButton("Install") { _, _ ->
                 // Trigger update download + install via AutoUpdater
-                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                lifecycleScope.launch {
                     val result = autoUpdater.forceCheck()
                     if (result is AutoUpdater.UpdateResult.Available) {
                         autoUpdater.downloadAndInstall(result.info)

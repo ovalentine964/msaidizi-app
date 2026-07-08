@@ -1,0 +1,27 @@
+{
+  "language": "dholuo",
+  "dialect": "Dholuo (Luo)",
+  "version": "1.0.0",
+  "entries": [
+    {"spoken": "kuon", "canonical": "maize", "category": "grains", "avg_price": 500, "unit": "kg"},
+    {"spoken": "nyoyo", "canonical": "beans", "category": "grains", "avg_price": 800, "unit": "kg"},
+    {"spoken": "osiep", "canonical": "cassava", "category": "produce", "avg_price": 200, "unit": "kg"},
+    {"spoken": "ng'wen", "canonical": "sorghum", "category": "grains", "avg_price": 400, "unit": "kg"},
+    {"spoken": "muhogo", "canonical": "cassava", "category": "produce", "avg_price": 200, "unit": "kg"},
+    {"spoken": "alodo", "canonical": "arrowroot", "category": "produce", "avg_price": 300, "unit": "kg"},
+    {"spoken": "nyangile", "canonical": "sugarcane", "category": "produce", "avg_price": 50, "unit": "piece"},
+    {"spoken": "rech", "canonical": "fish", "category": "protein", "avg_price": 300, "unit": "kg"},
+    {"spoken": "rikuo", "canonical": "meat", "category": "protein", "avg_price": 600, "unit": "kg"},
+    {"spoken": "mara", "canonical": "milk", "category": "dairy", "avg_price": 80, "unit": "litre"},
+    {"spoken": "chiemo", "canonical": "food", "category": "general", "avg_price": 0, "unit": ""},
+    {"spoken": "ot", "canonical": "money", "category": "money", "avg_price": 0, "unit": ""},
+    {"spoken": "hera", "canonical": "love", "category": "greeting", "avg_price": 0, "unit": ""},
+    {"spoken": "misawa", "canonical": "hello", "category": "greeting", "avg_price": 0, "unit": ""},
+    {"spoken": "erokamano", "canonical": "thank you", "category": "greeting", "avg_price": 0, "unit": ""},
+    {"spoken": "ichiegni", "canonical": "goodbye", "category": "greeting", "avg_price": 0, "unit": ""},
+    {"spoken": "odiechieng", "canonical": "good day", "category": "greeting", "avg_price": 0, "unit": ""},
+    {"spoken": "johera", "canonical": "trader", "category": "business", "avg_price": 0, "unit": ""},
+    {"spoken": "rech", "canonical": "sell", "category": "business", "avg_price": 0, "unit": ""},
+    {"spoken": "wuon", "canonical": "buy", "category": "business", "avg_price": 0, "unit": ""}
+  ]
+}

@@ -39,17 +39,24 @@
         android:extractNativeLibs="true"
         tools:targetApi="34">
 
-        <!-- Single Activity -->
+        <!-- Bootstrap Onboarding (LAUNCHER — checks onboarding_complete, redirects to MainActivity) -->
         <activity
-            android:name=".MainActivity"
+            android:name=".onboarding.bootstrap.BootstrapActivity"
             android:exported="true"
-            android:windowSoftInputMode="adjustResize"
-            android:screenOrientation="portrait">
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Main Activity (post-onboarding) -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"
+            android:screenOrientation="portrait" />
 
         <!-- Foreground service for voice recording -->
         <service

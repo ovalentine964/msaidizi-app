@@ -27,7 +27,9 @@ import timber.log.Timber
  *
  * Designed for <1ms latency — pure code, no ML models.
  */
-object YorubaDialectAdapter {
+object YorubaDialectAdapter : IDialectAdapter {
+    override val asrLanguageHint: String = "yo"  // Yoruba has its own Whisper token
+    override val ttsLanguage: String = "yo"
     private val MARKERS = mapOf(
         "ni" to Regex("\\bni\\b"),
         "si" to Regex("\\bsi\\b"),
@@ -188,7 +190,7 @@ object YorubaDialectAdapter {
 
     // ────────────────────── Code-Switching Detection ──────────────────────
 
-    fun detectCodeSwitching(text: String): CodeSwitchResult {
+    override fun detectCodeSwitching(text: String): CodeSwitchResult {
         val words = text.lowercase()
             .split(Regex("[^\\p{L}']+"))
             .filter { it.length > 1 }
@@ -230,7 +232,7 @@ object YorubaDialectAdapter {
 
     // ────────────────────── Normalization ──────────────────────
 
-    fun normalize(text: String): String {
+    override fun normalize(text: String): String {
         var normalized = text
         for ((key, regex) in PRONUNCIATION_REGEXES) {
             normalized = regex.replace(normalized, pronunciationVariations[key] ?: key)
@@ -238,7 +240,7 @@ object YorubaDialectAdapter {
         return normalized
     }
 
-    fun translateToStandard(term: String): String? {
+    override fun translateToStandard(term: String): String? {
         val lower = term.lowercase().trim()
 
         yorubaBusinessTerms[lower]?.let { return it }
@@ -266,7 +268,7 @@ object YorubaDialectAdapter {
         return null
     }
 
-    fun detectRegion(text: String): DialectRegion {
+    override fun detectRegion(text: String): DialectRegion {
         val lower = text.lowercase()
         var yorubaScore = 0
 
@@ -280,7 +282,7 @@ object YorubaDialectAdapter {
         return if (yorubaScore > 5) DialectRegion.YORUBA else DialectRegion.STANDARD
     }
 
-    fun process(text: String): ProcessedResult {
+    override fun process(text: String): ProcessedResult {
         Timber.tag(TAG).d("Processing: '%s'", text)
 
         val codeSwitch = detectCodeSwitching(text)

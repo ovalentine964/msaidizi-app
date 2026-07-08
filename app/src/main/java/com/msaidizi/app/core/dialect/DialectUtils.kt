@@ -23,7 +23,9 @@ object DialectUtils {
         "nenda", "kuja", "fanya", "sema", "ona", "pata"
     )
 
-    fun isSwahiliWord(word: String): Boolean = word in SWAHILI_WORDS
+    fun isSwahiliWord(word: String): Boolean =
+        word in SWAHILI_WORDS || SwahiliMarketVocabulary.isMarketTerm(word)
 
-    fun isSwahiliWordExtended(word: String): Boolean = word in SWAHILI_WORDS_EXTENDED
+    fun isSwahiliWordExtended(word: String): Boolean =
+        word in SWAHILI_WORDS_EXTENDED || SwahiliMarketVocabulary.isMarketTerm(word)
 }

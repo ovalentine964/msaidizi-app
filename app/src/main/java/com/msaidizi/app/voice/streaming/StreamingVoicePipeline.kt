@@ -110,6 +110,19 @@ class StreamingVoicePipeline @Inject constructor(
     private var audioJob: Job? = null
     private var processingScope: CoroutineScope? = null
 
+    // ────────────── Streaming ASR State ──────────────
+
+    /** Accumulated audio buffer for periodic partial transcription */
+    private val streamingAudioBuffer = mutableListOf<Short>()
+
+    /** Timestamp of last partial ASR run */
+    private var lastAsrTime = 0L
+
+    /** Minimum samples needed before attempting partial transcription (0.5s) */
+    private companion object {
+        const val MIN_STREAMING_SAMPLES = 8000  // 0.5s at 16kHz
+    }
+
     // ────────────────────── Initialization ──────────────────────
 
     /**
@@ -201,16 +214,42 @@ class StreamingVoicePipeline @Inject constructor(
 
         if (!isSpeech) return
 
-        // 2. Emotion detection (async, non-blocking)
+        // 2. Accumulate audio for periodic partial transcription
+        streamingAudioBuffer.addAll(chunk.toList())
+
+        // 3. Emotion detection (async, non-blocking)
         processingScope?.launch(Dispatchers.Default) {
             val features = featureExtractor.extractEmotionFeatures(chunk)
             val emotionResult = emotionDetector.detect(features)
             _emotion.emit(emotionResult.primaryEmotion)
         }
 
-        // 3. For streaming ASR, we'd process partial audio here
-        // In production, this would send audio chunks to a streaming ASR model
-        // and emit partial transcripts as they arrive
+        // 4. Streaming ASR: run partial transcription every STREAMING_CHUNK_MS
+        val now = System.currentTimeMillis()
+        if (now - lastAsrTime >= STREAMING_CHUNK_MS && streamingAudioBuffer.size >= MIN_STREAMING_SAMPLES) {
+            lastAsrTime = now
+            val partialAudio = ShortArray(streamingAudioBuffer.size) { streamingAudioBuffer[it] }
+
+            processingScope?.launch(Dispatchers.Default) {
+                try {
+                    val partialText = speechRecognizer.transcribe(partialAudio)
+                    if (!partialText.isNullOrBlank()) {
+                        _partialTranscript.emit(StreamingTranscript(
+                            text = partialText,
+                            rawText = partialText,
+                            confidence = 0.6f,  // Lower confidence for partial results
+                            dialect = "",
+                            emotion = VoiceEmotion.NEUTRAL,
+                            latencyMs = 0,
+                            isPartial = true
+                        ))
+                    }
+                } catch (e: Exception) {
+                    // Partial transcription failure is non-fatal
+                    Timber.tag(TAG).v("Partial ASR skipped: %s", e.message)
+                }
+            }
+        }
     }
 
     /**
@@ -225,6 +264,9 @@ class StreamingVoicePipeline @Inject constructor(
 
         _pipelineState.value = StreamingPipelineState.PROCESSING
         val startTime = System.currentTimeMillis()
+
+        // Clear streaming buffer
+        streamingAudioBuffer.clear()
 
         try {
             // Step 1: Extract features for emotion + dialect detection (parallel)

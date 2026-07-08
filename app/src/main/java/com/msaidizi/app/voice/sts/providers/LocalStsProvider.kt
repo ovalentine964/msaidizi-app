@@ -65,6 +65,13 @@ class LocalStsProvider @Inject constructor(
     private val latencyHistory = mutableListOf<Long>()
     private var isInterrupted = false
 
+    /**
+     * Shutdown the scope. Call when the provider is being destroyed.
+     */
+    fun shutdown() {
+        scope.cancel()
+    }
+
     // Audio buffer for accumulating user speech
     private val audioBuffer = mutableListOf<ShortArray>()
 
@@ -112,14 +119,18 @@ class LocalStsProvider @Inject constructor(
 
         if (combinedAudio.isEmpty()) return
 
-        // 2. ASR — transcribe audio
-        val transcript = speechRecognizer.transcribe(combinedAudio)
+        // 2. ASR — transcribe audio with language hint from session
+        val langHint = session.language
+        val transcript = speechRecognizer.transcribeWithLanguage(combinedAudio, langHint)
         if (transcript.isNullOrBlank()) return
+
+        // Detect language from transcript content for response generation
+        val lang = detectLanguage(transcript)
 
         _transcription.emit(StsTranscription(
             userText = transcript,
             responseText = "",
-            language = "sw",
+            language = lang,
             isPartial = false,
             latencyMs = System.currentTimeMillis() - startTime
         ))
@@ -130,7 +141,7 @@ class LocalStsProvider @Inject constructor(
 
         llmEngine.generateResponse(
             userInput = transcript,
-            language = "sw",
+            language = lang,
             onToken = { token ->
                 responseBuilder.append(token)
                 // Split into sentences for streaming TTS
@@ -155,7 +166,7 @@ class LocalStsProvider @Inject constructor(
         for (chunk in responseChunks) {
             if (isInterrupted) break
 
-            val ttsAudio = synthesizeAudio(chunk, "sw")
+            val ttsAudio = synthesizeAudio(chunk, lang)
             if (ttsAudio.isNotEmpty()) {
                 _audioOutput.emit(ttsAudio)
             }
@@ -168,7 +179,7 @@ class LocalStsProvider @Inject constructor(
         _transcription.emit(StsTranscription(
             userText = transcript,
             responseText = responseChunks.joinToString(" "),
-            language = "sw",
+            language = lang,
             isPartial = false,
             latencyMs = elapsed
         ))
@@ -183,28 +194,54 @@ class LocalStsProvider @Inject constructor(
         Timber.tag(TAG).d("Local STS interrupted")
     }
 
+    // ────────────────────── Language Detection ──────────────────────
+
+    /**
+     * Detect language from transcript text.
+     * Uses keyword-based heuristics optimized for African languages.
+     */
+    private fun detectLanguage(text: String): String {
+        val lower = text.lowercase()
+        return when {
+            // Sheng markers
+            lower.contains("sasa") || lower.contains("poa") || lower.contains("niaje") ||
+            lower.contains("boss") || lower.contains("msee") -> "sheng"
+            // Yoruba markers
+            lower.contains("bawo") || lower.contains("ẹ") || lower.contains("ṣe") ||
+            lower.contains("jẹ") -> "yo"
+            // Hausa markers
+            lower.contains("sannu") || lower.contains("yaya") || lower.contains("na gode") -> "ha"
+            // Dholuo markers
+            lower.contains("maber") || lower.contains("nyako") || lower.contains("ocha") ||
+            lower.contains("nie") -> "dholuo"
+            // Amharic markers (romanized)
+            lower.contains("selam") || lower.contains("ameseginalehu") -> "am"
+            // Swahili markers
+            lower.contains("habari") || lower.contains("sawa") || lower.contains("asante") ||
+            lower.contains("nzuri") || lower.contains("niko") -> "sw"
+            // English fallback
+            else -> "en"
+        }
+    }
+
     // ────────────────────── Audio Synthesis ──────────────────────
 
     /**
      * Synthesize audio from text using the appropriate TTS engine.
      * Returns raw PCM samples at the engine's native sample rate.
+     * Captures PCM output instead of playing directly to speaker,
+     * so the audio can be routed through the STS audioOutput flow.
      */
     private suspend fun synthesizeAudio(text: String, language: String): ShortArray {
-        // In production, this would capture the synthesized audio
-        // instead of playing it directly. For now, use the existing
-        // TTS engines which play to AudioTrack.
+        val usePiper = language in setOf("sw", "sheng", "en")
 
-        val engine = if (language in setOf("sw", "sheng", "en")) {
-            piperTts
+        return if (usePiper) {
+            // Piper TTS: synthesize to PCM at 22050Hz
+            piperTts.synthesizeToPcm(text, language)
         } else {
-            mmsTts
+            // MMS TTS: synthesize to PCM at 16kHz
+            mmsTts.synthesizeToPcm(text, language)
         }
-
-        // Speak the text (plays to speaker)
-        engine.speak(text, language)
-
-        // Return empty array — in production, capture PCM output
-        return ShortArray(0)
     }
 
     // ────────────────────── Quality Metrics ──────────────────────

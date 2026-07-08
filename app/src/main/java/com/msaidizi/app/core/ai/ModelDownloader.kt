@@ -107,6 +107,9 @@ class ModelDownloader @Inject constructor(
     /** Whether WiFi-only mode is enforced for large models */
     var wifiOnlyMode: Boolean = true
 
+    /** Coroutine scope for background downloads */
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     // ────────────────────── Public API ──────────────────────
 
     /**
@@ -310,7 +313,7 @@ class ModelDownloader @Inject constructor(
         cm.registerNetworkCallback(request, object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
                 Timber.d(TAG, "WiFi available — checking for queued downloads")
-                CoroutineScope(Dispatchers.IO).launch {
+                scope.launch {
                     resumeQueuedDownloads()
                 }
             }
@@ -338,7 +341,7 @@ class ModelDownloader @Inject constructor(
         updateProgress(modelId, 0f)
         showDownloadNotification(modelId, def, 0)
 
-        val job = CoroutineScope(Dispatchers.IO).launch {
+        val job = scope.launch {
             try {
                 val success = modelRegistry.downloadModel(modelId) { progress ->
                     updateProgress(modelId, progress)

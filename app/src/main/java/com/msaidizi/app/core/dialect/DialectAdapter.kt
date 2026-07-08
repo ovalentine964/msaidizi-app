@@ -26,11 +26,23 @@ import timber.log.Timber
  *
  * Designed for <1ms latency — pure code, no ML models.
  */
-open class DialectAdapter(private val config: DialectConfig) {
+open class DialectAdapter(private val config: DialectConfig) : IDialectAdapter {
 
     private val TAG_PREFIX = "Dialect"
 
     private val tag = "$TAG_PREFIX:${config.name}"
+
+    /**
+     * ISO language code to pass to Whisper ASR for improved recognition.
+     * Maps dialect to its parent language for the ASR model.
+     */
+    override val asrLanguageHint: String = config.languageCode
+
+    /**
+     * Language code to use for TTS engine selection.
+     * Maps dialect to the TTS model that best handles it.
+     */
+    override val ttsLanguage: String = config.languageCode
 
     // ────────────────────── Code-Switching Detection ──────────────────────
 
@@ -41,7 +53,7 @@ open class DialectAdapter(private val config: DialectConfig) {
      * Returns a [CodeSwitchResult] indicating whether code-switching was detected,
      * the primary language, and confidence scores.
      */
-    fun detectCodeSwitching(text: String): CodeSwitchResult {
+    override fun detectCodeSwitching(text: String): CodeSwitchResult {
         val words = text.lowercase()
             .split(Regex("[^\\p{L}']+"))
             .filter { it.length > 1 }
@@ -89,7 +101,7 @@ open class DialectAdapter(private val config: DialectConfig) {
      * Applies all pronunciation regex replacements from the config.
      * Each match is replaced with its standard form from [DialectConfig.pronunciationVariations].
      */
-    fun normalize(text: String): String {
+    override fun normalize(text: String): String {
         var normalized = text
         for ((key, regex) in config.pronunciationRegexes) {
             normalized = regex.replace(normalized, config.pronunciationVariations[key] ?: key)
@@ -107,7 +119,7 @@ open class DialectAdapter(private val config: DialectConfig) {
      *
      * @return The standard Swahili term, or null if not found.
      */
-    fun translateToStandard(term: String): String? {
+    override fun translateToStandard(term: String): String? {
         val lower = term.lowercase().trim()
 
         config.businessTerms[lower]?.let { return it }
@@ -125,7 +137,7 @@ open class DialectAdapter(private val config: DialectConfig) {
      * Scores the text based on business terms and marker patterns.
      * Returns the configured region if the score exceeds the threshold.
      */
-    fun detectRegion(text: String): DialectRegion {
+    override fun detectRegion(text: String): DialectRegion {
         val lower = text.lowercase()
         var dialectScore = 0
 
@@ -151,7 +163,7 @@ open class DialectAdapter(private val config: DialectConfig) {
      *
      * @return [ProcessedResult] with all analysis and transformations.
      */
-    fun process(text: String): ProcessedResult {
+    override fun process(text: String): ProcessedResult {
         Timber.tag(tag).d("Processing: '%s'", text)
 
         val codeSwitch = detectCodeSwitching(text)
@@ -180,6 +192,7 @@ open class DialectAdapter(private val config: DialectConfig) {
 
     private fun isBusinessTerm(word: String): Boolean {
         return config.businessTerms.containsKey(word) ||
-                config.businessTerms.values.any { it == word }
+                config.businessTerms.values.any { it == word } ||
+                SwahiliMarketVocabulary.isMarketTerm(word)
     }
 }

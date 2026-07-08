@@ -357,6 +357,85 @@ class MMSTextToSpeech @Inject constructor(
     }
 
     /**
+     * Synthesize text to raw PCM samples without playing.
+     * Used by STS pipeline to capture audio for routing through SharedFlow.
+     *
+     * @param text Text to synthesize
+     * @param language Language code
+     * @return Raw PCM samples at OUTPUT_SAMPLE_RATE (16kHz), empty array on failure
+     */
+    suspend fun synthesizeToPcm(text: String, language: String = "sw"): ShortArray = withContext(Dispatchers.Default) {
+        val langCode = normalizeLanguageCode(language)
+        if (!isModelLoaded || currentModelId != LANGUAGE_MODEL_MAP[langCode]) {
+            val loaded = loadModel(langCode)
+            if (!loaded) return@withContext ShortArray(0)
+        }
+        if (text.isBlank()) return@withContext ShortArray(0)
+
+        try {
+            val tokenIds = tokenize(text)
+            if (tokenIds.isEmpty()) return@withContext ShortArray(0)
+
+            val tokenIdArray = tokenIds.map { it.toLong() }.toLongArray()
+            val tokenCount = tokenIdArray.size.toLong()
+
+            val xTensor = OnnxTensor.createTensor(
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
+                LongBuffer.wrap(tokenIdArray),
+                longArrayOf(1, tokenCount)
+            )
+            val xLengthsTensor = OnnxTensor.createTensor(
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
+                LongBuffer.wrap(longArrayOf(tokenCount)),
+                longArrayOf(1)
+            )
+            val noiseScaleTensor = OnnxTensor.createTensor(
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
+                FloatBuffer.wrap(floatArrayOf(DEFAULT_NOISE_SCALE)),
+                longArrayOf(1)
+            )
+            val lengthScaleTensor = OnnxTensor.createTensor(
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
+                FloatBuffer.wrap(floatArrayOf(1.0f / speed)),
+                longArrayOf(1)
+            )
+            val noiseWTensor = OnnxTensor.createTensor(
+                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
+                FloatBuffer.wrap(floatArrayOf(DEFAULT_NOISE_W)),
+                longArrayOf(1)
+            )
+
+            val inputs = mapOf(
+                "x" to xTensor,
+                "x_lengths" to xLengthsTensor,
+                "noise_scale" to noiseScaleTensor,
+                "length_scale" to lengthScaleTensor,
+                "noise_scale_w" to noiseWTensor
+            )
+
+            val results = requireNotNull(ortSession) { "ORT session not initialized" }.run(inputs)
+            val audioOutput = results.get("audio")
+            val samples = ((audioOutput as OnnxTensor).value as Array<FloatArray>)[0]
+
+            val pcmData = ShortArray(samples.size) { i ->
+                (samples[i].coerceIn(-1f, 1f) * Short.MAX_VALUE).toInt().toShort()
+            }
+
+            xTensor.close()
+            xLengthsTensor.close()
+            noiseScaleTensor.close()
+            lengthScaleTensor.close()
+            noiseWTensor.close()
+            results.close()
+
+            pcmData
+        } catch (e: Exception) {
+            Timber.e(e, "MMS synthesizeToPcm error")
+            ShortArray(0)
+        }
+    }
+
+    /**
      * Speak with streaming playback — splits text into sentences.
      */
     suspend fun speakStreaming(text: String, language: String = "sw") {

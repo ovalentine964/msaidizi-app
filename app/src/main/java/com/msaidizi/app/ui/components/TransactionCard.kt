@@ -8,10 +8,16 @@ import android.widget.TextView
 import com.msaidizi.app.R
 import com.msaidizi.app.core.model.Transaction
 import com.msaidizi.app.core.model.TransactionType
+import com.msaidizi.app.ui.theme.AppTypography
 
 /**
  * Transaction card component.
  * Displays a single transaction with type icon, item, and amount.
+ *
+ * ACCESSIBILITY:
+ * - Minimum touch target 48dp
+ * - Content description for screen readers (type + item + amount)
+ * - Minimum text size 16sp for elderly readability
  */
 class TransactionCard @JvmOverloads constructor(
     context: Context,
@@ -32,10 +38,20 @@ class TransactionCard @JvmOverloads constructor(
         amount = findViewById(R.id.amount)
         details = findViewById(R.id.details)
         timestamp = findViewById(R.id.timestamp)
+
+        // ACCESSIBILITY: Minimum touch target
+        val minTouch = AppTypography.minTouchTarget(context)
+        minimumHeight = minTouch
+
+        // ACCESSIBILITY: Minimum text sizes
+        itemName.textSize = AppTypography.MIN_TEXT_SIZE_SP
+        amount.textSize = AppTypography.MIN_TEXT_SIZE_SP
+        details.textSize = 14f.coerceAtLeast(AppTypography.MIN_TEXT_SIZE_SP)
     }
 
     /**
      * Bind transaction data to the card.
+     * Sets content description for screen reader accessibility.
      */
     fun bind(transaction: Transaction) {
         typeIcon.text = when (transaction.type) {
@@ -75,5 +91,18 @@ class TransactionCard @JvmOverloads constructor(
             TransactionType.REFUND -> context.getColor(R.color.profit_positive)
         }
         amount.setTextColor(amountColor)
+
+        // ACCESSIBILITY: Content description for screen readers
+        val typeLabel = when (transaction.type) {
+            TransactionType.SALE -> "Mauzo"
+            TransactionType.PURCHASE -> "Manunuzi"
+            TransactionType.EXPENSE -> "Gharama"
+            TransactionType.OTHER -> "Nyingine"
+            TransactionType.WITHDRAWAL -> "Kutoa"
+            TransactionType.DEPOSIT -> "Kuingiza"
+            TransactionType.FEE -> "Ada"
+            TransactionType.REFUND -> "Rudishwa"
+        }
+        contentDescription = "$typeLabel: ${transaction.item}, KSh ${"%.0f".format(transaction.totalAmount)}, saa $time"
     }
 }

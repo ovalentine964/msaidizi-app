@@ -17,8 +17,13 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.msaidizi.app.R
+import com.msaidizi.app.voice.VoicePipeline
+import com.msaidizi.app.voice.TranscriptionResult
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import timber.log.Timber
+import javax.inject.Inject
 
 /**
  * Business Discovery — Msaidizi's conversation to understand the worker's business.
@@ -57,10 +62,15 @@ import kotlinx.coroutines.launch
  * @see OnboardingConversation for the conversation logic
  * @see WorkerProfile for the data model
  */
+@AndroidEntryPoint
 class BusinessDiscoveryFragment : Fragment() {
+
+    @Inject
+    lateinit var voicePipeline: VoicePipeline
 
     private lateinit var conversation: OnboardingConversation
     private var currentStep: ConversationStep? = null
+    private var isVoiceListening = false
 
     // UI elements
     private lateinit var promptText: TextView
@@ -185,6 +195,31 @@ class BusinessDiscoveryFragment : Fragment() {
 
         // Start the conversation
         startConversation()
+
+        // Initialize voice pipeline and collect transcriptions
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                voicePipeline.initialize()
+                Timber.d("VoicePipeline initialized for BusinessDiscovery")
+            } catch (e: Exception) {
+                Timber.e(e, "VoicePipeline init failed in BusinessDiscovery")
+            }
+        }
+
+        // Collect transcriptions from voice pipeline
+        viewLifecycleOwner.lifecycleScope.launch {
+            voicePipeline.transcription.collect { result ->
+                if (result.success && result.text.isNotBlank()) {
+                    Timber.d("Voice transcription received: %s", result.text.take(50))
+                    processResponse(result.text)
+                } else {
+                    hintText.text = result.error ?: "Sikujielewa. Jaribu tena."
+                }
+                isVoiceListening = false
+                voiceButton.text = "🎤 Sema Sasa"
+                voiceButton.isEnabled = true
+            }
+        }
 
         // Entrance animation
         layout.alpha = 0f
@@ -318,7 +353,8 @@ class BusinessDiscoveryFragment : Fragment() {
 
     /**
      * Start voice input.
-     * Uses on-device Whisper for transcription (no internet needed).
+     * Uses on-device Whisper ASR via VoicePipeline for transcription.
+     * No internet needed — Whisper runs locally on the device.
      */
     private fun startVoiceInput() {
         // Check microphone permission
@@ -333,22 +369,37 @@ class BusinessDiscoveryFragment : Fragment() {
             return
         }
 
-        // TODO: Integrate with Whisper on-device STT
-        // For now, show a placeholder
-        voiceButton.text = "🎤 Nasikiliza..."
-        voiceButton.isEnabled = false
-
-        // In production, this would:
-        // 1. Start recording audio
-        // 2. Feed to Whisper model
-        // 3. Get transcription
-        // 4. Process response
-
-        // Simulate voice input for now
-        voiceButton.postDelayed({
-            voiceButton.text = "🎤 Sema Sasa"
-            voiceButton.isEnabled = true
-        }, 3000)
+        if (isVoiceListening) {
+            // Stop listening — Whisper will transcribe
+            isVoiceListening = false
+            voiceButton.text = "⏳ Ninachambua..."
+            voiceButton.isEnabled = false
+            viewLifecycleOwner.lifecycleScope.launch {
+                try {
+                    voicePipeline.stopListening()
+                } catch (e: Exception) {
+                    Timber.e(e, "Error stopping voice")
+                    voiceButton.text = "🎤 Sema Sasa"
+                    voiceButton.isEnabled = true
+                }
+            }
+        } else {
+            // Start listening via VoicePipeline (Whisper ASR)
+            isVoiceListening = true
+            voiceButton.text = "🔴 Nasikiliza... (bonyeza kuacha)"
+            viewLifecycleOwner.lifecycleScope.launch {
+                try {
+                    voicePipeline.startListening(this)
+                } catch (e: Exception) {
+                    Timber.e(e, "Error starting voice")
+                    isVoiceListening = false
+                    voiceButton.text = "🎤 Sema Sasa"
+                    voiceButton.isEnabled = true
+                    // Show text input hint as fallback
+                    hintText.text = "Sauti haikufanya kazi. Jaribu kuruka swali hili."
+                }
+            }
+        }
     }
 
     /**
@@ -429,6 +480,18 @@ class BusinessDiscoveryFragment : Fragment() {
             putLong("onboarding_completed_at", profile.onboardingCompletedAt)
             apply()
         }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        try {
+            voicePipeline.stopSpeaking()
+            if (isVoiceListening) {
+                viewLifecycleOwner.lifecycleScope.launch {
+                    voicePipeline.stopListening()
+                }
+            }
+        } catch (_: Exception) {}
     }
 
     /**

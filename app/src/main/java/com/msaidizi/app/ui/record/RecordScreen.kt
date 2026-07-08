@@ -19,6 +19,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.msaidizi.app.R
+import com.msaidizi.app.ui.accessibility.AccessibilityTtsHelper
+import com.msaidizi.app.ui.accessibility.VoiceInputHelper
 import com.msaidizi.app.voice.PipelineState
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -26,6 +28,14 @@ import kotlinx.coroutines.launch
 /**
  * Record screen — voice recording and interaction UI.
  * Large animated microphone button for easy access.
+ *
+ * ACCESSIBILITY:
+ * - Voice input fallback for text input field
+ * - Error messages spoken aloud, not just displayed
+ * - Voice recognition failure recovery with clear instructions
+ * - Minimum touch targets 48dp on all interactive elements
+ * - Content descriptions on all UI elements
+ * - TTS feedback on state changes
  */
 @AndroidEntryPoint
 class RecordFragment : Fragment() {
@@ -41,6 +51,11 @@ class RecordFragment : Fragment() {
     private lateinit var conversationRecycler: RecyclerView
     private lateinit var pronunciationFeedback: PronunciationFeedbackView
 
+    // ── Accessibility ──
+    private var ttsHelper: AccessibilityTtsHelper? = null
+    private var textInputVoiceHelper: VoiceInputHelper? = null
+    private lateinit var textInputMicButton: ImageButton
+
     private var isRecording = false
 
     override fun onCreateView(
@@ -54,6 +69,7 @@ class RecordFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        ttsHelper = AccessibilityTtsHelper(requireContext())
         setupViews(view)
         observeState()
         viewModel.initialize()
@@ -67,6 +83,21 @@ class RecordFragment : Fragment() {
         textInput = view.findViewById(R.id.text_input)
         sendButton = view.findViewById(R.id.send_button)
         conversationRecycler = view.findViewById(R.id.conversation_recycler)
+
+        // ACCESSIBILITY: Content descriptions
+        micButton.contentDescription = "Kitufe kikubcha cha sauti. Gusa kuanza kurekodi."
+        textInput.contentDescription = "Andika ujumbe wako hapa, au tumia sauti"
+        sendButton.contentDescription = "Tuma ujumbe"
+        statusText.contentDescription = "Hali ya sasa"
+        transcribedText.contentDescription = "Maandishi yaliyosikika"
+        responseText.contentDescription = "Jibu la mfumo"
+
+        // ACCESSIBILITY: Minimum touch targets (48dp)
+        val minTouch = (48 * resources.displayMetrics.density).toInt()
+        micButton.minimumWidth = minTouch
+        micButton.minimumHeight = minTouch
+        sendButton.minimumWidth = minTouch
+        sendButton.minimumHeight = minTouch
 
         // Mic button click
         micButton.setOnClickListener {
@@ -89,6 +120,35 @@ class RecordFragment : Fragment() {
                 textInput.text.clear()
             }
         }
+
+        // ── Accessibility: Voice input fallback for text field ──
+        // Create a mic button for the text input area
+        textInputMicButton = ImageButton(requireContext()).apply {
+            setImageResource(android.R.drawable.ic_btn_speak_now)
+            contentDescription = "Gusa kusema badala ya kuandika"
+            background = null
+            minimumWidth = minTouch
+            minimumHeight = minTouch
+            setPadding(8, 8, 8, 8)
+        }
+        // Add mic button to the text input row if parent allows
+        val textInputParent = textInput.parent as? ViewGroup
+        textInputParent?.addView(textInputMicButton)
+
+        textInputVoiceHelper = VoiceInputHelper.attach(
+            context = requireContext(),
+            editText = textInput,
+            micButton = textInputMicButton,
+            language = "sw",
+            ttsHelper = ttsHelper,
+            onResult = { text ->
+                // Auto-send on voice input if text is substantial
+                if (text.length > 3) {
+                    viewModel.processTextInput(text)
+                    textInput.text.clear()
+                }
+            }
+        )
 
         // Setup conversation recycler
         conversationRecycler.layoutManager = LinearLayoutManager(requireContext()).apply {
@@ -168,6 +228,12 @@ class RecordFragment : Fragment() {
         } else if (!state.showPronunciationFeedback && pronunciationFeedback.isShowingFeedback()) {
             pronunciationFeedback.dismiss()
         }
+
+        // ── Accessibility: Speak errors, don't just display ──
+        if (state.statusMessage.contains("Error", ignoreCase = true) ||
+            state.statusMessage.contains("Tatizo", ignoreCase = true)) {
+            ttsHelper?.speakError(state.statusMessage)
+        }
     }
 
     private fun hasAudioPermission(): Boolean {
@@ -186,10 +252,19 @@ class RecordFragment : Fragment() {
         super.onPause()
         viewModel.onBackground()
     }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        ttsHelper?.release()
+        ttsHelper = null
+        textInputVoiceHelper?.destroy()
+        textInputVoiceHelper = null
+    }
 }
 
 /**
  * RecyclerView adapter for conversation history.
+ * ACCESSIBILITY: Content descriptions on conversation entries.
  */
 class ConversationAdapter(
     private val entries: List<ConversationEntry>
@@ -210,6 +285,9 @@ class ConversationAdapter(
         val entry = entries[position]
         holder.userText.text = "🎤 ${entry.userText}"
         holder.responseText.text = "🤖 ${entry.responseText}"
+        // ACCESSIBILITY: Full content description
+        holder.itemView.contentDescription =
+            "Wewe: ${entry.userText}. Msaidizi: ${entry.responseText}"
     }
 
     override fun getItemCount() = entries.size

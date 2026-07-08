@@ -48,6 +48,13 @@ class AdaptiveLearningEngine(
     private val json = Json { ignoreUnknownKeys = true }
     private val engineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
+    /**
+     * Shutdown the engine scope. Call when the component is being destroyed.
+     */
+    fun shutdown() {
+        engineScope.cancel()
+    }
+
     // ═══════════════ CORRECTION TRACKING ═══════════════
 
     /**

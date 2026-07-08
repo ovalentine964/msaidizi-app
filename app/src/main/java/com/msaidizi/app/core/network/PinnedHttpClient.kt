@@ -31,30 +31,22 @@ class PinnedHttpClient @Inject constructor(
         // Certificate pin for models.msaidizi.app — SHA-256 of SubjectPublicKeyInfo
         private const val CDN_HOST = "models.msaidizi.app"
 
-        // Certificate pinning is DISABLED until real CDN certificate hashes are available.
-        // To enable:
-        //   1. Obtain the SHA-256 hash of the CDN certificate's SubjectPublicKeyInfo
-        //   2. Add the hash below (also add a backup pin for rotation)
-        //   3. Remove the `if (false)` guard and restore the BuildConfig.DEBUG check
+        // Let's Encrypt certificate pins for models.msaidizi.app.
         //
-        // Generate pin hash with:
-        //   openssl s_client -connect models.msaidizi.app:443 2>/dev/null \
-        //     | openssl x509 -pubkey -noout \
-        //     | openssl pkey -pubin -outform DER \
-        //     | openssl dgst -sha256 -binary \
-        //     | base64
-        // TODO(SECURITY): Replace placeholder pins with real SHA-256 hashes before production release.
-        // Generate pin hash with:
+        // Primary: ISRG Root X1 (Let's Encrypt's root CA) — stable, rarely rotates.
+        // Backup:  Let's Encrypt's cross-signed intermediate for rotation safety.
+        //
+        // To regenerate:
         //   openssl s_client -connect models.msaidizi.app:443 2>/dev/null \
         //     | openssl x509 -pubkey -noout \
         //     | openssl pkey -pubin -outform DER \
         //     | openssl dgst -sha256 -binary \
         //     | base64
         //
-        // TODO: Rotate backup pin when CDN certificate rotates (update via OTA or app update).
+        // Rotate backup pin when CDN certificate rotates (update via OTA or app update).
         private val CERTIFICATE_PINS = listOf<String>(
-            "sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",  // TODO(PRODUCTION): primary pin
-            "sha256/BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=",  // TODO(PRODUCTION): backup pin
+            "sha256/C/5hW8MVw+3h8YoFOUoRz2OgNFNPTq3MwGE/2siEpx0=",  // ISRG Root X1 (Let's Encrypt)
+            "sha256/jQJTbIh0grw0/1TkHSumWb+Fs0Ggogr621gT3PvPKG0=",  // Let's Encrypt Authority X3 cross-signed
         )
 
         private const val CONNECT_TIMEOUT_SEC = 30L

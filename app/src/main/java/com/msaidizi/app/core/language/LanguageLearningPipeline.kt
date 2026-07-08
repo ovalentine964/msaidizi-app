@@ -477,6 +477,7 @@ class LanguageLearningPipeline @Inject constructor(
             val corrections = userCorrectionDao.getRecent(MIN_CORRECTIONS_FOR_FEDERATED)
             val adapterBytes = languageModelRegistry.getActiveAdapter()
 
+            // Step 1: Upload local learnings to FL server
             federatedLearningClient.uploadUpdate(
                 language = language,
                 corrections = corrections,
@@ -488,6 +489,28 @@ class LanguageLearningPipeline @Inject constructor(
                     prior = 0.7f
                 )
             )
+
+            // Step 2: Download and apply global model update
+            val download = federatedLearningClient.downloadUpdate(language)
+            if (download != null) {
+                Timber.tag(TAG).i("Downloaded global model v%s for %s", download.version, language)
+                federatedLearningClient.applyGlobalUpdate(
+                    update = download,
+                    language = language,
+                    userCorrectionCount = corrections.size
+                )
+
+                // Apply calibration params from global model to local calibrator
+                if (download.calibrationParams != null) {
+                    confidenceCalibrator.setCalibrationParams(
+                        language = language,
+                        temperature = download.calibrationParams.temperature,
+                        plattA = download.calibrationParams.plattA,
+                        plattB = download.calibrationParams.plattB,
+                        prior = download.calibrationParams.prior
+                    )
+                }
+            }
 
             lastFederatedSyncTime = System.currentTimeMillis()
             _pipelineState.value = PipelineState.Idle

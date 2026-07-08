@@ -131,8 +131,8 @@ dependencies {
     implementation("com.google.dagger:hilt-android:2.53.1")
     ksp("com.google.dagger:hilt-android-compiler:2.53.1")  // was: kapt(...)
 
-    // Kotlin reflect
-    implementation("org.jetbrains.kotlin:kotlin-reflect:2.1.0")
+    // Kotlin reflect — MUST match Kotlin compiler 1.9.24
+    implementation("org.jetbrains.kotlin:kotlin-reflect:1.9.24")
 
     // Coroutines — 1.9.0: improved structured concurrency, better debugging
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
@@ -212,13 +212,13 @@ ksp {
     arg("room.verbose", "true")
 }
 
-// Force ALL Kotlin deps to match Kotlin 2.1.0 (K2 compiler)
+// Force ALL Kotlin deps to match Kotlin 1.9.24 (compiler version)
 configurations.all {
     resolutionStrategy {
-        force("org.jetbrains.kotlin:kotlin-reflect:2.1.0")
-        force("org.jetbrains.kotlin:kotlin-stdlib:2.1.0")
-        force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.1.0")
-        force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.1.0")
+        force("org.jetbrains.kotlin:kotlin-reflect:1.9.24")
+        force("org.jetbrains.kotlin:kotlin-stdlib:1.9.24")
+        force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.24")
+        force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.24")
     }
 }
 

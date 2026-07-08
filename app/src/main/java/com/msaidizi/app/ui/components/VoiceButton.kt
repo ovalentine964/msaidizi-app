@@ -6,12 +6,20 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.util.AttributeSet
 import android.view.View
+import android.view.accessibility.AccessibilityEvent
 import android.view.animation.AccelerateDecelerateInterpolator
 import com.msaidizi.app.R
+import com.msaidizi.app.ui.theme.AppTypography
 
 /**
  * Animated voice button with pulsing effect.
  * Shows recording state with visual feedback.
+ *
+ * ACCESSIBILITY:
+ * - Minimum touch target 48dp (WCAG 2.5.5)
+ * - Content description changes with state (idle/recording)
+ * - Announces state changes to screen readers
+ * - High contrast colors for visibility
  */
 class VoiceButton @JvmOverloads constructor(
     context: Context,
@@ -35,6 +43,18 @@ class VoiceButton @JvmOverloads constructor(
     private var isRecording = false
 
     init {
+        // ACCESSIBILITY: Minimum touch target 48dp
+        val minTouch = AppTypography.minTouchTarget(context)
+        minimumWidth = minTouch
+        minimumHeight = minTouch
+
+        // ACCESSIBILITY: Initial content description
+        contentDescription = "Kitufe cha sauti. Gusa kurekodi sauti."
+
+        // ACCESSIBILITY: Make focusable for screen readers
+        isFocusable = true
+        isClickable = true
+
         setOnClickListener {
             // Handled by parent
         }
@@ -42,9 +62,15 @@ class VoiceButton @JvmOverloads constructor(
 
     /**
      * Start pulsing animation (recording state).
+     * Announces state change for accessibility.
      */
     fun startPulsing() {
         isRecording = true
+        contentDescription = "Inarekodi sauti. Gusa kuacha kurekodi."
+
+        // ACCESSIBILITY: Announce state change
+        announceForAccessibility("Inarekodi sauti sasa")
+
         pulseAnimator = ValueAnimator.ofFloat(1.0f, 1.3f).apply {
             duration = 1000
             repeatCount = ValueAnimator.INFINITE
@@ -60,13 +86,24 @@ class VoiceButton @JvmOverloads constructor(
 
     /**
      * Stop pulsing animation.
+     * Announces state change for accessibility.
      */
     fun stopPulsing() {
         isRecording = false
+        contentDescription = "Kitufe cha sauti. Gusa kurekodi sauti."
+
+        // ACCESSIBILITY: Announce state change
+        announceForAccessibility("Umekoma kurekodi")
+
         pulseAnimator?.cancel()
         pulseScale = 1.0f
         invalidate()
     }
+
+    /**
+     * Check if currently recording.
+     */
+    fun isCurrentlyRecording(): Boolean = isRecording
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)

@@ -99,6 +99,11 @@ class AdaptiveAsrEngine(
 
     /**
      * Initialize the adaptive engine — load user's learned corrections.
+     *
+     * Cold-start handling: If no corrections exist yet, load the
+     * pre-seeded Swahili market vocabulary so the system has a baseline
+     * vocabulary from day one. This ensures Msaidizi can recognize
+     * common market terms before any training data is collected.
      */
     suspend fun initialize() = withContext(Dispatchers.IO) {
         if (initialized) return@withContext
@@ -121,6 +126,18 @@ class AdaptiveAsrEngine(
             // Also add correction cache entries
             vocabSet.addAll(correctionCache.keys)
             vocabSet.addAll(correctionCache.values)
+
+            // Cold-start: if no user vocabulary exists, seed with market terms
+            if (vocabSet.isEmpty() || vocabulary.size < 10) {
+                Timber.tag(TAG).i("Cold start detected — loading seed vocabulary")
+                val seedWords = loadSeedVocabulary()
+                vocabSet.addAll(seedWords)
+                // Build n-gram model from seed phrases
+                for (word in seedWords) {
+                    updateNgramModel(word, languageModelRegistry.getActiveLanguage())
+                }
+            }
+
             knownVocabulary = vocabSet
 
             Timber.tag(TAG).i(
@@ -131,6 +148,41 @@ class AdaptiveAsrEngine(
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Initialization failed")
         }
+    }
+
+    /**
+     * Load pre-seeded Swahili market vocabulary for cold start.
+     *
+     * These are the most common terms used in East African markets.
+     * Loaded from SwahiliMarketVocabulary when no user data exists.
+     * Ensures the system can recognize basic market terms from day one.
+     */
+    private fun loadSeedVocabulary(): Set<String> {
+        val seedWords = mutableSetOf<String>()
+        try {
+            // Load from the static SwahiliMarketVocabulary
+            val allTerms = com.msaidizi.app.core.dialect.SwahiliMarketVocabulary.ALL_TERMS
+            for ((term, _) in allTerms) {
+                seedWords.add(term.lowercase())
+                // Also add underscore-to-space variants
+                seedWords.add(term.replace("_", " ").lowercase())
+            }
+            // Add common ASR error corrections
+            val errorCorrections = mapOf(
+                "nika uza" to "nimeuza",
+                "nika nunua" to "nimenunua",
+                "ni nataka" to "nataka",
+                "ngapi bei" to "bei ni gapi"
+            )
+            for ((wrong, correct) in errorCorrections) {
+                correctionCache[wrong] = correct
+                seedWords.add(correct)
+            }
+            Timber.tag(TAG).d("Loaded %d seed vocabulary terms", seedWords.size)
+        } catch (e: Exception) {
+            Timber.tag(TAG).w(e, "Failed to load seed vocabulary")
+        }
+        return seedWords
     }
 
     // ════════════════════════════════════════════════════════════════════
@@ -262,7 +314,10 @@ class AdaptiveAsrEngine(
         learnVocabularyFromCorrection(originalTranscript, correctedTranscript, language)
 
         // 4. Update confidence calibration
-        confidenceCalibrator.recordOutcome(0.5f, language, wasCorrect = true)  // User confirmed correct
+        // When user corrects, the ASR was wrong — use a low confidence signal.
+        // The actual raw confidence from the original transcription should be
+        // passed through, but we use 0.3 as a proxy for "ASR was wrong".
+        confidenceCalibrator.recordOutcome(0.3f, language, wasCorrect = false)  // User corrected = ASR was wrong
 
         // 5. Store correction in database
         val correction = UserCorrection(
@@ -302,7 +357,8 @@ class AdaptiveAsrEngine(
         }
 
         // Update calibration with positive signal
-        confidenceCalibrator.recordOutcome(0.8f, language, wasCorrect = true)
+        // When user confirms, the ASR was right — use a high confidence signal.
+        confidenceCalibrator.recordOutcome(0.85f, language, wasCorrect = true)
 
         Timber.tag(TAG).d("Confirmation recorded [%s]: '%s'", language, transcript)
     }

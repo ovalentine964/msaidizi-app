@@ -13,6 +13,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.tabs.TabLayout
 import com.msaidizi.app.R
+import com.msaidizi.app.ui.accessibility.AccessibilityTtsHelper
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -30,6 +31,13 @@ import kotlinx.coroutines.launch
  *
  * This is the core UX that makes workers understand their business.
  * M-Pesa shows cash flow. Msaidizi shows business flow.
+ *
+ * ACCESSIBILITY:
+ * - "Sikiliza" button reads flow summary aloud via TTS
+ * - All content descriptions set for screen readers
+ * - Tab navigation announced to screen readers
+ * - Errors are spoken, not just displayed
+ * - Minimum touch targets 48dp
  */
 @AndroidEntryPoint
 class BusinessFlowFragment : Fragment() {
@@ -42,6 +50,10 @@ class BusinessFlowFragment : Fragment() {
     private lateinit var emptyState: View
     private lateinit var errorText: TextView
 
+    // ── Accessibility ──
+    private var ttsHelper: AccessibilityTtsHelper? = null
+    private lateinit var listenButton: com.google.android.material.button.MaterialButton
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -53,6 +65,7 @@ class BusinessFlowFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        ttsHelper = AccessibilityTtsHelper(requireContext())
         setupViews(view)
         setupTabs()
         observeState()
@@ -64,6 +77,23 @@ class BusinessFlowFragment : Fragment() {
         flowView = view.findViewById(R.id.business_flow_view)
         emptyState = view.findViewById(R.id.empty_state)
         errorText = view.findViewById(R.id.error_text)
+
+        // ACCESSIBILITY: Content descriptions
+        periodTabs.contentDescription = "Chagua kipindi: Leo, Wiki, Mwezi, Mwaka"
+        flowView.contentDescription = "Muongozo wa biashara"
+        errorText.contentDescription = "Ujumbe wa kosa"
+
+        // ── Accessibility: Listen button for audio readout ──
+        listenButton = view.findViewById(R.id.listen_button)
+            ?: com.google.android.material.button.MaterialButton(requireContext()).apply {
+                text = "🔊 Sikiliza Muongozo"
+                textSize = 18f
+                val minTouch = (48 * resources.displayMetrics.density).toInt()
+                minimumHeight = minTouch
+                minimumWidth = minTouch
+                contentDescription = "Sikiliza muongozo wa biashara"
+            }
+        listenButton.setOnClickListener { speakFlowSummary() }
 
         swipeRefresh.setOnRefreshListener {
             viewModel.refresh()
@@ -81,6 +111,8 @@ class BusinessFlowFragment : Fragment() {
             override fun onTabSelected(tab: TabLayout.Tab) {
                 val period = FlowPeriod.fromOrdinal(tab.position)
                 viewModel.switchPeriod(period)
+                // ACCESSIBILITY: Announce tab change
+                periodTabs.announceForAccessibility("Kipindi: ${period.displayNameSw}")
             }
 
             override fun onTabUnselected(tab: TabLayout.Tab) {}
@@ -126,12 +158,48 @@ class BusinessFlowFragment : Fragment() {
             errorText.visibility = View.GONE
         }
 
-        // Error handling
+        // Error handling — speak errors, not just display
         state.error?.let { error ->
             errorText.text = error
             errorText.visibility = View.VISIBLE
+            ttsHelper?.speakError(error)
         } ?: run {
             errorText.visibility = View.GONE
         }
+    }
+
+    /**
+     * Speak the business flow summary via TTS.
+     * For non-literate and visually impaired users.
+     */
+    private fun speakFlowSummary() {
+        val state = viewModel.uiState.value
+        val data = state.flowData
+        if (data == null) {
+            ttsHelper?.speak("Hakuna data bado. Anza kurekodi biashara yako.")
+            return
+        }
+
+        val periodLabel = when (state.currentPeriod) {
+            FlowPeriod.TODAY -> "leo"
+            FlowPeriod.WEEK -> "wiki hii"
+            FlowPeriod.MONTH -> "mwezi huu"
+            FlowPeriod.YEAR -> "mwaka huu"
+        }
+
+        ttsHelper?.speakFlowSummary(
+            revenue = data.revenue,
+            expenses = data.expenses,
+            profit = data.profit,
+            savings = data.savings,
+            healthScore = data.healthScore,
+            period = periodLabel
+        )
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        ttsHelper?.release()
+        ttsHelper = null
     }
 }
