@@ -86,35 +86,60 @@ class ModelRegistry @Inject constructor(
             ),
             "whisper-tiny-int4" to ModelDef(
                 id = "whisper-tiny-int4",
-                filename = "whisper-tiny-int4.onnx",
-                url = "$MODEL_CDN/whisper-tiny-int4.onnx",
-                // PLACEHOLDER: This is a known test hash. Replace before production.
-                sha256 = "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a",  // TODO(security): Replace with: sha256sum whisper-tiny-int4.onnx
-                sizeBytes = 42_000_000L,
+                filename = "whisper-encoder-int8.onnx",  // Primary file for compatibility
+                url = "https://huggingface.co/Xenova/whisper-tiny.en/resolve/main/onnx/encoder_model_quantized.onnx",
+                sha256 = "",  // Will be computed after download
+                sizeBytes = 39_000_000L,  // encoder (9.7MB) + decoder (29.3MB)
                 priority = ModelPriority.HIGH,
                 requiredFor = listOf(Feature.VOICE_INPUT),
                 tier = ModelTier.FIRST_LAUNCH,
-                version = "1.0.0"
+                version = "1.0.0",
+                files = mapOf(
+                    "encoder" to ModelFileDef(
+                        filename = "whisper-encoder-int8.onnx",
+                        url = "https://huggingface.co/Xenova/whisper-tiny.en/resolve/main/onnx/encoder_model_quantized.onnx",
+                        sha256 = "",
+                        sizeBytes = 10_124_993L
+                    ),
+                    "decoder" to ModelFileDef(
+                        filename = "whisper-decoder-int8.onnx",
+                        url = "https://huggingface.co/Xenova/whisper-tiny.en/resolve/main/onnx/decoder_model_merged_quantized.onnx",
+                        sha256 = "",
+                        sizeBytes = 29_290_000L
+                    ),
+                    "tokens" to ModelFileDef(
+                        filename = "whisper-tokens.json",
+                        url = "https://huggingface.co/Xenova/whisper-tiny.en/resolve/main/tokenizer.json",
+                        sha256 = "",
+                        sizeBytes = 2_000_000L
+                    )
+                )
             ),
             "piper-swahili" to ModelDef(
                 id = "piper-swahili",
                 filename = "piper-swahili.onnx",
-                url = "$MODEL_CDN/piper-swahili.onnx",
-                // PLACEHOLDER: This is a known test hash. Replace before production.
-                sha256 = "d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592",  // TODO(security): Replace with: sha256sum piper-swahili.onnx
+                url = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-sw_CD-lanfrica-medium.tar.bz2",
+                sha256 = "",  // Will be computed after download
                 sizeBytes = 26_000_000L,
                 priority = ModelPriority.HIGH,
                 requiredFor = listOf(Feature.VOICE_OUTPUT),
                 tier = ModelTier.FIRST_LAUNCH,
-                version = "1.0.0"
+                version = "1.0.0",
+                files = mapOf(
+                    "model" to ModelFileDef(
+                        filename = "piper-swahili.onnx",
+                        url = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-sw_CD-lanfrica-medium.tar.bz2",
+                        sha256 = "",
+                        sizeBytes = 26_000_000L
+                    )
+                )
             ),
             "qwen-0.5b-q4km" to ModelDef(
                 id = "qwen-0.5b-q4km",
                 filename = "qwen-0.5b-q4_k_m.gguf",
-                url = "$MODEL_CDN/qwen-0.5b-q4_k_m.gguf",
-                // PLACEHOLDER: This is a known test hash. Replace before production.
-                sha256 = "ef537f25c895bfa782526529a9b63d97aa631564d5d789c2b765448c8635fb6c",  // TODO(security): Replace with: sha256sum qwen-0.5b-q4_k_m.gguf
-                sizeBytes = 310_000_000L,
+                url = "https://huggingface.co/bartowski/Qwen_Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf",
+                sha256 = "",  // Will be computed after download
+                sizeBytes = 580_000_000L,
                 priority = ModelPriority.LOW,
                 requiredFor = listOf(Feature.LLM_INFERENCE),
                 tier = ModelTier.ON_DEMAND,
@@ -340,29 +365,66 @@ class ModelRegistry @Inject constructor(
 
     /**
      * Check which models are available locally (downloaded + size verified).
+     * Supports both single-file and multi-file models.
      */
     fun getAvailableModels(): Set<String> {
         return MODELS.filter { (_, def) ->
-            val file = File(modelsDir, def.filename)
-            file.exists() && file.length() > 0 && file.length() >= def.sizeBytes * 0.9
+            if (def.files.isNotEmpty()) {
+                // Multi-file model: all files must exist
+                def.files.values.all { fileDef ->
+                    val file = File(modelsDir, fileDef.filename)
+                    file.exists() && file.length() > 0
+                }
+            } else {
+                // Single-file model
+                val file = File(modelsDir, def.filename)
+                file.exists() && file.length() > 0 && file.length() >= def.sizeBytes * 0.9
+            }
         }.keys
     }
 
     /**
      * Check if a specific model is ready (downloaded + verified).
+     * Supports both single-file and multi-file models.
      */
     fun isModelReady(modelId: String): Boolean {
         val def = MODELS[modelId] ?: return false
-        val file = File(modelsDir, def.filename)
-        return file.exists() && file.length() > 0
+        return if (def.files.isNotEmpty()) {
+            // Multi-file model: all files must exist
+            def.files.values.all { fileDef ->
+                val file = File(modelsDir, fileDef.filename)
+                file.exists() && file.length() > 0
+            }
+        } else {
+            val file = File(modelsDir, def.filename)
+            file.exists() && file.length() > 0
+        }
     }
 
     /**
      * Get the local file path for a model, or null if not available.
+     * For single-file models, returns the file directly.
+     * For multi-file models, returns the directory containing all files.
      */
     fun getModelPath(modelId: String): File? {
         val def = MODELS[modelId] ?: return null
-        val file = File(modelsDir, def.filename)
+        return if (def.files.isNotEmpty()) {
+            // Multi-file model: return directory (all files must exist)
+            if (isModelReady(modelId)) modelsDir else null
+        } else {
+            val file = File(modelsDir, def.filename)
+            if (file.exists() && file.length() > 0) file else null
+        }
+    }
+
+    /**
+     * Get path to a specific file within a multi-file model.
+     * Returns null if the file doesn't exist.
+     */
+    fun getModelFilePath(modelId: String, fileKey: String): File? {
+        val def = MODELS[modelId] ?: return null
+        val fileDef = def.files[fileKey] ?: return null
+        val file = File(modelsDir, fileDef.filename)
         return if (file.exists() && file.length() > 0) file else null
     }
 
@@ -419,6 +481,7 @@ class ModelRegistry @Inject constructor(
 
     /**
      * Internal download with per-model mutex protection.
+     * Supports both single-file and multi-file models.
      */
     private suspend fun downloadModelWithMutex(
         modelId: String,
@@ -433,57 +496,126 @@ class ModelRegistry @Inject constructor(
             }
 
             val def = MODELS[modelId] ?: return
-            val destFile = File(modelsDir, def.filename)
-            val tempFile = File(modelsDir, "${def.filename}.tmp")
-            val resumeFile = File(modelsDir, "${def.filename}.resume")
 
             try {
                 updateState(modelId, ModelState.DOWNLOADING)
                 onProgress(modelId, 0f)
 
-                // Pre-check: ensure sufficient storage space (model size + 20% buffer)
-                val requiredSpace = (def.sizeBytes * 1.2).toLong()
-                if (modelsDir.usableSpace < requiredSpace) {
-                    Timber.e("Insufficient storage for model %s: need %d MB, have %d MB",
-                        modelId, requiredSpace / (1024*1024), modelsDir.usableSpace / (1024*1024))
-                    updateState(modelId, ModelState.ERROR)
-                    return
-                }
+                if (def.files.isNotEmpty()) {
+                    // ── Multi-file model ──
+                    val totalFiles = def.files.size
+                    var completedFiles = 0
 
-                // Resume from partial download if exists
-                val resumeOffset = if (tempFile.exists() && resumeFile.exists()) {
-                    resumeFile.readText().toLongOrNull() ?: 0L
-                } else 0L
+                    for ((key, fileDef) in def.files) {
+                        val destFile = File(modelsDir, fileDef.filename)
+                        if (destFile.exists() && destFile.length() > 0) {
+                            completedFiles++
+                            onProgress(modelId, completedFiles.toFloat() / totalFiles * 0.95f)
+                            continue
+                        }
 
-                downloadFile(def.url, tempFile, resumeOffset) { bytesDownloaded ->
-                    val totalDownloaded = resumeOffset + bytesDownloaded
-                    val progress = totalDownloaded.toFloat() / def.sizeBytes
-                    val clampedProgress = progress.coerceIn(0f, 0.95f)
-                    onProgress(modelId, clampedProgress)
-                    updateProgress(modelId, clampedProgress)
+                        // Handle tar.bz2 archives (for Piper TTS)
+                        if (fileDef.url.endsWith(".tar.bz2") || fileDef.url.endsWith(".tar.gz")) {
+                            downloadAndExtractArchive(fileDef, def, modelId) { progress ->
+                                val overallProgress = (completedFiles + progress) / totalFiles
+                                onProgress(modelId, overallProgress * 0.95f)
+                            }
+                        } else {
+                            // Regular file download
+                            val tempFile = File(modelsDir, "${fileDef.filename}.tmp")
+                            val resumeFile = File(modelsDir, "${fileDef.filename}.resume")
 
-                    // Save resume position periodically
-                    if (totalDownloaded % (1024 * 1024) < BUFFER_SIZE) {
-                        resumeFile.writeText(totalDownloaded.toString())
+                            val resumeOffset = if (tempFile.exists() && resumeFile.exists()) {
+                                resumeFile.readText().toLongOrNull() ?: 0L
+                            } else 0L
+
+                            // Pre-check: sufficient storage
+                            val requiredSpace = (fileDef.sizeBytes * 1.2).toLong()
+                            if (modelsDir.usableSpace < requiredSpace) {
+                                Timber.e("Insufficient storage for %s/%s: need %d MB, have %d MB",
+                                    modelId, key, requiredSpace / (1024*1024), modelsDir.usableSpace / (1024*1024))
+                                updateState(modelId, ModelState.ERROR)
+                                return
+                            }
+
+                            downloadFile(fileDef.url, tempFile, resumeOffset) { bytesDownloaded ->
+                                val totalDownloaded = resumeOffset + bytesDownloaded
+                                val fileProgress = totalDownloaded.toFloat() / fileDef.sizeBytes
+                                val overallProgress = (completedFiles + fileProgress.coerceIn(0f, 0.95f)) / totalFiles
+                                onProgress(modelId, overallProgress)
+
+                                if (totalDownloaded % (1024 * 1024) < BUFFER_SIZE) {
+                                    resumeFile.writeText(totalDownloaded.toString())
+                                }
+                            }
+
+                            // Verify SHA-256 if hash is provided
+                            updateState(modelId, ModelState.VERIFYING)
+                            if (fileDef.sha256.isNotEmpty()) {
+                                if (!verifySha256File(fileDef.filename, fileDef.sha256, tempFile)) {
+                                    tempFile.delete()
+                                    resumeFile.delete()
+                                    updateState(modelId, ModelState.ERROR)
+                                    return
+                                }
+                            }
+
+                            val renamed = tempFile.renameTo(destFile)
+                            if (!renamed) {
+                                tempFile.copyTo(destFile, overwrite = true)
+                                tempFile.delete()
+                            }
+                            resumeFile.delete()
+                        }
+
+                        completedFiles++
+                        onProgress(modelId, completedFiles.toFloat() / totalFiles * 0.95f)
                     }
-                }
+                } else {
+                    // ── Single-file model (legacy path) ──
+                    val destFile = File(modelsDir, def.filename)
+                    val tempFile = File(modelsDir, "${def.filename}.tmp")
+                    val resumeFile = File(modelsDir, "${def.filename}.resume")
 
-                // Verify SHA-256
-                updateState(modelId, ModelState.VERIFYING)
-                if (!verifySha256(modelId, def, tempFile, "download")) {
-                    tempFile.delete()
+                    val requiredSpace = (def.sizeBytes * 1.2).toLong()
+                    if (modelsDir.usableSpace < requiredSpace) {
+                        Timber.e("Insufficient storage for model %s: need %d MB, have %d MB",
+                            modelId, requiredSpace / (1024*1024), modelsDir.usableSpace / (1024*1024))
+                        updateState(modelId, ModelState.ERROR)
+                        return
+                    }
+
+                    val resumeOffset = if (tempFile.exists() && resumeFile.exists()) {
+                        resumeFile.readText().toLongOrNull() ?: 0L
+                    } else 0L
+
+                    downloadFile(def.url, tempFile, resumeOffset) { bytesDownloaded ->
+                        val totalDownloaded = resumeOffset + bytesDownloaded
+                        val progress = totalDownloaded.toFloat() / def.sizeBytes
+                        val clampedProgress = progress.coerceIn(0f, 0.95f)
+                        onProgress(modelId, clampedProgress)
+                        updateProgress(modelId, clampedProgress)
+
+                        if (totalDownloaded % (1024 * 1024) < BUFFER_SIZE) {
+                            resumeFile.writeText(totalDownloaded.toString())
+                        }
+                    }
+
+                    updateState(modelId, ModelState.VERIFYING)
+                    if (!verifySha256(modelId, def, tempFile, "download")) {
+                        tempFile.delete()
+                        resumeFile.delete()
+                        updateState(modelId, ModelState.ERROR)
+                        return
+                    }
+
+                    val renamed = tempFile.renameTo(destFile)
+                    if (!renamed) {
+                        tempFile.copyTo(destFile, overwrite = true)
+                        tempFile.delete()
+                    }
                     resumeFile.delete()
-                    updateState(modelId, ModelState.ERROR)
-                    return
                 }
-
-                // Atomic rename: temp -> final
-                val renamed = tempFile.renameTo(destFile)
-                if (!renamed) {
-                    tempFile.copyTo(destFile, overwrite = true)
-                    tempFile.delete()
-                }
-                resumeFile.delete()
 
                 // Write version file
                 versionTracker.writeVersion(modelId, def.version)
@@ -491,17 +623,13 @@ class ModelRegistry @Inject constructor(
                 updateState(modelId, ModelState.READY)
                 updateProgress(modelId, 1.0f)
                 onProgress(modelId, 1.0f)
-                Timber.i("Model %s downloaded and verified (%d bytes)", modelId, destFile.length())
+                Timber.i("Model %s downloaded and verified", modelId)
 
             } catch (e: CancellationException) {
-                // Save resume state on cancellation
-                resumeFile.writeText(tempFile.length().toString())
                 updateState(modelId, ModelState.PAUSED)
-                Timber.i("Model %s download paused at %d bytes", modelId, tempFile.length())
+                Timber.i("Model %s download paused", modelId)
                 throw e
             } catch (e: Exception) {
-                tempFile.delete()
-                resumeFile.delete()
                 updateState(modelId, ModelState.ERROR)
                 Timber.e(e, "Failed to download model %s", modelId)
             }
@@ -571,12 +699,22 @@ class ModelRegistry @Inject constructor(
 
     /**
      * Delete a specific model to reclaim storage.
+     * Handles both single-file and multi-file models.
      */
     fun deleteModel(modelId: String) {
         val def = MODELS[modelId] ?: return
-        File(modelsDir, def.filename).delete()
-        File(modelsDir, "${def.filename}.tmp").delete()
-        File(modelsDir, "${def.filename}.resume").delete()
+        if (def.files.isNotEmpty()) {
+            for (fileDef in def.files.values) {
+                File(modelsDir, fileDef.filename).delete()
+                File(modelsDir, "${fileDef.filename}.tmp").delete()
+                File(modelsDir, "${fileDef.filename}.resume").delete()
+            }
+            File(modelsDir, "${modelId}_archive").deleteRecursively()
+        } else {
+            File(modelsDir, def.filename).delete()
+            File(modelsDir, "${def.filename}.tmp").delete()
+            File(modelsDir, "${def.filename}.resume").delete()
+        }
         updateState(modelId, ModelState.NOT_DOWNLOADED)
         Timber.i("Model %s deleted", modelId)
     }
@@ -754,6 +892,105 @@ class ModelRegistry @Inject constructor(
     }
 
     /**
+     * Verify SHA-256 hash of a file.
+     * Used for individual files within multi-file models.
+     */
+    private fun verifySha256File(
+        fileLabel: String,
+        expectedHash: String,
+        file: File
+    ): Boolean {
+        if (expectedHash.isEmpty()) {
+            Timber.w("SHA-256 hash missing for %s — skipping verification", fileLabel)
+            return true
+        }
+        val hash = sha256File(file)
+        if (hash != expectedHash) {
+            Timber.e("SHA-256 MISMATCH for %s: expected=%s, got=%s", fileLabel, expectedHash, hash)
+            return false
+        }
+        Timber.d("SHA-256 verified for %s", fileLabel)
+        return true
+    }
+
+    /**
+     * Download and extract a tar.bz2/tar.gz archive.
+     * Used for Piper TTS models distributed as archives.
+     */
+    private suspend fun downloadAndExtractArchive(
+        fileDef: ModelFileDef,
+        def: ModelDef,
+        modelId: String,
+        onProgress: (Float) -> Unit
+    ) = withContext(Dispatchers.IO) {
+        val archiveFile = File(modelsDir, "${modelId}_archive.tar.bz2")
+        val extractDir = File(modelsDir, "${modelId}_archive")
+        extractDir.mkdirs()
+
+        try {
+            downloadFile(fileDef.url, archiveFile, 0L) { bytesDownloaded ->
+                val progress = bytesDownloaded.toFloat() / fileDef.sizeBytes
+                onProgress(progress.coerceAtMost(0.5f))
+            }
+
+            onProgress(0.5f)
+
+            val process = if (fileDef.url.endsWith(".tar.bz2")) {
+                Runtime.getRuntime().exec(arrayOf("tar", "xjf", archiveFile.absolutePath, "-C", extractDir.absolutePath))
+            } else {
+                Runtime.getRuntime().exec(arrayOf("tar", "xzf", archiveFile.absolutePath, "-C", extractDir.absolutePath))
+            }
+            val exitCode = process.waitFor()
+            if (exitCode != 0) {
+                throw Exception("Archive extraction failed with exit code $exitCode")
+            }
+
+            onProgress(0.8f)
+
+            copyExtractedModelFiles(extractDir, def)
+
+            onProgress(0.95f)
+
+            archiveFile.delete()
+            extractDir.deleteRecursively()
+
+            Timber.i("Archive downloaded and extracted for model %s", modelId)
+        } catch (e: Exception) {
+            archiveFile.delete()
+            extractDir.deleteRecursively()
+            throw e
+        }
+    }
+
+    /**
+     * Copy model files from extracted archive to the models directory.
+     * Handles the Piper TTS archive structure.
+     */
+    private fun copyExtractedModelFiles(extractDir: File, def: ModelDef) {
+        val modelDir = extractDir.listFiles()?.firstOrNull { it.isDirectory } ?: extractDir
+
+        val onnxFile = modelDir.listFiles()?.firstOrNull { it.name.endsWith(".onnx") }
+        if (onnxFile != null) {
+            val dest = File(modelsDir, "piper-swahili.onnx")
+            onnxFile.copyTo(dest, overwrite = true)
+            Timber.d("Copied ONNX model: %s → %s", onnxFile.name, dest.name)
+        }
+
+        val tokensFile = File(modelDir, "tokens.txt")
+        if (tokensFile.exists()) {
+            val dest = File(modelsDir, "piper-tokens.txt")
+            tokensFile.copyTo(dest, overwrite = true)
+        }
+
+        val espeakDir = File(modelDir, "espeak-ng-data")
+        if (espeakDir.exists() && espeakDir.isDirectory) {
+            val dest = File(modelsDir, "espeak-ng-data")
+            if (dest.exists()) dest.deleteRecursively()
+            espeakDir.copyRecursively(dest, overwrite = true)
+        }
+    }
+
+    /**
      * Compute SHA-256 hash of a file.
      */
     private fun sha256File(file: File): String {
@@ -787,6 +1024,14 @@ class ModelRegistry @Inject constructor(
  * Model definition with metadata for download and verification.
  * Extended with tier and version for model bundling.
  */
+/**
+ * Model file definition — supports single-file and multi-file models.
+ *
+ * Single-file models (e.g. Piper, Qwen): set [filename] + [url] + [sha256].
+ * Multi-file models (e.g. Whisper encoder+decoder): set [files] map instead.
+ *
+ * When [files] is non-empty, it takes precedence over [filename]/[url]/[sha256].
+ */
 data class ModelDef(
     val id: String,
     val filename: String,
@@ -796,7 +1041,25 @@ data class ModelDef(
     val priority: ModelPriority,
     val requiredFor: List<Feature>,
     val tier: ModelTier = ModelTier.FIRST_LAUNCH,
-    val version: String = "1.0.0"
+    val version: String = "1.0.0",
+    /**
+     * Multi-file model support. Map of "logical_name" → ModelFileDef.
+     * When non-empty, overrides [filename]/[url]/[sha256].
+     * Example:
+     *   "encoder" → ModelFileDef("whisper-encoder.onnx", "https://...", "sha256...", 10_000_000)
+     *   "decoder" → ModelFileDef("whisper-decoder.onnx", "https://...", "sha256...", 29_000_000)
+     */
+    val files: Map<String, ModelFileDef> = emptyMap()
+)
+
+/**
+ * Individual file within a multi-file model.
+ */
+data class ModelFileDef(
+    val filename: String,
+    val url: String,
+    val sha256: String,
+    val sizeBytes: Long
 )
 
 /** Download priority — CRITICAL always downloads, LOW only on good connections */

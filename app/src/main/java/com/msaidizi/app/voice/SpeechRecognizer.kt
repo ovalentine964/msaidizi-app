@@ -58,7 +58,8 @@ class SpeechRecognizer @Inject constructor(
     }
 
     private var ortEnvironment: OrtEnvironment? = null
-    private var ortSession: OrtSession? = null
+    private var ortSession: OrtSession? = null        // Encoder
+    private var ortDecoderSession: OrtSession? = null  // Decoder (merged with KV cache)
     private var isModelLoaded = false
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -74,17 +75,17 @@ class SpeechRecognizer @Inject constructor(
     // ────────────────────── Model Lifecycle ──────────────────────
 
     /**
-     * Load the Whisper ONNX model from disk.
+     * Load the Whisper encoder and decoder ONNX models from disk.
      * Uses memory-mapped loading for fast startup and reduced RAM.
      *
-     * @return true if model loaded successfully
+     * @return true if models loaded successfully
      */
     suspend fun loadModel(): Boolean = withContext(Dispatchers.IO) {
         if (isModelLoaded) return@withContext true
 
-        val modelFile = modelRegistry.getModelPath(MODEL_ID)
-        if (modelFile == null) {
-            Timber.w("Whisper model not found at expected path")
+        // Verify all required files exist
+        if (!modelRegistry.isModelReady(MODEL_ID)) {
+            Timber.w("Whisper model files not found")
             return@withContext false
         }
 
@@ -94,16 +95,31 @@ class SpeechRecognizer @Inject constructor(
             ortEnvironment = OrtEnvironment.getEnvironment()
 
             val sessionOptions = OrtSession.SessionOptions().apply {
-                setIntraOpNumThreads(2)  // 2 threads for Whisper
+                setIntraOpNumThreads(2)
                 setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
-                // Enable memory-mapped model loading for reduced RAM
-                setOptimizedModelFilePath(
-                    File(context.cacheDir, "whisper_optimized.onnx").absolutePath
-                )
             }
 
+            // Load encoder
+            val encoderPath = modelRegistry.getModelFilePath(MODEL_ID, "encoder")
+            if (encoderPath == null) {
+                Timber.e("Whisper encoder file not found")
+                return@withContext false
+            }
             ortSession = requireNotNull(ortEnvironment) { "ORT environment not initialized" }.createSession(
-                modelFile.absolutePath,
+                encoderPath.absolutePath,
+                sessionOptions
+            )
+
+            // Load decoder
+            val decoderPath = modelRegistry.getModelFilePath(MODEL_ID, "decoder")
+            if (decoderPath == null) {
+                Timber.e("Whisper decoder file not found")
+                ortSession?.close()
+                ortSession = null
+                return@withContext false
+            }
+            ortDecoderSession = requireNotNull(ortEnvironment) { "ORT environment not initialized" }.createSession(
+                decoderPath.absolutePath,
                 sessionOptions
             )
 
@@ -112,7 +128,7 @@ class SpeechRecognizer @Inject constructor(
 
             isModelLoaded = true
             val elapsed = System.currentTimeMillis() - startTime
-            Timber.i("Whisper model loaded in %dms", elapsed)
+            Timber.i("Whisper encoder+decoder loaded in %dms", elapsed)
             true
         } catch (e: Exception) {
             Timber.e(e, "Failed to load Whisper model")
@@ -122,15 +138,17 @@ class SpeechRecognizer @Inject constructor(
     }
 
     /**
-     * Unload model to free ~40MB RAM.
+     * Unload models to free ~40MB RAM.
      * Called when app goes to background on low-memory devices.
      */
     fun unloadModel() {
+        ortDecoderSession?.close()
+        ortDecoderSession = null
         ortSession?.close()
         ortSession = null
         ortEnvironment = null
         isModelLoaded = false
-        Timber.d("Whisper model unloaded")
+        Timber.d("Whisper models unloaded")
     }
 
     fun isModelReady(): Boolean = isModelLoaded
@@ -156,84 +174,88 @@ class SpeechRecognizer @Inject constructor(
 
         try {
             val startTime = System.currentTimeMillis()
+            val env = requireNotNull(ortEnvironment)
+            val encoder = requireNotNull(ortSession)
+            val decoder = requireNotNull(ortDecoderSession)
 
             // 1. Convert ShortArray to FloatArray (normalized to [-1, 1])
             val floatAudio = FloatArray(audioData.size) { i ->
                 audioData[i].toFloat() / Short.MAX_VALUE
             }
 
-            // 2. Whisper expects exactly 30 seconds of audio (480,000 samples).
-            //    Pad with zeros if shorter, truncate if longer.
+            // 2. Pad/truncate to 30 seconds
             val paddedAudio = FloatArray(WHISPER_SAMPLES)
             val copyLength = minOf(floatAudio.size, WHISPER_SAMPLES)
             System.arraycopy(floatAudio, 0, paddedAudio, 0, copyLength)
-            // Remaining samples are already zero (padding)
 
-            // 3. Create input tensors
+            // 3. Run encoder: audio → encoder_hidden_states
             val audioTensor = OnnxTensor.createTensor(
-                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
-                FloatBuffer.wrap(paddedAudio),
+                env, FloatBuffer.wrap(paddedAudio),
                 longArrayOf(1, paddedAudio.size.toLong())
             )
+            val encoderInputs = mapOf("input_features" to audioTensor)
+            val encoderOutputs = encoder.run(encoderInputs)
+            val encoderHidden = encoderOutputs.get("last_hidden_state") as OnnxTensor
+            audioTensor.close()
 
-            val maxLengthTensor = OnnxTensor.createTensor(
-                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
-                IntBuffer.wrap(intArrayOf(MAX_TOKENS)),
-                longArrayOf(1)
-            )
+            // 4. Decode tokens one at a time
+            val tokenIds = mutableListOf<Long>()
+            // <|startoftranscript|> <|notimestamps|>
+            var decoderInputIds = longArrayOf(50258L, 50360L)
 
-            val minLengthTensor = OnnxTensor.createTensor(
-                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
-                IntBuffer.wrap(intArrayOf(MIN_TOKENS)),
-                longArrayOf(1)
-            )
+            for (step in 0 until MAX_TOKENS) {
+                val decoderInputTensor = OnnxTensor.createTensor(
+                    env,
+                    java.nio.LongBuffer.wrap(decoderInputIds),
+                    longArrayOf(1, decoderInputIds.size.toLong())
+                )
 
-            val numBeamsTensor = OnnxTensor.createTensor(
-                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
-                IntBuffer.wrap(intArrayOf(NUM_BEAMS)),
-                longArrayOf(1)
-            )
+                val decoderInputs = mutableMapOf<String, OnnxTensor>(
+                    "input_ids" to decoderInputTensor,
+                    "encoder_hidden_states" to encoderHidden
+                )
 
-            val lengthPenaltyTensor = OnnxTensor.createTensor(
-                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
-                FloatBuffer.wrap(floatArrayOf(LENGTH_PENALTY)),
-                longArrayOf(1)
-            )
+                // Pass past key values if available
+                // (Merged decoder handles KV cache internally)
 
-            val repetitionPenaltyTensor = OnnxTensor.createTensor(
-                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
-                FloatBuffer.wrap(floatArrayOf(REPETITION_PENALTY)),
-                longArrayOf(1)
-            )
+                val decoderOutputs = decoder.run(decoderInputs)
+                val logits = decoderOutputs.get("logits") as OnnxTensor
 
-            // 4. Run inference
-            val inputs = mapOf(
-                "audio" to audioTensor,
-                "max_length" to maxLengthTensor,
-                "min_length" to minLengthTensor,
-                "num_beams" to numBeamsTensor,
-                "length_penalty" to lengthPenaltyTensor,
-                "repetition_penalty" to repetitionPenaltyTensor
-            )
+                // Get last token logits
+                val logitsArray = logits.value as Array<Array<FloatArray>>
+                val lastLogits = logitsArray[0][logitsArray[0].size - 1]
 
-            val results = requireNotNull(ortSession) { "ORT session not initialized" }.run(inputs)
+                // Greedy decoding: pick argmax
+                var bestToken = 0L
+                var bestScore = Float.MIN_VALUE
+                for (i in lastLogits.indices) {
+                    if (lastLogits[i] > bestScore) {
+                        bestScore = lastLogits[i]
+                        bestToken = i.toLong()
+                    }
+                }
 
-            // 5. Decode output tokens to text
-            val sequences = results.get("sequences")
-            val tokenIds = ((sequences as OnnxTensor).value as Array<LongArray>)[0]
-            val text = whisperTokenizer.decode(tokenIds)
+                decoderInputTensor.close()
+                logits.close()
+                decoderOutputs.close()
+
+                // Check EOS: <|endoftranscript|> = 50257
+                if (bestToken == 50257L) break
+
+                tokenIds.add(bestToken)
+
+                // Append token to decoder input for next step
+                decoderInputIds = decoderInputIds + bestToken
+            }
+
+            encoderHidden.close()
+            encoderOutputs.close()
+
+            // 5. Decode tokens to text
+            val text = whisperTokenizer.decode(tokenIds.toLongArray())
 
             val elapsed = System.currentTimeMillis() - startTime
             Timber.d("Whisper transcription: '%s' (%dms, %d samples)", text, elapsed, audioData.size)
-
-            // 6. Cleanup tensors
-            audioTensor.close()
-            maxLengthTensor.close()
-            minLengthTensor.close()
-            numBeamsTensor.close()
-            lengthPenaltyTensor.close()
-            repetitionPenaltyTensor.close()
-            results.close()
 
             text.takeIf { it.isNotBlank() }
         } catch (e: OutOfMemoryError) {
@@ -272,109 +294,72 @@ class SpeechRecognizer @Inject constructor(
 
         try {
             val startTime = System.currentTimeMillis()
+            val env = requireNotNull(ortEnvironment)
+            val encoder = requireNotNull(ortSession)
+            val decoder = requireNotNull(ortDecoderSession)
 
-            // 1. Convert ShortArray to FloatArray (normalized to [-1, 1])
+            // 1. Prepare audio
             val floatAudio = FloatArray(audioData.size) { i ->
                 audioData[i].toFloat() / Short.MAX_VALUE
             }
-
-            // 2. Pad/truncate to 30 seconds
             val paddedAudio = FloatArray(WHISPER_SAMPLES)
             val copyLength = minOf(floatAudio.size, WHISPER_SAMPLES)
             System.arraycopy(floatAudio, 0, paddedAudio, 0, copyLength)
 
-            // 3. Create input tensors
+            // 2. Run encoder
             val audioTensor = OnnxTensor.createTensor(
-                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
-                FloatBuffer.wrap(paddedAudio),
+                env, FloatBuffer.wrap(paddedAudio),
                 longArrayOf(1, paddedAudio.size.toLong())
             )
+            val encoderOutputs = encoder.run(mapOf("input_features" to audioTensor))
+            val encoderHidden = encoderOutputs.get("last_hidden_state") as OnnxTensor
+            audioTensor.close()
 
-            val maxLengthTensor = OnnxTensor.createTensor(
-                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
-                IntBuffer.wrap(intArrayOf(MAX_TOKENS)),
-                longArrayOf(1)
-            )
-
-            val minLengthTensor = OnnxTensor.createTensor(
-                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
-                IntBuffer.wrap(intArrayOf(MIN_TOKENS)),
-                longArrayOf(1)
-            )
-
-            val numBeamsTensor = OnnxTensor.createTensor(
-                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
-                IntBuffer.wrap(intArrayOf(NUM_BEAMS)),
-                longArrayOf(1)
-            )
-
-            val lengthPenaltyTensor = OnnxTensor.createTensor(
-                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
-                FloatBuffer.wrap(floatArrayOf(LENGTH_PENALTY)),
-                longArrayOf(1)
-            )
-
-            val repetitionPenaltyTensor = OnnxTensor.createTensor(
-                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
-                FloatBuffer.wrap(floatArrayOf(REPETITION_PENALTY)),
-                longArrayOf(1)
-            )
-
-            // 4. Create decoder input with language token as forced prefix.
-            //    Whisper's decoder starts with <|startoftranscript|><|language|><|notimestamps|>
-            //    We encode this as a LongArray for the "decoder_input_ids" tensor.
+            // 3. Decode with language token prefix
             val languageTokenId = getLanguageTokenId(language)
-            val decoderInputIds = longArrayOf(
-                50258L,              // <|startoftranscript|>
-                languageTokenId,     // <|language|> — e.g. <|sw|>=50309, <|en|>=50259
-                50258L + 2           // <|notimestamps|> (token 50360 in base, adjust per model)
-            )
+            // <|startoftranscript|> <|language|> <|notimestamps|>
+            var decoderInputIds = longArrayOf(50258L, languageTokenId, 50360L)
+            val tokenIds = mutableListOf<Long>()
 
-            val decoderInputTensor = OnnxTensor.createTensor(
-                requireNotNull(ortEnvironment) { "ORT environment not initialized" },
-                java.nio.LongBuffer.wrap(decoderInputIds),
-                longArrayOf(1, decoderInputIds.size.toLong())
-            )
+            for (step in 0 until MAX_TOKENS) {
+                val decoderInputTensor = OnnxTensor.createTensor(
+                    env,
+                    java.nio.LongBuffer.wrap(decoderInputIds),
+                    longArrayOf(1, decoderInputIds.size.toLong())
+                )
 
-            // 5. Run inference with language hint
-            val inputs = mutableMapOf(
-                "audio" to audioTensor,
-                "max_length" to maxLengthTensor,
-                "min_length" to minLengthTensor,
-                "num_beams" to numBeamsTensor,
-                "length_penalty" to lengthPenaltyTensor,
-                "repetition_penalty" to repetitionPenaltyTensor
-            )
+                val decoderOutputs = decoder.run(mapOf(
+                    "input_ids" to decoderInputTensor,
+                    "encoder_hidden_states" to encoderHidden
+                ))
+                val logits = decoderOutputs.get("logits") as OnnxTensor
+                val logitsArray = logits.value as Array<Array<FloatArray>>
+                val lastLogits = logitsArray[0][logitsArray[0].size - 1]
 
-            // Add decoder_input_ids if the model supports it
-            // Some ONNX exports have this input, others use only the audio + params
-            try {
-                inputs["decoder_input_ids"] = decoderInputTensor
-            } catch (e: Exception) {
-                // Model may not accept decoder_input_ids — that's OK
-                Timber.d("decoder_input_ids not accepted by model, using standard decoding")
+                var bestToken = 0L
+                var bestScore = Float.MIN_VALUE
+                for (i in lastLogits.indices) {
+                    if (lastLogits[i] > bestScore) {
+                        bestScore = lastLogits[i]
+                        bestToken = i.toLong()
+                    }
+                }
+
                 decoderInputTensor.close()
+                logits.close()
+                decoderOutputs.close()
+
+                if (bestToken == 50257L) break  // EOS
+                tokenIds.add(bestToken)
+                decoderInputIds = decoderInputIds + bestToken
             }
 
-            val results = requireNotNull(ortSession) { "ORT session not initialized" }.run(inputs)
+            encoderHidden.close()
+            encoderOutputs.close()
 
-            // 6. Decode output tokens to text
-            val sequences = results.get("sequences")
-            val tokenIds = ((sequences as OnnxTensor).value as Array<LongArray>)[0]
-            val text = whisperTokenizer.decode(tokenIds)
-
+            val text = whisperTokenizer.decode(tokenIds.toLongArray())
             val elapsed = System.currentTimeMillis() - startTime
             Timber.d("Whisper transcription (lang=%s): '%s' (%dms)", language, text, elapsed)
-
-            // 7. Cleanup tensors
-            audioTensor.close()
-            maxLengthTensor.close()
-            minLengthTensor.close()
-            numBeamsTensor.close()
-            lengthPenaltyTensor.close()
-            repetitionPenaltyTensor.close()
-            if (inputs.containsKey("decoder_input_ids")) decoderInputTensor.close()
-            results.close()
 
             text.takeIf { it.isNotBlank() }
         } catch (e: OutOfMemoryError) {
@@ -383,7 +368,6 @@ class SpeechRecognizer @Inject constructor(
             System.gc()
             null
         } catch (e: Exception) {
-            // If decoder_input_ids approach fails, fall back to standard transcribe
             Timber.w(e, "Language-hinted transcription failed, falling back to standard")
             transcribe(audioData)
         }

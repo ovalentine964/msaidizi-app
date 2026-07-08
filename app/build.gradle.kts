@@ -95,6 +95,18 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
             jniLibs.useLegacyPackaging = true
         }
+        // Don't compress large model files — they need to be memory-mapped or streamed
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+
+    // AAPT options for large APK with model assets
+    aaptOptions {
+        // Don't compress model files (they're accessed via AssetManager or mmap)
+        noCompress += listOf("gguf", "onnx", "txt")
+        // Increase cruncher timeout for large assets
+        cruncherProcesses = 4
     }
 }
 

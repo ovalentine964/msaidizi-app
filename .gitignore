@@ -84,3 +84,10 @@ Desktop.ini
 # macOS
 .AppleDouble
 .LSOverride
+
+# AI Models (too large for git, downloaded by CI/scripts/download-models.sh)
+app/src/main/assets/models/*.onnx
+app/src/main/assets/models/*.gguf
+app/src/main/assets/models/*.json
+app/src/main/assets/models/*.txt
+app/src/main/assets/models/espeak-ng-data/

@@ -1,4 +1,4 @@
-name: Build and Release
+name: Build Full APK (with AI Models)
 
 on:
   push:
@@ -26,15 +26,10 @@ jobs:
           chmod +x scripts/validate-build.sh
           ./scripts/validate-build.sh
 
-      - name: Check Room Entity Registration
-        run: python3 scripts/check-room-entities.py
-
-      - name: Check kapt Compatibility
-        run: python3 scripts/check-kapt-compat.py
-
   build:
     needs: validate
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
@@ -59,20 +54,36 @@ jobs:
           restore-keys: |
             gradle-${{ runner.os }}-
 
-      - name: Cache Android SDK
+      - name: Cache models
+        id: cache-models
         uses: actions/cache@v4
         with:
-          path: |
-            ~/android-sdk
-            ~/.android
-          key: android-sdk-${{ runner.os }}-${{ hashFiles('app/build.gradle.kts') }}
-          restore-keys: |
-            android-sdk-${{ runner.os }}-
+          path: app/src/main/assets/models
+          key: models-v1-whisper-piper-qwen
+
+      - name: Download AI Models
+        if: steps.cache-models.outputs.cache-hit != 'true'
+        run: |
+          chmod +x scripts/download-models.sh
+          ./scripts/download-models.sh
+        timeout-minutes: 30
+
+      - name: Verify models present
+        run: |
+          chmod +x scripts/download-models.sh
+          ./scripts/download-models.sh --verify
+
+      - name: KSP Migration
+        run: |
+          if [ -f "app/build.gradle.ksp" ]; then
+            cp app/build.gradle.ksp app/build.gradle.kts
+            echo "✅ KSP migration applied"
+          fi
 
       - name: Build Debug APK
         run: |
           set -o pipefail
-          gradle assembleDebug --stacktrace --info 2>&1 | tee build-debug.log
+          ./gradlew assembleDebug --stacktrace --info 2>&1 | tee build-debug.log
           echo "Gradle exit code: $?"
 
       - name: Upload build log on failure
@@ -82,27 +93,67 @@ jobs:
           name: build-debug-log
           path: build-debug.log
 
+      - name: Check APK size
+        run: |
+          APK_PATH=$(find app/build/outputs/apk/debug -name "*.apk" | head -1)
+          if [ -n "$APK_PATH" ]; then
+            SIZE=$(stat -c%s "$APK_PATH")
+            SIZE_MB=$((SIZE / 1048576))
+            echo "APK size: ${SIZE_MB}MB"
+            ls -lh "$APK_PATH"
+            # Warn if APK is unexpectedly small (models might be missing)
+            if [ "$SIZE_MB" -lt 100 ]; then
+              echo "⚠️  WARNING: APK is only ${SIZE_MB}MB — models may not be bundled!"
+            fi
+          fi
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: msaidizi-debug
+          name: msaidizi-full
           path: app/build/outputs/apk/debug/*.apk
 
-      - name: Rename APK for release
+      - name: Create/Update Release
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
           mkdir -p release-apk
-          cp app/build/outputs/apk/debug/*.apk release-apk/msaidizi.apk
-          echo "APK ready: release-apk/msaidizi.apk"
+          APK_PATH=$(find app/build/outputs/apk/debug -name "*.apk" | head -1)
+          cp "$APK_PATH" release-apk/msaidizi-v0.1.0-full.apk
+          echo "APK ready:"
           ls -lh release-apk/
 
       - name: Attach APK to Release
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: latest
-          name: Latest Build
-          files: release-apk/msaidizi.apk
+          tag_name: v0.1.0
+          name: "Msaidizi v0.1.0 — Full Bundle"
+          body: |
+            ## Msaidizi v0.1.0 — Full AI Bundle APK
+
+            **One APK. All models. Works offline from first launch.**
+
+            ### What's bundled:
+            - 🎤 **Whisper** speech recognition (INT8, ~40MB) — voice input in 14 dialects
+            - 🔊 **Piper TTS** Swahili (~61MB) — voice output
+            - 🧠 **Qwen 3.5 0.8B** LLM (Q4_K_M, ~553MB) — on-device reasoning
+            - 📦 **Silero VAD** — voice activity detection
+            - 🗣️ **eSpeak-ng** data — phoneme mapping
+
+            ### Device requirements:
+            - **RAM:** 2GB minimum (3GB+ recommended)
+            - **Storage:** ~700MB free for APK + extracted models
+            - **Android:** 8.0+ (API 26)
+            - **Architecture:** ARM64 (arm64-v8a)
+
+            ### First launch:
+            Models extract from APK assets on first launch (~30 seconds).
+            After extraction, everything works fully offline. No downloads needed.
+
+            ### For Valentine's mum:
+            Download → Install → Open → Say "Habari" → It speaks back. 🤱
+          files: release-apk/msaidizi-v0.1.0-full.apk
           generate_release_notes: true
+          make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

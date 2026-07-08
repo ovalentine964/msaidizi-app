@@ -45,6 +45,19 @@ class BundledModelManager @Inject constructor(
 
         /** The full model ID (downloaded post-install) */
         const val FULL_MODEL_ID = "qwen-0.5b-q4km"
+
+        /** All bundled model assets to extract on first launch */
+        private val BUNDLED_ASSETS = listOf(
+            "whisper-encoder-int8.onnx",
+            "whisper-decoder-int8.onnx",
+            "whisper-tokens.json",
+            "piper-swahili.onnx",
+            "piper-tokens.txt",
+            "qwen-0.5b-q4_k_m.gguf"
+        )
+
+        /** espeak-ng-data directory name in assets */
+        private const val ESPEAK_ASSET_DIR = "espeak-ng-data"
     }
 
     /** Coroutine scope for background downloads */
@@ -75,24 +88,29 @@ class BundledModelManager @Inject constructor(
     suspend fun initialize() = withContext(Dispatchers.IO) {
         Timber.i(TAG, "Initializing BundledModelManager")
 
-        // Check if bundled model exists in assets
-        val bundledReady = isBundledModelAvailable()
-        _bundledModelState.value = if (bundledReady) {
-            Timber.i(TAG, "Bundled mini-model available — app can work immediately")
-            BundledModelState.READY
-        } else {
-            Timber.w(TAG, "Bundled model not found — checking full model")
-            if (modelRegistry.isModelReady(FULL_MODEL_ID)) {
-                BundledModelState.FULL_MODEL_READY
+        // Check if all bundled models are already extracted
+        val modelsDir = File(context.filesDir, "models")
+        val allExtracted = BUNDLED_ASSETS.all { asset ->
+            val file = File(modelsDir, asset)
+            file.exists() && file.length() > 1000
+        }
+
+        if (allExtracted) {
+            Timber.i(TAG, "All bundled models already extracted")
+            _bundledModelState.value = BundledModelState.READY
+        } else if (isBundledModelAvailable()) {
+            // Extract bundled models from APK assets
+            Timber.i(TAG, "Extracting bundled models from APK assets...")
+            val extracted = extractAllBundledModels()
+            _bundledModelState.value = if (extracted) {
+                Timber.i(TAG, "All bundled models extracted successfully")
+                BundledModelState.READY
             } else {
                 BundledModelState.UNAVAILABLE
             }
-        }
-
-        // If full model not downloaded, start background download
-        if (!isFullModelDownloaded() && !modelRegistry.isModelReady(FULL_MODEL_ID)) {
-            Timber.i(TAG, "Full model not downloaded — scheduling background download")
-            startFullModelDownload()
+        } else {
+            Timber.w(TAG, "Bundled models not found in assets")
+            _bundledModelState.value = BundledModelState.UNAVAILABLE
         }
     }
 
@@ -127,18 +145,90 @@ class BundledModelManager @Inject constructor(
     }
 
     /**
-     * Check if the bundled mini-model is available (in assets or extracted).
+     * Check if bundled models exist in APK assets.
      */
     fun isBundledModelAvailable(): Boolean {
-        // Check if already extracted
-        val extracted = File(context.filesDir, "models/bundled_qwen_mini.gguf")
-        if (extracted.exists() && extracted.length() > 1_000_000) return true
-
-        // Check if it's in assets
+        // Check if first model file exists in assets
         return try {
-            context.assets.open("models/bundled_qwen_mini.gguf").use { it.available() > 0 }
+            context.assets.open("models/${BUNDLED_ASSETS.first()}").use { it.available() > 0 }
         } catch (e: Exception) {
             false
+        }
+    }
+
+    /**
+     * Extract all bundled models from APK assets to internal storage.
+     * This runs once on first launch. Total extraction: ~730MB.
+     *
+     * @return true if all models extracted successfully
+     */
+    suspend fun extractAllBundledModels(): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val outputDir = File(context.filesDir, "models")
+            outputDir.mkdirs()
+
+            var totalExtracted = 0L
+
+            for (assetName in BUNDLED_ASSETS) {
+                val outputFile = File(outputDir, assetName)
+                if (outputFile.exists() && outputFile.length() > 1000) {
+                    Timber.d(TAG, "Already extracted: %s", assetName)
+                    totalExtracted += outputFile.length()
+                    continue
+                }
+
+                Timber.i(TAG, "Extracting %s from assets...", assetName)
+                context.assets.open("models/$assetName").use { input ->
+                    outputFile.outputStream().use { output ->
+                        input.copyTo(output, bufferSize = 65536)  // 64KB buffer for large files
+                    }
+                }
+                totalExtracted += outputFile.length()
+                Timber.i(TAG, "Extracted %s (%d MB)", assetName, outputFile.length() / (1024 * 1024))
+            }
+
+            // Extract espeak-ng-data directory
+            val espeakDir = File(outputDir, ESPEAK_ASSET_DIR)
+            if (!espeakDir.exists() || espeakDir.listFiles()?.isEmpty() != false) {
+                Timber.i(TAG, "Extracting espeak-ng-data from assets...")
+                extractAssetDirectory(ESPEAK_ASSET_DIR, outputDir)
+            }
+
+            Timber.i(TAG, "All bundled models extracted: %d MB total", totalExtracted / (1024 * 1024))
+            _bundledModelState.value = BundledModelState.READY
+            true
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to extract bundled models")
+            _bundledModelState.value = BundledModelState.UNAVAILABLE
+            false
+        }
+    }
+
+    /**
+     * Extract a directory of assets recursively.
+     */
+    private fun extractAssetDirectory(assetPath: String, outputDir: File) {
+        val files = context.assets.list(assetPath) ?: return
+        val targetDir = File(outputDir, assetPath)
+        targetDir.mkdirs()
+
+        for (file in files) {
+            val subPath = "$assetPath/$file"
+            val subFiles = context.assets.list(subPath)
+            if (subFiles != null && subFiles.isNotEmpty()) {
+                // It's a directory
+                extractAssetDirectory(subPath, outputDir)
+            } else {
+                // It's a file
+                val outputFile = File(targetDir, file)
+                if (!outputFile.exists()) {
+                    context.assets.open(subPath).use { input ->
+                        outputFile.outputStream().use { output ->
+                            input.copyTo(output, bufferSize = 65536)
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -147,31 +237,7 @@ class BundledModelManager @Inject constructor(
      * Called lazily on first inference attempt.
      */
     suspend fun extractBundledModel(): Boolean = withContext(Dispatchers.IO) {
-        try {
-            val outputDir = File(context.filesDir, "models")
-            outputDir.mkdirs()
-            val outputFile = File(outputDir, "bundled_qwen_mini.gguf")
-
-            if (outputFile.exists() && outputFile.length() > 1_000_000) {
-                Timber.d(TAG, "Bundled model already extracted")
-                return@withContext true
-            }
-
-            Timber.i(TAG, "Extracting bundled mini-model from assets...")
-            context.assets.open("models/bundled_qwen_mini.gguf").use { input ->
-                outputFile.outputStream().use { output ->
-                    input.copyTo(output, bufferSize = 8192)
-                }
-            }
-
-            Timber.i(TAG, "Bundled model extracted: ${outputFile.length() / (1024 * 1024)}MB")
-            _bundledModelState.value = BundledModelState.READY
-            true
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to extract bundled model")
-            _bundledModelState.value = BundledModelState.UNAVAILABLE
-            false
-        }
+        extractAllBundledModels()
     }
 
     /**
