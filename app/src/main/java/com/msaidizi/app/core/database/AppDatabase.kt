@@ -19,6 +19,9 @@ import com.msaidizi.app.core.model.RichHabitEntry
 import com.msaidizi.app.core.model.MindsetLessonEntity
 import com.msaidizi.app.core.model.BriefingDeliveryEntity
 import com.msaidizi.app.onboarding.WorkerProfile
+import com.msaidizi.app.data.sync.SyncableGoal
+import com.msaidizi.app.data.sync.SyncableInventory
+import com.msaidizi.app.data.sync.SyncableTransaction
 
 /**
  * Room database for Msaidizi.
@@ -59,9 +62,12 @@ import com.msaidizi.app.onboarding.WorkerProfile
         LoanRecord::class,
         LoanRepayment::class,
         WorkerProfile::class,
+        SyncableTransaction::class,
+        SyncableInventory::class,
+        SyncableGoal::class,
         BriefingDeliveryEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
