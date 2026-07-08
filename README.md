@@ -4,7 +4,7 @@
 
 **Not an assistant. A CFO. Proactive, voice-first, offline-first. Speaks your language.**
 
-**Version:** 0.2.0 | **Last Updated:** July 2026
+**Version:** 0.3.0 | **Last Updated:** July 8, 2026
 
 ---
 
