@@ -12,7 +12,7 @@ import androidx.room.PrimaryKey
  *
  * @author Angavu Intelligence — Architecture Fix Team 4
  */
-@Entity(tableName = "transactions")
+@Entity(tableName = "syncable_transactions")
 data class SyncableTransaction(
     @PrimaryKey
     @ColumnInfo(name = "entity_id")
@@ -133,7 +133,7 @@ data class SyncableGoal(
 /**
  * SyncableInventory — Inventory entity with sync conflict resolution.
  */
-@Entity(tableName = "inventory")
+@Entity(tableName = "syncable_inventory")
 data class SyncableInventory(
     @PrimaryKey
     @ColumnInfo(name = "entity_id")

@@ -1,15 +1,20 @@
 package com.msaidizi.app.core.database
 
 import androidx.room.TypeConverter
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.msaidizi.app.core.model.CorrectionType
 import com.msaidizi.app.core.model.PatternType
 import com.msaidizi.app.core.model.TransactionType
+import com.msaidizi.app.onboarding.WorkingHours
 
 /**
  * Room TypeConverters for custom types.
- * Converts enums to strings for SQLite storage.
+ * Converts enums and complex types to strings for SQLite storage.
  */
 class Converters {
+    private val gson = Gson()
+
     @TypeConverter
     fun fromTransactionType(value: TransactionType): String = value.name
 
@@ -30,4 +35,25 @@ class Converters {
     @TypeConverter
     fun toCorrectionType(value: String): CorrectionType =
         CorrectionType.valueOf(value)
+
+    @TypeConverter
+    fun fromStringList(value: List<String>): String = gson.toJson(value)
+
+    @TypeConverter
+    fun toStringList(value: String): List<String> {
+        val type = object : TypeToken<List<String>>() {}.type
+        return gson.fromJson(value, type) ?: emptyList()
+    }
+
+    @TypeConverter
+    fun fromWorkingHours(value: WorkingHours): String = gson.toJson(value)
+
+    @TypeConverter
+    fun toWorkingHours(value: String): WorkingHours {
+        return try {
+            gson.fromJson(value, WorkingHours::class.java) ?: WorkingHours()
+        } catch (e: Exception) {
+            WorkingHours()
+        }
+    }
 }

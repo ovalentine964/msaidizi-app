@@ -537,9 +537,7 @@ class ModelRouter(
                 "price_comparison", "ocr", "image_classification"
             )
         ))
-    } — Task type → optimal provider chain
-    // Based on Swarm 2 research: 80% on-device, 15% cloud reasoning, 5% premium
-    // ═══════════════════════════════════════════════════════════════
+    }
 
     // ═══════════════════════════════════════════════════════════════
     // ROUTING TABLE — Task type → optimal provider chain
