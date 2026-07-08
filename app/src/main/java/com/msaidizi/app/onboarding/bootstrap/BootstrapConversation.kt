@@ -995,12 +995,12 @@ class BootstrapConversation {
 
         // Determine greeting style
         understanding.greetingStyle = when (understanding.relationshipType) {
-            RelationshipType.FRIEND -> "Habari ${accumulated.workerName}! ${accumulated.msaidiziName hapa.}"
+            RelationshipType.FRIEND -> "Habari ${accumulated.workerName}! ${accumulated.msaidiziName} hapa."
             RelationshipType.ADVISOR -> "Habari ${accumulated.workerName}. Ripoti yako ya leo:"
             RelationshipType.BUSINESS_PARTNER -> "${accumulated.workerName}, hapa kile kilichotokea leo:"
             RelationshipType.FAMILY -> "Habari ${accumulated.workerName}! Leo imekuwaje?"
             RelationshipType.PRAGMATIC -> "Ripoti ya leo:"
-            RelationshipType.CREATIVE -> "Heeey ${accumulated.workerName}! ${accumulated.msaidiziName ana update! 🎉"
+            RelationshipType.CREATIVE -> "Heeey ${accumulated.workerName}! ${accumulated.msaidiziName} ana update! 🎉"
         }
 
         Timber.i(TAG, "Final understanding: archetype=%s, primaryHelp=%s, reportType=%s, tone=%s",
