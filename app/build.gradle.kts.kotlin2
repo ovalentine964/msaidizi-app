@@ -1,0 +1,198 @@
+// ============================================================
+// OPTION A + D: Kotlin 2.0.x + KSP + JDK 21
+// ============================================================
+// This is the Kotlin 2.0 version of the app build file.
+// Used by the build.kotlin2.yml workflow.
+// ============================================================
+
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+    id("com.google.devtools.ksp")
+    id("com.google.dagger.hilt.android")
+    id("org.jetbrains.kotlin.plugin.serialization")
+    id("io.gitlab.arturbosch.detekt")
+}
+
+detekt {
+    config.setFrom("$rootDir/config/detekt/detekt.yml")
+    buildUponDefaultConfig = true
+    allRules = false
+    disableDefaultRuleSets = false
+    ignoredBuildTypes = listOf("debug")
+
+    reports {
+        html.required.set(true)
+        xml.required.set(true)
+        sarif.required.set(false)
+        txt.required.set(false)
+    }
+}
+
+android {
+    namespace = "com.msaidizi.app"
+    compileSdk = 35
+
+    defaultConfig {
+        applicationId = "com.msaidizi.app"
+        minSdk = 26
+        targetSdk = 35
+        versionCode = 1
+        versionName = "0.3.0"
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "MODEL_DIR", "\"models\"")
+        buildConfigField("String", "WHISPER_MODEL", "\"whisper-tiny-int4.onnx\"")
+        buildConfigField("String", "LLM_MODEL", "\"qwen-0.5b-q4_k_m.gguf\"")
+        buildConfigField("String", "TTS_MODEL", "\"piper-swahili.onnx\"")
+        buildConfigField("String", "VAD_MODEL", "\"silero_vad.onnx\"")
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+        debug {
+            isMinifyEnabled = false
+            applicationIdSuffix = ".debug"
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+
+    kotlinOptions {
+        jvmTarget = "11"
+        freeCompilerArgs += listOf(
+            "-opt-in=kotlin.RequiresOptIn",
+            "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi"
+        )
+    }
+
+    buildFeatures {
+        buildConfig = true
+        viewBinding = true
+    }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            jniLibs.useLegacyPackaging = true
+        }
+    }
+}
+
+dependencies {
+    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("com.google.android.material:material:1.11.0")
+    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+    implementation("androidx.fragment:fragment-ktx:1.6.2")
+
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-process:2.8.7")
+
+    implementation("androidx.navigation:navigation-fragment-ktx:2.7.6")
+    implementation("androidx.navigation:navigation-ui-ktx:2.7.6")
+
+    implementation("androidx.room:room-runtime:2.7.1")
+    implementation("androidx.room:room-ktx:2.7.1")
+    implementation("androidx.room:room-paging:2.7.1")
+    ksp("androidx.room:room-compiler:2.7.1")
+
+    implementation("net.zetetic:android-database-sqlcipher:4.5.4")
+    implementation("androidx.sqlite:sqlite:2.4.0")
+
+    implementation("com.google.dagger:hilt-android:2.53.1")
+    ksp("com.google.dagger:hilt-android-compiler:2.53.1")
+
+    implementation("org.jetbrains.kotlin:kotlin-reflect:1.9.24")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+    implementation("com.google.code.gson:gson:2.10.1")
+
+    implementation("io.ktor:ktor-client-core:3.0.3")
+    implementation("io.ktor:ktor-client-okhttp:3.0.3")
+    implementation("io.ktor:ktor-client-content-negotiation:3.0.3")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:3.0.3")
+    implementation("io.ktor:ktor-client-logging:3.0.3")
+
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
+    implementation("androidx.hilt:hilt-work:1.2.0")
+    ksp("androidx.hilt:hilt-compiler:1.2.0")
+
+    implementation("com.github.luben:zstd-jni:1.5.5-11@aar")
+
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.20.0")
+
+    implementation("com.airbnb.android:lottie:6.3.0")
+
+    implementation("com.jakewharton.timber:timber:5.0.1")
+
+    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
+
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.1")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.10.1")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.10.1")
+    testImplementation("io.mockk:mockk:1.13.9")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    testImplementation("app.cash.turbine:turbine:1.0.0")
+    testImplementation("junit:junit:4.13.2")
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.10.1")
+
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+    androidTestImplementation("androidx.room:room-testing:2.7.1")
+    androidTestImplementation("androidx.test:runner:1.5.2")
+
+    detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.7")
+}
+
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+    arg("room.incremental", "false")
+    arg("room.generateKotlin", "true")
+    arg("room.verbose", "true")
+}
+
+configurations.all {
+    resolutionStrategy {
+        force("org.jetbrains.kotlin:kotlin-reflect:1.9.24")
+        force("org.jetbrains.kotlin:kotlin-stdlib:1.9.24")
+        force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.24")
+        force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.24")
+    }
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
+}
+
+apply(plugin = "jacoco")
+tasks.withType<JacocoReport> {
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+}
