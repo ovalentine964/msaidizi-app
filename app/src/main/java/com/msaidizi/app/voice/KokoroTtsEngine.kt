@@ -455,11 +455,22 @@ class KokoroTtsEngine @Inject constructor(
                 arrayOf("espeak-ng", "-v", langCode, "-q", "--ipa", text)
             )
             val output = process.inputStream.bufferedReader().readText().trim()
-            process.waitFor()
+            val completed = process.waitFor(5, java.util.concurrent.TimeUnit.SECONDS)
+            if (!completed) {
+                Timber.w("espeak-ng process timed out after 5s, destroying")
+                process.destroyForcibly()
+                return null
+            }
+            val exitCode = process.exitValue()
+            if (exitCode != 0) {
+                Timber.w("espeak-ng exited with code %d", exitCode)
+                return null
+            }
             if (output.isNotEmpty()) {
                 output.split(Regex("\\s+")).filter { it.isNotEmpty() }
             } else null
         } catch (e: Exception) {
+            Timber.w(e, "espeak-ng phonemization failed")
             null
         }
     }
