@@ -248,8 +248,57 @@ class ConversationManager(
             }
         }
 
+        // Feed critique to SelfEvolutionManager for learning
+        feedCritiqueToEvolution(critique, intentResult.intent.name, language)
+
         lastResponse = response.text
         return critique.score
+    }
+
+    // ═══════════════ CRITIQUE → EVOLUTION FEEDBACK LOOP ═══════════════
+
+    /**
+     * Feed ReflexionLoop critique scores and issues to SelfEvolutionManager.
+     * This closes the learning loop: critique → pattern → improvement.
+     *
+     * When the reflexion loop identifies quality issues, the evolution
+     * manager learns from them to improve future responses.
+     */
+    private fun feedCritiqueToEvolution(
+        critique: com.msaidizi.app.loops.Critique,
+        intentName: String,
+        language: String
+    ) {
+        val evolution = selfEvolution ?: return
+
+        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                // Record quality signal based on critique score
+                val signal = when {
+                    critique.score >= 0.8 -> com.msaidizi.app.evolution.SatisfactionSignal.POSITIVE
+                    critique.score >= 0.5 -> com.msaidizi.app.evolution.SatisfactionSignal.NEUTRAL
+                    else -> com.msaidizi.app.evolution.SatisfactionSignal.NEGATIVE
+                }
+                evolution.recordSatisfactionSignal(
+                    adviceId = "reflexion_${intentName}_${System.currentTimeMillis()}",
+                    signal = signal,
+                    context = "score=${critique.score}, issues=${critique.issues.joinToString(",")}"
+                )
+
+                // If critique found language-specific issues, record for vocabulary learning
+                if (critique.issues.any { it.contains("language", ignoreCase = true) ||
+                        it.contains("swahili", ignoreCase = true) }) {
+                    evolution.recordLanguageSignal(language)
+                }
+
+                // Track advice effectiveness if critique suggests response quality
+                if (critique.suggestions.isNotEmpty()) {
+                    evolution.recordFeatureUsage("REFLEXION_FEEDBACK_${intentName}")
+                }
+            } catch (e: Exception) {
+                Timber.w(e, "Failed to feed critique to evolution manager")
+            }
+        }
     }
 
     // ═══════════════ SELF-EVOLUTION SIGNALS ═══════════════

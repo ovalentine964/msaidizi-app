@@ -22,6 +22,13 @@ import com.msaidizi.app.loops.ReflexionLoop
 import com.msaidizi.app.loops.PlanExecuteLoop
 import com.msaidizi.app.core.dialect.AdaptiveVocabulary
 import com.msaidizi.app.evolution.SelfEvolutionManager
+import com.msaidizi.app.agent.autonomy.ProgressiveAutonomy
+import com.msaidizi.app.agent.autonomy.Domain
+import com.msaidizi.app.agent.autonomy.AgentAction
+import com.msaidizi.app.agent.proactive.ProactiveAlertEngine
+import com.msaidizi.app.agent.a2a.A2AProtocol
+import com.msaidizi.app.agent.a2a.AgentProfile
+import com.msaidizi.app.agent.knowledge.CrossDomainKnowledgeGraph
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import timber.log.Timber
@@ -96,14 +103,19 @@ class Orchestrator(
     private val reflexionLoop: ReflexionLoop = ReflexionLoop(),
     private val planExecuteLoop: PlanExecuteLoop = PlanExecuteLoop(),
     private val eventBus: AgentEventBus = AgentEventBus.getInstance(),
-    private val llmEngine: LlmEngine? = null
+    private val llmEngine: LlmEngine? = null,
+    // ── AGI Components ──
+    private val progressiveAutonomy: ProgressiveAutonomy? = null,
+    private val proactiveAlertEngine: ProactiveAlertEngine? = null,
+    private val a2aProtocol: A2AProtocol? = null,
+    private val knowledgeGraph: CrossDomainKnowledgeGraph? = null
 ) {
     private val _responses = MutableSharedFlow<AgentResponse>(extraBufferCapacity = 8)
     val responses: SharedFlow<AgentResponse> = _responses
 
     /**
      * Process user input and generate a response.
-     * Pipeline: classify → context → enhance → route → learn → reflect
+     * Pipeline: classify → context → enhance → route → autonomy check → learn → reflect
      */
     suspend fun processInput(text: String, language: String = "sw"): AgentResponse {
         val trace = reActLoop.startTrace("process_input:$language")
@@ -176,6 +188,10 @@ class Orchestrator(
         reActLoop.complete(trace, sanitizedResponse.type != ResponseType.ERROR, sanitizedResponse.text)
 
         conversationManager.publishTaskCompleted(trace, response)
+
+        // Step 9: Record autonomy outcome and generate cross-domain insights
+        recordAutonomyOutcome(intentResult, response)
+        generateCrossDomainInsights()
 
         return response
     }
@@ -302,6 +318,27 @@ class Orchestrator(
     fun getConversationMemory(): ConversationMemory = conversationManager.getConversationMemory()
     fun clearConversationMemory() = conversationManager.clearConversationMemory()
 
+    // ── AGI Component Accessors ──
+
+    /** Get progressive autonomy state. */
+    fun getAutonomyState() = progressiveAutonomy?.overallState?.value
+    fun getAutonomyDomainStates() = progressiveAutonomy?.getAllDomainStates()
+    fun getHumanInTheLoopRequirements() = progressiveAutonomy?.getHumanInTheLoopRequirements() ?: emptyList()
+
+    /** Get proactive alerts. */
+    fun getRecentAlerts() = proactiveAlertEngine?.getRecentAlerts() ?: emptyList()
+    fun startProactiveMonitoring() = proactiveAlertEngine?.startMonitoring()
+    fun stopProactiveMonitoring() = proactiveAlertEngine?.stopMonitoring()
+
+    /** Get A2A protocol metrics. */
+    fun getA2AMetrics() = a2aProtocol?.getMetrics()
+    fun discoverAgents(capability: String) = a2aProtocol?.discoverAgents(capability) ?: emptyList()
+
+    /** Get knowledge graph stats. */
+    fun getKnowledgeGraphStats() = knowledgeGraph?.getStats()
+    fun getCrossDomainInsights(limit: Int = 20) = knowledgeGraph?.getInsights(limit) ?: emptyList()
+    fun getKnowledgeContext(topic: String) = knowledgeGraph?.getContextForTopic(topic) ?: ""
+
     fun triggerEvolutionCycle() = selfEvolution?.launchEvolutionCycle()
     fun getWorkerPreferences() = selfEvolution?.getPreferences()
     fun getEvolutionMetrics() = selfEvolution?.evolutionMetrics?.value
@@ -310,6 +347,91 @@ class Orchestrator(
     suspend fun getPreferredReportFormat() = preferenceLearner?.getPreferredReportFormat() ?: "daily"
     suspend fun getPreferredVoiceSpeed() = preferenceLearner?.getPreferredVoiceSpeed() ?: 1.0f
     suspend fun getPreferredLanguage() = preferenceLearner?.getPreferredLanguage() ?: "sw"
+
+    // ═══════════════ AGI INTEGRATION ═══════════════
+
+    /**
+     * Initialize AGI components: register agents, start monitoring.
+     * Call after construction.
+     */
+    fun initializeAGI() {
+        // Register orchestrator as an A2A agent
+        a2aProtocol?.registerAgent(AgentProfile(
+            agentId = "orchestrator",
+            displayName = "Orchestrator",
+            capabilities = listOf("routing", "intent_classification", "response_generation"),
+            priority = 1000
+        ))
+
+        // Register domain agents
+        a2aProtocol?.registerAgent(AgentProfile(
+            agentId = "business-agent",
+            displayName = "Business Agent",
+            capabilities = listOf("transaction_recording", "sales_analysis"),
+            priority = 900
+        ))
+        a2aProtocol?.registerAgent(AgentProfile(
+            agentId = "analysis-agent",
+            displayName = "Analysis Agent",
+            capabilities = listOf("trend_analysis", "anomaly_detection", "forecasting"),
+            priority = 800
+        ))
+        a2aProtocol?.registerAgent(AgentProfile(
+            agentId = "advisor-agent",
+            displayName = "Advisor Agent",
+            capabilities = listOf("advice", "recommendations", "financial_planning"),
+            priority = 700
+        ))
+
+        // Start proactive monitoring
+        proactiveAlertEngine?.startMonitoring()
+
+        Timber.d("AGI components initialized")
+    }
+
+    /**
+     * Record autonomy outcome after processing.
+     */
+    private fun recordAutonomyOutcome(intentResult: IntentResult, response: AgentResponse) {
+        val autonomy = progressiveAutonomy ?: return
+        val domain = mapIntentToDomain(intentResult.intent)
+        val wasCorrect = response.type != ResponseType.ERROR
+        val wasCritical = intentResult.intent in setOf(
+            IntentType.SALE, IntentType.PURCHASE, IntentType.EXPENSE
+        ) && !wasCorrect
+        autonomy.recordOutcome(domain, intentResult.intent.name, wasCorrect, wasCritical)
+    }
+
+    /**
+     * Map an intent type to an autonomy domain.
+     */
+    private fun mapIntentToDomain(intent: IntentType): Domain {
+        return when (intent) {
+            IntentType.SALE, IntentType.PURCHASE -> Domain.SALES
+            IntentType.EXPENSE, IntentType.PROFIT_QUERY, IntentType.CHECK_BALANCE -> Domain.FINANCE
+            IntentType.STOCK_QUERY -> Domain.INVENTORY
+            IntentType.DAILY_SUMMARY, IntentType.WEEKLY_SUMMARY,
+            IntentType.GOAL_REPORT, IntentType.LOAN_REPORT -> Domain.REPORTING
+            IntentType.ASK_ADVICE, IntentType.GIVING_RECORD,
+            IntentType.GIVING_QUERY, IntentType.GIVING_GOAL -> Domain.GIVING
+            else -> Domain.ADVICE
+        }
+    }
+
+    /**
+     * Generate cross-domain insights from knowledge graph.
+     */
+    private fun generateCrossDomainInsights() {
+        knowledgeGraph?.let { kg ->
+            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    kg.generateInsights()
+                } catch (e: Exception) {
+                    Timber.w(e, "Cross-domain insight generation failed")
+                }
+            }
+        }
+    }
 }
 
 enum class ResponseType {

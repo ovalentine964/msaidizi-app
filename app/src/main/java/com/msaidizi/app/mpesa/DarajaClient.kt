@@ -291,9 +291,11 @@ class DarajaClient @Inject constructor(
     }
 
     private fun getProductionShortCode(): String {
-        // Read from encrypted shared preferences or BuildConfig
+        // SECURITY FIX: Production shortcode moved to encrypted storage.
+        // Business identifiers are sensitive — attackers knowing the shortcode
+        // can craft targeted phishing or spoofed STK Push requests.
         return try {
-            val prefs = context.getSharedPreferences("mpesa_config", Context.MODE_PRIVATE)
+            val prefs = getEncryptedPrefs()
             prefs.getString("production_shortcode", SHORTCODE_SANDBOX) ?: SHORTCODE_SANDBOX
         } catch (e: Exception) {
             SHORTCODE_SANDBOX
@@ -302,6 +304,7 @@ class DarajaClient @Inject constructor(
 
     private fun isSandbox(): Boolean {
         return try {
+            // Environment flag is non-sensitive, plain prefs acceptable
             val prefs = context.getSharedPreferences("mpesa_config", Context.MODE_PRIVATE)
             prefs.getBoolean("use_sandbox", true)
         } catch (e: Exception) {
@@ -311,18 +314,42 @@ class DarajaClient @Inject constructor(
 
     /**
      * Get Daraja API credentials.
-     * In production: read from encrypted SharedPreferences.
+     *
+     * SECURITY FIX (Quantum-Safe): Credentials are now stored in EncryptedSharedPreferences
+     * backed by Android Keystore AES-256-GCM. Previously stored in plain SharedPreferences,
+     * which meant any app with root access or backup extraction could read consumer key/secret.
+     *
+     * AES-256-GCM is quantum-safe: Grover's algorithm halves effective key length to 128 bits,
+     * which remains computationally infeasible for quantum computers.
+     *
+     * The encrypted prefs instance is shared with getPasskey() to avoid duplicate initialization.
      */
     private fun getCredentials(): DarajaCredentials {
         return try {
-            val prefs = context.getSharedPreferences("mpesa_config", Context.MODE_PRIVATE)
+            val prefs = getEncryptedPrefs()
             DarajaCredentials(
                 consumerKey = prefs.getString("consumer_key", "") ?: "",
                 consumerSecret = prefs.getString("consumer_secret", "") ?: ""
             )
         } catch (e: Exception) {
-            Timber.e(e, "Failed to read Daraja credentials")
+            Timber.e(e, "Failed to read Daraja credentials from encrypted storage")
             DarajaCredentials("", "")
+        }
+    }
+
+    /**
+     * Store Daraja API credentials securely.
+     * MUST be called during setup/onboarding — credentials must never be in plain storage.
+     */
+    fun setCredentials(consumerKey: String, consumerSecret: String) {
+        try {
+            getEncryptedPrefs().edit()
+                .putString("consumer_key", consumerKey)
+                .putString("consumer_secret", consumerSecret)
+                .apply()
+            Timber.i("Daraja credentials stored in encrypted storage")
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to store Daraja credentials")
         }
     }
 

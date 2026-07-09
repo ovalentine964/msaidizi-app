@@ -36,10 +36,18 @@ class TlsConfig @Inject constructor(
         private const val API_HOST = "api.angavu.com"
         private const val API_HOST_IO = "api.angavu.io"
 
-        // Let's Encrypt certificate pins for api.angavu.com and api.angavu.io.
+        // Certificate pins for api.angavu.com and api.angavu.io.
         //
-        // Primary: ISRG Root X1 (Let's Encrypt's root CA) — stable, rarely rotates.
-        // Backup:  Let's Encrypt's cross-signed intermediate for rotation safety.
+        // QUANTUM-SAFETY NOTE: These pins hash the SubjectPublicKeyInfo (SPKI),
+        // which is algorithm-agnostic. When the server upgrades to PQ certificates
+        // (e.g., ML-DSA-65 issued by a PQ CA), these pins will need updating
+        // because the SPKI bytes change. However, pin verification itself is not
+        // vulnerable to quantum attack — SHA-256 collision resistance drops from
+        // 128-bit to 85-bit under Grover's, but the pin is checked server-side
+        // via TLS certificate chain, not brute-forced.
+        //
+        // TODO(quantum): When Let's Encrypt or another CA issues ML-DSA certificates,
+        // rotate these pins and add PQ certificate chain validation.
         //
         // To regenerate:
         //   openssl s_client -connect api.angavu.com:443 2>/dev/null \
@@ -67,6 +75,36 @@ class TlsConfig @Inject constructor(
      * maintaining backward compatibility.
      *
      * Per White House EO 14412 and Cloudflare/Meta PQC deployment patterns.
+     */
+    /**
+     * Create an OkHttpClient with TLS 1.3 enforcement, certificate pinning,
+     * and post-quantum hybrid key exchange support.
+     *
+     * QUANTUM-SAFETY STATUS:
+     * ✅ TLS 1.3 only (no downgrade to TLS 1.2)
+     * ✅ AES-256-GCM cipher suites (128-bit post-quantum security)
+     * ✅ Certificate pinning (SHA-256 of SPKI)
+     * ✅ Cleartext HTTP blocked
+     * ✅ Security header validation
+     * ⚠️  TLS key exchange is classical (X25519/ECDHE) — NOT yet hybrid PQC
+     *
+     * WHY NOT HYBRID PQC TLS YET:
+     * Android's TLS stack (via Conscrypt/OpenSSL) does not yet support
+     * ML-KEM hybrid key exchange groups. IANA assigned code points for
+     * X25519Kyber768Draft00 (0x6399) in 2024, but Android's SSLSocket
+     * implementation doesn't expose them. When Android adds support
+     * (likely Android 16+), this method should enable hybrid groups.
+     *
+     * MITIGATION: Application-layer PQC (HybridKeyExchange) is used for
+     * sensitive data like federated learning gradients. M-Pesa data relies
+     * on TLS 1.3 + AES-256 which provides 128-bit post-quantum security
+     * for the symmetric encryption layer. The key exchange vulnerability
+     * ("Harvest Now, Decrypt Later") is mitigated by short token lifetimes
+     * (15-min access tokens) and the fact that M-Pesa transactions are
+     * processed server-side in real-time.
+     *
+     * @see PqcConfig for migration phase control
+     * @see HybridKeyExchange for application-layer PQC key exchange
      */
     fun createSecureClient(): OkHttpClient {
         val builder = OkHttpClient.Builder()

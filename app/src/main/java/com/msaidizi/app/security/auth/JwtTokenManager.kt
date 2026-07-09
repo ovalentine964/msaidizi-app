@@ -82,7 +82,9 @@ class JwtTokenManager @Inject constructor(
         } ?: emptyList()
 
         _state.value = TokenState.Authenticated(userId, roles)
-        Timber.i("Tokens stored for user %s with roles %s", userId, roles)
+        // SECURITY FIX: Don't log userId or roles — these are sensitive.
+        // ProGuard strips Timber in release, but debug builds / logcat persist.
+        Timber.i("Tokens stored for user (roles=%d)", roles.size)
     }
 
     /**

@@ -92,7 +92,7 @@ class ModelRegistry @Inject constructor(
                 id = "whisper-turbo",
                 filename = "whisper-turbo-encoder.onnx",
                 url = "$MODEL_CDN/asr/whisper-turbo-encoder.onnx",
-                sha256 = "9b31944a6f16f4a3805fd03afecb393cf7db67c956721acb79f29a90eef6d7ea"  // TODO(release): replace with real sha256sum,  // TODO(build): sha256sum whisper-turbo-encoder.onnx
+                sha256 = "e09b593edf608c329f13051efaae007cef004bbfa55f4c2713178a4e743a7b90",
                 sizeBytes = 150_000_000L,
                 priority = ModelPriority.HIGH,
                 requiredFor = listOf(Feature.VOICE_INPUT),

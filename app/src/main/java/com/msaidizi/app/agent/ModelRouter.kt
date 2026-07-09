@@ -68,6 +68,12 @@ class ModelRouter(
     private val multimodalPipeline = MultimodalPipeline(context, this)
     private val reflexionLoop = ReflexionLoop()
 
+    // ── Evolution Signals for Adaptive Routing ──
+    /** Recent evolution quality scores (0.0–1.0) per task type */
+    private val evolutionQualityScores = java.util.concurrent.ConcurrentHashMap<String, Double>()
+    /** Provider preference adjustments from evolution feedback */
+    private val evolutionProviderBoosts = java.util.concurrent.ConcurrentHashMap<String, Double>()
+
     // ═══════════════════════════════════════════════════════════════
     // CONFIGURATION
     // ═══════════════════════════════════════════════════════════════

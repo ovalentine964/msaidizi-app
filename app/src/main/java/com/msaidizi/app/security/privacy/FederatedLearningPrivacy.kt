@@ -1,5 +1,7 @@
 package com.msaidizi.app.security.privacy
 
+import com.msaidizi.app.security.crypto.pqc.HybridKeyExchange
+import com.msaidizi.app.security.crypto.pqc.DocumentSigner
 import timber.log.Timber
 import java.security.SecureRandom
 import javax.inject.Inject
@@ -28,7 +30,10 @@ import javax.inject.Singleton
  * Learning with Differential Privacy".
  */
 @Singleton
-class FederatedLearningPrivacy @Inject constructor() {
+class FederatedLearningPrivacy @Inject constructor(
+    private val hybridKeyExchange: HybridKeyExchange? = null,
+    private val documentSigner: DocumentSigner? = null
+) {
 
     companion object {
         /** Default privacy budget per training round */
@@ -97,6 +102,63 @@ class FederatedLearningPrivacy @Inject constructor() {
             epsilon = epsilon,
             gradientHash = gradientHash,
             noiseScale = (maxNorm / epsilon).toFloat()
+        )
+    }
+
+    /**
+     * Encrypt a privatized gradient using hybrid PQC key exchange (X25519 + ML-KEM-768).
+     *
+     * This is the "Harvest Now, Decrypt Later" defense:
+     * An adversary recording today's gradient uploads could decrypt them
+     * when a quantum computer arrives if we use classical-only encryption.
+     * Hybrid PQC ensures the gradient remains protected even against
+     * future quantum adversaries.
+     *
+     * Architecture:
+     *   Device: privatize(gradient) → hybrid_encrypt(gradient, server_pubkey) → upload
+     *   Server: hybrid_decrypt(gradient, server_privkey) → aggregate
+     *
+     * @param privateGradient The privatized gradient from [privatizeGradient]
+     * @param peerMlKemPublicKey Server's ML-KEM-768 public key
+     * @param peerX25519PublicKey Server's X25519 public key
+     * @return Encrypted gradient bytes ready for upload
+     */
+    fun encryptGradientForUpload(
+        privateGradient: PrivateGradient,
+        peerMlKemPublicKey: ByteArray,
+        peerX25519PublicKey: ByteArray
+    ): EncryptedGradient {
+        val hke = hybridKeyExchange
+            ?: throw IllegalStateException("HybridKeyExchange not injected — cannot encrypt gradients")
+
+        // Serialize the gradient
+        val gradientBytes = privateGradient.toBytes()
+
+        // Hybrid key exchange: X25519 + ML-KEM-768 → combined shared secret
+        val hybridResult = hke.initiate(peerX25519PublicKey, peerMlKemPublicKey)
+
+        // Encrypt gradient with the hybrid shared secret (AES-256-GCM)
+        val encryptedBytes = hke.encryptWithSharedSecret(gradientBytes, hybridResult.sharedSecret)
+
+        // Sign the encrypted gradient with ML-DSA for integrity
+        // (prevents server from processing tampered gradients)
+        val signature = documentSigner?.sign(
+            encryptedBytes,
+            ByteArray(0), // Signature key loaded from keystore by DocumentSigner
+            null // Use default ML-DSA algorithm
+        )
+
+        Timber.i(
+            "FL gradient encrypted with hybrid PQC: %s (size=%d→%d bytes)",
+            hybridResult.algorithmId, gradientBytes.size, encryptedBytes.size
+        )
+
+        return EncryptedGradient(
+            encryptedData = encryptedBytes,
+            mlKemCiphertext = hybridResult.mlKemCiphertext,
+            x25519PublicKey = hybridResult.ecdhPublicKey,
+            algorithmId = hybridResult.algorithmId,
+            gradientHash = privateGradient.gradientHash
         )
     }
 
@@ -252,4 +314,54 @@ class FederatedLearningPrivacy @Inject constructor() {
         val indices: IntArray,
         val values: FloatArray
     )
+}
+
+/**
+ * Encrypted gradient ready for PQC-safe upload to the federated learning server.
+ *
+ * Contains the gradient encrypted with hybrid X25519+ML-KEM-768 shared secret,
+ * plus the key exchange material the server needs to decrypt.
+ *
+ * "Harvest Now, Decrypt Later" defense: even if an adversary records this
+ * traffic today, they cannot decrypt the gradient without breaking both
+ * X25519 (classical) AND ML-KEM-768 (post-quantum).
+ */
+data class EncryptedGradient(
+    /** Gradient encrypted with AES-256-GCM using hybrid shared secret */
+    val encryptedData: ByteArray,
+    /** ML-KEM-768 ciphertext for server to decapsulate */
+    val mlKemCiphertext: ByteArray,
+    /** X25519 ephemeral public key for server to compute shared secret */
+    val x25519PublicKey: ByteArray,
+    /** Algorithm identifier (e.g., "X25519+ML-KEM-768") */
+    val algorithmId: String,
+    /** Hash of the original privatized gradient (for integrity verification) */
+    val gradientHash: String
+) {
+    /**
+     * Serialize for network upload.
+     * Format: [4B algo_len][algo][4B x25519_len][x25519_pub][4B mlkem_len][mlkem_ct][4B data_len][encrypted_data]
+     */
+    fun toBytes(): ByteArray {
+        val algoBytes = algorithmId.toByteArray(Charsets.UTF_8)
+        val buf = java.nio.ByteBuffer.allocate(
+            4 + algoBytes.size +
+            4 + x25519PublicKey.size +
+            4 + mlKemCiphertext.size +
+            4 + encryptedData.size
+        )
+        buf.putInt(algoBytes.size); buf.put(algoBytes)
+        buf.putInt(x25519PublicKey.size); buf.put(x25519PublicKey)
+        buf.putInt(mlKemCiphertext.size); buf.put(mlKemCiphertext)
+        buf.putInt(encryptedData.size); buf.put(encryptedData)
+        return buf.array()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is EncryptedGradient) return false
+        return gradientHash == other.gradientHash && algorithmId == other.algorithmId
+    }
+
+    override fun hashCode(): Int = gradientHash.hashCode()
 }

@@ -13,19 +13,23 @@ import javax.inject.Singleton
 /**
  * Complete voice pipeline orchestrator (v2 — upgraded).
  *
- * Flow: AudioRecord → VAD → Whisper Turbo → IntentRouter → Agent → Kokoro → AudioTrack
+ * Flow: AudioRecord → VAD → Whisper Tiny → IntentRouter → Agent → Kokoro → AudioTrack
  *
- * Upgrades from v1:
- * - ASR: Whisper Turbo (primary) → Moonshine (edge) → Whisper Tiny (legacy)
- * - TTS: Kokoro (primary, 82M) → Piper (fallback, 26MB)
- * - Streaming: Real streaming ASR with 500ms hops
- * - Emotion: Auto-selects voice personality based on detected emotion
- * - MsingiAI: Integrates Sauti models for Swahili dialect enhancement
+ * ASR Strategy (2GB phones first):
+ * - Primary: Whisper Tiny INT4 (~40MB) — fits all devices
+ * - Edge: Moonshine Tiny (~40MB) — alternative for mobile
+ * - Turbo: ~150MB — HIGH-END ONLY (4GB+ RAM)
+ * - WAXAL adapter: +5MB LoRA fine-tuned for African languages
+ *
+ * TTS Strategy:
+ * - Primary: Kokoro (82M, Apache 2.0) — best quality
+ * - Fallback: Piper (26MB) — smaller, works everywhere
+ * - MMS: Other African languages (on-demand)
  *
  * Memory management:
  * - Models lazy-loaded, released on background
  * - Kokoro: ~90MB, Piper: ~25MB (kept as fallback)
- * - ASR: ~150MB (Turbo) or ~40MB (Moonshine/legacy)
+ * - ASR: ~40MB (Tiny/Moonshine) — safe for 2GB devices
  */
 @Singleton
 class VoicePipeline @Inject constructor(

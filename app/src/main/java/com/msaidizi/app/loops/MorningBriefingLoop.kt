@@ -48,7 +48,8 @@ class MorningBriefingLoop(
     private val briefingDelivery: BriefingDelivery,
     private val businessAgent: BusinessAgent,
     private val transactionDao: TransactionDao,
-    private val briefingDeliveryDao: BriefingDeliveryDao
+    private val briefingDeliveryDao: BriefingDeliveryDao,
+    private val patternTracker: BusinessPatternTracker? = null
 ) {
     companion object {
         private const val TAG = "MorningBriefingLoop"
@@ -104,14 +105,18 @@ class MorningBriefingLoop(
             recentTransactions = recentTransactions
         )
 
+        // Enrich briefing with pattern tracker insights
+        val enrichedMessage = enrichBriefingWithInsights(result.message)
+        val enrichedResult = result.copy(message = enrichedMessage)
+
         // Record delivery for outcome tracking
         val entityId = briefingDeliveryDao.insert(
             BriefingDeliveryEntity(
                 briefingType = BriefingType.MORNING.name,
-                briefingText = result.message,
-                predictedSales = result.data["todaySales"]?.toDoubleOrNull() ?: 0.0,
-                predictedProfit = result.data["todayProfit"]?.toDoubleOrNull() ?: 0.0,
-                keyAdvice = extractKeyAdvice(result.message)
+                briefingText = enrichedResult.message,
+                predictedSales = enrichedResult.data["todaySales"]?.toDoubleOrNull() ?: 0.0,
+                predictedProfit = enrichedResult.data["todayProfit"]?.toDoubleOrNull() ?: 0.0,
+                keyAdvice = extractKeyAdvice(enrichedResult.message)
             )
         )
 
@@ -120,7 +125,7 @@ class MorningBriefingLoop(
         // Personalize: adjust briefing based on what worker historically acts on
         personalizeNextBriefing()
 
-        return result
+        return enrichedResult
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -338,5 +343,59 @@ class MorningBriefingLoop(
     ): List<Transaction> {
         // Use the existing transactionDao through the business agent's data
         return transactionDao.getTransactionsInRangeSuspend(startTimestamp, endTimestamp)
+    }
+
+    // ═══════════════ PATTERN TRACKER ENRICHMENT ═══════════════
+
+    /**
+     * Enrich briefing message with BusinessPatternTracker insights.
+     * Adds trend data, peak day info, and product insights
+     * that the CFOEngine might not have access to.
+     */
+    private suspend fun enrichBriefingWithInsights(message: String): String {
+        val tracker = patternTracker ?: return message
+
+        val insights = StringBuilder()
+        insights.appendLine()
+        insights.appendLine("📊 Insights from your patterns:")
+
+        try {
+            // Weekly trend
+            val trend = tracker.detectWeeklyTrend()
+            if (trend.direction != com.msaidizi.app.agent.Trend.INSUFFICIENT_DATA) {
+                val trendEmoji = when (trend.direction) {
+                    com.msaidizi.app.agent.Trend.RISING -> "📈"
+                    com.msaidizi.app.agent.Trend.FALLING -> "📉"
+                    com.msaidizi.app.agent.Trend.STABLE -> "➡️"
+                    else -> ""
+                }
+                insights.appendLine("$trendEmoji Sales trend: ${trend.direction.name.lowercase()} (${trend.changePercent.toInt()}% vs last week)")
+            }
+
+            // Top product insight
+            val products = tracker.analyzeProductPerformance(14)
+            val topProduct = products.firstOrNull()
+            if (topProduct != null) {
+                insights.appendLine("⭐ Top product: ${topProduct.item} (margin ${topProduct.profitMargin.toInt()}%)")
+            }
+
+            // Peak hours
+            val peakHours = tracker.analyzePeakHours(7)
+            val peaks = peakHours.filter { it.isPeakHour }.take(2)
+            if (peaks.isNotEmpty()) {
+                insights.appendLine("⏰ Busiest hours: ${peaks.joinToString(", ") { "${it.hour}:00" }}")
+            }
+
+            // Business health
+            val health = tracker.calculateBusinessHealthScore()
+            if (health.totalScore < 50) {
+                insights.appendLine("⚠️ Business health: ${health.totalScore.toInt()}/100 — let's work on improving this!")
+            }
+        } catch (e: Exception) {
+            Timber.tag(TAG).w(e, "Failed to enrich briefing with pattern insights")
+            return message
+        }
+
+        return message + insights.toString()
     }
 }

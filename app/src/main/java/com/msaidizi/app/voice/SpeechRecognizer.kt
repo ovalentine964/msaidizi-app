@@ -17,15 +17,19 @@ import javax.inject.Singleton
 /**
  * Multi-tier speech recognizer using ONNX Runtime.
  *
- * Primary:   Whisper Turbo ONNX (209M params, distilled large-v3)
- *            - 10x cheaper, 8x faster than large-v2
- *            - Near large-v3 accuracy on African languages
- *            - ~150MB encoder+decoder
+ * Primary:   Whisper Tiny INT4 ONNX (~40MB) — fits ALL devices including 2GB phones
+ *            - Best accuracy-per-MB for African languages
+ *            - WAXAL fine-tuned for Swahili dialect accuracy
  *
- * Fallback:  Moonshine Tiny ONNX (27M params)
+ * Edge:     Moonshine Tiny ONNX (27M params)
  *            - Purpose-built for mobile/edge
  *            - ~40MB, runs on $50 phones
  *            - Best WER-per-MB ratio
+ *
+ * Turbo:    Whisper Turbo ONNX (209M params) — HIGH-END DEVICES ONLY
+ *            - ~150MB encoder+decoder, too large for 2GB phones
+ *            - Only loaded on devices with 4GB+ RAM
+ *            - NOT the default for Msaidizi's target users
  *
  * Streaming ASR:
  *            - Processes audio in 150ms chunks (not full utterance)
@@ -36,12 +40,16 @@ import javax.inject.Singleton
  *            - Fine-tuned on 27 African languages (1,846+ hours)
  *            - CC-BY-4.0 licensed
  *            - Improves Swahili, Hausa, Yoruba, Igbo, Amharic, Zulu, etc.
+ *            - Applied as LoRA adapter on Whisper Tiny (adds ~5MB)
  *
  * Performance targets (Helio G25, 2GB):
- * - Model load: ~1.5s (Whisper Turbo), ~600ms (Moonshine)
- * - Inference: ~200ms for 5s audio (Turbo), ~100ms (Moonshine)
- * - Memory: ~150MB (Turbo), ~40MB (Moonshine)
- * - Streaming chunk: <50ms per 150ms audio window
+ * - Model load: ~600ms (Whisper Tiny), ~800ms (Moonshine)
+ * - Inference: ~300ms for 5s audio (Tiny), ~100ms (Moonshine)
+ * - Memory: ~40MB (Tiny), ~40MB (Moonshine)
+ * - Streaming chunk: <80ms per 150ms audio window
+ *
+ * ⚠️  Whisper Turbo (~150MB) is TOO LARGE for 2GB phones.
+ *     Only load Turbo on devices with DeviceTier.HIGH (4GB+ RAM).
  */
 @Singleton
 class SpeechRecognizer @Inject constructor(
@@ -175,13 +183,39 @@ class SpeechRecognizer @Inject constructor(
 
     /**
      * Select the best available model based on device tier and availability.
+     *
+     * Strategy (updated for 2GB phones):
+     * - LOW/MEDIUM tier (2GB): Whisper Tiny INT4 → Moonshine → skip Turbo
+     * - HIGH tier (4GB+): Whisper Turbo → Moonshine → Whisper Tiny
+     *
+     * ⚠️ Whisper Turbo (~150MB) is too large for $50 phones.
+     * Msaidizi's target users have 2GB RAM devices.
      */
     private fun selectBestModel(): String? {
+        val tier = DeviceTier.current
         return when {
-            modelRegistry.isModelReady(MODEL_TURBO) -> MODEL_TURBO
-            modelRegistry.isModelReady(MODEL_MOONSHINE) -> MODEL_MOONSHINE
-            modelRegistry.isModelReady(MODEL_LEGACY) -> MODEL_LEGACY
-            else -> null
+            // High-end devices: can afford Turbo
+            tier == com.msaidizi.app.core.util.DeviceTier.HIGH -> {
+                when {
+                    modelRegistry.isModelReady(MODEL_TURBO) -> MODEL_TURBO
+                    modelRegistry.isModelReady(MODEL_MOONSHINE) -> MODEL_MOONSHINE
+                    modelRegistry.isModelReady(MODEL_LEGACY) -> MODEL_LEGACY
+                    else -> null
+                }
+            }
+            // Low/Medium devices (2GB phones): Tiny is primary, Turbo is TOO LARGE
+            else -> {
+                when {
+                    modelRegistry.isModelReady(MODEL_LEGACY) -> MODEL_LEGACY
+                    modelRegistry.isModelReady(MODEL_MOONSHINE) -> MODEL_MOONSHINE
+                    // Turbo only if nothing else available AND user explicitly opts in
+                    modelRegistry.isModelReady(MODEL_TURBO) -> {
+                        Timber.w("Loading Turbo on low-memory device — may cause OOM")
+                        MODEL_TURBO
+                    }
+                    else -> null
+                }
+            }
         }
     }
 

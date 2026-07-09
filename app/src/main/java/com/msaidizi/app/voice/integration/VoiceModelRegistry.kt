@@ -252,16 +252,24 @@ data class ModelProviderInfo(
 /**
  * Built-in model provider implementations.
  */
-class WhisperTurboAsrProvider : ModelProvider {
-    override val id = "whisper-turbo"
-    override val name = "Whisper Turbo (distilled large-v3)"
+/**
+ * Whisper Tiny INT4 — PRIMARY ASR for Msaidizi.
+ *
+ * ~40MB, fits on 2GB phones. Best accuracy-per-MB for African languages.
+ * WAXAL fine-tuned for Swahili dialect accuracy.
+ *
+ * ⚠️ Do NOT default to Turbo (~150MB) — Msaidizi's users have $50 phones.
+ */
+class WhisperTinyAsrProvider : ModelProvider {
+    override val id = "whisper-tiny-int4"
+    override val name = "Whisper Tiny INT4 (primary)"
     override val type = VoiceModelType.ASR
     override val requiresNetwork = false
     override val supportedLanguages = setOf("sw", "en", "sheng", "yo", "ha", "am", "zu", "xh", "ig", "so")
-    override val qualityScore = 0.92f
-    override val averageLatencyMs = 200L
+    override val qualityScore = 0.85f  // Boosted by WAXAL fine-tuning
+    override val averageLatencyMs = 300L
     override val costPerMinute = 0f
-    override fun isAvailable() = true  // Always available (lazy-loads)
+    override fun isAvailable() = true
 }
 
 class MoonshineAsrProvider : ModelProvider {
@@ -276,16 +284,22 @@ class MoonshineAsrProvider : ModelProvider {
     override fun isAvailable() = true
 }
 
-class WhisperTinyAsrProvider : ModelProvider {
-    override val id = "whisper-tiny-int4"
-    override val name = "Whisper Tiny INT4 (legacy)"
+/**
+ * Whisper Turbo — HIGH-END DEVICES ONLY (4GB+ RAM).
+ *
+ * ~150MB. Near large-v3 accuracy. Too large for $50 phones.
+ * Only used when DeviceTier is HIGH.
+ */
+class WhisperTurboAsrProvider : ModelProvider {
+    override val id = "whisper-turbo"
+    override val name = "Whisper Turbo (high-end only)"
     override val type = VoiceModelType.ASR
     override val requiresNetwork = false
-    override val supportedLanguages = setOf("sw", "en", "sheng", "yo", "ha", "am", "zu", "xh", "ig")
-    override val qualityScore = 0.70f
-    override val averageLatencyMs = 600L
+    override val supportedLanguages = setOf("sw", "en", "sheng", "yo", "ha", "am", "zu", "xh", "ig", "so")
+    override val qualityScore = 0.92f
+    override val averageLatencyMs = 200L
     override val costPerMinute = 0f
-    override fun isAvailable() = true
+    override fun isAvailable() = com.msaidizi.app.core.util.DeviceTier.current == com.msaidizi.app.core.util.DeviceTier.HIGH
 }
 
 class KokoroTtsProvider : ModelProvider {

@@ -134,8 +134,8 @@ dependencies {
     implementation("androidx.sqlite:sqlite:2.4.0")
 
     // Hilt DI — KSP replaces kapt
-    implementation("com.google.dagger:hilt-android:2.53.1")
-    ksp("com.google.dagger:hilt-android-compiler:2.53.1")  // was: kapt(...)
+    implementation("com.google.dagger:hilt-android:2.57.1")
+    ksp("com.google.dagger:hilt-android-compiler:2.57.1")  // was: kapt(...)
 
     // Kotlin reflect — MUST match Kotlin compiler 1.9.24
     implementation("org.jetbrains.kotlin:kotlin-reflect:1.9.24")
@@ -209,10 +209,10 @@ dependencies {
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.7")
 
     // Bouncy Castle — Post-Quantum Cryptography (ML-KEM, ML-DSA)
-    // bcprov-jdk18on 1.79+ includes production FIPS 203 (ML-KEM) and FIPS 204 (ML-DSA)
-    implementation("org.bouncycastle:bcprov-jdk18on:1.79")
-    implementation("org.bouncycastle:bcpkix-jdk18on:1.79")
-    implementation("org.bouncycastle:bctls-jdk18on:1.79")
+    // bcprov-jdk18on 1.84 includes production FIPS 203 (ML-KEM) and FIPS 204 (ML-DSA)
+    implementation("org.bouncycastle:bcprov-jdk18on:1.84")
+    implementation("org.bouncycastle:bcpkix-jdk18on:1.84")
+    implementation("org.bouncycastle:bctls-jdk18on:1.84")
 }
 
 // KSP configuration — Room schema export

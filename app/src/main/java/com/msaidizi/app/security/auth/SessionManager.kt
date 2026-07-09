@@ -73,6 +73,8 @@ class SessionManager @Inject constructor(
     /**
      * Start a new session after successful authentication.
      * Binds session to current IP subnet for hijack detection.
+     * SECURITY FIX: Session token stored via EncryptedSharedPreferences
+     * instead of plain SharedPreferences.
      */
     fun startSession(userId: String, ipSubnet: String? = null) {
         lastActivityTime = System.currentTimeMillis()
@@ -84,12 +86,13 @@ class SessionManager @Inject constructor(
             bytes.joinToString("") { "%02x".format(it) }
         }
 
-        // Store session binding
+        // Store session binding — IP subnet in plain prefs (non-sensitive),
+        // session token in encrypted storage (sensitive)
         val prefs = context.getSharedPreferences(DEVICE_ID_PREF, Context.MODE_PRIVATE)
         prefs.edit()
             .putString(KEY_IP_SUBNET, ipSubnet ?: "")
-            .putString(KEY_SESSION_TOKEN, sessionToken)
             .apply()
+        tokenStorage.saveCsrfNonce(sessionToken) // Reuse encrypted storage for session token
 
         _state.value = SessionState.Active
         Timber.i("Session started for user %s on device %s (IP subnet bound: %b)",
@@ -138,8 +141,8 @@ class SessionManager @Inject constructor(
         val prefs = context.getSharedPreferences(DEVICE_ID_PREF, Context.MODE_PRIVATE)
         prefs.edit()
             .remove(KEY_IP_SUBNET)
-            .remove(KEY_SESSION_TOKEN)
             .apply()
+        tokenStorage.saveCsrfNonce("") // Clear session token from encrypted storage
 
         _state.value = SessionState.Inactive
         Timber.i("Session ended — all session state cleared")

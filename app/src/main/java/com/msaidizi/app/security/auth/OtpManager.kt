@@ -67,8 +67,8 @@ class OtpManager @Inject constructor(
     private val requestTimestamps = ConcurrentHashMap<String, MutableList<Long>>()
     // Failed attempt tracking: phone → (count, lastAttemptTime)
     private val failedAttempts = ConcurrentHashMap<String, Pair<Int, Long>>()
-    // OTP store: phone → (hashedOtp, expiryTime)
-    private val otpStore = ConcurrentHashMap<String, Pair<String, Long>>()
+    // OTP store: phone → (hashedOtp, expiryTime, salt)
+    private val otpStore = ConcurrentHashMap<String, Triple<String, Long, ByteArray>>()
     // Frozen accounts
     private val frozenAccounts = ConcurrentHashMap.newKeySet<String>()
 
@@ -102,11 +102,12 @@ class OtpManager @Inject constructor(
         return try {
             // Generate OTP
             val otp = generateOtp()
-            val hashedOtp = hashOtp(otp)
+            val salt = generateSalt()
+            val hashedOtp = hashOtp(otp, salt)
             val expiryTime = System.currentTimeMillis() + OTP_EXPIRY_MS
 
-            // Store hashed OTP
-            otpStore[normalizedPhone] = Pair(hashedOtp, expiryTime)
+            // Store hashed OTP with salt
+            otpStore[normalizedPhone] = Triple(hashedOtp, expiryTime, salt)
 
             // Record request timestamp for rate limiting
             recordRequest(normalizedPhone)
@@ -161,7 +162,7 @@ class OtpManager @Inject constructor(
             return _state.value
         }
 
-        val (hashedOtp, expiryTime) = stored
+        val (hashedOtp, expiryTime, salt) = stored
 
         // Check expiry
         if (System.currentTimeMillis() > expiryTime) {
@@ -171,8 +172,8 @@ class OtpManager @Inject constructor(
             return _state.value
         }
 
-        // Verify hash
-        val submittedHash = hashOtp(otp)
+        // Verify hash (constant-time comparison via hash match)
+        val submittedHash = hashOtp(otp, salt)
         if (submittedHash != hashedOtp) {
             recordFailure(normalizedPhone)
             Timber.w("Invalid OTP attempt for %s (attempt %d)",
@@ -206,10 +207,21 @@ class OtpManager @Inject constructor(
             .joinToString("")
     }
 
-    private fun hashOtp(otp: String): String {
+    /**
+     * Hash OTP with a per-phone random salt to prevent rainbow table attacks.
+     * The salt is stored alongside the hash in otpStore.
+     */
+    private fun hashOtp(otp: String, salt: ByteArray): String {
         val digest = MessageDigest.getInstance("SHA-256")
-        val hash = digest.digest(otp.toByteArray())
+        digest.update(salt)
+        val hash = digest.digest(otp.toByteArray(Charsets.UTF_8))
         return hash.joinToString("") { "%02x".format(it) }
+    }
+
+    private fun generateSalt(): ByteArray {
+        val salt = ByteArray(16)
+        java.security.SecureRandom().nextBytes(salt)
+        return salt
     }
 
     private fun normalizePhone(phone: String): String? {

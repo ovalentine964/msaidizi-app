@@ -166,5 +166,8 @@ object SecurityModule {
 
     @Provides
     @Singleton
-    fun provideFederatedLearningPrivacy(): FederatedLearningPrivacy = FederatedLearningPrivacy()
+    fun provideFederatedLearningPrivacy(
+        hybridKeyExchange: HybridKeyExchange,
+        documentSigner: DocumentSigner
+    ): FederatedLearningPrivacy = FederatedLearningPrivacy(hybridKeyExchange, documentSigner)
 }

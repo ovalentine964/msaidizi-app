@@ -20,6 +20,14 @@ import javax.net.ssl.SSLPeerUnverifiedException
  * Models are executable code — a compromised model could exfiltrate business data.
  * Certificate pinning prevents MITM attacks that could inject malicious models.
  *
+ * QUANTUM-SAFETY NOTES:
+ * - Certificate pins hash the SPKI (algorithm-agnostic) — SHA-256 is quantum-safe enough
+ *   for pin verification (collision resistance drops but remains impractical to exploit)
+ * - When CDN upgrades to PQ certificates (ML-DSA), pins will need rotation
+ * - Model downloads are integrity-verified separately (hash/signature check after download)
+ * - The TLS key exchange for CDN is classical — acceptable because model content
+ *   is verified post-download, not solely via TLS channel security
+ *
  * Pin SHA-256 hashes for models.msaidizi.app.
  * Update these hashes when CDN certificates rotate.
  */

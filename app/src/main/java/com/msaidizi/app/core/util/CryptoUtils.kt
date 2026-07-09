@@ -156,18 +156,15 @@ object CryptoUtils {
         val passphrase = bytes.joinToString("") { "%02x".format(it) }
 
         // Encrypt with Android Keystore and store the ciphertext
-        try {
-            val (encrypted, iv) = encryptWithKeystoreKey(passphrase.toByteArray(Charsets.UTF_8))
-            prefs.edit()
-                .putString(DB_PREFS_KEY, bytesToHex(encrypted))
-                .putString(DB_PREFS_IV, bytesToHex(iv))
-                .apply()
-            Timber.d("CryptoUtils: Generated and encrypted new database key")
-        } catch (e: Exception) {
-            Timber.e(e, "CryptoUtils: Keystore encryption failed, storing plaintext as fallback")
-            // Last-resort fallback — still better than no encryption
-            prefs.edit().putString(DB_PREFS_KEY, passphrase).apply()
-        }
+        // SECURITY FIX: Removed plaintext fallback — if Keystore fails,
+        // the app must not store the DB key in plaintext. This is a
+        // critical security boundary for a financial app.
+        val (encrypted, iv) = encryptWithKeystoreKey(passphrase.toByteArray(Charsets.UTF_8))
+        prefs.edit()
+            .putString(DB_PREFS_KEY, bytesToHex(encrypted))
+            .putString(DB_PREFS_IV, bytesToHex(iv))
+            .apply()
+        Timber.d("CryptoUtils: Generated and encrypted new database key")
 
         return passphrase
     }
@@ -194,6 +191,7 @@ object CryptoUtils {
             .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
             .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
             .setKeySize(256)
+            .setRandomizedEncryptionRequired(true) // SECURITY: enforce unique IV per encryption
             .build()
 
         keyGen.init(spec)
