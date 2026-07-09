@@ -143,6 +143,18 @@ echo "Model files:"
 ls -lh "$MODELS_DIR"/*.onnx "$MODELS_DIR"/*.gguf "$MODELS_DIR"/*.json "$MODELS_DIR"/*.txt 2>/dev/null | awk '{print "  "$NF" ("$5")"}'
 
 echo ""
+echo "Expected APK size breakdown:"
+echo "  Whisper encoder+decoder (INT8):  ~40MB"
+echo "  Piper Swahili TTS (ONNX):       ~30MB"
+echo "  Qwen 3.5 0.8B (Q4_K_M GGUF):   ~450MB"
+echo "  App code + resources:            ~10MB"
+echo "  ─────────────────────────────────"
+echo "  Estimated total APK:             ~530MB"
+echo ""
+echo "Note: Models are stored uncompressed (noCompress) in assets/"
+echo "      for mmap access at runtime. APK will be large but runtime"
+echo "      memory usage is efficient via memory-mapped file I/O."
+echo ""
 if [ "$VERIFY_ONLY" = true ]; then
     echo -e "${GREEN}✅ Verification complete${NC}"
 else

@@ -193,6 +193,7 @@ class VoicePipeline @Inject constructor(
 
     /**
      * Speak a response to the user.
+     * Waits for audio playback to complete before returning to IDLE.
      *
      * TTS engine priority:
      * 1. Kokoro (primary) — best quality, emotion-aware voice personality
@@ -211,7 +212,17 @@ class VoicePipeline @Inject constructor(
             TtsEngineType.MMS -> mmsTtsEngine.speak(text, language)
         }
 
+        // Wait for audio playback to complete before transitioning to IDLE.
+        // TTS speak() now uses suspend delay(), so playback finishes within the
+        // call, but the engine's isSpeaking() flag is cleared in its finally block
+        // slightly after the suspend returns. Poll briefly to ensure the audio track
+        // has fully drained.
+        while (isAnyTtsSpeaking()) {
+            kotlinx.coroutines.delay(50)
+        }
+
         _response.emit(text)
+        _pipelineState.value = PipelineState.IDLE
     }
 
     /**
@@ -239,13 +250,11 @@ class VoicePipeline @Inject constructor(
 
     /**
      * Speak and wait for completion.
+     * speak() already waits for audio completion, so this just delegates.
      */
     suspend fun speakAndWait(text: String, language: String = "sw") {
         speak(text, language)
-        while (isAnyTtsSpeaking()) {
-            delay(100)
-        }
-        _pipelineState.value = PipelineState.IDLE
+        // speak() already transitions to IDLE after playback completes
     }
 
     /**

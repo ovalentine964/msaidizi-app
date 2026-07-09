@@ -582,7 +582,7 @@ class KokoroTtsEngine @Inject constructor(
 
     // ────────────────────── Audio Playback ──────────────────────
 
-    private fun playPcmAudio(pcm: ShortArray, sampleRate: Int) {
+    private suspend fun playPcmAudio(pcm: ShortArray, sampleRate: Int) {
         val minBufferSize = AudioTrack.getMinBufferSize(
             sampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
         )
@@ -613,11 +613,12 @@ class KokoroTtsEngine @Inject constructor(
                 audioTrack.write(pcm, offset, writeSize)
                 offset += writeSize
             }
+            // Suspend delay instead of Thread.sleep — non-blocking
             while (audioTrack.playState == AudioTrack.PLAYSTATE_PLAYING
                 && audioTrack.playbackHeadPosition < pcm.size
                 && isCurrentlySpeaking
             ) {
-                Thread.sleep(20)
+                kotlinx.coroutines.delay(20)
             }
         } catch (e: Exception) {
             Timber.e(e, "AudioTrack playback error")

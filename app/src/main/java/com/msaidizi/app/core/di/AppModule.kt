@@ -50,6 +50,7 @@ import com.msaidizi.app.sync.SyncQueue
 import com.msaidizi.app.sync.NetworkMonitor
 import com.msaidizi.app.agent.ModelRouter
 import com.msaidizi.app.voice.LlmEngine
+import com.msaidizi.app.voice.LlamaCppEngine
 import com.msaidizi.app.finance.TitheTracker
 import com.msaidizi.app.finance.GoalPlanner
 import com.msaidizi.app.finance.LoanManager
@@ -774,11 +775,18 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideLlamaCppEngine(
+        @ApplicationContext context: Context
+    ): LlamaCppEngine = LlamaCppEngine(context)
+
+    @Provides
+    @Singleton
     fun provideLlmEngine(
         @ApplicationContext context: Context,
+        llamaCppEngine: LlamaCppEngine,
         languageModelRegistry: LanguageModelRegistry,
         adaptiveAsrEngine: AdaptiveAsrEngine
-    ): LlmEngine = LlmEngine(context, languageModelRegistry, adaptiveAsrEngine)
+    ): LlmEngine = LlmEngine(context, llamaCppEngine, languageModelRegistry, adaptiveAsrEngine)
 
     @Provides
     @Singleton

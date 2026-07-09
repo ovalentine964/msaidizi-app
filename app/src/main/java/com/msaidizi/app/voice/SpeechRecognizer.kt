@@ -362,7 +362,13 @@ class SpeechRecognizer @Inject constructor(
         }
 
         isStreaming = true
-        val audioBuffer = mutableListOf<Short>()
+        // Ring buffer with primitive ShortArray — avoids boxing 32k objects/sec
+        // Max capacity: 10s of 16kHz audio = 160,000 shorts (~312KB, no boxing)
+        val ringCapacity = SAMPLE_RATE * 10  // 10s max buffer
+        val ringBuffer = ShortArray(ringCapacity)
+        var ringWritePos = 0
+        var ringFilled = false
+        var totalSamples = 0L
         var lastProcessTime = 0L
         var bestTranscript = ""
         var transcriptCount = 0
@@ -371,19 +377,33 @@ class SpeechRecognizer @Inject constructor(
             audioChunks.collect { chunk ->
                 if (!isStreaming) return@collect
 
-                audioBuffer.addAll(chunk.toList())
+                // Copy chunk into ring buffer (primitive ShortArray, no boxing)
+                for (sample in chunk) {
+                    ringBuffer[ringWritePos] = sample
+                    ringWritePos = (ringWritePos + 1) % ringCapacity
+                    if (ringWritePos == 0) ringFilled = true
+                    totalSamples++
+                }
 
                 val now = System.currentTimeMillis()
-                val bufferedSamples = audioBuffer.size
+                val bufferedSamples = if (ringFilled) ringCapacity else ringWritePos
 
-                // Process every 500ms with at least 0.5s of audio
+                // Process every 125ms with at least 0.5s of audio
                 if (now - lastProcessTime >= 125 && bufferedSamples >= MIN_STREAMING_SAMPLES) {
                     lastProcessTime = now
 
-                    // Use sliding window: take last 2s of audio
+                    // Use sliding window: take last 2s of audio from ring buffer
                     val windowSamples = minOf(bufferedSamples, STREAMING_WINDOW_SAMPLES)
-                    val startIdx = bufferedSamples - windowSamples
-                    val windowAudio = ShortArray(windowSamples) { audioBuffer[startIdx + it] }
+                    val windowAudio = ShortArray(windowSamples)
+                    // Read from ring buffer in correct order (oldest → newest)
+                    val readStart = if (ringFilled) {
+                        (ringWritePos - windowSamples + ringCapacity) % ringCapacity
+                    } else {
+                        (ringWritePos - windowSamples).coerceAtLeast(0)
+                    }
+                    for (i in 0 until windowSamples) {
+                        windowAudio[i] = ringBuffer[(readStart + i) % ringCapacity]
+                    }
 
                     // Run ASR on the window
                     launch(Dispatchers.Default) {
@@ -450,20 +470,27 @@ class SpeechRecognizer @Inject constructor(
         encoderHidden: OnnxTensor,
         languageTokenId: Long? = null
     ): String {
-        // Build initial decoder input
-        var decoderInputIds = if (languageTokenId != null) {
-            longArrayOf(TOKEN_START_OF_TRANSCRIPT, languageTokenId, TOKEN_NO_TIMESTAMPS)
-        } else {
-            longArrayOf(TOKEN_START_OF_TRANSCRIPT, TOKEN_NO_TIMESTAMPS)
-        }
+        // Pre-allocate decode buffer once — avoids O(n²) LongArray copies.
+        // Worst case: MAX_TOKENS steps × (initial tokens + 1 per step)
+        val initialTokens = if (languageTokenId != null) 3 else 2
+        // Use a growable array that starts at initial size and grows by 1 each step
+        // instead of creating a new LongArray via `decoderInputIds + bestToken` each iteration
+        val decodeBuffer = LongArray(initialTokens + MAX_TOKENS)
+        var decodeLen = 0
 
-        val tokenIds = mutableListOf<Long>()
+        // Seed initial tokens
+        decodeBuffer[decodeLen++] = TOKEN_START_OF_TRANSCRIPT
+        if (languageTokenId != null) decodeBuffer[decodeLen++] = languageTokenId
+        decodeBuffer[decodeLen++] = TOKEN_NO_TIMESTAMPS
+
+        val tokenIds = LongArray(MAX_TOKENS)
+        var tokenCount = 0
 
         for (step in 0 until MAX_TOKENS) {
             val decoderInputTensor = OnnxTensor.createTensor(
                 env,
-                java.nio.LongBuffer.wrap(decoderInputIds),
-                longArrayOf(1, decoderInputIds.size.toLong())
+                java.nio.LongBuffer.wrap(decodeBuffer, 0, decodeLen),
+                longArrayOf(1, decodeLen.toLong())
             )
 
             val decoderOutputs = decoder.run(mapOf(
@@ -491,11 +518,11 @@ class SpeechRecognizer @Inject constructor(
 
             if (bestToken == TOKEN_EOS) break
 
-            tokenIds.add(bestToken)
-            decoderInputIds = decoderInputIds + bestToken
+            tokenIds[tokenCount++] = bestToken
+            decodeBuffer[decodeLen++] = bestToken
         }
 
-        return whisperTokenizer.decode(tokenIds.toLongArray())
+        return whisperTokenizer.decode(tokenIds.copyOf(tokenCount))
     }
 
     /**

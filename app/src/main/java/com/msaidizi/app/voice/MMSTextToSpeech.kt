@@ -589,7 +589,7 @@ class MMSTextToSpeech @Inject constructor(
      * @param pcm 16-bit PCM samples
      * @param sampleRate Sample rate in Hz (16000 for MMS)
      */
-    private fun playPcmAudio(pcm: ShortArray, sampleRate: Int) {
+    private suspend fun playPcmAudio(pcm: ShortArray, sampleRate: Int) {
         val minBufferSize = AudioTrack.getMinBufferSize(
             sampleRate,
             AudioFormat.CHANNEL_OUT_MONO,
@@ -628,12 +628,12 @@ class MMSTextToSpeech @Inject constructor(
                 offset += writeSize
             }
 
-            // Wait for playback to complete
+            // Suspend delay instead of Thread.sleep — non-blocking
             while (audioTrack.playState == AudioTrack.PLAYSTATE_PLAYING
                 && audioTrack.playbackHeadPosition < pcm.size
                 && isCurrentlySpeaking
             ) {
-                Thread.sleep(20)
+                kotlinx.coroutines.delay(20)
             }
         } catch (e: Exception) {
             Timber.e(e, "AudioTrack playback error")
@@ -660,7 +660,4 @@ class MMSTextToSpeech @Inject constructor(
             .filter { it.isNotBlank() }
     }
 
-    private suspend fun delay(ms: Long) {
-        kotlinx.coroutines.delay(ms)
-    }
 }

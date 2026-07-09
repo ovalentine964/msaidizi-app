@@ -564,7 +564,7 @@ class TextToSpeech @Inject constructor(
      * @param pcm 16-bit PCM samples
      * @param sampleRate Sample rate in Hz
      */
-    private fun playPcmAudio(pcm: ShortArray, sampleRate: Int) {
+    private suspend fun playPcmAudio(pcm: ShortArray, sampleRate: Int) {
         val minBufferSize = AudioTrack.getMinBufferSize(
             sampleRate,
             AudioFormat.CHANNEL_OUT_MONO,
@@ -603,12 +603,13 @@ class TextToSpeech @Inject constructor(
                 offset += writeSize
             }
 
-            // Wait for playback to complete
+            // Wait for playback to complete using suspend delay
+            // (non-blocking: yields coroutine thread instead of blocking it)
             while (audioTrack.playState == AudioTrack.PLAYSTATE_PLAYING
                 && audioTrack.playbackHeadPosition < pcm.size
                 && isCurrentlySpeaking
             ) {
-                Thread.sleep(20)
+                delay(20)
             }
         } catch (e: Exception) {
             Timber.e(e, "AudioTrack playback error")
@@ -635,7 +636,4 @@ class TextToSpeech @Inject constructor(
             .filter { it.isNotBlank() }
     }
 
-    private suspend fun delay(ms: Long) {
-        kotlinx.coroutines.delay(ms)
-    }
 }
