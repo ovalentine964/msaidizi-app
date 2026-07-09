@@ -58,8 +58,12 @@ jobs:
 
       - name: KSP Migration
         run: |
-          # CI copies build.gradle.ksp → build.gradle.kts (KSP migration)
-          cp app/build.gradle.ksp app/build.gradle.kts
+          if grep -q "com.google.devtools.ksp" app/build.gradle.kts; then
+            echo "✅ Already using KSP"
+          elif [ -f "app/build.gradle.ksp" ]; then
+            cp app/build.gradle.ksp app/build.gradle.kts
+            echo "✅ KSP migration applied"
+          fi
 
       - name: Run Unit Tests
         run: ./gradlew testDebugUnitTest --stacktrace
@@ -89,8 +93,12 @@ jobs:
 
       - name: KSP Migration
         run: |
-          # CI copies build.gradle.ksp → build.gradle.kts (KSP migration)
-          cp app/build.gradle.ksp app/build.gradle.kts
+          if grep -q "com.google.devtools.ksp" app/build.gradle.kts; then
+            echo "✅ Already using KSP"
+          elif [ -f "app/build.gradle.ksp" ]; then
+            cp app/build.gradle.ksp app/build.gradle.kts
+            echo "✅ KSP migration applied"
+          fi
 
       - name: Build Debug APK
         run: |
@@ -158,8 +166,12 @@ jobs:
 
       - name: KSP Migration
         run: |
-          # CI copies build.gradle.ksp → build.gradle.kts (KSP migration)
-          cp app/build.gradle.ksp app/build.gradle.kts
+          if grep -q "com.google.devtools.ksp" app/build.gradle.kts; then
+            echo "✅ Already using KSP"
+          elif [ -f "app/build.gradle.ksp" ]; then
+            cp app/build.gradle.ksp app/build.gradle.kts
+            echo "✅ KSP migration applied"
+          fi
 
       - name: Build Release APK
         run: ./gradlew assembleRelease --stacktrace

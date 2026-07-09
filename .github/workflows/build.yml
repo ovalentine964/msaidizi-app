@@ -75,7 +75,9 @@ jobs:
 
       - name: KSP Migration
         run: |
-          if [ -f "app/build.gradle.ksp" ]; then
+          if grep -q "com.google.devtools.ksp" app/build.gradle.kts; then
+            echo "✅ Already using KSP"
+          elif [ -f "app/build.gradle.ksp" ]; then
             cp app/build.gradle.ksp app/build.gradle.kts
             echo "✅ KSP migration applied"
           fi
