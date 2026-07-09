@@ -67,69 +67,49 @@ download() {
     return 1
 }
 
-# ── 1. Whisper Encoder (INT8 quantized, Optimum format) ──
-echo "📋 Whisper Speech Recognition (encoder + decoder):"
+# ── 1. Whisper tiny.en (Q5_1 quantized, whisper.cpp format) ──
+echo "📋 Whisper Speech Recognition (ggml Q5_1):"
 download \
-    "https://huggingface.co/Xenova/whisper-tiny.en/resolve/main/onnx/encoder_model_quantized.onnx" \
-    "$MODELS_DIR/whisper-encoder-int8.onnx" \
-    "Whisper encoder (INT8)" \
-    9000000
+    "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en-q5_1.bin" \
+    "$MODELS_DIR/ggml-tiny.en-q5_1.bin" \
+    "Whisper tiny.en (Q5_1)" \
+    25000000
 
-# ── 2. Whisper Decoder (merged, INT8 quantized, Optimum format) ──
-download \
-    "https://huggingface.co/Xenova/whisper-tiny.en/resolve/main/onnx/decoder_model_merged_quantized.onnx" \
-    "$MODELS_DIR/whisper-decoder-int8.onnx" \
-    "Whisper decoder merged (INT8)" \
-    29000000
-
-# ── 3. Whisper Tokenizer (JSON format) ──
-download \
-    "https://huggingface.co/Xenova/whisper-tiny.en/resolve/main/tokenizer.json" \
-    "$MODELS_DIR/whisper-tokens.json" \
-    "Whisper tokenizer" \
-    1000000
-
-# ── 4. Piper Swahili TTS ──
+# ── 2. Piper Swahili TTS (ONNX) ──
 echo ""
 echo "📋 Piper Swahili TTS:"
-PIPER_ARCHIVE="$MODELS_DIR/piper-swahili.tar.bz2"
-if [ -f "$MODELS_DIR/piper-swahili.onnx" ] && [ -s "$MODELS_DIR/piper-swahili.onnx" ]; then
-    echo -e "  ${GREEN}✓${NC} Piper model already extracted"
-elif [ "$VERIFY_ONLY" = true ]; then
-    echo -e "  ${RED}✗${NC} Piper model MISSING"
-else
-    echo -e "  ${YELLOW}↓${NC} Downloading Piper Swahili TTS archive..."
-    for attempt in 1 2 3; do
-        if curl -L --progress-bar --fail -o "$PIPER_ARCHIVE" \
-            "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-sw_CD-lanfrica-medium.tar.bz2"; then
-            echo -e "  ${YELLOW}📦${NC} Extracting Piper archive..."
-            tar xjf "$PIPER_ARCHIVE" -C "$MODELS_DIR" 2>/dev/null
+download \
+    "https://huggingface.co/rhasspy/piper-voices/resolve/main/sw/sw_CD/lanfrica/medium/sw_CD-lanfrica-medium.onnx" \
+    "$MODELS_DIR/piper-swahili.onnx" \
+    "Piper Swahili TTS (ONNX)" \
+    50000000
 
-            # Copy files to expected locations
-            PIPER_SRC=$(find "$MODELS_DIR" -maxdepth 2 -name "*.onnx" -path "*/piper*" -o -name "*.onnx" -path "*/sw_*" 2>/dev/null | head -1)
-            if [ -n "$PIPER_SRC" ]; then
-                PIPER_DIR=$(dirname "$PIPER_SRC")
-                cp "$PIPER_SRC" "$MODELS_DIR/piper-swahili.onnx" 2>/dev/null || true
-                cp "$PIPER_DIR/tokens.txt" "$MODELS_DIR/piper-tokens.txt" 2>/dev/null || true
-                cp -r "$PIPER_DIR/espeak-ng-data" "$MODELS_DIR/" 2>/dev/null || true
-                rm -rf "$MODELS_DIR/vits-piper-"* "$PIPER_ARCHIVE"
-                echo -e "  ${GREEN}✓${NC} Piper TTS extracted"
-                break
-            fi
-        fi
-        echo -e "  ${YELLOW}↻${NC} Retry $attempt/3..."
-        sleep 2
-    done
-fi
+# Also download the Piper config JSON
+download \
+    "https://huggingface.co/rhasspy/piper-voices/resolve/main/sw/sw_CD/lanfrica/medium/sw_CD-lanfrica-medium.onnx.json" \
+    "$MODELS_DIR/piper-swahili.onnx.json" \
+    "Piper Swahili config" \
+    1000
 
-# ── 5. Qwen3.5-0.8B Q4_K_M ──
+# ── 3. Qwen3.5-0.8B Q4_K_M (GGUF) ──
 echo ""
 echo "📋 Qwen 3.5 0.8B LLM:"
+# Try unsloth first, fallback to bartowski
 download \
-    "https://huggingface.co/bartowski/Qwen_Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf" \
-    "$MODELS_DIR/qwen-0.5b-q4_k_m.gguf" \
+    "https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf" \
+    "$MODELS_DIR/qwen3.5-0.8b-q4_k_m.gguf" \
     "Qwen LLM (Q4_K_M)" \
     500000000
+
+# Fallback if unsloth fails
+if [ ! -f "$MODELS_DIR/qwen3.5-0.8b-q4_k_m.gguf" ] || [ "$(stat -c%s "$MODELS_DIR/qwen3.5-0.8b-q4_k_m.gguf" 2>/dev/null || echo 0)" -lt 100000 ]; then
+    echo -e "  ${YELLOW}↻${NC} Trying bartowski mirror..."
+    download \
+        "https://huggingface.co/bartowski/Qwen_Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf" \
+        "$MODELS_DIR/qwen3.5-0.8b-q4_k_m.gguf" \
+        "Qwen LLM (Q4_K_M, bartowski)" \
+        500000000
+fi
 
 # ── Summary ──
 echo ""
@@ -140,16 +120,16 @@ echo ""
 
 # List all model files
 echo "Model files:"
-ls -lh "$MODELS_DIR"/*.onnx "$MODELS_DIR"/*.gguf "$MODELS_DIR"/*.json "$MODELS_DIR"/*.txt 2>/dev/null | awk '{print "  "$NF" ("$5")"}'
+ls -lh "$MODELS_DIR"/*.onnx "$MODELS_DIR"/*.gguf "$MODELS_DIR"/*.bin "$MODELS_DIR"/*.json 2>/dev/null | awk '{print "  "$NF" ("$5")"}'
 
 echo ""
 echo "Expected APK size breakdown:"
-echo "  Whisper encoder+decoder (INT8):  ~40MB"
-echo "  Piper Swahili TTS (ONNX):       ~30MB"
-echo "  Qwen 3.5 0.8B (Q4_K_M GGUF):   ~450MB"
+echo "  Whisper tiny.en (Q5_1 bin):     ~30MB"
+echo "  Piper Swahili TTS (ONNX):       ~60MB"
+echo "  Qwen 3.5 0.8B (Q4_K_M GGUF):   ~508MB"
 echo "  App code + resources:            ~10MB"
 echo "  ─────────────────────────────────"
-echo "  Estimated total APK:             ~530MB"
+echo "  Estimated total APK:             ~610MB"
 echo ""
 echo "Note: Models are stored uncompressed (noCompress) in assets/"
 echo "      for mmap access at runtime. APK will be large but runtime"
