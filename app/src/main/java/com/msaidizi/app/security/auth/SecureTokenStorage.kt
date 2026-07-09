@@ -97,4 +97,30 @@ class SecureTokenStorage @Inject constructor(
     fun hasValidSession(): Boolean {
         return getAccessToken() != null && !isRefreshTokenExpired()
     }
+
+    /**
+     * Validate that tokens belong to the current device.
+     * Prevents token theft via device cloning or backup extraction.
+     *
+     * @param currentDeviceId The hashed device ID from DeviceBinder
+     * @return true if the session is valid AND bound to this device
+     */
+    fun isSessionBoundToDevice(currentDeviceId: String): Boolean {
+        if (!hasValidSession()) return false
+        val storedDeviceId = getDeviceId() ?: return false
+        // Use constant-time comparison to prevent timing attacks
+        return storedDeviceId.length == currentDeviceId.length &&
+            storedDeviceId.toByteArray().zip(currentDeviceId.toByteArray())
+                .fold(0) { acc, (a, b) -> acc or (a.toInt() xor b.toInt()) } == 0
+    }
+
+    /**
+     * Save a token binding nonce for CSRF protection.
+     * The nonce is sent with each request and validated server-side.
+     */
+    fun saveCsrfNonce(nonce: String) {
+        prefs.edit().putString("csrf_nonce", nonce).apply()
+    }
+
+    fun getCsrfNonce(): String? = prefs.getString("csrf_nonce", null)
 }

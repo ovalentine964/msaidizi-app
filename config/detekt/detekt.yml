@@ -9,6 +9,25 @@ build:
     LongParameterList: 1
     comments: 1
 
+# ─── Security Rules ───────────────────────────────────────────────
+security:
+  HardcodedPassword:
+    active: true
+    passwordPatterns:
+      - 'password'
+      - 'secret'
+      - 'api[_-]?key'
+      - 'token'
+      - 'credential'
+      - 'private[_-]?key'
+  HardcodedSecret:
+    active: true
+    secretPatterns:
+      - 'AKIA[0-9A-Z]{16}'
+      - 'sk-[a-zA-Z0-9]{20,}'
+      - 'ghp_[a-zA-Z0-9]{36}'
+      - 'xox[bprs]-[a-zA-Z0-9-]+'
+
 complexity:
   LongParameterList:
     active: true
@@ -55,6 +74,16 @@ style:
   NestedBlockDepth:
     active: true
     threshold: 4
+  # Prevent debug logging of sensitive data in production
+  ForbiddenMethodCall:
+    active: true
+    methods:
+      - 'kotlin.io.println'
+      - 'kotlin.io.print'
+      - 'android.util.Log.v'
+      - 'android.util.Log.d'
+    ignoreAnnotated:
+      - 'Test'
 
 naming:
   FunctionNaming:

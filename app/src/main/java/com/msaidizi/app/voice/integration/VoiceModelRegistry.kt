@@ -252,21 +252,57 @@ data class ModelProviderInfo(
 /**
  * Built-in model provider implementations.
  */
-class WhisperAsrProvider : ModelProvider {
+class WhisperTurboAsrProvider : ModelProvider {
+    override val id = "whisper-turbo"
+    override val name = "Whisper Turbo (distilled large-v3)"
+    override val type = VoiceModelType.ASR
+    override val requiresNetwork = false
+    override val supportedLanguages = setOf("sw", "en", "sheng", "yo", "ha", "am", "zu", "xh", "ig", "so")
+    override val qualityScore = 0.92f
+    override val averageLatencyMs = 200L
+    override val costPerMinute = 0f
+    override fun isAvailable() = true  // Always available (lazy-loads)
+}
+
+class MoonshineAsrProvider : ModelProvider {
+    override val id = "moonshine-tiny"
+    override val name = "Moonshine Tiny (mobile/edge)"
+    override val type = VoiceModelType.ASR
+    override val requiresNetwork = false
+    override val supportedLanguages = setOf("sw", "en", "sheng", "yo", "ha", "am", "zu", "xh", "ig")
+    override val qualityScore = 0.80f
+    override val averageLatencyMs = 100L
+    override val costPerMinute = 0f
+    override fun isAvailable() = true
+}
+
+class WhisperTinyAsrProvider : ModelProvider {
     override val id = "whisper-tiny-int4"
-    override val name = "Whisper Tiny INT4 (ONNX)"
+    override val name = "Whisper Tiny INT4 (legacy)"
     override val type = VoiceModelType.ASR
     override val requiresNetwork = false
     override val supportedLanguages = setOf("sw", "en", "sheng", "yo", "ha", "am", "zu", "xh", "ig")
     override val qualityScore = 0.70f
     override val averageLatencyMs = 600L
     override val costPerMinute = 0f
-    override fun isAvailable() = true  // Always available (lazy-loads)
+    override fun isAvailable() = true
+}
+
+class KokoroTtsProvider : ModelProvider {
+    override val id = "kokoro-swahili"
+    override val name = "Kokoro TTS (82M, Apache 2.0)"
+    override val type = VoiceModelType.TTS
+    override val requiresNetwork = false
+    override val supportedLanguages = setOf("sw", "en", "sheng")
+    override val qualityScore = 0.90f
+    override val averageLatencyMs = 300L
+    override val costPerMinute = 0f
+    override fun isAvailable() = true
 }
 
 class PiperTtsProvider : ModelProvider {
     override val id = "piper-swahili"
-    override val name = "Piper TTS (Swahili)"
+    override val name = "Piper TTS (fallback)"
     override val type = VoiceModelType.TTS
     override val requiresNetwork = false
     override val supportedLanguages = setOf("sw", "en", "sheng")
@@ -289,13 +325,13 @@ class MmsTtsProvider : ModelProvider {
 }
 
 class QwenLlmProvider : ModelProvider {
-    override val id = "qwen-0.5b-q4"
-    override val name = "Qwen 0.5B Q4 (llama.cpp)"
+    override val id = "qwen-3.5-0.8b-q4km"
+    override val name = "Qwen 3.5 0.8B Q4 (llama.cpp)"
     override val type = VoiceModelType.LLM
     override val requiresNetwork = false
     override val supportedLanguages = setOf("sw", "en", "sheng")
-    override val qualityScore = 0.60f
-    override val averageLatencyMs = 500L
+    override val qualityScore = 0.70f
+    override val averageLatencyMs = 400L
     override val costPerMinute = 0f
     override fun isAvailable() = true
 }

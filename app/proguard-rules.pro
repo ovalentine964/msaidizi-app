@@ -82,8 +82,81 @@
 -keep class net.zetetic.** { *; }
 -dontwarn net.zetetic.**
 
-# Optimize
+# Bouncy Castle — Post-Quantum Cryptography (ML-KEM, ML-DSA)
+# Must keep all PQC algorithm classes for runtime reflection and key generation
+-keep class org.bouncycastle.** { *; }
+-dontwarn org.bouncycastle.**
+-keep class com.msaidizi.app.security.crypto.pqc.** { *; }
+
+# ══════════════════════════════════════════════════════════════
+# SECURITY: Strip ALL logging in release builds
+# Prevents PII, tokens, keys, and internal state from leaking via logs
+# ══════════════════════════════════════════════════════════════
+
+# Remove all android.util.Log calls
 -assumenosideeffects class android.util.Log {
-    public static *** d(...);
+    public static int v(...);
+    public static int d(...);
+    public static int i(...);
+    public static int w(...);
+    public static int e(...);
+    public static int wtf(...);
+    public static int println(...);
+}
+
+# Remove all Timber logging (used throughout the app)
+-assumenosideeffects class timber.log.Timber {
     public static *** v(...);
+    public static *** d(...);
+    public static *** i(...);
+    public static *** w(...);
+    public static *** e(...);
+    public static *** wtf(...);
+    public static *** tag(...);
+    public static *** plant(...);
+    public static *** uproot(...);
+    public static *** uprootAll(...);
+}
+
+# Remove Timber.Tree subclasses (prevents any custom log trees)
+-assumenosideeffects class timber.log.Timber$Tree {
+    protected *** v(...);
+    protected *** d(...);
+    protected *** i(...);
+    protected *** w(...);
+    protected *** e(...);
+}
+
+# Remove java.util.logging calls (if any library uses JUL)
+-assumenosideeffects class java.util.logging.Logger {
+    public static *** severe(...);
+    public static *** warning(...);
+    public static *** info(...);
+    public static *** fine(...);
+    public static *** finer(...);
+    public static *** finest(...);
+}
+
+# Remove SLF4J calls (if any library uses SLF4J)
+-assumenosideeffects class org.slf4j.Logger {
+    public static *** error(...);
+    public static *** warn(...);
+    public static *** info(...);
+    public static *** debug(...);
+    public static *** trace(...);
+}
+
+# SECURITY: Obfuscate stack traces in release (prevents info leakage)
+-renamesourcefileattribute SourceFile
+-keepattributes SourceFile,LineNumberTable
+
+# SECURITY: Strip debug metadata
+-assumenosideeffects class kotlin.jvm.internal.Intrinsics {
+    public static void checkNotNull(...);
+    public static void checkNotNullParameter(...);
+    public static void checkExpressionValueIsNotNull(...);
+    public static void checkNotNullExpressionValue(...);
+    public static void checkParameterIsNotNull(...);
+    public static void checkReturnedValueIsNotNull(...);
+    public static void checkFieldIsNotNull(...);
 }

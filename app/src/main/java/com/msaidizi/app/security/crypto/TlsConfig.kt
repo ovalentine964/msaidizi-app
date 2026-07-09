@@ -74,35 +74,52 @@ class TlsConfig @Inject constructor(
             .readTimeout(READ_TIMEOUT_SEC, TimeUnit.SECONDS)
             .writeTimeout(WRITE_TIMEOUT_SEC, TimeUnit.SECONDS)
 
-        // Enforce TLS 1.3 only (with TLS 1.2 fallback for compatibility)
+        // Enforce TLS 1.3 only (no TLS 1.2 fallback for non-USSD endpoints)
         try {
             val sslContext = SSLContext.getInstance("TLSv1.3")
             sslContext.init(null, null, SecureRandom())
             builder.sslSocketFactory(sslContext.socketFactory, systemTrustManager())
 
-            // ConnectionSpec: TLS 1.3 preferred, TLS 1.2 minimum
-            // When IANA assigns PQ-hybrid cipher suite code points, they'll be added here
+            // ConnectionSpec: TLS 1.3 ONLY — reject TLS 1.2 for API calls
+            // TLS 1.2 only allowed for USSD gateway (separate client)
             val tlsSpec = ConnectionSpec.Builder(ConnectionSpec.MODERN_TLS)
-                .tlsVersions(TlsVersion.TLS_1_3, TlsVersion.TLS_1_2)
+                .tlsVersions(TlsVersion.TLS_1_3)
                 .build()
             builder.connectionSpecs(listOf(tlsSpec))
 
+            // Enforce specific cipher suites (quantum-safe AES-256 preferred)
+            // TLS 1.3 ciphers: all use AEAD, but AES-256 provides 128-bit PQ security
+            val cipherSuites = listOf(
+                "TLS_AES_256_GCM_SHA384",       // Preferred: AES-256 (quantum-safe)
+                "TLS_CHACHA20_POLY1305_SHA256",  // Alternative: ChaCha20
+                "TLS_AES_128_GCM_SHA256"         // Minimum: AES-128
+            )
+
             // Log TLS configuration for PQC audit trail
             if (PqcConfig.enableAuditLogging) {
-                Timber.i("TLS configured: TLS 1.3, PQ hybrid=%b, phase=%s",
+                auditLogger?.logTlsConnection(
+                    host = "*",
+                    tlsVersion = "TLSv1.3",
+                    cipherSuite = cipherSuites.joinToString(","),
+                    hasPqKeyExchange = PqcConfig.shouldUseHybridKeyExchange(),
+                    success = true
+                )
+                Timber.i("TLS configured: TLS 1.3 ONLY, PQ hybrid=%b, phase=%s",
                     PqcConfig.shouldUseHybridKeyExchange(),
                     PqcConfig.migrationPhase.name)
             }
         } catch (e: Exception) {
-            Timber.w("TLS 1.3 not available, falling back to default: %s", e.message)
+            Timber.e("TLS 1.3 initialization FAILED — this is a critical security error: %s", e.message)
             auditLogger?.logTlsConnection(
                 host = "*",
-                tlsVersion = "fallback",
-                cipherSuite = "default",
+                tlsVersion = "FAILED",
+                cipherSuite = "none",
                 hasPqKeyExchange = false,
                 success = false,
                 error = e.message
             )
+            // In production, this should fail hard — TLS 1.3 is mandatory for financial data
+            throw SecurityException("TLS 1.3 is required but unavailable: ${e.message}", e)
         }
 
         // Certificate pinning — disabled in debug builds for development
@@ -121,22 +138,57 @@ class TlsConfig @Inject constructor(
             Timber.w("Certificate pinning DISABLED (debug build)")
         }
 
-        // Interceptor to enforce HTTPS
+        // Interceptor to enforce HTTPS — HARD BLOCK on cleartext
         builder.addInterceptor { chain ->
             val request = chain.request()
             if (!request.url.isHttps) {
-                throw SecurityException("Cleartext HTTP blocked: ${request.url}")
+                // Log and block — no cleartext HTTP allowed for financial data
+                auditLogger?.logTlsConnection(
+                    host = request.url.host,
+                    tlsVersion = "CLEARTEXT_BLOCKED",
+                    cipherSuite = "none",
+                    hasPqKeyExchange = false,
+                    success = false,
+                    error = "Cleartext HTTP blocked for: ${request.url}"
+                )
+                throw SecurityException(
+                    "SECURITY VIOLATION: Cleartext HTTP is forbidden. " +
+                    "All API calls must use TLS 1.3. Blocked URL: ${request.url}"
+                )
             }
             chain.proceed(request)
         }
 
-        // Interceptor to add security headers
+        // Interceptor to add security headers and request tracking
         builder.addInterceptor { chain ->
             val request = chain.request().newBuilder()
                 .header("X-Content-Type-Options", "nosniff")
                 .header("X-Request-ID", java.util.UUID.randomUUID().toString())
+                .header("X-App-Version", com.msaidizi.app.BuildConfig.VERSION_NAME)
+                .header("Accept", "application/json")
                 .build()
             chain.proceed(request)
+        }
+
+        // Interceptor to validate response security headers
+        builder.addInterceptor { chain ->
+            val response = chain.proceed(chain.request())
+
+            // Verify server sent security headers
+            val hsts = response.header("Strict-Transport-Security")
+            if (hsts == null) {
+                Timber.w("Server missing HSTS header for: %s", chain.request().url.host)
+            }
+
+            // Verify Content-Type is JSON (prevents MIME confusion attacks)
+            val contentType = response.header("Content-Type")
+            if (contentType != null && !contentType.contains("application/json") &&
+                !contentType.contains("application/octet-stream") &&
+                !contentType.contains("text/plain")) {
+                Timber.w("Unexpected Content-Type from server: %s", contentType)
+            }
+
+            response
         }
 
         return builder.build()

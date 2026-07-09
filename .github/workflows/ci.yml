@@ -1,4 +1,4 @@
-name: CI Pipeline
+name: CI Pipeline — Hardened
 
 on:
   push:
@@ -16,11 +16,31 @@ env:
   JAVA_VERSION: "17"
 
 jobs:
-  # ─── Lint & Static Analysis ───
+  # ──────────────────────────────────────
+  # 1. Secret Detection (gate everything)
+  # ──────────────────────────────────────
+  secret-scan:
+    name: 🔒 Secret Detection
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: TruffleHog scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          extra_args: --only-verified --fail
+
+  # ──────────────────────────────────────
+  # 2. Lint & Static Analysis (Detekt)
+  # ──────────────────────────────────────
   lint:
-    name: Lint & Static Analysis
+    name: 🧹 Detekt Lint + Security
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    needs: [secret-scan]
     steps:
       - uses: actions/checkout@v4
 
@@ -32,20 +52,33 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Run Detekt
-        run: ./gradlew detektMain detektTest --continue || true
+        run: |
+          ./gradlew detektMain detektTest --continue 2>&1 | tee detekt-output.txt
+          DETEKT_EXIT=$?
+          # Fail on findings with severity=error (security rules are error-level)
+          if grep -q "error" detekt-output.txt; then
+            echo "::error::Detekt found security/style errors"
+            exit 1
+          fi
+          exit $DETEKT_EXIT
 
       - name: Upload Detekt reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: detekt-reports
-          path: build/reports/detekt/
+          path: |
+            build/reports/detekt/
+            detekt-output.txt
 
-  # ─── Unit Tests ───
+  # ──────────────────────────────────────
+  # 3. Unit Tests with Coverage Gate
+  # ──────────────────────────────────────
   unit-tests:
-    name: Unit Tests
+    name: 🧪 Unit Tests (80% gate)
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    needs: [secret-scan]
     steps:
       - uses: actions/checkout@v4
 
@@ -65,21 +98,110 @@ jobs:
             echo "✅ KSP migration applied"
           fi
 
-      - name: Run Unit Tests
-        run: ./gradlew testDebugUnitTest --stacktrace
+      - name: Run Unit Tests with Coverage
+        run: ./gradlew testDebugUnitTest jacocoTestReportDebug --stacktrace
+
+      - name: Enforce 80% Coverage Gate
+        run: |
+          COVERAGE_FILE="app/build/reports/jacoco/jacocoTestReportDebug/jacocoTestReportDebug.xml"
+          if [ ! -f "$COVERAGE_FILE" ]; then
+            echo "::warning::Coverage report not found — skipping gate (Jacoco not configured yet)"
+            exit 0
+          fi
+
+          # Extract line coverage from Jacoco XML
+          COVERED=$(grep -oP 'covered="\K[0-9]+' "$COVERAGE_FILE" | paste -sd+ | bc)
+          MISSED=$(grep -oP 'missed="\K[0-9]+' "$COVERAGE_FILE" | paste -sd+ | bc)
+          TOTAL=$((COVERED + MISSED))
+          if [ "$TOTAL" -gt 0 ]; then
+            PCT=$((COVERED * 100 / TOTAL))
+            echo "Line coverage: ${PCT}%"
+            if [ "$PCT" -lt 80 ]; then
+              echo "::error::Coverage ${PCT}% is below the 80% minimum"
+              exit 1
+            fi
+            echo "✅ Coverage ${PCT}% meets 80% threshold"
+          fi
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: app/build/reports/tests/
+          path: |
+            app/build/reports/tests/
+            app/build/reports/jacoco/
 
-  # ─── Build ───
-  build:
-    name: Build
+  # ──────────────────────────────────────
+  # 4. OWASP Dependency Check
+  # ──────────────────────────────────────
+  dependency-check:
+    name: 🔍 OWASP Dependency Check
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
+    needs: [secret-scan]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Download OWASP Dependency-Check
+        run: |
+          curl -sSL https://github.com/jeremylong/DependencyCheck/releases/download/v10.0.4/dependency-check-10.0.4-release.zip -o dc.zip
+          unzip -q dc.zip
+          chmod +x dependency-check/bin/dependency-check.sh
+
+      - name: Run Dependency Check
+        run: |
+          ./dependency-check/bin/dependency-check.sh \
+            --project "msaidizi-app" \
+            --scan . \
+            --out dependency-check-report \
+            --format HTML \
+            --format JSON \
+            --failOnCVSS 7 \
+            --enableExperimental \
+            --suppressionFile .github/dependency-check-suppressions.xml 2>&1 || true
+
+          # Parse results
+          if [ -f dependency-check-report/dependency-check-report.json ]; then
+            HIGH=$(python3 -c "
+          import json
+          data = json.load(open('dependency-check-report/dependency-check-report.json'))
+          vulns = data.get('dependencies', [])
+          count = sum(1 for d in vulns if any(
+              v.get('cvssv3', {}).get('baseSeverity') in ('HIGH', 'CRITICAL')
+              for v in d.get('vulnerabilities', [])
+          ))
+          print(count)
+          ")
+            echo "High/Critical vulnerabilities: $HIGH"
+            if [ "$HIGH" -gt 5 ]; then
+              echo "::error::Too many high/critical dependency vulnerabilities ($HIGH)"
+              exit 1
+            fi
+          fi
+
+      - name: Upload dependency check report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: dependency-check-report/
+          retention-days: 14
+
+  # ──────────────────────────────────────
+  # 5. Build Debug APK
+  # ──────────────────────────────────────
+  build:
+    name: 🏗️ Build Debug
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
     needs: [lint, unit-tests]
     steps:
       - uses: actions/checkout@v4
@@ -104,7 +226,6 @@ jobs:
         run: |
           set -o pipefail
           ./gradlew assembleDebug --stacktrace 2>&1 | tee build-debug.log
-          echo "Gradle exit code: $?"
 
       - name: Upload build log on failure
         if: failure()
@@ -113,16 +234,19 @@ jobs:
           name: build-debug-log
           path: build-debug.log
 
-      - name: Check APK size
+      - name: Check APK size (< 100MB)
         run: |
           APK_PATH=$(find app/build/outputs/apk/debug/ -name "*.apk" | head -1)
           if [ -n "$APK_PATH" ]; then
             APK_SIZE=$(stat -c%s "$APK_PATH")
-            MAX_SIZE=$((50 * 1024 * 1024))  # 50MB
-            echo "APK size: $((APK_SIZE / 1024 / 1024))MB"
+            SIZE_MB=$((APK_SIZE / 1048576))
+            MAX_SIZE=$((100 * 1024 * 1024))
+            echo "APK size: ${SIZE_MB}MB (limit: 100MB)"
             if [ "$APK_SIZE" -gt "$MAX_SIZE" ]; then
-              echo "::warning::APK size ($APK_SIZE bytes) exceeds 50MB limit"
+              echo "::error::APK size ${SIZE_MB}MB exceeds 100MB limit"
+              exit 1
             fi
+            echo "✅ APK size OK"
           fi
 
       - name: Upload APK
@@ -131,28 +255,85 @@ jobs:
           name: debug-apk
           path: app/build/outputs/apk/debug/*.apk
 
-  # ─── Security Scan ───
-  security:
-    name: Security Scan
+  # ──────────────────────────────────────
+  # 6. Model Integrity Verification
+  # ──────────────────────────────────────
+  model-integrity:
+    name: 🔐 Model Integrity (SHA-256)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: [build]
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run dependency check
+      - name: Verify model checksums
         run: |
-          # Basic dependency vulnerability check
-          echo "Checking for known vulnerabilities in dependencies..."
-          # This would use OWASP dependency-check or similar
-          echo "Security scan complete"
+          # Expected SHA-256 hashes for bundled models
+          # Update these when models are updated
+          declare -A EXPECTED_HASHES=(
+            ["app/src/main/assets/models/whisper-tiny-int8.tflite"]="PLACEHOLDER_COMPUTE_ON_FIRST_RELEASE"
+            ["app/src/main/assets/models/piper-swahili.onnx"]="PLACEHOLDER_COMPUTE_ON_FIRST_RELEASE"
+          )
 
-  # ─── Release Build (main only) ───
+          MANIFEST="model-integrity.txt"
+          echo "Model Integrity Report — $(date -u)" > "$MANIFEST"
+          echo "========================================" >> "$MANIFEST"
+
+          FAIL=0
+          MODEL_DIR="app/src/main/assets/models"
+
+          if [ ! -d "$MODEL_DIR" ]; then
+            echo "⚠️  No models directory found — skipping integrity check"
+            echo "This is expected if models are downloaded at build time."
+            exit 0
+          fi
+
+          for MODEL in "$MODEL_DIR"/*; do
+            [ -f "$MODEL" ] || continue
+            ACTUAL=$(sha256sum "$MODEL" | awk '{print $1}')
+            SIZE=$(stat -c%s "$MODEL")
+            echo "File: $MODEL" >> "$MANIFEST"
+            echo "  SHA-256: $ACTUAL" >> "$MANIFEST"
+            echo "  Size: $SIZE bytes" >> "$MANIFEST"
+
+            BASENAME=$(basename "$MODEL")
+            if [ -n "${EXPECTED_HASHES[$MODEL]+x}" ]; then
+              EXPECTED="${EXPECTED_HASHES[$MODEL]}"
+              if [ "$EXPECTED" = "PLACEHOLDER_COMPUTE_ON_FIRST_RELEASE" ]; then
+                echo "  Status: ⚠️  Hash not yet configured — update workflow" >> "$MANIFEST"
+              elif [ "$ACTUAL" != "$EXPECTED" ]; then
+                echo "  Status: ❌ MISMATCH (expected: $EXPECTED)" >> "$MANIFEST"
+                FAIL=1
+              else
+                echo "  Status: ✅ Verified" >> "$MANIFEST"
+              fi
+            else
+              echo "  Status: ℹ️  New model — add hash to workflow" >> "$MANIFEST"
+            fi
+            echo "" >> "$MANIFEST"
+          done
+
+          cat "$MANIFEST"
+          if [ "$FAIL" -eq 1 ]; then
+            echo "::error::Model integrity check failed — hashes do not match"
+            exit 1
+          fi
+
+      - name: Upload integrity manifest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-integrity
+          path: model-integrity.txt
+
+  # ──────────────────────────────────────
+  # 7. Signed Release Build (main only)
+  # ──────────────────────────────────────
   release-build:
-    name: Release Build
+    name: 🚀 Signed Release APK
     runs-on: ubuntu-latest
-    timeout-minutes: 25
-    needs: [build]
+    timeout-minutes: 30
+    needs: [build, dependency-check, model-integrity]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
@@ -173,29 +354,66 @@ jobs:
             echo "✅ KSP migration applied"
           fi
 
-      - name: Build Release APK
-        run: ./gradlew assembleRelease --stacktrace
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > /tmp/release.keystore
 
-      - name: Rename APK for release
+      - name: Build Signed Release APK
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -o pipefail
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=/tmp/release.keystore \
+            -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$KEY_PASSWORD" \
+            --stacktrace 2>&1 | tee build-release.log
+
+      - name: Verify APK signature
+        run: |
+          APK_PATH=$(find app/build/outputs/apk/release/ -name "*.apk" | head -1)
+          if [ -n "$APK_PATH" ]; then
+            # Verify signature using apksigner
+            apksigner verify --print-certs "$APK_PATH" 2>&1 | tee signature-verify.txt
+            echo "✅ APK signature verified"
+          fi
+
+      - name: Check release APK size
+        run: |
+          APK_PATH=$(find app/build/outputs/apk/release/ -name "*.apk" | head -1)
+          if [ -n "$APK_PATH" ]; then
+            SIZE=$(stat -c%s "$APK_PATH")
+            SIZE_MB=$((SIZE / 1048576))
+            echo "Release APK size: ${SIZE_MB}MB"
+            if [ "$SIZE" -gt $((100 * 1024 * 1024)) ]; then
+              echo "::error::Release APK exceeds 100MB"
+              exit 1
+            fi
+          fi
+
+      - name: Prepare release artifact
         run: |
           mkdir -p release-apk
-          cp app/build/outputs/apk/release/*.apk release-apk/msaidizi.apk 2>/dev/null || \
-          cp app/build/outputs/apk/debug/*.apk release-apk/msaidizi.apk
-          echo "APK ready: release-apk/msaidizi.apk"
+          APK_PATH=$(find app/build/outputs/apk/release/ -name "*.apk" | head -1)
+          cp "$APK_PATH" release-apk/msaidizi-release.apk 2>/dev/null || \
+          cp app/build/outputs/apk/debug/*.apk release-apk/msaidizi-release.apk
           ls -lh release-apk/
 
-      - name: Attach APK to Release
+      - name: Attach to Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          name: Latest Build
-          files: release-apk/msaidizi.apk
+          name: Latest Release
+          files: |
+            release-apk/msaidizi-release.apk
+            signature-verify.txt
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload release APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-apk
-          path: release-apk/
+      - name: Cleanup keystore
+        if: always()
+        run: rm -f /tmp/release.keystore

@@ -20,6 +20,8 @@ import com.msaidizi.app.security.crypto.pqc.MlKemParameterSet
 import com.msaidizi.app.security.privacy.ConsentManager
 import com.msaidizi.app.security.privacy.DataMinimizer
 import com.msaidizi.app.security.privacy.DataRetentionManager
+import com.msaidizi.app.security.privacy.DifferentialPrivacy
+import com.msaidizi.app.security.privacy.FederatedLearningPrivacy
 import com.msaidizi.app.security.simswap.DeviceBinder
 import com.msaidizi.app.security.simswap.SuspiciousLoginDetector
 import dagger.Module
@@ -157,4 +159,12 @@ object SecurityModule {
     fun provideDataMinimizer(
         @ApplicationContext context: Context
     ): DataMinimizer = DataMinimizer(context)
+
+    @Provides
+    @Singleton
+    fun provideDifferentialPrivacy(): DifferentialPrivacy = DifferentialPrivacy()
+
+    @Provides
+    @Singleton
+    fun provideFederatedLearningPrivacy(): FederatedLearningPrivacy = FederatedLearningPrivacy()
 }

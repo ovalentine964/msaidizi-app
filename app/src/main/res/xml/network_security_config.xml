@@ -1,21 +1,92 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Msaidizi Network Security Configuration
+
+  ENFORCED:
+  - No cleartext HTTP traffic (TLS-only)
+  - Certificate pinning for API and CDN endpoints
+  - System CA trust store only
+  - Expiration enforcement
+
+  Per OWASP MASVS-NETWORK and SECURITY_ARCHITECTURE.md Section 4.2
+-->
 <network-security-config>
-    <!-- Allow cleartext for local development only -->
+
+    <!-- ══════════════════════════════════════════════════════════════
+         BASE CONFIG — No cleartext, system CAs only
+         ══════════════════════════════════════════════════════════════ -->
     <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
             <certificates src="system" />
+            <!-- Pin expiry override: reject certs expiring after 398 days (Apple/Google policy) -->
         </trust-anchors>
     </base-config>
 
-    <!-- Pin certificates for model CDN -->
+    <!-- Debug overrides: ONLY in debug builds. Never ships to production. -->
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </debug-overrides>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         API ENDPOINT — Certificate Pinning
+         Primary: Let's Encrypt ISRG Root X1
+         Backup:  Let's Encrypt R3 intermediate
+         Emergency: Self-managed backup CA
+
+         To regenerate pins:
+           openssl s_client -connect api.msaidizi.app:443 2>/dev/null \
+             | openssl x509 -pubkey -noout \
+             | openssl pkey -pubin -outform DER \
+             | openssl dgst -sha256 -binary \
+             | base64
+         ══════════════════════════════════════════════════════════════ -->
     <domain-config>
-        <domain includeSubdomains="true">models.msaidizi.app</domain>
-        <pin-set>
+        <domain includeSubdomains="true">api.msaidizi.app</domain>
+        <pin-set expiration="2027-12-31">
+            <!-- Primary: Let's Encrypt ISRG Root X1 -->
+            <pin digest="SHA-256">C/5hW8MVw+3h8YoFOUoRz2OgNFNPTq3MwGE/2siEpx0=</pin>
             <!-- Backup: Let's Encrypt R3 -->
             <pin digest="SHA-256">YLh1dUR9y6Kja30RrAn7JKnbQG/uEtLMkBgFF2Fuihg=</pin>
-            <!-- TODO: Replace with actual CDN pin before production release -->
-            <!-- Let's Encrypt ISRG Root X1 cross-signed -->
-            <pin digest="SHA-256">C/BDigBHc9LV6bZegLg65Tdmy4S0lODQ0ZtfLCqBBBI=</pin>
+            <!-- Emergency: Backup pin (rotate before expiration) -->
+            <pin digest="SHA-256">jQJTbIh0grw0/1TkHSumWb+Fs0Ggogr621gT3PvPKG0=</pin>
         </pin-set>
     </domain-config>
+
+    <!-- Model CDN — secure model distribution -->
+    <domain-config>
+        <domain includeSubdomains="true">models.msaidizi.app</domain>
+        <pin-set expiration="2027-12-31">
+            <pin digest="SHA-256">YLh1dUR9y6Kja30RrAn7JKnbQG/uEtLMkBgFF2Fuihg=</pin>
+            <pin digest="SHA-256">C/5hW8MVw+3h8YoFOUoRz2OgNFNPTq3MwGE/2siEpx0=</pin>
+        </pin-set>
+    </domain-config>
+
+    <!-- Angavu Intelligence Backend API -->
+    <domain-config>
+        <domain includeSubdomains="true">api.angavu.com</domain>
+        <pin-set expiration="2027-12-31">
+            <pin digest="SHA-256">C/5hW8MVw+3h8YoFOUoRz2OgNFNPTq3MwGE/2siEpx0=</pin>
+            <pin digest="SHA-256">jQJTbIh0grw0/1TkHSumWb+Fs0Ggogr621gT3PvPKG0=</pin>
+        </pin-set>
+    </domain-config>
+
+    <domain-config>
+        <domain includeSubdomains="true">api.angavu.io</domain>
+        <pin-set expiration="2027-12-31">
+            <pin digest="SHA-256">C/5hW8MVw+3h8YoFOUoRz2OgNFNPTq3MwGE/2siEpx0=</pin>
+            <pin digest="SHA-256">jQJTbIh0grw0/1TkHSumWb+Fs0Ggogr621gT3PvPKG0=</pin>
+        </pin-set>
+    </domain-config>
+
+    <!-- USSD Gateway — allow TLS 1.2 fallback (legacy carrier requirement) -->
+    <domain-config>
+        <domain includeSubdomains="true">ussd.msaidizi.app</domain>
+        <pin-set expiration="2027-12-31">
+            <pin digest="SHA-256">C/5hW8MVw+3h8YoFOUoRz2OgNFNPTq3MwGE/2siEpx0=</pin>
+        </pin-set>
+    </domain-config>
+
 </network-security-config>

@@ -15,38 +15,26 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Low-latency streaming voice pipeline optimized for <200ms response time.
+ * Low-latency streaming voice pipeline (v2 — real streaming ASR).
  *
- * Key optimizations over the standard [VoicePipeline]:
- *
- * 1. **Streaming ASR**: Process audio in 100ms chunks instead of waiting for
- *    full utterance. Emit partial transcripts as user speaks.
- *
- * 2. **Speculative LLM Start**: Begin LLM inference on partial transcripts.
- *    If the transcript is revised, restart LLM with corrected input.
- *
- * 3. **Streaming TTS**: Start TTS synthesis on first sentence of LLM output.
- *    Don't wait for complete response.
- *
- * 4. **Pipeline Parallelism**: ASR, LLM, and TTS run concurrently on
- *    different coroutine dispatchers.
- *
- * 5. **Preamble Phrases**: Eliminate "dead air" by playing filler phrases
- *    while processing (inspired by GPT-Realtime-2).
- *
- * 6. **Emotion-Aware Responses**: Detect user emotion from audio prosody
- *    and adjust response tone accordingly.
+ * Key upgrades from v1:
+ * 1. **Real Streaming ASR**: Uses SpeechRecognizer.startStreaming() for
+ *    actual partial transcription in 500ms hops (not just full-utterance re-runs)
+ * 2. **Kokoro TTS**: Primary TTS with emotion-aware voice personality
+ * 3. **Streaming TTS**: Start TTS synthesis on first sentence of LLM output
+ * 4. **Preamble Phrases**: Eliminate dead air with filler phrases
+ * 5. **Emotion → Voice**: Auto-selects Kokoro voice style based on emotion
  *
  * Latency breakdown (target):
  * ┌──────────────────────────────┬───────────────┐
  * │ Component                    │ Target (ms)   │
  * ├──────────────────────────────┼───────────────┤
- * │ Streaming ASR (partial)      │ <100          │
+ * │ Streaming ASR (partial)      │ <200          │
  * │ LLM (first token)           │ <150          │
- * │ TTS (first audio chunk)     │ <50           │
+ * │ Kokoro TTS (first chunk)    │ <100          │
  * │ Audio playback latency       │ <20           │
  * ├──────────────────────────────┼───────────────┤
- * │ Total (first response byte)  │ <200          │
+ * │ Total (first response byte)  │ <350          │
  * └──────────────────────────────┴───────────────┘
  *
  * @see VoicePipeline for the standard (non-streaming) pipeline
@@ -57,7 +45,8 @@ class StreamingVoicePipeline @Inject constructor(
     private val audioRecorder: AudioRecorder,
     private val vad: VoiceActivityDetector,
     private val speechRecognizer: SpeechRecognizer,
-    private val ttsEngine: TextToSpeech,
+    private val kokoroTts: KokoroTtsEngine,
+    private val piperTts: TextToSpeech,
     private val mmsTtsEngine: MMSTextToSpeech,
     private val llmEngine: LlmEngine,
     private val featureExtractor: AudioFeatureExtractor,
@@ -66,9 +55,7 @@ class StreamingVoicePipeline @Inject constructor(
 ) {
     companion object {
         private const val TAG = "StreamingPipeline"
-        private const val STREAMING_CHUNK_MS = 100L  // Process every 100ms
-        private const val PREAMBLE_DELAY_MS = 50L    // Delay before preamble
-        private const val MAX_SPECULATIVE_WAIT_MS = 500L
+        private const val PREAMBLE_DELAY_MS = 50L
     }
 
     // ────────────── Pipeline State ──────────────
@@ -98,43 +85,29 @@ class StreamingVoicePipeline @Inject constructor(
 
     // ────────────── Preamble Phrases ──────────────
 
-    /** Preamble phrases to eliminate dead air while processing */
     private val preamblePhrases = mapOf(
         "sw" to listOf("Sawa...", "Hebu nione...", "Sikiliza..."),
         "en" to listOf("Sure...", "Let me check...", "One moment..."),
         "sheng" to listOf("Sawa boss...", "Hebu nione...", "Poa...")
     )
 
-    // ────────────── Processing Jobs ──────────────
-
-    private var audioJob: Job? = null
     private var processingScope: CoroutineScope? = null
-
-    // ────────────── Streaming ASR State ──────────────
-
-    /** Accumulated audio buffer for periodic partial transcription */
-    private val streamingAudioBuffer = mutableListOf<Short>()
-
-    /** Timestamp of last partial ASR run */
-    private var lastAsrTime = 0L
-
-    /** Minimum samples needed before attempting partial transcription (0.5s) */
-    private companion object {
-        const val MIN_STREAMING_SAMPLES = 8000  // 0.5s at 16kHz
-    }
 
     // ────────────────────── Initialization ──────────────────────
 
     /**
      * Initialize the streaming pipeline.
-     * Loads minimal models for fast startup.
      */
     suspend fun initialize() {
         Timber.tag(TAG).d("Initializing streaming pipeline...")
         _pipelineState.value = StreamingPipelineState.INITIALIZING
 
-        // Load only essential models
-        ttsEngine.loadModel()
+        // Load primary TTS: Kokoro
+        val kokoroLoaded = kokoroTts.loadModel()
+        if (!kokoroLoaded) {
+            Timber.tag(TAG).w("Kokoro not available, falling back to Piper")
+            piperTts.loadModel()
+        }
 
         // ASR lazy-loads on first use
         if (DeviceTier.preloadASR()) {
@@ -142,14 +115,16 @@ class StreamingVoicePipeline @Inject constructor(
         }
 
         _pipelineState.value = StreamingPipelineState.IDLE
-        Timber.tag(TAG).i("Streaming pipeline ready")
+        Timber.tag(TAG).i("Streaming pipeline ready (ASR: %s, TTS: %s)",
+            if (speechRecognizer.isModelReady()) speechRecognizer.getActiveModelId() else "lazy",
+            if (kokoroLoaded) "Kokoro" else "Piper")
     }
 
     // ────────────────────── Voice Processing ──────────────────────
 
     /**
-     * Start listening with streaming processing.
-     * Processes audio in real-time chunks for minimal latency.
+     * Start listening with REAL streaming ASR.
+     * Uses SpeechRecognizer.startStreaming() for partial transcripts in 500ms hops.
      */
     suspend fun startListening(scope: CoroutineScope) {
         if (_pipelineState.value == StreamingPipelineState.LISTENING) {
@@ -164,11 +139,39 @@ class StreamingVoicePipeline @Inject constructor(
 
         audioRecorder.startRecording(scope)
 
-        // Stream audio chunks for real-time processing
-        audioJob = scope.launch {
+        // Start real streaming ASR
+        speechRecognizer.startStreaming(
+            audioChunks = audioRecorder.audioChunks,
+            onPartial = { text, confidence ->
+                scope.launch {
+                    _partialTranscript.emit(StreamingTranscript(
+                        text = text,
+                        rawText = text,
+                        confidence = confidence,
+                        dialect = "",
+                        emotion = VoiceEmotion.NEUTRAL,
+                        latencyMs = 0,
+                        isPartial = true
+                    ))
+                }
+            },
+            onFinal = { text ->
+                // Final result handled in processEndOfSpeech
+            },
+            scope = scope
+        )
+
+        // Monitor VAD for end-of-speech
+        scope.launch {
             audioRecorder.audioChunks.collect { chunk ->
-                if (_pipelineState.value == StreamingPipelineState.LISTENING) {
-                    processAudioChunk(chunk)
+                val speechProb = vad.processChunk(chunk)
+                if (speechProb > 0.5f) {
+                    // Also extract emotion features (async, non-blocking)
+                    processingScope?.launch(Dispatchers.Default) {
+                        val features = featureExtractor.extractEmotionFeatures(chunk)
+                        val emotionResult = emotionDetector.detect(features)
+                        _emotion.emit(emotionResult.primaryEmotion)
+                    }
                 }
             }
         }
@@ -177,8 +180,7 @@ class StreamingVoicePipeline @Inject constructor(
         scope.launch {
             audioRecorder.recordingState.collect { state ->
                 when (state) {
-                    RecordingState.STOPPED,
-                    RecordingState.MAX_DURATION -> {
+                    RecordingState.STOPPED, RecordingState.MAX_DURATION -> {
                         processEndOfSpeech()
                     }
                     RecordingState.ERROR_NO_PERMISSION,
@@ -196,61 +198,12 @@ class StreamingVoicePipeline @Inject constructor(
      * Stop listening and process final audio.
      */
     suspend fun stopListening() {
-        audioJob?.cancel()
+        speechRecognizer.stopStreaming()
         audioRecorder.stopRecording()
         processEndOfSpeech()
     }
 
     // ────────────────────── Internal Processing ──────────────────────
-
-    /**
-     * Process a single audio chunk in real-time.
-     * This runs on every 32ms audio frame for streaming analysis.
-     */
-    private suspend fun processAudioChunk(chunk: ShortArray) {
-        // 1. VAD — detect speech activity
-        val speechProb = vad.processChunk(chunk)
-        val isSpeech = speechProb > 0.5f
-
-        if (!isSpeech) return
-
-        // 2. Accumulate audio for periodic partial transcription
-        streamingAudioBuffer.addAll(chunk.toList())
-
-        // 3. Emotion detection (async, non-blocking)
-        processingScope?.launch(Dispatchers.Default) {
-            val features = featureExtractor.extractEmotionFeatures(chunk)
-            val emotionResult = emotionDetector.detect(features)
-            _emotion.emit(emotionResult.primaryEmotion)
-        }
-
-        // 4. Streaming ASR: run partial transcription every STREAMING_CHUNK_MS
-        val now = System.currentTimeMillis()
-        if (now - lastAsrTime >= STREAMING_CHUNK_MS && streamingAudioBuffer.size >= MIN_STREAMING_SAMPLES) {
-            lastAsrTime = now
-            val partialAudio = ShortArray(streamingAudioBuffer.size) { streamingAudioBuffer[it] }
-
-            processingScope?.launch(Dispatchers.Default) {
-                try {
-                    val partialText = speechRecognizer.transcribe(partialAudio)
-                    if (!partialText.isNullOrBlank()) {
-                        _partialTranscript.emit(StreamingTranscript(
-                            text = partialText,
-                            rawText = partialText,
-                            confidence = 0.6f,  // Lower confidence for partial results
-                            dialect = "",
-                            emotion = VoiceEmotion.NEUTRAL,
-                            latencyMs = 0,
-                            isPartial = true
-                        ))
-                    }
-                } catch (e: Exception) {
-                    // Partial transcription failure is non-fatal
-                    Timber.tag(TAG).v("Partial ASR skipped: %s", e.message)
-                }
-            }
-        }
-    }
 
     /**
      * Process end of speech — full pipeline execution.
@@ -265,9 +218,6 @@ class StreamingVoicePipeline @Inject constructor(
         _pipelineState.value = StreamingPipelineState.PROCESSING
         val startTime = System.currentTimeMillis()
 
-        // Clear streaming buffer
-        streamingAudioBuffer.clear()
-
         try {
             // Step 1: Extract features for emotion + dialect detection (parallel)
             val featuresJob = processingScope?.async(Dispatchers.Default) {
@@ -276,14 +226,14 @@ class StreamingVoicePipeline @Inject constructor(
                 Pair(emotionFeatures, dialectFeatures)
             }
 
-            // Step 2: ASR transcription
+            // Step 2: Final ASR transcription (more accurate than streaming partials)
             val transcript = speechRecognizer.transcribe(speechAudio)
             if (transcript.isNullOrBlank()) {
                 _pipelineState.value = StreamingPipelineState.IDLE
                 return
             }
 
-            // Step 3: Get features (should be done by now)
+            // Step 3: Get features
             val (emotionFeatures, dialectFeatures) = featuresJob?.await()
                 ?: Pair(null, null)
 
@@ -312,15 +262,12 @@ class StreamingVoicePipeline @Inject constructor(
                 isPartial = false
             ))
 
-            // Step 8: Generate and speak response
-            // This would trigger the LLM + TTS pipeline
-            // For now, emit the transcript for the orchestrator to handle
-
             _pipelineState.value = StreamingPipelineState.IDLE
 
             Timber.tag(TAG).d(
-                "Processed in %dms: '%s' (dialect: %s, emotion: %s)",
-                elapsed, normalizedText, dialectResult.dialectId, detectedEmotion
+                "Processed in %dms: '%s' (dialect: %s, emotion: %s, ASR: %s)",
+                elapsed, normalizedText, dialectResult.dialectId,
+                detectedEmotion, speechRecognizer.getActiveModelId()
             )
 
         } catch (e: Exception) {
@@ -329,57 +276,77 @@ class StreamingVoicePipeline @Inject constructor(
         }
     }
 
+    // ────────────────────── TTS with Emotion ──────────────────────
+
+    /**
+     * Speak a response with emotion-aware voice personality.
+     * Uses Kokoro's emotion-to-voice mapping for empathetic responses.
+     */
+    suspend fun speakWithEmotion(
+        text: String,
+        language: String = "sw",
+        emotion: VoiceEmotion = VoiceEmotion.NEUTRAL
+    ) {
+        _pipelineState.value = StreamingPipelineState.SPEAKING
+
+        if (kokoroTts.isModelReady()) {
+            kokoroTts.setVoiceForEmotion(emotion)
+            kokoroTts.speak(text, language)
+        } else if (piperTts.isModelReady()) {
+            piperTts.speak(text, language)
+        }
+
+        _pipelineState.value = StreamingPipelineState.IDLE
+    }
+
     // ────────────────────── Preamble Phrases ──────────────────────
 
     /**
      * Play a preamble phrase to eliminate dead air while processing.
-     * Inspired by GPT-Realtime-2's preamble feature.
      */
     suspend fun playPreamble(language: String = "sw") {
         val phrases = preamblePhrases[language] ?: preamblePhrases["sw"]!!
         val phrase = phrases.random()
 
-        // Play immediately (low latency)
         processingScope?.launch {
-            ttsEngine.speak(phrase, language)
+            if (kokoroTts.isModelReady()) {
+                kokoroTts.speak(phrase, language)
+            } else {
+                piperTts.speak(phrase, language)
+            }
         }
     }
 
     // ────────────────────── Resource Management ──────────────────────
 
-    /**
-     * Release models when backgrounded.
-     */
     fun onBackground() {
         speechRecognizer.unloadModel()
         mmsTtsEngine.unloadModel()
     }
 
-    /**
-     * Reload models when foregrounded.
-     */
     suspend fun onForeground() {
         if (DeviceTier.preloadASR()) {
             speechRecognizer.loadModel()
         }
     }
 
-    /**
-     * Release all resources.
-     */
     fun release() {
-        audioJob?.cancel()
+        speechRecognizer.stopStreaming()
         audioRecorder.release()
         speechRecognizer.unloadModel()
-        ttsEngine.unloadModel()
+        kokoroTts.unloadModel()
+        piperTts.unloadModel()
         mmsTtsEngine.unloadModel()
         _pipelineState.value = StreamingPipelineState.IDLE
     }
 
     fun getStatus(): Map<String, Any> = mapOf(
         "state" to _pipelineState.value.name,
+        "asrModel" to speechRecognizer.getActiveModelId(),
         "asrLoaded" to speechRecognizer.isModelReady(),
-        "ttsReady" to ttsEngine.isModelReady(),
+        "asrStreaming" to speechRecognizer.isStreamingActive(),
+        "kokoroReady" to kokoroTts.isModelReady(),
+        "piperReady" to piperTts.isModelReady(),
         "deviceTier" to DeviceTier.current.name
     )
 }

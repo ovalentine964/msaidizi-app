@@ -31,6 +31,9 @@ class SessionManager @Inject constructor(
         private const val MAX_TRUSTED_DEVICES = 3
         private const val DEVICE_ID_PREF = "angavu_device_binding"
         private const val KEY_BOUND_DEVICES = "bound_devices"
+        private const val KEY_IP_SUBNET = "session_ip_subnet"
+        private const val KEY_SESSION_TOKEN = "session_token"
+        private const val MAX_CONCURRENT_SESSIONS = 3
     }
 
     sealed class SessionState {
@@ -38,6 +41,7 @@ class SessionManager @Inject constructor(
         object Active : SessionState()
         object Expired : SessionState()
         object RequiresReauth : SessionState()
+        object SuspiciousActivity : SessionState()
     }
 
     private val _state = MutableStateFlow<SessionState>(SessionState.Inactive)
@@ -45,6 +49,7 @@ class SessionManager @Inject constructor(
 
     private var lastActivityTime: Long = 0
     private var sessionCheckThread: Thread? = null
+    private var boundIpSubnet: String? = null
 
     /**
      * Get or create a stable device ID for binding.
@@ -67,22 +72,46 @@ class SessionManager @Inject constructor(
 
     /**
      * Start a new session after successful authentication.
+     * Binds session to current IP subnet for hijack detection.
      */
-    fun startSession(userId: String) {
+    fun startSession(userId: String, ipSubnet: String? = null) {
         lastActivityTime = System.currentTimeMillis()
+        boundIpSubnet = ipSubnet
+
+        // Generate a cryptographically random session token
+        val sessionToken = java.security.SecureRandom().let { rng ->
+            val bytes = ByteArray(32); rng.nextBytes(bytes)
+            bytes.joinToString("") { "%02x".format(it) }
+        }
+
+        // Store session binding
+        val prefs = context.getSharedPreferences(DEVICE_ID_PREF, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString(KEY_IP_SUBNET, ipSubnet ?: "")
+            .putString(KEY_SESSION_TOKEN, sessionToken)
+            .apply()
+
         _state.value = SessionState.Active
-        Timber.i("Session started for user %s on device %s", userId, getDeviceId())
+        Timber.i("Session started for user %s on device %s (IP subnet bound: %b)",
+            userId, getDeviceId(), ipSubnet != null)
         startSessionMonitor()
     }
 
     /**
      * Record user activity to keep session alive.
-     * Call this from UI interactions.
+     * Validates IP subnet hasn't changed (session hijack detection).
      */
-    fun recordActivity() {
+    fun recordActivity(currentIpSubnet: String? = null) {
+        // Session hijack detection: verify IP subnet hasn't changed
+        if (boundIpSubnet != null && currentIpSubnet != null && boundIpSubnet != currentIpSubnet) {
+            Timber.e("Session hijack detected: IP subnet changed from %s to %s",
+                boundIpSubnet, currentIpSubnet)
+            _state.value = SessionState.SuspiciousActivity
+            return
+        }
+
         lastActivityTime = System.currentTimeMillis()
         if (_state.value is SessionState.Expired || _state.value is SessionState.RequiresReauth) {
-            // Session was expired — require re-auth before resuming
             _state.value = SessionState.RequiresReauth
         }
     }
@@ -98,13 +127,22 @@ class SessionManager @Inject constructor(
 
     /**
      * End the current session (logout).
+     * Clears all session state including IP binding and session token.
      */
     fun endSession() {
         sessionCheckThread?.interrupt()
         sessionCheckThread = null
         lastActivityTime = 0
+        boundIpSubnet = null
+
+        val prefs = context.getSharedPreferences(DEVICE_ID_PREF, Context.MODE_PRIVATE)
+        prefs.edit()
+            .remove(KEY_IP_SUBNET)
+            .remove(KEY_SESSION_TOKEN)
+            .apply()
+
         _state.value = SessionState.Inactive
-        Timber.i("Session ended")
+        Timber.i("Session ended — all session state cleared")
     }
 
     /**

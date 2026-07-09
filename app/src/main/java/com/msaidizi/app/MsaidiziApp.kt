@@ -17,7 +17,9 @@ import com.msaidizi.app.core.util.DeviceTier
 import com.msaidizi.app.cfo.BriefingDelivery
 import com.msaidizi.app.loops.BriefingNotificationWorker
 import dagger.hilt.android.HiltAndroidApp
+import org.bouncycastle.jce.provider.BouncyCastleProvider
 import timber.log.Timber
+import java.security.Security
 import javax.inject.Inject
 
 /**
@@ -57,6 +59,19 @@ class MsaidiziApp : Application(), Configuration.Provider {
         // Initialize logging
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())
+        }
+
+        // Register Bouncy Castle provider for Post-Quantum Cryptography
+        // ML-KEM (FIPS 203) and ML-DSA (FIPS 204) require Bouncy Castle 1.79+
+        // Android's built-in BC is stripped and lacks PQC support
+        if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
+            Security.insertProviderAt(BouncyCastleProvider(), 1)
+            Timber.i("Bouncy Castle provider registered for PQC support")
+        } else {
+            // Replace Android's stripped BC with the full version
+            Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME)
+            Security.insertProviderAt(BouncyCastleProvider(), 1)
+            Timber.i("Bouncy Castle provider replaced with PQC-capable version")
         }
 
         // Detect device tier

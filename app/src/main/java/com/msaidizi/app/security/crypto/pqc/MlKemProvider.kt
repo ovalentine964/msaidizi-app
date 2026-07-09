@@ -1,11 +1,20 @@
 package com.msaidizi.app.security.crypto.pqc
 
+import org.bouncycastle.crypto.AsymmetricCipherKeyPair
+import org.bouncycastle.crypto.params.AsymmetricKeyParameter
+import org.bouncycastle.pqc.crypto.mlkem.MLKEMExtractor
+import org.bouncycastle.pqc.crypto.mlkem.MLKEMGenerator
+import org.bouncycastle.pqc.crypto.mlkem.MLKEMKeyGenerationParameters
+import org.bouncycastle.pqc.crypto.mlkem.MLKEMKeyPairGenerator
+import org.bouncycastle.pqc.crypto.mlkem.MLKEMParameters
+import org.bouncycastle.pqc.crypto.mlkem.MLKEMPrivateKeyParameters
+import org.bouncycastle.pqc.crypto.mlkem.MLKEMPublicKeyParameters
 import timber.log.Timber
 
 /**
  * ML-KEM (Module-Lattice-Based Key Encapsulation Mechanism) provider.
  *
- * Implements NIST FIPS 203 (formerly CRYSTALS-Kyber).
+ * Implements NIST FIPS 203 (formerly CRYSTALS-Kyber) using Bouncy Castle 1.79+.
  * ML-KEM provides IND-CCA2 secure key encapsulation resistant to quantum attacks.
  *
  * Three parameter sets:
@@ -13,9 +22,14 @@ import timber.log.Timber
  * - ML-KEM-768: NIST Level 3 (192-bit classical security) — recommended default
  * - ML-KEM-1024: NIST Level 5 (256-bit classical security)
  *
- * This is a STUB implementation. When Bouncy Castle or Conscrypt adds
- * native ML-KEM support, wire it here. The interface is production-ready;
- * the implementation will be swapped via AlgorithmRegistry.
+ * This is a REAL implementation backed by Bouncy Castle's production-grade
+ * ML-KEM implementation. No stubs, no random byte placeholders.
+ *
+ * Key sizes (FIPS 203):
+ *   ML-KEM-512:  pub=800,  priv=1632, ct=768
+ *   ML-KEM-768:  pub=1184, priv=2400, ct=1088
+ *   ML-KEM-1024: pub=1568, priv=3168, ct=1568
+ *   Shared secret: 32 bytes (all parameter sets)
  *
  * @see <a href="https://csrc.nist.gov/pubs/fips/203/final">NIST FIPS 203</a>
  */
@@ -28,11 +42,16 @@ class MlKemProvider(
     override val securityLevel: Int = parameterSet.securityLevel
 
     /**
-     * Flag indicating this is a STUB implementation.
-     * Callers MUST check this and fall back to real AES-256-GCM if true.
-     * Do NOT rely on key exchange security from a stub.
+     * This is a REAL implementation — not a stub.
      */
-    val is_stub: Boolean = true
+    val is_stub: Boolean = false
+
+    /** Bouncy Castle ML-KEM parameters for this provider's parameter set */
+    private val bcParams: MLKEMParameters = when (parameterSet) {
+        MlKemParameterSet.ML_KEM_512 -> MLKEMParameters.ml_kem_512
+        MlKemParameterSet.ML_KEM_768 -> MLKEMParameters.ml_kem_768
+        MlKemParameterSet.ML_KEM_1024 -> MLKEMParameters.ml_kem_1024
+    }
 
     companion object {
         /** Public key sizes in bytes for each parameter set */
@@ -54,34 +73,27 @@ class MlKemProvider(
     }
 
     /**
-     * Generate an ML-KEM key pair.
+     * Generate an ML-KEM key pair using Bouncy Castle.
      *
-     * TODO: Replace with native implementation when available:
-     *   - Bouncy Castle PQC (bcprov-jdk18on with ML-KEM)
-     *   - Conscrypt with PQC extensions
-     *   - Google Tink PQC (when available)
-     *
-     * Current stub generates a placeholder for interface testing.
+     * The key pair is generated using the NIST-approved ML-KEM algorithm.
+     * The private key includes the public key (as per FIPS 203).
      */
     override fun generateKeyPair(): CryptoKeyPair {
-        val publicKeySize = PUBLIC_KEY_SIZES[parameterSet]!!
-        val privateKeySize = publicKeySize * 2 // Approximate; actual sizes vary
+        val keyPairGenerator = MLKEMKeyPairGenerator()
+        keyPairGenerator.init(MLKEMKeyGenerationParameters(bcParams))
 
-        // STUB: Generate random bytes as placeholder
-        // In production, this calls native ML-KEM key generation
-        val publicKey = ByteArray(publicKeySize).also {
-            java.security.SecureRandom().nextBytes(it)
-        }
-        val privateKey = ByteArray(privateKeySize).also {
-            java.security.SecureRandom().nextBytes(it)
-        }
+        val keyPair: AsymmetricCipherKeyPair = keyPairGenerator.generateKeyPair()
+        val publicKey = keyPair.public as MLKEMPublicKeyParameters
+        val privateKey = keyPair.private as MLKEMPrivateKeyParameters
 
-        Timber.i("ML-KEM key pair generated: %s (pub=%d, priv=%d bytes)",
-            parameterSet.name, publicKey.size, privateKey.size)
+        Timber.i(
+            "ML-KEM key pair generated: %s (pub=%d, priv=%d bytes)",
+            parameterSet.name, publicKey.encoded.size, privateKey.encoded.size
+        )
 
         return CryptoKeyPair(
-            publicKey = publicKey,
-            privateKey = privateKey,
+            publicKey = publicKey.encoded,
+            privateKey = privateKey.encoded,
             algorithmId = algorithmId
         )
     }
@@ -93,24 +105,25 @@ class MlKemProvider(
      * - ciphertext: send to the holder of the private key
      * - sharedSecret: use for symmetric encryption (AES-256-GCM)
      *
-     * TODO: Wire to native ML-KEM encapsulation.
+     * Uses Bouncy Castle's MLKEMGenerator for IND-CCA2 secure encapsulation.
      */
-    fun encapsulate(publicKey: ByteArray): EncapsulatedKey {
-        require(publicKey.size == PUBLIC_KEY_SIZES[parameterSet]) {
-            "Invalid public key size for ${parameterSet.name}: ${publicKey.size}, expected ${PUBLIC_KEY_SIZES[parameterSet]}"
+    fun encapsulate(publicKeyBytes: ByteArray): EncapsulatedKey {
+        val expectedSize = PUBLIC_KEY_SIZES[parameterSet]!!
+        require(publicKeyBytes.size == expectedSize) {
+            "Invalid public key size for ${parameterSet.name}: ${publicKeyBytes.size}, expected $expectedSize"
         }
 
-        val ciphertextSize = CIPHERTEXT_SIZES[parameterSet]!!
+        // Reconstruct BC public key from raw bytes
+        val publicKey = MLKEMPublicKeyParameters(bcParams, publicKeyBytes)
 
-        // STUB: Generate random ciphertext and shared secret
-        val ciphertext = ByteArray(ciphertextSize).also {
-            java.security.SecureRandom().nextBytes(it)
-        }
-        val sharedSecret = ByteArray(SHARED_SECRET_SIZE).also {
-            java.security.SecureRandom().nextBytes(it)
-        }
+        // Use MLKEMGenerator for encapsulation (deterministic with internal DRBG)
+        val generator = MLKEMGenerator()
+        val encapsulated = generator.generateEncapsulated(publicKey)
 
-        Timber.d("ML-KEM encapsulation complete: %s", parameterSet.name)
+        val ciphertext = encapsulated.encapsulation
+        val sharedSecret = encapsulated.secret
+
+        Timber.d("ML-KEM encapsulation complete: %s (ct=%d bytes)", parameterSet.name, ciphertext.size)
 
         return EncapsulatedKey(
             ciphertext = ciphertext,
@@ -124,20 +137,22 @@ class MlKemProvider(
      *
      * Called by the recipient of a key exchange.
      *
-     * TODO: Wire to native ML-KEM decapsulation.
+     * Uses Bouncy Castle's MLKEMExtractor for IND-CCA2 secure decapsulation.
+     * The decapsulated shared secret will match the one from encapsulate()
+     * if and only if the private key corresponds to the public key used.
      */
-    fun decapsulate(ciphertext: ByteArray, privateKey: ByteArray): ByteArray {
-        require(ciphertext.size == CIPHERTEXT_SIZES[parameterSet]) {
-            "Invalid ciphertext size for ${parameterSet.name}: ${ciphertext.size}, expected ${CIPHERTEXT_SIZES[parameterSet]}"
+    fun decapsulate(ciphertext: ByteArray, privateKeyBytes: ByteArray): ByteArray {
+        val expectedCtSize = CIPHERTEXT_SIZES[parameterSet]!!
+        require(ciphertext.size == expectedCtSize) {
+            "Invalid ciphertext size for ${parameterSet.name}: ${ciphertext.size}, expected $expectedCtSize"
         }
 
-        // STUB: Return deterministic placeholder based on private key
-        // In production, this recovers the exact shared secret from encapsulation
-        val sharedSecret = ByteArray(SHARED_SECRET_SIZE)
-        val digest = java.security.MessageDigest.getInstance("SHA-256")
-        digest.update(privateKey)
-        digest.update(ciphertext)
-        System.arraycopy(digest.digest(), 0, sharedSecret, 0, SHARED_SECRET_SIZE)
+        // Reconstruct BC private key from raw bytes
+        val privateKey = MLKEMPrivateKeyParameters(bcParams, privateKeyBytes)
+
+        // Use MLKEMExtractor for decapsulation
+        val extractor = MLKEMExtractor(privateKey)
+        val sharedSecret = extractor.extractSecret(ciphertext)
 
         Timber.d("ML-KEM decapsulation complete: %s", parameterSet.name)
         return sharedSecret

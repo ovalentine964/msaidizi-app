@@ -213,6 +213,12 @@ dependencies {
 
     // Detekt linting
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.7")
+
+    // Bouncy Castle — Post-Quantum Cryptography (ML-KEM, ML-DSA)
+    // bcprov-jdk18on 1.79+ includes production FIPS 203 (ML-KEM) and FIPS 204 (ML-DSA)
+    implementation("org.bouncycastle:bcprov-jdk18on:1.79")
+    implementation("org.bouncycastle:bcpkix-jdk18on:1.79")
+    implementation("org.bouncycastle:bctls-jdk18on:1.79")
 }
 
 // KSP configuration — Room schema export

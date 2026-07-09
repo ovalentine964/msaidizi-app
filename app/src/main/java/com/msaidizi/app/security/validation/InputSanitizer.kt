@@ -46,15 +46,40 @@ object InputSanitizer {
         Pattern.compile("(?i)override\\s+(your|system)")
     )
 
+    // Swahili-specific patterns (prevent injection via Bantu language constructs)
+    // Swahili uses Latin script with special characters (ng', dh, th, ch, sh)
+    // Block Unicode control chars and homoglyph attacks
+    private val SWAHILI_SAFE_PATTERN = Regex("^[\\p{L}\\p{M}\\p{N}\\s.,!?'\"()@#&:;+=_/-]+$")
+    private val HOMOGLYPH_CHARS = setOf(
+        '\u0430', // Cyrillic а vs Latin a
+        '\u0435', // Cyrillic е vs Latin e
+        '\u043E', // Cyrillic о vs Latin o
+        '\u0440', // Cyrillic р vs Latin p
+        '\u0441', // Cyrillic с vs Latin c
+        '\u0443', // Cyrillic у vs Latin y
+        '\u0445', // Cyrillic х vs Latin x
+        '\uFF0E', // Fullwidth period
+        '\uFF10', // Fullwidth 0
+        '\u200B', // Zero-width space
+        '\u200C', // Zero-width non-joiner
+        '\u200D', // Zero-width joiner
+        '\uFEFF', // BOM / zero-width no-break space
+        '\u2028', // Line separator
+        '\u2029', // Paragraph separator
+    )
+
     // Max input lengths
     const val MAX_PHONE_LENGTH = 15
     const val MAX_NAME_LENGTH = 100
     const val MAX_MESSAGE_LENGTH = 5000
     const val MAX_OTP_LENGTH = 6
+    const val MAX_AMOUNT_DIGITS = 15
+    const val MAX_SWAHILI_TEXT_LENGTH = 10000
 
     /**
      * Sanitize general text input.
      * Removes potentially dangerous content while preserving normal text.
+     * Handles Swahili-specific characters safely.
      */
     fun sanitizeText(input: String, maxLength: Int = MAX_MESSAGE_LENGTH): String {
         if (input.isBlank()) return ""
@@ -69,7 +94,44 @@ object InputSanitizer {
         // Remove control characters except newlines and tabs
         sanitized = sanitized.replace(Regex("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]"), "")
 
+        // Remove zero-width and invisible Unicode characters (homoglyph defense)
+        sanitized = sanitized.replace(Regex("[\\u200B-\\u200D\\u2060-\\u206F\\uFEFF\\u2028\\u2029]"), "")
+
+        // Normalize Unicode to NFC (prevents encoding-based bypasses)
+        sanitized = java.text.Normalizer.normalize(sanitized, java.text.Normalizer.Form.NFC)
+
         return sanitized
+    }
+
+    /**
+     * Sanitize Swahili text for voice transcription and message input.
+     * Allows Swahili-specific characters (ng', dh, th) while blocking injection.
+     */
+    fun sanitizeSwahiliText(input: String, maxLength: Int = MAX_SWAHILI_TEXT_LENGTH): String {
+        if (input.isBlank()) return ""
+
+        val sanitized = sanitizeText(input, maxLength)
+
+        // Verify the text only contains safe characters
+        // Swahili uses standard Latin + a few digraphs, no special Unicode needed
+        if (!SWAHILI_SAFE_PATTERN.matches(sanitized)) {
+            // Strip anything not in the safe pattern
+            return sanitized.replace(Regex("[^\\p{L}\\p{M}\\p{N}\\s.,!?'\"()@#&:;+=_/-]"), "").take(maxLength)
+        }
+
+        return sanitized
+    }
+
+    /**
+     * Check for homoglyph attacks (Cyrillic/fullwidth chars impersonating Latin).
+     * Critical for preventing username impersonation and phishing.
+     */
+    fun containsHomoglyphs(input: String): Boolean {
+        return input.any { it in HOMOGLYPH_CHARS ||
+            it.code in 0xFF01..0xFF5E || // Fullwidth ASCII variants
+            it.code in 0x0400..0x04FF ||  // Cyrillic block
+            (it.code in 0x2000..0x200F)   // General punctuation (invisible)
+        }
     }
 
     /**
@@ -143,11 +205,49 @@ object InputSanitizer {
             InputType.OTP -> sanitizeOtp(input)
             InputType.NAME -> sanitizeName(input)
             InputType.TEXT -> sanitizeText(input)
+            InputType.SWAHILI_TEXT -> sanitizeSwahiliText(input)
+            InputType.AMOUNT -> sanitizeAmount(input)
             InputType.NUMERIC -> {
                 val num = input.replace(Regex("[^\\d.]"), "")
                 if (num.isNotEmpty() && num.toDoubleOrNull() != null) num else null
             }
         }
+    }
+
+    /**
+     * Sanitize and validate a monetary amount.
+     * Prevents negative, NaN, Infinity, and excessively large values.
+     * Handles KES and NGN currency formatting.
+     */
+    fun sanitizeAmount(input: String): String? {
+        // Strip currency symbols, commas, spaces
+        val stripped = input.replace(Regex("[^\\d.]"), "")
+        if (stripped.isEmpty()) return null
+
+        // Prevent multiple decimal points
+        val parts = stripped.split(".")
+        if (parts.size > 2) return null
+
+        val amount = stripped.toDoubleOrNull() ?: return null
+
+        // Validate: positive, finite, reasonable range (max 10M KES / 100M NGN)
+        if (amount <= 0 || amount.isNaN() || amount.isInfinite()) return null
+        if (amount > 10_000_000.0) return null // Max 10M per transaction
+
+        // Max 2 decimal places for currency
+        if (parts.size == 2 && parts[1].length > 2) return null
+
+        return stripped
+    }
+
+    /**
+     * Validate a geohash (location data for fraud detection).
+     * Geohashes use base32: 0-9, a-z (excluding a, i, l, o).
+     */
+    fun sanitizeGeohash(input: String): String? {
+        if (input.length !in 1..12) return null
+        val validPattern = Regex("^[0-9b-hjkmnp-z]+$")
+        return if (validPattern.matches(input.lowercase())) input else null
     }
 
     /**
@@ -189,6 +289,8 @@ object InputSanitizer {
         OTP,
         NAME,
         TEXT,
+        SWAHILI_TEXT,
+        AMOUNT,
         NUMERIC
     }
 }

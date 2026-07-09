@@ -1,11 +1,19 @@
 package com.msaidizi.app.security.crypto.pqc
 
+import org.bouncycastle.crypto.digests.SHA512Digest
+import org.bouncycastle.crypto.params.AsymmetricKeyParameter
+import org.bouncycastle.pqc.crypto.mldsa.MLDSAKeyGenerationParameters
+import org.bouncycastle.pqc.crypto.mldsa.MLDSAKeyPairGenerator
+import org.bouncycastle.pqc.crypto.mldsa.MLDSAParameters
+import org.bouncycastle.pqc.crypto.mldsa.MLDSAPrivateKeyParameters
+import org.bouncycastle.pqc.crypto.mldsa.MLDSAPublicKeyParameters
+import org.bouncycastle.pqc.crypto.mldsa.MLDSASigner
 import timber.log.Timber
 
 /**
  * ML-DSA (Module-Lattice-Based Digital Signature Algorithm) provider.
  *
- * Implements NIST FIPS 204 (formerly CRYSTALS-Dilithium).
+ * Implements NIST FIPS 204 (formerly CRYSTALS-Dilithium) using Bouncy Castle 1.79+.
  * ML-DSA provides EUF-CMA secure digital signatures resistant to quantum attacks.
  *
  * Three parameter sets:
@@ -13,8 +21,13 @@ import timber.log.Timber
  * - ML-DSA-65: NIST Level 3 (approx. 192-bit classical security) — recommended default
  * - ML-DSA-87: NIST Level 5 (approx. 256-bit classical security)
  *
- * This is a STUB implementation. When Bouncy Castle or Conscrypt adds
- * native ML-DSA support, wire it here. The interface is production-ready.
+ * This is a REAL implementation backed by Bouncy Castle's production-grade
+ * ML-DSA implementation. No stubs, no SHA-512 hash placeholders.
+ *
+ * Key sizes (FIPS 204):
+ *   ML-DSA-44: pub=1312, priv=2560, max_sig=2420
+ *   ML-DSA-65: pub=1952, priv=4032, max_sig=3293
+ *   ML-DSA-87: pub=2592, priv=4896, max_sig=4595
  *
  * @see <a href="https://csrc.nist.gov/pubs/fips/204/final">NIST FIPS 204</a>
  */
@@ -27,11 +40,16 @@ class MlDsaProvider(
     override val securityLevel: Int = parameterSet.securityLevel
 
     /**
-     * Flag indicating this is a STUB implementation.
-     * Callers MUST check this and fall back to AES-256-GCM if true.
-     * Do NOT rely on signature verification results from a stub.
+     * This is a REAL implementation — not a stub.
      */
-    val is_stub: Boolean = true
+    val is_stub: Boolean = false
+
+    /** Bouncy Castle ML-DSA parameters for this provider's parameter set */
+    private val bcParams: MLDSAParameters = when (parameterSet) {
+        MlDsaParameterSet.ML_DSA_44 -> MLDSAParameters.ml_dsa_44
+        MlDsaParameterSet.ML_DSA_65 -> MLDSAParameters.ml_dsa_65
+        MlDsaParameterSet.ML_DSA_87 -> MLDSAParameters.ml_dsa_87
+    }
 
     companion object {
         /** Public key sizes in bytes */
@@ -57,29 +75,27 @@ class MlDsaProvider(
     }
 
     /**
-     * Generate an ML-DSA key pair.
+     * Generate an ML-DSA key pair using Bouncy Castle.
      *
-     * TODO: Replace with native implementation when Bouncy Castle PQC
-     * or Conscrypt adds ML-DSA support.
+     * The key pair is generated using the NIST-approved ML-DSA algorithm.
+     * The private key includes the public key (as per FIPS 204).
      */
     override fun generateKeyPair(): CryptoKeyPair {
-        val publicKeySize = PUBLIC_KEY_SIZES[parameterSet]!!
-        val privateKeySize = PRIVATE_KEY_SIZES[parameterSet]!!
+        val keyPairGenerator = MLDSAKeyPairGenerator()
+        keyPairGenerator.init(MLDSAKeyGenerationParameters(bcParams))
 
-        // STUB: Generate random bytes as placeholder
-        val publicKey = ByteArray(publicKeySize).also {
-            java.security.SecureRandom().nextBytes(it)
-        }
-        val privateKey = ByteArray(privateKeySize).also {
-            java.security.SecureRandom().nextBytes(it)
-        }
+        val keyPair = keyPairGenerator.generateKeyPair()
+        val publicKey = keyPair.public as MLDSAPublicKeyParameters
+        val privateKey = keyPair.private as MLDSAPrivateKeyParameters
 
-        Timber.i("ML-DSA key pair generated: %s (pub=%d, priv=%d bytes)",
-            parameterSet.name, publicKey.size, privateKey.size)
+        Timber.i(
+            "ML-DSA key pair generated: %s (pub=%d, priv=%d bytes)",
+            parameterSet.name, publicKey.encoded.size, privateKey.encoded.size
+        )
 
         return CryptoKeyPair(
-            publicKey = publicKey,
-            privateKey = privateKey,
+            publicKey = publicKey.encoded,
+            privateKey = privateKey.encoded,
             algorithmId = algorithmId
         )
     }
@@ -90,28 +106,24 @@ class MlDsaProvider(
      * The signature is deterministic (no randomness needed from caller),
      * which is a security advantage over classical schemes like ECDSA.
      *
-     * STUB: produces a deterministic signature from data only (not private key),
-     * so that verify() can re-derive it using just the public key + data.
-     * This ensures verify() actually rejects tampered data.
-     *
-     * TODO: Wire to native ML-DSA signing (Bouncy Castle / liboqs).
+     * Uses Bouncy Castle's MLDSASigner with a SHA-512 prehash for
+     * messages of arbitrary length (hedged signature mode per FIPS 204).
      */
-    override fun sign(data: ByteArray, privateKey: ByteArray): ByteArray {
-        require(privateKey.size == PRIVATE_KEY_SIZES[parameterSet]) {
-            "Invalid private key size for ${parameterSet.name}"
+    override fun sign(data: ByteArray, privateKeyBytes: ByteArray): ByteArray {
+        val expectedSize = PRIVATE_KEY_SIZES[parameterSet]!!
+        require(privateKeyBytes.size == expectedSize) {
+            "Invalid private key size for ${parameterSet.name}: ${privateKeyBytes.size}, expected $expectedSize"
         }
 
-        val maxSignatureSize = SIGNATURE_SIZES[parameterSet]!!
+        // Reconstruct BC private key from raw bytes
+        val privateKey = MLDSAPrivateKeyParameters(bcParams, privateKeyBytes)
 
-        // STUB: Deterministic signature from data hash.
-        // In production, replace with native ML-DSA signing.
-        val digest = java.security.MessageDigest.getInstance("SHA-512")
-        digest.update(data)
-        val hash = digest.digest()
-
-        // Pad to expected signature size (stub only — real ML-DSA signatures are variable-length)
-        val signature = ByteArray(maxSignatureSize)
-        System.arraycopy(hash, 0, signature, 0, hash.size.coerceAtMost(maxSignatureSize))
+        // Sign using hedged mode (FIPS 204, Section 5.4)
+        // The signer internally hashes the message with SHA-512
+        val signer = MLDSASigner()
+        signer.init(true, privateKey)
+        signer.update(data, 0, data.size)
+        val signature = signer.generateSignature()
 
         Timber.d("ML-DSA signature generated: %s (%d bytes)", parameterSet.name, signature.size)
         return signature
@@ -120,38 +132,30 @@ class MlDsaProvider(
     /**
      * Verify an ML-DSA signature.
      *
-     * STUB implementation: performs deterministic verification by re-deriving
-     * the expected signature from the data and public key, then comparing.
-     * This is NOT cryptographically equivalent to real ML-DSA verification,
-     * but ensures verify() does not blindly accept all signatures.
-     *
-     * TODO: Wire to native ML-DSA verification (Bouncy Castle / liboqs).
+     * Uses Bouncy Castle's MLDSASigner for NIST-approved verification.
+     * Returns true if and only if the signature was produced by the
+     * holder of the private key corresponding to this public key.
      */
-    override fun verify(data: ByteArray, signature: ByteArray, publicKey: ByteArray): Boolean {
-        require(publicKey.size == PUBLIC_KEY_SIZES[parameterSet]) {
-            "Invalid public key size for ${parameterSet.name}"
+    override fun verify(data: ByteArray, signature: ByteArray, publicKeyBytes: ByteArray): Boolean {
+        val expectedSize = PUBLIC_KEY_SIZES[parameterSet]!!
+        require(publicKeyBytes.size == expectedSize) {
+            "Invalid public key size for ${parameterSet.name}: ${publicKeyBytes.size}, expected $expectedSize"
         }
 
-        if (signature.size < 32) {
-            Timber.w("ML-DSA verification: signature too short (%d bytes)", signature.size)
-            return false
-        }
+        // Reconstruct BC public key from raw bytes
+        val publicKey = MLDSAPublicKeyParameters(bcParams, publicKeyBytes)
 
-        // STUB: Deterministic check — re-derive expected signature hash from data
-        // and compare with the first 32 bytes of the provided signature.
-        // In production, replace with native ML-DSA verification.
-        val digest = java.security.MessageDigest.getInstance("SHA-512")
-        digest.update(data)
-        val expectedHash = digest.digest()
+        // Verify the signature
+        val signer = MLDSASigner()
+        signer.init(false, publicKey)
+        signer.update(data, 0, data.size)
 
-        // Compare first 32 bytes of signature with expected hash
-        val isValid = signature.size >= 32 && expectedHash.size >= 32 &&
-                signature.sliceArray(0..31).contentEquals(expectedHash.sliceArray(0..31))
+        val isValid = signer.verifySignature(signature)
 
         if (!isValid) {
-            Timber.w("ML-DSA verification: STUB signature mismatch — rejecting")
+            Timber.w("ML-DSA verification FAILED for %s", parameterSet.name)
         } else {
-            Timber.d("ML-DSA verification: STUB signature matched (replace with native)")
+            Timber.d("ML-DSA verification passed: %s", parameterSet.name)
         }
         return isValid
     }
