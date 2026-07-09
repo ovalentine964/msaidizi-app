@@ -55,6 +55,10 @@ class MemoryManager(private val context: Context) {
     private val modelReleasers = ConcurrentHashMap<String, () -> Unit>()
     private val memoryListeners = ConcurrentHashMap<String, (MemoryLevel) -> Unit>()
 
+    // ═══ Sequential Model Coordination ═══
+    // Callback to coordinate with SequentialModelLoader on LOW-tier devices
+    private var sequentialCoordinationCallback: ((MemoryLevel) -> Unit)? = null
+
     // ═══ State ═══
     private val isMonitoring = AtomicBoolean(false)
     private val lastTrimTime = AtomicLong(0)
@@ -104,6 +108,18 @@ class MemoryManager(private val context: Context) {
      */
     fun registerListener(name: String, listener: (MemoryLevel) -> Unit) {
         memoryListeners[name] = listener
+    }
+
+    /**
+     * Register a sequential model coordination callback.
+     * Called when memory pressure changes on LOW-tier devices,
+     * allowing SequentialModelLoader to react (e.g., abort in-flight operations).
+     *
+     * @param callback Called with the new MemoryLevel
+     */
+    fun registerSequentialCoordinator(callback: (MemoryLevel) -> Unit) {
+        sequentialCoordinationCallback = callback
+        Timber.d("MemoryManager: Registered sequential model coordinator")
     }
 
     /**
@@ -295,8 +311,16 @@ class MemoryManager(private val context: Context) {
 
     /**
      * Notify all registered listeners of memory level change.
+     * Also notifies the sequential model coordinator if registered.
      */
     private fun notifyListeners(level: MemoryLevel) {
+        // Notify sequential coordinator first (higher priority — may abort operations)
+        try {
+            sequentialCoordinationCallback?.invoke(level)
+        } catch (e: Exception) {
+            Timber.e(e, "MemoryManager: Sequential coordinator threw exception")
+        }
+
         memoryListeners.forEach { (name, listener) ->
             try {
                 listener(level)

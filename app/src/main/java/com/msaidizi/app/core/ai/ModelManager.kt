@@ -13,6 +13,7 @@ import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
+import javax.inject.Provider
 
 /**
  * Central orchestrator for on-device AI model lifecycle.
@@ -53,7 +54,8 @@ class ModelManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val modelRegistry: ModelRegistry,
     private val modelDownloader: ModelDownloader,
-    private val llmEngine: LlmEngine
+    private val llmEngine: LlmEngine,
+    private val sequentialModelLoader: Provider<SequentialModelLoader>  // Provider to break circular dependency
 ) {
     companion object {
         private const val TAG = "ModelManager"
@@ -199,8 +201,11 @@ class ModelManager @Inject constructor(
         // Start memory monitoring
         startMemoryMonitor()
 
+        // Initialize sequential model loader for LOW-tier devices
+        sequentialModelLoader.get().initialize(deviceTier)
+
         _modelState.value = ModelManagerState.READY
-        Timber.i(TAG, "ModelManager initialized (tier=%s)", deviceTier)
+        Timber.i(TAG, "ModelManager initialized (tier=%s, sequential=%s)", deviceTier, deviceTier == DeviceTier.LOW)
     }
 
     /**
@@ -595,6 +600,25 @@ class ModelManager @Inject constructor(
         activeBackend = null
         _modelState.value = ModelManagerState.IDLE
         Timber.i(TAG, "All models unloaded")
+    }
+
+    /**
+     * Get the sequential model loader instance.
+     * Used by VoicePipeline and other components for LOW-tier device operation.
+     *
+     * @return The SequentialModelLoader, or null if not in sequential mode
+     */
+    fun getSequentialLoader(): SequentialModelLoader? {
+        return if (deviceTier == DeviceTier.LOW) sequentialModelLoader.get() else null
+    }
+
+    /**
+     * Check if sequential model loading is active (LOW-tier devices).
+     * When true, callers MUST use [SequentialModelLoader.withModel] instead of
+     * loading models directly.
+     */
+    fun isSequentialMode(): Boolean {
+        return deviceTier == DeviceTier.LOW
     }
 
     /**
