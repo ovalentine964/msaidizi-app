@@ -2,12 +2,10 @@ package com.msaidizi.app.voice
 
 import android.content.Context
 import com.msaidizi.app.core.LanguageDetector
-import com.msaidizi.app.core.dialect.*
 import com.msaidizi.app.core.language.AdaptiveAsrEngine
 import com.msaidizi.app.core.language.ConfidenceCalibrator
 import com.msaidizi.app.core.language.FederatedLearningClient
 import com.msaidizi.app.core.language.LanguageLearningPipeline
-import com.msaidizi.app.core.model.DialectRegion
 import com.msaidizi.app.core.util.DeviceTier
 import com.msaidizi.app.voice.dialect.AudioFeatures
 import com.msaidizi.app.voice.dialect.DialectDetectionEngine

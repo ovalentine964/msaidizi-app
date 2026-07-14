@@ -78,6 +78,26 @@
 -keep class com.msaidizi.app.voice.transfer.ModelTransfer { *; }
 -keep class com.msaidizi.app.sync.** { *; }
 
+# Sherpa-ONNX JNI bridge — CRITICAL: native methods + reflection
+-keep class com.k2fsa.sherpa.onnx.** { *; }
+-dontwarn com.k2fsa.sherpa.onnx.**
+
+# Agent loops, AGI, and Hermes session management
+-keep class com.msaidizi.app.agent.loops.** { *; }
+-keep class com.msaidizi.app.agent.agi.** { *; }
+-keep class com.msaidizi.app.agent.hermes.** { *; }
+
+# QuantumReadyLayer — inner classes with crypto providers
+-keep class com.msaidizi.app.core.security.QuantumReadyLayer$* { *; }
+-keep class com.msaidizi.app.core.security.QuantumReadyLayer { *; }
+
+# Voice engines (SherpaVoiceEngine, DialectLearningEngine, ModelRegistry)
+-keep class com.msaidizi.app.voice.SherpaVoiceEngine { *; }
+-keep class com.msaidizi.app.voice.DialectLearningEngine$* { *; }
+-keep class com.msaidizi.app.voice.DialectLearningEngine { *; }
+-keep class com.msaidizi.app.voice.ModelRegistry$* { *; }
+-keep class com.msaidizi.app.voice.dialect.** { *; }
+
 # Keep SQLCipher
 -keep class net.zetetic.** { *; }
 -dontwarn net.zetetic.**

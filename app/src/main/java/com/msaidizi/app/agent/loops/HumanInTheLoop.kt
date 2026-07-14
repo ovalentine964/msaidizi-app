@@ -323,14 +323,20 @@ class HumanInTheLoop(
 
         // Emit event for UI to pick up
         scope.launch {
-            agentEventBus.emit(
-                AgentEvent(
-                    type = com.msaidizi.app.agent.AgentEvent.EventType.AGENT_DECISION_PENDING,
+            agentEventBus.publish(
+                AgentEvent.ProactiveAlert(
+                    eventId = UUID.randomUUID().toString(),
+                    timestamp = System.currentTimeMillis(),
+                    source = TAG,
+                    alertType = "AGENT_DECISION_PENDING",
+                    severity = "INFO",
+                    title = "Decision pending: $action",
+                    message = "Agent needs confirmation for: $action in ${domain.name}",
                     data = mapOf(
                         "decisionId" to decision.id,
                         "domain" to domain.name,
                         "action" to action,
-                        "confidence" to confidence
+                        "confidence" to confidence.toString()
                     )
                 )
             )
@@ -362,14 +368,20 @@ class HumanInTheLoop(
 
             // Notify user of level up
             scope.launch {
-                agentEventBus.emit(
-                    AgentEvent(
-                        type = com.msaidizi.app.agent.AgentEvent.EventType.AGENT_DECISION_MADE,
+                agentEventBus.publish(
+                    AgentEvent.ProactiveAlert(
+                        eventId = UUID.randomUUID().toString(),
+                        timestamp = System.currentTimeMillis(),
+                        source = TAG,
+                        alertType = "AUTONOMY_LEVEL_UP",
+                        severity = "INFO",
+                        title = "$domain leveled up to $newLevel",
+                        message = "Trust score: ${trust.score}. Autonomy increased to $newLevel.",
                         data = mapOf(
                             "event" to "autonomy_level_up",
                             "domain" to domain.name,
                             "newLevel" to newLevel.name,
-                            "score" to trust.score
+                            "score" to trust.score.toString()
                         )
                     )
                 )
@@ -386,9 +398,15 @@ class HumanInTheLoop(
     }
 
     private suspend fun notifyUser(domain: Domain, action: String, result: Any) {
-        agentEventBus.emit(
-            AgentEvent(
-                type = com.msaidizi.app.agent.AgentEvent.EventType.AGENT_DECISION_MADE,
+        agentEventBus.publish(
+            AgentEvent.ProactiveAlert(
+                eventId = UUID.randomUUID().toString(),
+                timestamp = System.currentTimeMillis(),
+                source = TAG,
+                alertType = "AGENT_DECISION_MADE",
+                severity = "INFO",
+                title = "Action taken: $action",
+                message = "Agent executed: $action in ${domain.name}",
                 data = mapOf(
                     "domain" to domain.name,
                     "action" to action,

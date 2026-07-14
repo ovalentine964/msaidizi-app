@@ -1,9 +1,6 @@
 package com.msaidizi.app.agent.hermes
 
 import com.msaidizi.app.agent.*
-import com.msaidizi.app.core.model.IntentResult
-import com.msaidizi.app.core.model.IntentType
-import com.msaidizi.app.core.model.ResponseType
 import kotlinx.coroutines.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
