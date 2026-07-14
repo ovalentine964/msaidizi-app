@@ -415,7 +415,7 @@ class Orchestrator(
     fun getCircuitBreakerStates() = inferenceHarness?.getAllCircuitBreakerStates()
     /** Get daily cost breakdown for a user. */
     fun getUserDailyInferenceCosts(userId: String) = inferenceHarness?.getUserDailyCosts(userId)
-    fun getConversationMemory(): ConversationMemory = conversationManager.getConversationMemory()
+    fun getConversationMemory(): ConversationMemory = conversationManager.conversationMemory
     fun clearConversationMemory() = conversationManager.clearConversationMemory()
 
     // ── AGI Component Accessors ──
