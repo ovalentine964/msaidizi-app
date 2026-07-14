@@ -445,7 +445,7 @@ class ConversationManager(
      * Record self-evolution signals from user input.
      * Called at the start of processing before intent classification.
      */
-    fun recordEvolutionSignals(language: String) {
+    suspend fun recordEvolutionSignals(language: String) {
         selfEvolution?.recordLanguageSignal(language)
         selfEvolution?.recordTimeSignal(java.time.LocalTime.now().hour)
         preferenceLearner?.learnLanguagePreference(language, "")
@@ -460,7 +460,7 @@ class ConversationManager(
      *
      * @return The enhanced text
      */
-    fun enhanceText(text: String): String {
+    suspend fun enhanceText(text: String): String {
         val evolvedText = selfEvolution?.applyCorrectionPatterns(text) ?: text
         return evolvedText // adaptiveVocabulary is applied at Orchestrator level before this
     }
