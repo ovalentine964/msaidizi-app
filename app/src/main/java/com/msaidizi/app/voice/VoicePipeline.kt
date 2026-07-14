@@ -59,7 +59,8 @@ class VoicePipeline @Inject constructor(
     private val mmsTtsEngine: MMSTextToSpeech,
     private val adaptiveAsrEngine: AdaptiveAsrEngine,
     private val memoryManager: MemoryManager,
-    private val conversationLearningPipeline: ConversationLearningPipeline
+    private val conversationLearningPipeline: ConversationLearningPipeline,
+    private val harness: VoicePipelineHarness
 ) {
     // Pipeline state
     private val _pipelineState = MutableStateFlow(PipelineState.IDLE)
@@ -72,6 +73,9 @@ class VoicePipeline @Inject constructor(
     // Last spoken response
     private val _response = MutableSharedFlow<String>(extraBufferCapacity = 4)
     val response: SharedFlow<String> = _response
+
+    // Processing feedback from harness (Swahili messages during processing)
+    val processingFeedback: SharedFlow<String> = harness.processingFeedback
 
     // Collect audio chunks from recorder
     private var audioCollectionJob: Job? = null
@@ -337,6 +341,98 @@ class VoicePipeline @Inject constructor(
                 error = "Error processing speech: ${e.message}"
             ))
             _pipelineState.value = PipelineState.ERROR
+        }
+    }
+
+    // ────────────────────── Quality-Gated Pipeline Execution ──────────────────────
+
+    /**
+     * Execute the full voice pipeline with quality gates via [VoicePipelineHarness].
+     *
+     * This is the preferred entry point for voice interactions. It wraps the
+     * raw pipeline methods (STT → LLM → TTS) with:
+     * - STT confidence threshold (< 0.6 → ask to repeat)
+     * - LLM response validation + safety check + thinking mode activation
+     * - TTS naturalness scoring + voice selection
+     * - Fallback: voice → text if any stage fails
+     * - Processing feedback: "Sawa, nimesikia..." during gaps
+     *
+     * @param audioData Raw audio bytes from the microphone
+         * @param language Language code (default "sw")
+     * @param llmCall Function to call the LLM with transcribed text
+     * @return Pipeline result with quality scores and degradation info
+     */
+    suspend fun executeWithQualityGates(
+        audioData: ByteArray,
+        language: String = "sw",
+        llmCall: suspend (String) -> String
+    ): VoicePipelineHarness.VoicePipelineResult {
+        return harness.executePipeline(
+            audioData = audioData,
+            language = language,
+            sttCall = {
+                // Use the pipeline's STT path
+                val result = processEndOfSpeechForResult()
+                result ?: TranscriptionResult(
+                    text = "",
+                    confidence = 0f,
+                    success = false,
+                    error = "STT processing failed"
+                )
+            },
+            llmCall = llmCall,
+            ttsCall = { text -> speak(text, language) },
+            feedbackCall = { message -> _response.emit(message) }
+        )
+    }
+
+    /**
+     * Get harness status for monitoring/debugging.
+     */
+    fun getHarnessStatus(): String = harness.getStatusSummary()
+
+    /**
+     * Get harness metrics for analytics.
+     */
+    fun getHarnessMetrics() = harness.getAggregatePipelineStats()
+
+    /**
+     * Internal STT processing that returns a result instead of emitting to flow.
+     * Used by the harness for quality-gated execution.
+     */
+    private suspend fun processEndOfSpeechForResult(): TranscriptionResult? {
+        val speechAudio = vad.getAccumulatedAudio() ?: return null
+        if (speechAudio.isEmpty()) return null
+
+        try {
+            // Ensure ASR model is loaded
+            if (!speechRecognizer.isModelReady()) {
+                val loaded = speechRecognizer.loadModel()
+                if (!loaded) {
+                    return TranscriptionResult(
+                        text = "",
+                        confidence = 0f,
+                        success = false,
+                        error = "ASR model failed to load"
+                    )
+                }
+            }
+
+            val result = adaptiveAsrEngine.transcribe(speechAudio)
+            return TranscriptionResult(
+                text = result.transcript,
+                confidence = result.calibratedConfidence.calibratedConfidence,
+                success = result.transcript.isNotBlank(),
+                error = if (result.transcript.isBlank()) "Empty transcription" else null
+            )
+        } catch (e: Exception) {
+            Timber.e(e, "VoicePipeline: STT error in harness mode")
+            return TranscriptionResult(
+                text = "",
+                confidence = 0f,
+                success = false,
+                error = e.message
+            )
         }
     }
 
