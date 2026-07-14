@@ -1,18 +1,83 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="80dp"
-    android:height="80dp"
+    android:width="108dp"
+    android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
     <!-- Background circle -->
     <path
-        android:fillColor="#1B2A4A"
+        android:fillColor="#0F1B3A"
         android:pathData="M54,54m-48,0a48,48 0,1 1,96 0a48,48 0,1 1,-96 0"/>
-    <!-- Letter M -->
+    <!-- Africa-contoured shield outline -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M30,76L30,34L42,34L54,58L66,34L78,34L78,76L66,76L66,52L54,74L42,52L42,76Z"/>
-    <!-- Accent underline -->
+        android:fillColor="#C6922A"
+        android:fillAlpha="0.15"
+        android:strokeColor="#C6922A"
+        android:strokeWidth="0.8"
+        android:pathData="M54,14
+                          C58,13 62,14 65,16
+                          C68,19 69,22 69.5,25
+                          C70,29 70.5,32 71.5,35
+                          C72.5,39 74,42 75,45
+                          C75.8,47.5 75.5,49.5 74,51.5
+                          C72.5,53.5 71,55 70.5,57
+                          C70,59 68.5,61 66.5,63
+                          C64.5,65 62,66.5 59,67.5
+                          C57,68 55.5,68 54,67
+                          C52.5,66 51,64 49.5,61
+                          C48,58 46.5,55 45,52
+                          C43.5,49 42,46 41,43
+                          C40,40 39.5,37 39.5,34
+                          C39.5,30 40.5,27 42,24
+                          C44,20 46,17 48.5,15
+                          C50,14 52,14 54,14 Z"/>
+    <!-- Madagascar bump -->
     <path
-        android:fillColor="#E8853D"
-        android:pathData="M30,78L78,78L78,82L30,82Z"/>
+        android:fillColor="#C6922A"
+        android:fillAlpha="0.1"
+        android:strokeColor="#C6922A"
+        android:strokeWidth="0.4"
+        android:pathData="M76,56 C77,53 78,50 77,47 C76,50 75,53 76,56 Z"/>
+    <!-- Gold chart line (CFO) -->
+    <path
+        android:strokeColor="#F7931A"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"
+        android:pathData="M38,55 L44,55 L47.5,48 L51,52 L54,44 L57,50 L60,46 L63,53 L70,53"/>
+    <!-- Chart data points -->
+    <path
+        android:fillColor="#F7931A"
+        android:pathData="M47.5,48 m-1.2,0 a1.2,1.2 0 1 1,2.4 0 a1.2,1.2 0 1 1,-2.4 0"/>
+    <path
+        android:fillColor="#FFCC02"
+        android:pathData="M54,44 m-1.4,0 a1.4,1.4 0 1 1,2.8 0 a1.4,1.4 0 1 1,-2.8 0"/>
+    <path
+        android:fillColor="#F7931A"
+        android:pathData="M60,46 m-1.2,0 a1.2,1.2 0 1 1,2.4 0 a1.2,1.2 0 1 1,-2.4 0"/>
+    <!-- Speech bubble -->
+    <path
+        android:fillColor="#0F1B3A"
+        android:strokeColor="#C6922A"
+        android:strokeWidth="0.6"
+        android:pathData="M37,28 C34,28 31,30 31,33 C31,36 34,38 37,38 L41,38 L40,41 L42,38 L45,38 C48,38 50,36 50,33 C50,30 48,28 45,28 Z"/>
+    <!-- Sound waves -->
+    <path
+        android:strokeColor="#F7931A"
+        android:strokeWidth="0.6"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M39,31 C39.5,31.5 39.5,34 39,34.5"/>
+    <path
+        android:strokeColor="#F7931A"
+        android:strokeWidth="0.6"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M41.5,30 C43,31 43,35 41.5,36"/>
+    <path
+        android:strokeColor="#F7931A"
+        android:strokeWidth="0.6"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M44,29 C46,30.5 46,35.5 44,37"/>
 </vector>
