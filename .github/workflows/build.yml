@@ -14,11 +14,16 @@ concurrency:
   group: build-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true"
+  NDK_VERSION: "26.1.10909125"
+  CMAKE_VERSION: "3.22.1"
+
 jobs:
   build:
-    name: Build & Verify APK
+    name: Build Debug APK
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
 
     steps:
       - name: Checkout code
@@ -31,28 +36,28 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: '8.5'
+        uses: gradle/actions/setup-gradle@v4
 
-      - name: Cache Gradle packages
+      - name: Cache NDK & CMake
+        id: cache-ndk
         uses: actions/cache@v4
         with:
           path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            gradle-${{ runner.os }}-
+            ${{ env.ANDROID_HOME }}/ndk/${{ env.NDK_VERSION }}
+            ${{ env.ANDROID_HOME }}/cmake/${{ env.CMAKE_VERSION }}
+          key: ndk-cmake-${{ env.NDK_VERSION }}-${{ env.CMAKE_VERSION }}
 
       - name: Install NDK r26b and CMake 3.22.1
+        if: steps.cache-ndk.outputs.cache-hit != 'true'
         run: |
-          # Install NDK r26b (26.1.10909125) and CMake 3.22.1
           echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
-            "ndk;26.1.10909125" \
-            "cmake;3.22.1"
+            "ndk;${{ env.NDK_VERSION }}" \
+            "cmake;${{ env.CMAKE_VERSION }}"
           echo "✅ NDK r26b and CMake 3.22.1 installed"
-          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
+
+      - name: Set NDK environment
+        run: |
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${{ env.NDK_VERSION }}" >> $GITHUB_ENV
 
       - name: Generate debug keystore
         run: |
@@ -67,21 +72,12 @@ jobs:
             -dname "CN=Android Debug,O=Msaidizi,C=KE"
           echo "✅ Debug keystore generated"
 
-      - name: Decode release keystore
-        if: env.RELEASE_KEYSTORE_BASE64 != ''
-        run: |
-          echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > release.keystore
-          echo "✅ Release keystore decoded"
-          echo "RELEASE_KEYSTORE_FILE=release.keystore" >> $GITHUB_ENV
-        env:
-          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
-
       - name: Cache AI models
         id: cache-models
         uses: actions/cache@v4
         with:
           path: app/src/main/assets/models
-          key: models-v1-whisper-piper-qwen
+          key: models-v2-whisper-piper-qwen
 
       - name: Download AI Models
         if: steps.cache-models.outputs.cache-hit != 'true'
@@ -97,52 +93,19 @@ jobs:
 
       - name: Build Debug APK
         run: |
-          set -o pipefail
           ./gradlew assembleDebug --stacktrace --info 2>&1 | tee build-debug.log
-          echo "Gradle exit code: $?"
-
-      - name: Build Release APK
-        run: |
-          set -o pipefail
-          ./gradlew assembleRelease --stacktrace --info 2>&1 | tee build-release.log
-          echo "Gradle exit code: $?"
-        env:
-          RELEASE_KEYSTORE_FILE: ${{ env.RELEASE_KEYSTORE_FILE }}
-          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
-          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
-          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
-
-      - name: Verify debug APK signing
-        run: |
-          APK_PATH=$(find app/build/outputs/apk/debug -name "*.apk" | head -1)
-          if [ -n "$APK_PATH" ]; then
-            echo "📋 Verifying debug APK signature..."
-            ${ANDROID_HOME}/build-tools/$(ls ${ANDROID_HOME}/build-tools/ | sort -V | tail -1)/apksigner verify --print-certs "$APK_PATH"
-            echo "✅ Debug APK signing verified"
-          fi
-
-      - name: Verify release APK signing
-        run: |
-          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
-          if [ -n "$APK_PATH" ]; then
-            echo "📋 Verifying release APK signature..."
-            ${ANDROID_HOME}/build-tools/$(ls ${ANDROID_HOME}/build-tools/ | sort -V | tail -1)/apksigner verify --print-certs "$APK_PATH"
-            echo ""
-            ${ANDROID_HOME}/build-tools/$(ls ${ANDROID_HOME}/build-tools/ | sort -V | tail -1)/apksigner verify -v "$APK_PATH" 2>&1 || true
-            echo "✅ Release APK signing verified"
-          else
-            echo "❌ No release APK found"
-            exit 1
+          EXIT_CODE=${PIPESTATUS[0]}
+          if [ "$EXIT_CODE" -ne 0 ]; then
+            echo "::error::Gradle assembleDebug failed with exit code $EXIT_CODE"
+            exit "$EXIT_CODE"
           fi
 
       - name: Upload build log on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: build-logs
-          path: |
-            build-debug.log
-            build-release.log
+          name: build-debug-log
+          path: build-debug.log
 
       - name: Check APK size
         run: |
@@ -153,8 +116,15 @@ jobs:
             echo "📦 APK size: ${SIZE_MB}MB"
             ls -lh "$APK_PATH"
             if [ "$SIZE_MB" -lt 100 ]; then
-              echo "⚠️  WARNING: APK is only ${SIZE_MB}MB — models may not be bundled!"
+              echo "::warning::APK is only ${SIZE_MB}MB — models may not be bundled!"
             fi
+            if [ "$SIZE_MB" -gt 2048 ]; then
+              echo "::error::APK is ${SIZE_MB}MB — exceeds 2GB limit"
+              exit 1
+            fi
+          else
+            echo "::error::No APK found at app/build/outputs/apk/debug/"
+            exit 1
           fi
 
       - name: Upload Debug APK artifact
@@ -162,11 +132,4 @@ jobs:
         with:
           name: msaidizi-debug-${{ github.sha }}
           path: app/build/outputs/apk/debug/*.apk
-          retention-days: 14
-
-      - name: Upload Release APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: msaidizi-release-${{ github.sha }}
-          path: app/build/outputs/apk/release/*.apk
           retention-days: 14
