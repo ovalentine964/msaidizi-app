@@ -542,6 +542,9 @@ object AppModule {
     @Provides
     fun provideBriefingDeliveryDao(db: AppDatabase): BriefingDeliveryDao = db.briefingDeliveryDao()
 
+    @Provides
+    fun provideWorkerVocabularyDao(db: AppDatabase): com.msaidizi.app.core.model.WorkerVocabularyDao = db.workerVocabularyDao()
+
     // === DIALECT & ADAPTIVE VOCABULARY ===
 
     @Provides

@@ -103,6 +103,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun loanDao(): LoanDao
     abstract fun mindsetLessonDao(): MindsetLessonDao
     abstract fun briefingDeliveryDao(): BriefingDeliveryDao
+    abstract fun socialDao(): SocialDao
     abstract fun workerVocabularyDao(): WorkerVocabularyDao
 
     companion object {

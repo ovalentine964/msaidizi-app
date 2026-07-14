@@ -6,6 +6,7 @@ import com.msaidizi.app.core.model.GamificationEntity
 import timber.log.Timber
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.YearMonth
 import java.time.temporal.WeekFields
 import java.util.Locale
 
@@ -40,6 +41,11 @@ import java.util.Locale
 class GamificationEngine(
     private val gamificationDao: GamificationDao
 ) {
+    // Lazy-initialized reward subsystems
+    val streakRecovery: StreakRecovery by lazy { StreakRecovery(gamificationDao) }
+    val microRewards: MicroRewards by lazy { MicroRewards(gamificationDao, com.msaidizi.app.core.database.TransactionDao::class.java, com.msaidizi.app.core.database.PatternDao::class.java) }
+    val insightRewards: InsightRewards by lazy { InsightRewards(gamificationDao, com.msaidizi.app.core.database.TransactionDao::class.java, com.msaidizi.app.core.database.PatternDao::class.java) }
+    val levelProgression: LevelProgressionRewards by lazy { LevelProgressionRewards(gamificationDao) }
     companion object {
         private const val TAG = "GamificationEngine"
 
@@ -706,8 +712,17 @@ class GamificationEngine(
                     1
                 }
             }
-            // Missed 2+ days, streak resets
-            daysSinceLastActive > 2 -> 1
+            // Missed 2+ days, streak resets — check for recovery opportunity
+            daysSinceLastActive > 2 -> {
+                // Store the lost streak for recovery offer
+                val lostStreak = entity.currentStreak
+                if (lostStreak >= StreakRecovery.MIN_STREAK_FOR_RECOVERY) {
+                    Timber.d(TAG, "Streak lost: %d days. Recovery will be offered.", lostStreak)
+                    // Store lost streak in a companion for the recovery system to pick up
+                    _lastLostStreak = lostStreak
+                }
+                1
+            }
             else -> entity.currentStreak
         }
 
@@ -736,6 +751,20 @@ class GamificationEngine(
         }
 
         Timber.d(TAG, "Streak updated: %d → %d (days since: %d)", entity.currentStreak, newStreak, daysSinceLastActive)
+    }
+
+    /** Last lost streak value, for recovery system to pick up */
+    @Volatile
+    private var _lastLostStreak: Int = 0
+
+    /**
+     * Get and clear the last lost streak (for recovery offer).
+     * Returns 0 if no streak was lost.
+     */
+    fun consumeLostStreak(): Int {
+        val lost = _lastLostStreak
+        _lastLostStreak = 0
+        return lost
     }
 
     /**

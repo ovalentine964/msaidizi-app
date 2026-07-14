@@ -30,4 +30,14 @@ interface GamificationDao {
 
     @Query("UPDATE gamification SET level = :level, earnedBadges = :badges, updatedAt = :now WHERE id = 1")
     suspend fun updateLevelAndBadges(level: Int, badges: String, now: Long = System.currentTimeMillis() / 1000)
+
+    // ═══════════════════════════════════════════════════════════════
+    // STREAK RECOVERY (Fresh Start)
+    // ═══════════════════════════════════════════════════════════════
+
+    @Query("UPDATE gamification SET currentStreak = :streak, lastActiveDay = :day, updatedAt = :now WHERE id = 1")
+    suspend fun restoreStreak(streak: Int, day: Long, now: Long = System.currentTimeMillis() / 1000)
+
+    @Query("UPDATE gamification SET streakRecoveriesUsedThisMonth = :recoveriesUsed, streakRecoveryMonth = :month, updatedAt = :now WHERE id = 1")
+    suspend fun updateRecoveryUsage(recoveriesUsed: Int, month: Int, now: Long = System.currentTimeMillis() / 1000)
 }
