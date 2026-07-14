@@ -219,7 +219,7 @@ class WaxalDialectEnhancer @Inject constructor(
 
         // Also learn that the original was a misrecognition
         val key = original.lowercase().trim()
-        if (key !in learnedPatterns) {
+        if (!learnedPatterns.containsKey(key)) {
             learnedPatterns[key] = Pair(dialectId, 0.5f)
         }
     }
