@@ -561,7 +561,7 @@ class HermesSessionManager(
         val words = mutableSetOf<String>()
         val text = "${steps.joinToString(" ") { it.action }} $response"
         text.lowercase().split(Regex("\\s+")).forEach { word ->
-            val clean = word.trim(".,!?;:")
+            val clean = word.trim('.', ',', '!', '?', ';', ':')
             if (clean.length > 3) words.add(clean)
         }
         return words.sorted().take(10)
@@ -592,7 +592,7 @@ class HermesSessionManager(
         val wordFreq = mutableMapOf<String, Int>()
         for (entry in context) {
             entry.content.lowercase().split(Regex("\\s+")).forEach { word ->
-                val clean = word.trim(".,!?;:")
+                val clean = word.trim('.', ',', '!', '?', ';', ':')
                 if (clean.length > 3) wordFreq[clean] = (wordFreq[clean] ?: 0) + 1
             }
         }

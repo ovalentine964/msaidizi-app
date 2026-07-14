@@ -88,7 +88,7 @@ class EncryptedStorage @Inject constructor(
      * Uses a different key from encryption to prevent cross-protocol attacks.
      */
     private fun computeHmac(data: ByteArray): ByteArray {
-        val hmacKey = keyManager.ensureKey("angavu_hmac_storage")
+        val hmacKey = keyManager.getOrCreateKey("angavu_hmac_storage")
         val mac = javax.crypto.Mac.getInstance("HmacSHA256")
         mac.init(hmacKey)
         return mac.doFinal(data)

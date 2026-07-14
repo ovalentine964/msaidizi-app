@@ -138,13 +138,10 @@ class MpesaSmsReceiver : BroadcastReceiver() {
             type = parsed.transactionType,
             item = parsed.counterparty,
             totalAmount = parsed.amount,
-            quantity = 1,
+            quantity = 1.0,
             paymentMethod = "mpesa",
-            notes = "M-Pesa: ${parsed.receipt} — ${parsed.counterparty}",
-            createdAt = parsed.timestamp ?: (System.currentTimeMillis() / 1000),
-            mpesaReceipt = parsed.receipt,
-            isCredit = parsed.isCredit,
-            balance = parsed.balance ?: 0.0
+            notes = "M-Pesa: ${parsed.receipt} — ${parsed.counterparty} | credit=${parsed.isCredit} | balance=${parsed.balance ?: 0.0}",
+            createdAt = parsed.timestamp ?: (System.currentTimeMillis() / 1000)
         )
 
         // Save to database via BusinessAgent

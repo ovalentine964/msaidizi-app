@@ -829,6 +829,11 @@ class BusinessAgent(
         return transactionDao.getProfit(0, now)
     }
 
+    // Record a transaction (generic).
+    suspend fun recordTransaction(transaction: Transaction) {
+        transactionDao.insert(transaction)
+    }
+
     // Get transaction count for today.
     suspend fun getDailyTransactionCount(date: LocalDate = LocalDate.now()): Int {
         val startOfDay = date.atStartOfDay().toEpochSecond(ZoneOffset.UTC)

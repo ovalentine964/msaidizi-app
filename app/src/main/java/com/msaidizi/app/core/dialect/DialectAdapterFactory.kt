@@ -22,22 +22,22 @@ object DialectAdapterFactory {
      */
     fun create(languageCode: String): DialectAdapter {
         return when (languageCode.lowercase()) {
-            "sw" -> KiswahiliDialectAdapter
-            "sheng" -> ShengDialectAdapter
-            "luo", "dholuo" -> DholuoDialectAdapter
-            "ki", "kikuyu" -> KikuyuDialectAdapter
-            "kln", "kalenjin" -> KalenjinDialectAdapter
-            "luy", "luhya" -> LuhyaDialectAdapter
-            "mas", "maasai" -> MaasaiDialectAdapter
-            "migori" -> MigoriDialectAdapter
-            "so", "somali" -> SomaliDialectAdapter
-            "am", "amharic" -> AmharicDialectAdapter
-            "ha", "hausa" -> HausaDialectAdapter
-            "ig", "igbo" -> IgboDialectAdapter
-            "yo", "yoruba" -> YorubaDialectAdapter
-            "xh", "xhosa" -> XhosaDialectAdapter
-            "zu", "zulu" -> ZuluDialectAdapter
-            else -> KiswahiliDialectAdapter // Default to Kiswahili
+            "sw" -> KiswahiliDialectAdapter()
+            "sheng" -> ShengDialectAdapter()
+            "luo", "dholuo" -> DholuoDialectAdapter()
+            "ki", "kikuyu" -> KikuyuDialectAdapter()
+            "kln", "kalenjin" -> KalenjinDialectAdapter()
+            "luy", "luhya" -> LuhyaDialectAdapter()
+            "mas", "maasai" -> MaasaiDialectAdapter()
+            "migori" -> MigoriDialectAdapter()
+            "so", "somali" -> SomaliDialectAdapter()
+            "am", "amharic" -> AmharicDialectAdapter()
+            "ha", "hausa" -> HausaDialectAdapter()
+            "ig", "igbo" -> IgboDialectAdapter()
+            "yo", "yoruba" -> YorubaDialectAdapter()
+            "xh", "xhosa" -> XhosaDialectAdapter()
+            "zu", "zulu" -> ZuluDialectAdapter()
+            else -> KiswahiliDialectAdapter() // Default to Kiswahili
         }
     }
 }

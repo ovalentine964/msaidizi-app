@@ -307,7 +307,7 @@ class OnboardingConversation {
             is ConversationStep.WhatsAppConnected -> {
                 // Proceed to model download
                 ConversationStep.ModelDownloadStatus(
-                    prompt = step.prompt
+                    prompt = currentStep.prompt
                 )
             }
 

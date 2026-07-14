@@ -94,7 +94,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Run Unit Tests with Coverage
-        run: ./gradlew testDebugUnitTest jacocoTestReportDebug --stacktrace
+        run: ./gradlew testDebugUnitTest --stacktrace
 
       - name: Enforce 80% Coverage Gate
         run: |

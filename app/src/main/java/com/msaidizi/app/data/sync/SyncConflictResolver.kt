@@ -182,7 +182,8 @@ enum class ResolutionAction {
     NO_CHANGE,
     LOCAL_KEPT,
     REMOTE_ACCEPTED,
-    MERGED
+    MERGED,
+    LAST_WRITE_WINS
 }
 
 

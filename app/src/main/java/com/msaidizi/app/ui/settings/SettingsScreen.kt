@@ -158,7 +158,6 @@ class SettingsFragment : Fragment() {
             if (state.whatsappConnected) {
                 // Disconnect WhatsApp
                 viewModel.disconnectWhatsApp()
-                ttsHelper?.disconnectWhatsApp()
             } else {
                 // Launch WhatsApp connection dialog
                 showWhatsAppConnectDialog()

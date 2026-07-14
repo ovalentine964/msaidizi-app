@@ -1,6 +1,8 @@
 package com.msaidizi.app.agent
 
 import com.msaidizi.app.gamification.GamificationEngine
+import com.msaidizi.app.core.model.IntentResult
+import com.msaidizi.app.core.model.Trend
 import com.msaidizi.app.mindset.RichHabitsScore
 import timber.log.Timber
 

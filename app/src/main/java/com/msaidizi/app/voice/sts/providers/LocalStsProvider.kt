@@ -48,6 +48,8 @@ class LocalStsProvider @Inject constructor(
         const val PROVIDER_NAME = "On-Device Optimized Pipeline (v2)"
     }
 
+    private var currentSession: StsSession? = null
+
     override val id = PROVIDER_ID
     override val name = PROVIDER_NAME
     override val requiresNetwork = false
@@ -79,6 +81,7 @@ class LocalStsProvider @Inject constructor(
     }
 
     override suspend fun initializeSession(session: StsSession) {
+        currentSession = session
         // Pre-warm models based on device tier
         if (DeviceTier.preloadASR()) {
             speechRecognizer.loadModel()
@@ -125,7 +128,7 @@ class LocalStsProvider @Inject constructor(
         if (combinedAudio.isEmpty()) return
 
         // 2. ASR — transcribe with language hint
-        val langHint = session.language
+        val langHint = currentSession?.language ?: "sw"
         val transcript = speechRecognizer.transcribeWithLanguage(combinedAudio, langHint)
         if (transcript.isNullOrBlank()) return
 
@@ -139,27 +142,17 @@ class LocalStsProvider @Inject constructor(
             latencyMs = System.currentTimeMillis() - startTime
         ))
 
-        // 3. LLM — generate response with streaming
+        // 3. LLM — generate response
         val responseChunks = mutableListOf<String>()
-        val responseBuilder = StringBuilder()
 
-        llmEngine.generateResponse(
+        val fullResponse = llmEngine.generateResponse(
             userInput = transcript,
-            language = lang,
-            onToken = { token ->
-                responseBuilder.append(token)
-                if (token.contains('.') || token.contains('!') || token.contains('?')) {
-                    val sentence = responseBuilder.toString().trim()
-                    if (sentence.isNotBlank()) {
-                        responseChunks.add(sentence)
-                        responseBuilder.clear()
-                    }
-                }
-            }
+            language = lang
         )
 
-        val remaining = responseBuilder.toString().trim()
-        if (remaining.isNotBlank()) {
+        // Split response into sentences
+        val sentences = fullResponse.split(Regex("(?<=[.!?])\\s+")).filter { it.isNotBlank() }
+        responseChunks.addAll(sentences)
             responseChunks.add(remaining)
         }
 
@@ -250,9 +243,10 @@ class LocalStsProvider @Inject constructor(
 
     override fun getQualityScore(): Float {
         return when (DeviceTier.current) {
-            DeviceTier.TIER_ENHANCED -> 0.85f
-            DeviceTier.TIER_STANDARD -> 0.75f
-            DeviceTier.TIER_BASIC -> 0.60f
+            DeviceTier.Tier.PREMIUM -> 0.90f
+            DeviceTier.Tier.ENHANCED -> 0.85f
+            DeviceTier.Tier.STANDARD -> 0.75f
+            DeviceTier.Tier.BASIC -> 0.60f
         }
     }
 

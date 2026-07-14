@@ -1,6 +1,8 @@
 package com.msaidizi.app.agent
 
 import timber.log.Timber
+import com.msaidizi.app.core.model.IntentResult
+import com.msaidizi.app.core.model.IntentType
 
 /**
  * Routes domain-specific intents to specialized handlers.

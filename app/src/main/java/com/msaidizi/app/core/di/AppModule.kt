@@ -1372,6 +1372,7 @@ object AppModule {
     @Singleton
     fun provideVisionHarness(
         inferenceHarness: InferenceHarness,
-        correctionTracker: VisionCorrectionTracker
-    ): VisionHarness = VisionHarness(inferenceHarness, correctionTracker)
+        correctionTracker: VisionCorrectionTracker,
+        receiptScanner: ReceiptScanner
+    ): VisionHarness = VisionHarness(inferenceHarness, correctionTracker, receiptScanner)
 }

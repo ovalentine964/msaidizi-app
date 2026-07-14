@@ -228,6 +228,7 @@ class BootstrapViewModel @Inject constructor(application: Application) : Android
             is BootstrapStep.AskProducts -> step.prompt
             is BootstrapStep.AskLocation -> step.prompt
             is BootstrapStep.AskWorkingHours -> step.prompt
+            is BootstrapStep.AskPin -> step.prompt
             is BootstrapStep.AskCustomersAndPayment -> step.prompt
             is BootstrapStep.AskChallenges -> step.prompt
             is BootstrapStep.Summary -> step.prompt
@@ -295,7 +296,7 @@ class BootstrapViewModel @Inject constructor(application: Application) : Android
             putString("biggest_challenge", profile.biggestChallenge)
             putString("language", profile.language)
             putString("dialect", profile.dialect)
-            putDouble("classification_confidence", profile.classificationConfidence)
+            putFloat("classification_confidence", profile.classificationConfidence.toFloat())
             putInt("conversation_turns", profile.conversationTurns)
             putLong("onboarding_completed_at", profile.onboardingCompletedAt)
             putBoolean("onboarding_complete", true)

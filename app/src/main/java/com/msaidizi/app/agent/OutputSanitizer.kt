@@ -46,9 +46,9 @@ object OutputSanitizer {
 
     // Dangerous HTML/JS patterns for web view rendering
     private val XSS_PATTERNS = listOf(
-        Regex("""<script[^>]*>.*?</script>""", RegexOption.DOT_MATCHES_MULTILINE),
+        Regex("""<script[^>]*>.*?</script>""", RegexOption.DOT_MATCHES_ALL),
         Regex("""javascript\s*:"""),
-        Regex("""on\w+\s*=""", RegexOption.DOT_MATCHES_MULTILINE),
+        Regex("""on\w+\s*=""", RegexOption.DOT_MATCHES_ALL),
         Regex("""<iframe[^>]*>"""),
         Regex("""<object[^>]*>"""),
         Regex("""<embed[^>]*>"""),

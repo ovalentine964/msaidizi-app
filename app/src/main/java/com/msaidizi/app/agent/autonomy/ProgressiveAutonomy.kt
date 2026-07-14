@@ -57,11 +57,11 @@ class ProgressiveAutonomy(
 
     companion object {
         private const val TAG = "ProgressiveAutonomy"
-        private const val PATTERN_TYPE = PatternType.VOCABULARY
+        private val PATTERN_TYPE = PatternType.VOCABULARY
         private const val PATTERN_KEY_PREFIX = "autonomy_domain_"
 
         // Promotion thresholds per level
-        private val PROMOTION_THRESHOLDS = mapOf(
+        internal val PROMOTION_THRESHOLDS = mapOf(
             AutonomyLevel.LEVEL_1_SUPERVISED to PromotionCriteria(
                 minAccuracy = 0.70, minInteractions = 20, maxCriticalErrors = 3
             ),

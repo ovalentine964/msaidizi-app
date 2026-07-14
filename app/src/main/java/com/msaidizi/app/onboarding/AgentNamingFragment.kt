@@ -51,6 +51,8 @@ class AgentNamingFragment : Fragment() {
 
     private var selectedAgentName: String = "Msaidizi"
     private var workerName: String = ""
+    private lateinit var customNameInput: EditText
+    private lateinit var selectedNameDisplay: TextView
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -135,7 +137,7 @@ class AgentNamingFragment : Fragment() {
                 text = "$name — $description"
                 textSize = 14f
                 setPadding(24, 16, 24, 16)
-                setOnClickListener { selectAgentName(name, customInput, selectedDisplay) }
+                setOnClickListener { selectAgentName(name, customNameInput, selectedNameDisplay) }
             }
             suggestionsContainer.addView(button)
 
@@ -164,6 +166,7 @@ class AgentNamingFragment : Fragment() {
             imeOptions = EditorInfo.IME_ACTION_DONE
             maxLines = 1
         }
+        customNameInput = customInput
         layout.addView(customInput)
 
         // ── Selected Name Display ──
@@ -174,6 +177,7 @@ class AgentNamingFragment : Fragment() {
             setPadding(0, 24, 0, 16)
             setTypeface(null, android.graphics.Typeface.BOLD)
         }
+        selectedNameDisplay = selectedDisplay
         layout.addView(selectedDisplay)
 
         // ── Worker Name Input ──

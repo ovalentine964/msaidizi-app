@@ -59,8 +59,9 @@ object SecurityModule {
     @Singleton
     fun provideOtpManager(
         @ApplicationContext context: Context,
+        api: MsaidiziApi,
         tokenStorage: SecureTokenStorage
-    ): OtpManager = OtpManager(context, tokenStorage)
+    ): OtpManager = OtpManager(context, api, tokenStorage)
 
     @Provides
     @Singleton

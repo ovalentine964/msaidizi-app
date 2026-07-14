@@ -166,7 +166,7 @@ class ModelVersionManager(private val context: Context) {
         val expectedBytes = version.quantizedSizeMb.toLong() * 1024 * 1024
         val actualBytes = file.length()
         val tolerance = expectedBytes * 0.2
-        return actualBytes in (expectedBytes - tolerance)..(expectedBytes + tolerance)
+        return actualBytes.toDouble() in (expectedBytes - tolerance)..(expectedBytes + tolerance)
     }
 
     /**

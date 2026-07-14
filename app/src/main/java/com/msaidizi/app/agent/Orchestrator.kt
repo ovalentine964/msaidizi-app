@@ -384,7 +384,7 @@ class Orchestrator(
         // If VoicePersonality is available, enhance with contextual greeting
         val personality = voicePersonality
         if (personality != null) {
-            val greeting = personality.getGreeting(language = language)
+            val greeting = personality.getGreeting(workerName = "Msaidizi", language = language)
             return if (ahaWelcome != null) {
                 "$greeting\n\n$ahaWelcome"
             } else {

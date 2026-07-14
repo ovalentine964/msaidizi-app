@@ -180,7 +180,7 @@ class DifferentialPrivacy @Inject constructor() {
         sensitivity: Double = 1.0,
         epsilon: Double = DEFAULT_EPSILON
     ): FloatArray {
-        val scale = (sensitivity / epsilon).toFloat()
+        val scale = sensitivity / epsilon
         val noised = FloatArray(values.size)
 
         for (i in values.indices) {

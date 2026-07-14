@@ -64,7 +64,7 @@ class ReasoningModelManager(private val context: Context) {
     )
 
     // Cost tracking
-    private val totalCostUsd = AtomicLong(0f.toBits())
+    private val totalCostUsd = AtomicLong(0L)
     private val costHistory = mutableListOf<CostRecord>()
     private val dailyCosts = ConcurrentHashMap<String, Float>() // date → cost
 
@@ -136,7 +136,7 @@ class ReasoningModelManager(private val context: Context) {
      * Get total inference cost (USD) for tracking.
      */
     fun getTotalCostUsd(): Float {
-        return Float.fromBits(totalCostUsd.get())
+        return Float.fromBits(totalCostUsd.get().toInt())
     }
 
     /**
@@ -275,7 +275,7 @@ class ReasoningModelManager(private val context: Context) {
 
     private fun recordCost(record: CostRecord) {
         costHistory.add(record)
-        totalCostUsd.set((getTotalCostUsd() + record.costUsd).toBits())
+        totalCostUsd.set((getTotalCostUsd() + record.costUsd).toBits().toLong())
 
         val date = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
             .format(java.util.Date(record.timestamp))

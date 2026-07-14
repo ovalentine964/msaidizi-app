@@ -219,11 +219,11 @@ object LanguageDetectorV2 {
             // Significant presence of two languages
             val mixedLang = determineMixedLanguage(best.key, second.key)
             val confidence = (best.value + second.value) / 2f
-            return LanguageResult(mixedLang, confidence.coerceIn(0.3f, 0.9f), combinedScores)
+            return LanguageResult(mixedLang, confidence.coerceIn(0.3f, 0.9f), combinedScores.mapValues { (it.value * 100).toInt() })
         }
 
         val confidence = best.value.coerceIn(0.3f, 1.0f)
-        return LanguageResult(best.key, confidence, combinedScores)
+        return LanguageResult(best.key, confidence, combinedScores.mapValues { (it.value * 100).toInt() })
     }
 
     /**

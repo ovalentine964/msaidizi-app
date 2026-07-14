@@ -189,8 +189,8 @@ class VoicePipelineHarness @Inject constructor(
         // ── Stage 1: STT with quality gate ──────────────────────
         emitFeedback(FEEDBACK_STT_PROCESSING, feedbackCall)
 
-        val sttResult: String?
-        val sttQuality: Float
+        var sttResult: String?
+        var sttQuality: Float
 
         try {
             val sttStart = System.currentTimeMillis()
@@ -333,8 +333,8 @@ class VoicePipelineHarness @Inject constructor(
         _pipelineState.value = VoiceHarnessState.PROCESSING_LLM
         emitFeedback(FEEDBACK_LLM_PROCESSING, feedbackCall)
 
-        val llmResponse: String?
-        val llmQuality: Float
+        var llmResponse: String?
+        var llmQuality: Float
 
         try {
             val llmStart = System.currentTimeMillis()
@@ -439,7 +439,7 @@ class VoicePipelineHarness @Inject constructor(
         emitFeedback(FEEDBACK_TTS_PROCESSING, feedbackCall)
 
         var spoken = false
-        val ttsQuality: Float
+        var ttsQuality: Float
 
         try {
             val ttsStart = System.currentTimeMillis()

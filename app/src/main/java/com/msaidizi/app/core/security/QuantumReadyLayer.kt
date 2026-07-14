@@ -492,7 +492,7 @@ class QuantumReadyLayer(
             // Combine shared secrets via XOR (NIST recommendation for hybrid KEM)
             val combinedSecret = ByteArray(32)
             for (i in combinedSecret.indices) {
-                combinedSecret[i] = (classicalResult.sharedSecret[i] xor pqcResult.sharedSecret[i])
+                combinedSecret[i] = (classicalResult.sharedSecret[i].toInt() xor pqcResult.sharedSecret[i].toInt()).toByte()
             }
 
             val combinedCiphertext = classicalResult.ciphertext + pqcResult.ciphertext
@@ -510,7 +510,7 @@ class QuantumReadyLayer(
             // XOR combine
             val combined = ByteArray(32)
             for (i in combined.indices) {
-                combined[i] = (classicalSecret[i] xor pqcSecret[i])
+                combined[i] = (classicalSecret[i].toInt() xor pqcSecret[i].toInt()).toByte()
             }
             return combined
         }
@@ -588,7 +588,7 @@ class QuantumReadyLayer(
         // Combine: XOR the shared secrets
         val combined = ByteArray(32)
         for (i in combined.indices) {
-            combined[i] = (ecdhResult.sharedSecret[i] xor mlkemResult.sharedSecret[i])
+            combined[i] = (ecdhResult.sharedSecret[i].toInt() xor mlkemResult.sharedSecret[i].toInt()).toByte()
         }
 
         // HKDF for domain separation

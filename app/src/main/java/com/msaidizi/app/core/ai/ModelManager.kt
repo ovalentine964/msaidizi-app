@@ -1,4 +1,5 @@
 package com.msaidizi.app.core.ai
+import android.content.ComponentCallbacks2
 
 import android.app.ActivityManager
 import android.content.Context

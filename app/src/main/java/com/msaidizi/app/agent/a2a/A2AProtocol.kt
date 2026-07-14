@@ -531,7 +531,7 @@ class A2AAgentNotFoundException(message: String) : A2AException(message)
 /**
  * A2A message event for the AgentEventBus.
  */
-fun AgentEvent.Companion.a2aMessageEvent(
+fun createA2aMessageEvent(
     message: A2AMessage
 ): AgentEvent.A2AMessageEvent {
     return AgentEvent.A2AMessageEvent(

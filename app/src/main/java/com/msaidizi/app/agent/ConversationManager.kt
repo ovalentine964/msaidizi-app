@@ -331,7 +331,7 @@ class ConversationManager(
         intentResult: IntentResult,
         response: AgentResponse,
         language: String,
-        trace: com.msaidizi.app.loops.ReActLoop.Trace? = null
+        trace: com.msaidizi.app.loops.ReActTrace? = null
     ): Double {
         // Update conversation memory
         conversationMemory.addTurn("worker", inputText, intentResult, intentResult.extractedData)
@@ -528,7 +528,7 @@ class ConversationManager(
     /**
      * Publish task completed event.
      */
-    fun publishTaskCompleted(trace: com.msaidizi.app.loops.ReActLoop.Trace, response: AgentResponse) {
+    fun publishTaskCompleted(trace: com.msaidizi.app.loops.ReActTrace, response: AgentResponse) {
         eventBus.publish(
             AgentEvent.AgentTaskCompleted(
                 eventId = UUID.randomUUID().toString(),

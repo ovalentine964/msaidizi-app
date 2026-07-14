@@ -589,7 +589,7 @@ object SwahiliParser {
                     parseSwahiliNumber(clean) == null
                 ) {
                     // This might be a new product or term the user teaches us
-                    vocab.trackUnknownWord(clean, dialectResult.dialectRegion.name)
+                    vocab.trackUnknownWord(clean, dialectResult.dialectRegion?.name ?: "STANDARD")
                 }
             }
         }

@@ -297,8 +297,8 @@ class FeedbackLoop(
 
                 val meanV = values.average()
                 val meanO = outcomes.average()
-                val cov = values.zip(outcomes).sumOf { (v, o) -> (v - meanV) * (o - meanO) }
-                val varV = values.sumOf { (v) -> (v - meanV) * (v - meanV) }
+                val cov = values.zip(outcomes).sumOf { p -> (p.first - meanV) * (p.second - meanO) }
+                val varV = values.sumOf { v -> (v - meanV) * (v - meanV) }
 
                 if (varV > 0) {
                     val gradient = cov / varV

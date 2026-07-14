@@ -113,7 +113,7 @@ class SherpaVoiceEngine @Inject constructor(
             val modelConfig = OfflineModelConfig(
                 whisper = whisperConfig,
                 tokens = tokensPath.absolutePath,
-                numThreads = if (DeviceTier.current == DeviceTier.HIGH) 4 else 2,
+                numThreads = if (DeviceTier.current >= DeviceTier.Tier.ENHANCED) 4 else 2,
                 debug = false,
                 provider = "cpu",
             )
@@ -278,7 +278,7 @@ class SherpaVoiceEngine @Inject constructor(
 
             val modelConfig = TtsModelConfig(
                 vits = vitsConfig,
-                numThreads = if (DeviceTier.current == DeviceTier.HIGH) 4 else 2,
+                numThreads = if (DeviceTier.current >= DeviceTier.Tier.ENHANCED) 4 else 2,
                 debug = false,
                 provider = "cpu",
             )

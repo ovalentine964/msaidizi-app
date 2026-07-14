@@ -56,4 +56,31 @@
         android:name="com.msaidizi.app.ui.vision.CameraCaptureFragment"
         android:label="Piga Picha"
         tools:layout="@layout/fragment_camera_capture" />
+
+    <fragment
+        android:id="@+id/languageSelectionFragment"
+        android:name="com.msaidizi.app.onboarding.LanguageSelectionFragment"
+        android:label="Chagua Lugha">
+        <action
+            android:id="@+id/action_language_selection_to_voice_setup"
+            app:destination="@id/voiceSetupFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/voiceSetupFragment"
+        android:name="com.msaidizi.app.onboarding.VoiceSetupFragment"
+        android:label="Sauti">
+        <action
+            android:id="@+id/action_voice_setup_to_model_download"
+            app:destination="@id/modelDownloadFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/whatsAppConnectionStepFragment"
+        android:name="com.msaidizi.app.onboarding.WhatsAppConnectionStepFragment"
+        android:label="WhatsApp">
+        <action
+            android:id="@+id/action_whatsapp_to_personality"
+            app:destination="@id/homeFragment" />
+    </fragment>
 </navigation>

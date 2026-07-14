@@ -1,4 +1,6 @@
 package com.msaidizi.app.security.privacy
+import kotlin.math.ln
+import kotlin.math.exp
 
 import com.msaidizi.app.security.crypto.pqc.HybridKeyExchange
 import com.msaidizi.app.security.crypto.pqc.DocumentSigner

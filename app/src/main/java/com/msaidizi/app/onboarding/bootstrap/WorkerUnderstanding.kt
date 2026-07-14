@@ -1,5 +1,7 @@
 package com.msaidizi.app.onboarding.bootstrap
 
+import com.msaidizi.app.onboarding.PaymentType
+
 /**
  * Worker Understanding — what Msaidizi DERIVES from the conversation.
  *

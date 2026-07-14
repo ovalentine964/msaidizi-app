@@ -213,8 +213,8 @@ class DashboardFragment : Fragment() {
     private fun speakDashboardSummary() {
         val state = viewModel.uiState.value
         ttsHelper?.speakFlowSummary(
-            revenue = state.weeklyCashFlow.income,
-            expenses = state.weeklyCashFlow.expenses,
+            revenue = state.weeklyCashFlow.inflow,
+            expenses = state.weeklyCashFlow.outflow,
             profit = state.weeklyCashFlow.net,
             savings = 0.0,
             healthScore = state.profitMargin.toInt().coerceIn(0, 100),

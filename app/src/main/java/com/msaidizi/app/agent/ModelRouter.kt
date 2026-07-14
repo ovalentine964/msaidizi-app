@@ -170,7 +170,11 @@ class ModelRouter(
         GOODS_RECOGNITION,       // Multimodal → vision expert
         RECEIPT_SCANNING,        // Multimodal → vision expert
         INVENTORY_SCAN,          // Multimodal → vision expert
-        PRICE_COMPARISON         // Multimodal + reasoning
+        PRICE_COMPARISON,        // Multimodal + reasoning
+        INVENTORY_OPTIMIZATION,  // Cloud reasoning
+        SUPPLIER_ANALYSIS,       // Cloud reasoning
+        PROFITABILITY_ANALYSIS,  // Cloud reasoning
+        PRICE_ANALYSIS           // Cloud reasoning
     }
 
     /**
@@ -228,7 +232,7 @@ class ModelRouter(
         val requestId: String,
         val steps: MutableList<ReasoningStep> = mutableListOf(),
         val templateUsed: FinancialTemplate? = null,
-        val modelUsed: String = "",
+        var modelUsed: String = "",
         val totalThinkingTokens: Int = 0,
         val startedAt: Long = System.currentTimeMillis(),
         var completedAt: Long = 0L,

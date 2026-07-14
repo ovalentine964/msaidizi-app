@@ -377,7 +377,7 @@ class SequentialModelLoader @Inject constructor(
      *
      * @return true if it's safe to load the model
      */
-    private fun ensureMemoryAvailable(modelType: ModelType): Boolean {
+    private suspend fun ensureMemoryAvailable(modelType: ModelType): Boolean {
         val availableMb = getAvailableRamMb()
         val requiredMb = modelType.estimatedMemoryMb + MIN_FREE_RAM_MB + MODEL_SAFETY_MARGIN_MB
 

@@ -82,7 +82,7 @@ class MlDsaProvider(
      */
     override fun generateKeyPair(): CryptoKeyPair {
         val keyPairGenerator = MLDSAKeyPairGenerator()
-        keyPairGenerator.init(MLDSAKeyGenerationParameters(bcParams))
+        keyPairGenerator.init(MLDSAKeyGenerationParameters(bcParams, java.security.SecureRandom()))
 
         val keyPair = keyPairGenerator.generateKeyPair()
         val publicKey = keyPair.public as MLDSAPublicKeyParameters

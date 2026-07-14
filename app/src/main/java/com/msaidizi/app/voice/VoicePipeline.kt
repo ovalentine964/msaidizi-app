@@ -169,6 +169,7 @@ class VoicePipeline @Inject constructor(
      */
     private suspend fun initLegacyPipeline() {
 
+        val isBasicTier = DeviceTier.current == DeviceTier.Tier.BASIC
         if (isBasicTier) {
             // ═══ 2GB DEVICE: Conservative initialization ═══
             // Only load Piper TTS (25MB) — leave headroom for the OS and app.

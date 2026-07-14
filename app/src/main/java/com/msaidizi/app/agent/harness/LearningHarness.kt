@@ -150,7 +150,7 @@ class LearningHarness @Inject constructor() {
                 // Measure quality on held-out validation data
                 val heldOutAccuracy = validateOnHeldOut("vocabulary", validationPairs) {
                     // For each held-out pair, check if the harness resolves correctly
-                    testVocabularyResolution(it.first, it.second, learningAgent)
+                    testVocabularyResolution(it.input, it.expectedOutput, learningAgent)
                 }
                 if (heldOutAccuracy >= 0) heldOutAccuracy else qualityCheckFn()
             },

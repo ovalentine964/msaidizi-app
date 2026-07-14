@@ -266,8 +266,7 @@ class ConversationLearningPipeline @Inject constructor(
             WordCapture(
                 word = word,
                 firstConfidence = rawConfidence,
-                dialectRegion = dialectRegion,
-                context = context
+                dialectRegion = dialectRegion
             )
         }
         capture.count++

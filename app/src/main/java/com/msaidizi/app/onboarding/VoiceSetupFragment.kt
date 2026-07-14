@@ -1,5 +1,6 @@
 package com.msaidizi.app.onboarding
 
+import androidx.lifecycle.lifecycleScope
 import android.Manifest
 import android.content.pm.PackageManager
 import android.media.AudioFormat

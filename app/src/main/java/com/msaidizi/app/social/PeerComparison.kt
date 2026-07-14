@@ -493,7 +493,7 @@ data class PeerComparisonOutput(
         fun empty() = PeerComparisonOutput(
             comparison = PeerComparisonResult(),
             messages = emptyList(),
-            peerMetrics = PeerMetrics(location = "", businessType = "")
+            peerMetrics = PeerMetrics(location = "", businessType = "", periodStart = 0L)
         )
     }
 

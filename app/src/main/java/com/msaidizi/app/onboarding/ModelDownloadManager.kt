@@ -50,7 +50,8 @@ import java.util.concurrent.ConcurrentHashMap
  * @see OnboardingConversation for the conversation that runs during download
  */
 class ModelDownloadManager(
-    private val context: Context
+    private val context: Context,
+    private val modelDownloader: com.msaidizi.app.core.ai.ModelDownloader
 ) {
     companion object {
         private const val TAG = "ModelDownloadManager"
@@ -186,8 +187,7 @@ class ModelDownloadManager(
 
         return try {
             // Use actual ModelDownloader for real HTTP downloads
-            val downloader = ModelDownloader(context, ModelRegistry)
-            downloader.downloadModel(model.id)
+            modelDownloader.downloadModel(model.id)
         } catch (e: CancellationException) {
             updateModelState(model.id, ModelState.PAUSED)
             Timber.i(TAG, "Download cancelled for %s", model.id)
@@ -230,16 +230,10 @@ class ModelDownloadManager(
      * Check if a model is ready (downloaded and verified).
      */
     fun isModelReady(modelId: String): Boolean {
-        // Check actual model files on disk via ModelRegistry
+        // Check actual model files on disk
         return try {
-            val registry = ModelRegistry
-            val def = registry.MODELS[modelId]
-            if (def != null) {
-                val file = java.io.File(context.filesDir, "models/${def.files.values.first().filename}")
-                file.exists() && file.length() > 0
-            } else {
-                _modelStates.value[modelId] == ModelState.COMPLETED
-            }
+            val modelDir = java.io.File(context.filesDir, "models/$modelId")
+            modelDir.exists() && modelDir.listFiles()?.isNotEmpty() == true
         } catch (e: Exception) {
             _modelStates.value[modelId] == ModelState.COMPLETED
         }

@@ -1043,7 +1043,7 @@ class DialectLearningEngine @Inject constructor(
      * Get overall engine status.
      */
     fun getStatus(): Map<String, Any> = mapOf(
-        "state" to _engineState.value.name,
+        "state" to _engineState.value::class.simpleName,
         "baseLanguage" to BASE_LANGUAGE,
         "activeDialect" to (activeDialect ?: "none"),
         "dialectLockCount" to dialectLockCount,

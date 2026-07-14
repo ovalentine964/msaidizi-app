@@ -80,7 +80,7 @@ class MlKemProvider(
      */
     override fun generateKeyPair(): CryptoKeyPair {
         val keyPairGenerator = MLKEMKeyPairGenerator()
-        keyPairGenerator.init(MLKEMKeyGenerationParameters(bcParams))
+        keyPairGenerator.init(MLKEMKeyGenerationParameters(bcParams, java.security.SecureRandom()))
 
         val keyPair: AsymmetricCipherKeyPair = keyPairGenerator.generateKeyPair()
         val publicKey = keyPair.public as MLKEMPublicKeyParameters
@@ -107,18 +107,18 @@ class MlKemProvider(
      *
      * Uses Bouncy Castle's MLKEMGenerator for IND-CCA2 secure encapsulation.
      */
-    fun encapsulate(publicKeyBytes: ByteArray): EncapsulatedKey {
+    override fun encapsulate(publicKey: ByteArray): EncapsulatedKey {
         val expectedSize = PUBLIC_KEY_SIZES[parameterSet]!!
-        require(publicKeyBytes.size == expectedSize) {
-            "Invalid public key size for ${parameterSet.name}: ${publicKeyBytes.size}, expected $expectedSize"
+        require(publicKey.size == expectedSize) {
+            "Invalid public key size for ${parameterSet.name}: ${publicKey.size}, expected $expectedSize"
         }
 
         // Reconstruct BC public key from raw bytes
-        val publicKey = MLKEMPublicKeyParameters(bcParams, publicKeyBytes)
+        val bcPublicKey = MLKEMPublicKeyParameters(bcParams, publicKey)
 
         // Use MLKEMGenerator for encapsulation (deterministic with internal DRBG)
         val generator = MLKEMGenerator()
-        val encapsulated = generator.generateEncapsulated(publicKey)
+        val encapsulated = generator.generateEncapsulated(bcPublicKey)
 
         val ciphertext = encapsulated.encapsulation
         val sharedSecret = encapsulated.secret
@@ -141,17 +141,17 @@ class MlKemProvider(
      * The decapsulated shared secret will match the one from encapsulate()
      * if and only if the private key corresponds to the public key used.
      */
-    fun decapsulate(ciphertext: ByteArray, privateKeyBytes: ByteArray): ByteArray {
+    override fun decapsulate(ciphertext: ByteArray, privateKey: ByteArray): ByteArray {
         val expectedCtSize = CIPHERTEXT_SIZES[parameterSet]!!
         require(ciphertext.size == expectedCtSize) {
             "Invalid ciphertext size for ${parameterSet.name}: ${ciphertext.size}, expected $expectedCtSize"
         }
 
         // Reconstruct BC private key from raw bytes
-        val privateKey = MLKEMPrivateKeyParameters(bcParams, privateKeyBytes)
+        val bcPrivateKey = MLKEMPrivateKeyParameters(bcParams, privateKey)
 
         // Use MLKEMExtractor for decapsulation
-        val extractor = MLKEMExtractor(privateKey)
+        val extractor = MLKEMExtractor(bcPrivateKey)
         val sharedSecret = extractor.extractSecret(ciphertext)
 
         Timber.d("ML-KEM decapsulation complete: %s", parameterSet.name)
@@ -161,24 +161,24 @@ class MlKemProvider(
     /**
      * ML-KEM does not support direct encryption — use shared secret with AES-GCM.
      */
-    override fun encrypt(plaintext: ByteArray, key: ByteArray): ByteArray {
+        fun encrypt(plaintext: ByteArray, key: ByteArray): ByteArray {
         throw UnsupportedOperationException(
             "ML-KEM is a key encapsulation mechanism, not an encryption algorithm. " +
             "Use encapsulate() to derive a shared secret, then encrypt with AES-256-GCM."
         )
     }
 
-    override fun decrypt(ciphertext: ByteArray, key: ByteArray): ByteArray {
+        fun decrypt(ciphertext: ByteArray, key: ByteArray): ByteArray {
         throw UnsupportedOperationException(
             "ML-KEM is a key encapsulation mechanism. Use decapsulate() + AES-256-GCM."
         )
     }
 
-    override fun sign(data: ByteArray, privateKey: ByteArray): ByteArray {
+        fun sign(data: ByteArray, privateKey: ByteArray): ByteArray {
         throw UnsupportedOperationException("ML-KEM does not support signing. Use ML-DSA (Dilithium).")
     }
 
-    override fun verify(data: ByteArray, signature: ByteArray, publicKey: ByteArray): Boolean {
+        fun verify(data: ByteArray, signature: ByteArray, publicKey: ByteArray): Boolean {
         throw UnsupportedOperationException("ML-KEM does not support signature verification. Use ML-DSA (Dilithium).")
     }
 }
