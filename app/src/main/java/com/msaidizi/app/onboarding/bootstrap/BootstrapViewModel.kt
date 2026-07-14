@@ -193,12 +193,7 @@ class BootstrapViewModel @Inject constructor(application: Application) : Android
                 isProcessing = false
             )
             // Return — the Activity will speak the prompt
-            // Schedule daily briefing notifications
-            try {
-                BriefingNotificationWorker.scheduleAllBriefings(getApplication())
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to schedule briefing notifications")
-            }
+            // Briefings will be scheduled when PIN is complete → onVoiceInput → Complete
         }
     }
 
@@ -306,7 +301,7 @@ class BootstrapViewModel @Inject constructor(application: Application) : Android
             putBoolean("onboarding_complete", true)
 
             // Save PIN (set during voice onboarding)
-            val pin = conversation.accumulated.pin
+            val pin = conversation.pin
             if (pin.isNotEmpty()) {
                 val salt = java.util.UUID.randomUUID().toString()
                 val pinHash = hashPin(pin, salt)

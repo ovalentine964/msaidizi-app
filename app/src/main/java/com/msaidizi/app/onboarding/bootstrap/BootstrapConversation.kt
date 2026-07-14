@@ -87,6 +87,12 @@ class BootstrapConversation {
     // Accumulated raw data from conversation
     private val accumulated = AccumulatedData()
 
+    /** Public accessor for PIN (set during voice onboarding) */
+    val pin: String get() = accumulated.pin
+
+    /** Public accessor for PIN — needed by ViewModel to save to app_lock prefs */
+    val pin: String get() = accumulated.pin
+
     // Derived understanding — this is what makes it a CONVERSATION, not a form
     val understanding = WorkerUnderstanding()
 
@@ -140,15 +146,15 @@ class BootstrapConversation {
     fun getProgress(step: BootstrapStep): Float {
         return when (step) {
             is BootstrapStep.Greeting -> 0f
-            is BootstrapStep.AskAgentNaming -> 1f / 8f
-            is BootstrapStep.AskBusinessType -> 2f / 8f
-            is BootstrapStep.AskProducts -> 3f / 8f
-            is BootstrapStep.AskLocation -> 4f / 8f
-            is BootstrapStep.AskWorkingHours -> 5f / 8f
-            is BootstrapStep.AskCustomersAndPayment -> 6f / 8f
-            is BootstrapStep.AskChallenges -> 7f / 8f
-            is BootstrapStep.Summary -> 9f / 10f
-            is BootstrapStep.AskPin -> 10f / 10f
+            is BootstrapStep.AskAgentNaming -> 1f / 10f
+            is BootstrapStep.AskBusinessType -> 2f / 10f
+            is BootstrapStep.AskProducts -> 3f / 10f
+            is BootstrapStep.AskLocation -> 4f / 10f
+            is BootstrapStep.AskWorkingHours -> 5f / 10f
+            is BootstrapStep.AskCustomersAndPayment -> 6f / 10f
+            is BootstrapStep.AskChallenges -> 7f / 10f
+            is BootstrapStep.Summary -> 8f / 10f
+            is BootstrapStep.AskPin -> 9f / 10f
             is BootstrapStep.Complete -> 1f
         }
     }

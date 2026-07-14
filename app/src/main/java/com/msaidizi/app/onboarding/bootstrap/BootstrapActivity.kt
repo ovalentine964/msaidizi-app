@@ -46,7 +46,7 @@ import javax.inject.Inject
  * That name becomes Msaidizi's identity. It's not "the app" — it's "Rafiki".
  * "Karibu! Mimi ni Rafiki. Nakumbuka biashara yako, Mary."
  *
- * ## What the worker experiences (9 turns, ~3-5 min):
+ * ## What the worker experiences (10 turns, ~3-5 min):
  *
  * 1. Msaidizi: "Karibu! Mimi ni Msaidizi wako. Unaitwa nani?"
  *    Worker: "Naitwa Mary"
@@ -60,14 +60,17 @@ import javax.inject.Inject
  * 4-8. ... business questions ...
  *
  * 9. Msaidizi: Summary + first insight
- *    Worker: Taps "Anza Kufanya Kazi"
+ *    Worker: Taps "Endelea"
+ *
+ * 10. Msaidizi: "Weka PIN yako ya tarakimu 4"
+ *     Worker: "Moja mbili tatu nne"
  *
  * ## UI Layout (minimal, 2GB-friendly):
  *
  * ```
  * ┌─────────────────────────┐
  *  │  🤝 Rafiki               │  (header — shows chosen name!)
- * │  ████░░░░ 2/9            │  (progress)
+ * │  ████░░░░ 2/10           │  (progress)
  * │                          │
  * │  "Mary, nzuri sana!     │  (prompt - large text)
  * │   Unataka kuniita nani?" │
@@ -197,9 +200,9 @@ class BootstrapActivity : AppCompatActivity() {
         }
         contentLayout.addView(headerText)
 
-        // ── Progress (1/9 through 9/9) ──
+        // ── Progress (1/10 through 10/10) ──
         progressText = TextView(this).apply {
-            text = "1/9"
+            text = "1/10"
             textSize = 12f
             gravity = Gravity.CENTER
             setPadding(0, 0, 0, 4)
@@ -405,7 +408,7 @@ class BootstrapActivity : AppCompatActivity() {
         }
 
         // Update progress
-        progressText.text = "${state.stepNumber}/9"
+        progressText.text = "${state.stepNumber}/10"
         progressBar.progress = (state.progress * 100).toInt()
 
         // Update header to show chosen agent name after naming step
