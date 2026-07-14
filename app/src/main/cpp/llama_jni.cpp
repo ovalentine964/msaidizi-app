@@ -74,8 +74,9 @@ Java_com_msaidizi_app_voice_LlamaCppEngine_nativeLoadModel(
     // Store model + params in a heap-allocated handle; return address as jlong
     auto *handle = new ModelHandle{model, (int32_t)nCtx, (int32_t)nThreads};
 
+    const auto *vocab0 = llama_model_get_vocab(model);
     LOGI("Model loaded successfully (handle=%p, vocab=%d tokens)",
-         (void *)handle, llama_n_vocab(llama_get_model_vocab(model)));
+         (void *)handle, llama_vocab_n_tokens(vocab0));
 
     return reinterpret_cast<jlong>(handle);
 }
@@ -123,8 +124,9 @@ Java_com_msaidizi_app_voice_LlamaCppEngine_nativeGenerate(
     // ── Tokenize prompt ──
     // +5 for potential special tokens overhead
     std::vector<llama_token> tokens(prompt.size() + 5);
+    const auto *vocab = llama_model_get_vocab(model);
     int nTokens = llama_tokenize(
-        model,
+        vocab,
         prompt.c_str(),
         static_cast<int32_t>(prompt.size()),
         tokens.data(),
@@ -174,14 +176,14 @@ Java_com_msaidizi_app_voice_LlamaCppEngine_nativeGenerate(
         newToken = llama_sampler_sample(smpl, ctx, -1);
 
         // Check for end-of-sequence
-        if (llama_token_is_eog(model, newToken)) {
+        if (llama_vocab_is_eog(llama_model_get_vocab(model), newToken)) {
             LOGI("EOS token generated after %d tokens", nGenerated);
             break;
         }
 
         // Decode token to text
         char buf[256];
-        int n = llama_token_to_piece(model, newToken, buf, sizeof(buf), 0, false);
+        int n = llama_token_to_piece(llama_model_get_vocab(model), newToken, buf, sizeof(buf), 0, false);
         if (n > 0) {
             result.append(buf, n);
         }
