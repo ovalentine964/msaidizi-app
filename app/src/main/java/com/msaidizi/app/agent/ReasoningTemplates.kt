@@ -1,6 +1,5 @@
 package com.msaidizi.app.agent
 
-import com.msaidizi.app.agent.ModelRouter.TaskComplexity
 
 /**
  * ReasoningTemplates — Pre-built reasoning templates for financial analysis.
@@ -49,7 +48,7 @@ object ReasoningTemplates {
         val requiredContext: List<String>,
         val outputFormat: String,
         val maxThinkingTokens: Int = 512,
-        val recommendedComplexity: TaskComplexity = TaskComplexity.MEDIUM
+        val recommendedComplexity: ModelRouter.TaskComplexity = ModelRouter.TaskComplexity.MEDIUM
     )
 
     // ═══════════════════════════════════════════════════════════════
@@ -63,7 +62,7 @@ object ReasoningTemplates {
             type = TemplateType.PRICE_ANALYSIS,
             name = "Market Price Analysis",
             description = "Analyze pricing for informal market products",
-            recommendedComplexity = TaskComplexity.MEDIUM,
+            recommendedComplexity = ModelRouter.TaskComplexity.MEDIUM,
             maxThinkingTokens = 512,
             requiredContext = listOf("product", "current_price", "location"),
             outputFormat = "recommendation_with_reasoning",
@@ -111,7 +110,7 @@ OUTPUT FORMAT:
             type = TemplateType.CREDIT_ASSESSMENT,
             name = "Informal Economy Credit Assessment",
             description = "Assess creditworthiness using alternative data signals",
-            recommendedComplexity = TaskComplexity.HIGH,
+            recommendedComplexity = ModelRouter.TaskComplexity.HIGH,
             maxThinkingTokens = 1024,
             requiredContext = listOf("transaction_history", "business_type"),
             outputFormat = "credit_report",
@@ -172,7 +171,7 @@ OUTPUT FORMAT:
             type = TemplateType.CASH_FLOW_FORECAST,
             name = "Cash Flow Analysis & Forecast",
             description = "Analyze and forecast cash flow for small businesses",
-            recommendedComplexity = TaskComplexity.MEDIUM,
+            recommendedComplexity = ModelRouter.TaskComplexity.MEDIUM,
             maxThinkingTokens = 512,
             requiredContext = listOf("income_data", "expense_data"),
             outputFormat = "cash_flow_report",
@@ -223,7 +222,7 @@ OUTPUT FORMAT:
             type = TemplateType.RISK_ASSESSMENT,
             name = "Business Risk Assessment",
             description = "Assess business risks and recommend mitigation",
-            recommendedComplexity = TaskComplexity.HIGH,
+            recommendedComplexity = ModelRouter.TaskComplexity.HIGH,
             maxThinkingTokens = 768,
             requiredContext = listOf("business_profile", "market_conditions"),
             outputFormat = "risk_report",
@@ -282,7 +281,7 @@ OUTPUT FORMAT:
             type = TemplateType.MARKET_INTELLIGENCE,
             name = "Market Intelligence Report",
             description = "Generate market intelligence from transaction data",
-            recommendedComplexity = TaskComplexity.HIGH,
+            recommendedComplexity = ModelRouter.TaskComplexity.HIGH,
             maxThinkingTokens = 768,
             requiredContext = listOf("market_data", "location"),
             outputFormat = "market_report",
@@ -335,7 +334,7 @@ OUTPUT FORMAT:
             type = TemplateType.GROWTH_PLANNING,
             name = "Micro-Enterprise Growth Plan",
             description = "Create realistic growth plans for micro-entrepreneurs",
-            recommendedComplexity = TaskComplexity.CRITICAL,
+            recommendedComplexity = ModelRouter.TaskComplexity.CRITICAL,
             maxThinkingTokens = 1536,
             requiredContext = listOf("business_data", "financial_position"),
             outputFormat = "growth_plan",
@@ -399,7 +398,7 @@ OUTPUT FORMAT:
             type = TemplateType.INVENTORY_OPTIMIZATION,
             name = "Inventory Optimization",
             description = "Optimize inventory levels and product mix",
-            recommendedComplexity = TaskComplexity.MEDIUM,
+            recommendedComplexity = ModelRouter.TaskComplexity.MEDIUM,
             maxThinkingTokens = 512,
             requiredContext = listOf("current_stock", "sales_history"),
             outputFormat = "inventory_plan",
@@ -452,7 +451,7 @@ OUTPUT FORMAT:
             type = TemplateType.SUPPLIER_EVALUATION,
             name = "Supplier Evaluation & Diversification",
             description = "Evaluate suppliers and recommend diversification",
-            recommendedComplexity = TaskComplexity.MEDIUM,
+            recommendedComplexity = ModelRouter.TaskComplexity.MEDIUM,
             maxThinkingTokens = 512,
             requiredContext = listOf("supplier_data", "purchase_history"),
             outputFormat = "supplier_report",
@@ -500,7 +499,7 @@ OUTPUT FORMAT:
             type = TemplateType.PROFITABILITY_ANALYSIS,
             name = "Profitability Deep Dive",
             description = "Analyze profitability drivers and optimization opportunities",
-            recommendedComplexity = TaskComplexity.MEDIUM,
+            recommendedComplexity = ModelRouter.TaskComplexity.MEDIUM,
             maxThinkingTokens = 512,
             requiredContext = listOf("revenue_data", "cost_data"),
             outputFormat = "profitability_report",
@@ -546,7 +545,7 @@ OUTPUT FORMAT:
             type = TemplateType.MICRO_INSURANCE,
             name = "Micro-Insurance Recommendation",
             description = "Recommend micro-insurance products for informal workers",
-            recommendedComplexity = TaskComplexity.HIGH,
+            recommendedComplexity = ModelRouter.TaskComplexity.HIGH,
             maxThinkingTokens = 768,
             requiredContext = listOf("risk_profile", "financial_position"),
             outputFormat = "insurance_recommendation",
@@ -601,7 +600,7 @@ OUTPUT FORMAT:
             type = TemplateType.LOAN_AFFORDABILITY,
             name = "Loan Affordability Assessment",
             description = "Assess ability to repay a loan",
-            recommendedComplexity = TaskComplexity.HIGH,
+            recommendedComplexity = ModelRouter.TaskComplexity.HIGH,
             maxThinkingTokens = 768,
             requiredContext = listOf("income_data", "existing_debts", "loan_amount"),
             outputFormat = "affordability_report",
@@ -656,7 +655,7 @@ OUTPUT FORMAT:
             type = TemplateType.DAILY_BRIEFING,
             name = "Daily Business Briefing",
             description = "Generate morning briefing for vendors",
-            recommendedComplexity = TaskComplexity.LOW,
+            recommendedComplexity = ModelRouter.TaskComplexity.LOW,
             maxThinkingTokens = 256,
             requiredContext = listOf("yesterday_data", "goals"),
             outputFormat = "briefing_message",
@@ -772,10 +771,10 @@ Good morning! [yesterday recap]. Today's focus: [priority]. [Goal update]. [Tip/
     fun getReasoningEffort(type: TemplateType): ModelRouter.ReasoningEffort {
         val template = templates[type] ?: return ModelRouter.ReasoningEffort.STANDARD
         return when (template.recommendedComplexity) {
-            TaskComplexity.LOW -> ModelRouter.ReasoningEffort.LIGHT
-            TaskComplexity.MEDIUM -> ModelRouter.ReasoningEffort.STANDARD
-            TaskComplexity.HIGH -> ModelRouter.ReasoningEffort.EXTENDED
-            TaskComplexity.CRITICAL -> ModelRouter.ReasoningEffort.XHIGH
+            ModelRouter.TaskComplexity.LOW -> ModelRouter.ReasoningEffort.LIGHT
+            ModelRouter.TaskComplexity.MEDIUM -> ModelRouter.ReasoningEffort.STANDARD
+            ModelRouter.TaskComplexity.HIGH -> ModelRouter.ReasoningEffort.EXTENDED
+            ModelRouter.TaskComplexity.CRITICAL -> ModelRouter.ReasoningEffort.XHIGH
         }
     }
 
