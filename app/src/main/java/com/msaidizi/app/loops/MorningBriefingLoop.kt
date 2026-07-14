@@ -362,11 +362,11 @@ class MorningBriefingLoop(
         try {
             // Weekly trend
             val trend = tracker.detectWeeklyTrend()
-            if (trend.direction != com.msaidizi.app.agent.Trend.INSUFFICIENT_DATA) {
+            if (trend.direction != com.msaidizi.app.core.model.Trend.INSUFFICIENT_DATA) {
                 val trendEmoji = when (trend.direction) {
-                    com.msaidizi.app.agent.Trend.RISING -> "📈"
-                    com.msaidizi.app.agent.Trend.FALLING -> "📉"
-                    com.msaidizi.app.agent.Trend.STABLE -> "➡️"
+                    com.msaidizi.app.core.model.Trend.RISING -> "📈"
+                    com.msaidizi.app.core.model.Trend.FALLING -> "📉"
+                    com.msaidizi.app.core.model.Trend.STABLE -> "➡️"
                     else -> ""
                 }
                 insights.appendLine("$trendEmoji Sales trend: ${trend.direction.name.lowercase()} (${trend.changePercent.toInt()}% vs last week)")

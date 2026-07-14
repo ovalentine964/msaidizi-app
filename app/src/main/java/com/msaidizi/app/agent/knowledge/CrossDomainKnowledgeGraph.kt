@@ -3,7 +3,7 @@ package com.msaidizi.app.agent.knowledge
 import com.msaidizi.app.agent.AgentEvent
 import com.msaidizi.app.agent.AgentEventBus
 import com.msaidizi.app.agent.BusinessPatternTracker
-import com.msaidizi.app.agent.Trend
+import com.msaidizi.app.core.model.Trend
 import com.msaidizi.app.core.database.PatternDao
 import com.msaidizi.app.core.model.PatternType
 import kotlinx.coroutines.CoroutineScope

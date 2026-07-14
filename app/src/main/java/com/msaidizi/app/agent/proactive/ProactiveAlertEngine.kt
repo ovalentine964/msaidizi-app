@@ -239,7 +239,7 @@ class ProactiveAlertEngine(
         if (isOnCooldown(AlertType.SALES_DROP)) return
 
         val trend = patternTracker.detectWeeklyTrend()
-        if (trend.direction == com.msaidizi.app.agent.Trend.FALLING &&
+        if (trend.direction == com.msaidizi.app.core.model.Trend.FALLING &&
             trend.changePercent < -SALES_DROP_THRESHOLD * 100 &&
             trend.confidence > 0.5
         ) {
