@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: 🔬 Dimension 1: Research Validation
+      - name: "🔬 Dimension 1: Research Validation"
         run: |
           echo "━━━ RESEARCH FINDINGS IMPLEMENTATION CHECK ━━━"
           FAIL=0
@@ -72,7 +72,7 @@ jobs:
             echo "::warning::Some research dimensions missing — review before merging"
           fi
 
-      - name: 🏗️ Dimension 2: Architecture Validation
+      - name: "🏗️ Dimension 2: Architecture Validation"
         run: |
           echo "━━━ ARCHITECTURE ALIGNMENT CHECK ━━━"
 
@@ -101,7 +101,7 @@ jobs:
           AGENTS=$(find app/src/main/java -name "*Agent.kt" 2>/dev/null | wc -l)
           echo "✅ Multi-agent: $AGENTS agents found"
 
-      - name: 🔒 Dimension 4: Security Validation
+      - name: "🔒 Dimension 4: Security Validation"
         run: |
           echo "━━━ SECURITY CHECK ━━━"
 
@@ -131,7 +131,7 @@ jobs:
             echo "❌ Possible hardcoded secrets: $SECRETS"
           fi
 
-      - name: ⚛️ Dimension 7: Quantum Readiness
+      - name: "⚛️ Dimension 7: Quantum Readiness"
         run: |
           echo "━━━ QUANTUM READINESS CHECK ━━━"
 
@@ -159,7 +159,7 @@ jobs:
             echo "⚠️ Hybrid KEX missing"
           fi
 
-      - name: 🤖 Dimension 8: AGI Readiness
+      - name: "🤖 Dimension 8: AGI Readiness"
         run: |
           echo "━━━ AGI READINESS CHECK ━━━"
 
