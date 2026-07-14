@@ -7,6 +7,7 @@
     <color name="secondary">#FFE8853D</color>     <!-- African Orange -->
     <color name="secondary_dark">#FFD06B2A</color> <!-- Dark Orange -->
     <color name="background">#FFFFFFFF</color>
+    <color name="background_primary">#FF1B2A4A</color>  <!-- Deep Navy (same as primary) -->
     <color name="surface">#FFF5F5F5</color>
     <color name="text_primary">#FF212121</color>
     <color name="text_secondary">#FF757575</color>

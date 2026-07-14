@@ -139,14 +139,16 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
-            // Don't compress large model files — they need to be memory-mapped or streamed
-            // GGUF (~450MB) and ONNX (~40-30MB) models must remain uncompressed for mmap access
-            jniLibs.useLegacyPackaging = true
-            noCompress += listOf("gguf", "onnx", "bin")
         }
         jniLibs {
             useLegacyPackaging = true
         }
+    }
+
+    // Don't compress large model files — they need to be memory-mapped or streamed
+    // GGUF (~450MB) and ONNX (~40-30MB) models must remain uncompressed for mmap access
+    aaptOptions {
+        noCompress("gguf", "onnx", "bin")
     }
 }
 
