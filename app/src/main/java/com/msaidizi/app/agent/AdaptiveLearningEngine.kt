@@ -4,6 +4,7 @@ import com.msaidizi.app.core.database.PatternDao
 import com.msaidizi.app.core.database.TransactionDao
 import com.msaidizi.app.core.model.*
 import com.msaidizi.app.core.util.SwahiliParser
+import com.msaidizi.app.agent.harness.LearningHarness
 import com.msaidizi.app.voice.LlmEngine
 import kotlinx.coroutines.*
 import kotlinx.serialization.encodeToString
@@ -43,7 +44,8 @@ class AdaptiveLearningEngine(
     private val transactionDao: TransactionDao,
     private val patternDao: PatternDao,
     private val patternTracker: BusinessPatternTracker,
-    private val learningAgent: LearningAgent
+    private val learningAgent: LearningAgent,
+    private val learningHarness: LearningHarness? = null
 ) {
     private val json = Json { ignoreUnknownKeys = true }
     private val engineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -90,10 +92,22 @@ class AdaptiveLearningEngine(
         )
         userCorrectionDao.insert(correction)
 
-        // 2. Apply correction to vocabulary
+        // 2. Apply correction to vocabulary (wrapped with LearningHarness if available)
         when (correctionType) {
             CorrectionType.ITEM -> {
                 // User corrected an item name: learn the mapping
+                if (learningHarness != null) {
+                    learningHarness!!.wrapVocabularyUpdate(
+                        spoken = originalValue,
+                        canonical = correctedValue,
+                        learningAgent = learningAgent,
+                        qualityCheckFn = {
+                            // Quality = confidence of the learned mapping
+                            val existing = userVocabularyDao.getBySpokenForm(originalValue.lowercase())
+                            existing?.confidence ?: 0.5
+                        }
+                    )
+                }
                 learnVocabularyMapping(originalValue, correctedValue)
             }
             CorrectionType.PRICE -> {

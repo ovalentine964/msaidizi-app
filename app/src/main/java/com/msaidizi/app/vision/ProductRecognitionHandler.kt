@@ -5,6 +5,7 @@ import com.msaidizi.app.core.database.InventoryDao
 import com.msaidizi.app.core.model.InventoryItem
 import com.msaidizi.app.core.model.WorkerVocabularyDao
 import com.msaidizi.app.voice.TextToSpeech
+import com.msaidizi.app.vision.VisionHarness
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,7 +42,8 @@ class ProductRecognitionHandler @Inject constructor(
     private val inventoryDao: InventoryDao,
     private val workerVocabularyDao: WorkerVocabularyDao,
     private val correctionTracker: VisionCorrectionTracker,
-    private val tts: TextToSpeech
+    private val tts: TextToSpeech,
+    private val visionHarness: VisionHarness
 ) {
     companion object {
         private const val TAG = "ProductRecognition"
@@ -119,27 +121,39 @@ class ProductRecognitionHandler @Inject constructor(
             _state.value = RecognitionState.Classifying
             lastClassifyTime = now
 
-            val recognition = classifier.classify(bitmap)
+            // Route through VisionHarness for confidence gates, fallback, and monitoring
+            val visionResult = visionHarness.recognize(
+                bitmap = bitmap,
+                classifyFn = { bmp -> classifier.classify(bmp) },
+                workerId = currentWorkerId
+            )
+
+            val recognition = visionResult.recognition
             if (recognition != null) {
-                // Apply confidence adjustments from corrections
-                val adjustment = correctionTracker.getConfidenceAdjustment(recognition.productSwahili)
-                val adjustedRecognition = if (adjustment != 1.0) {
-                    recognition.copy(confidence = (recognition.confidence * adjustment).coerceIn(0.0, 1.0))
-                } else {
-                    recognition
+                _lastRecognition.value = recognition
+
+                // Act on harness recommendation
+                when (visionResult.recommendedAction) {
+                    VisionHarness.RecommendedAction.AUTO_ACCEPT -> {
+                        _state.value = RecognitionState.Result(recognition)
+                    }
+                    VisionHarness.RecommendedAction.CONFIRM_WITH_WORKER -> {
+                        _state.value = RecognitionState.AwaitingConfirmation(recognition)
+                    }
+                    VisionHarness.RecommendedAction.ASK_WORKER -> {
+                        _state.value = RecognitionState.Result(recognition)
+                    }
                 }
 
-                _lastRecognition.value = adjustedRecognition
-                _state.value = RecognitionState.Result(adjustedRecognition)
-
                 Timber.d(
-                    TAG, "Recognized: %s (%.0f%%, KSh %.0f)",
-                    adjustedRecognition.productSwahili,
-                    adjustedRecognition.confidence * 100,
-                    adjustedRecognition.suggestedPriceKSh
+                    TAG, "Recognized via harness: %s (%.0f%%, KSh %.0f, action=%s)",
+                    recognition.productSwahili,
+                    recognition.confidence * 100,
+                    recognition.suggestedPriceKSh,
+                    visionResult.recommendedAction.name
                 )
 
-                adjustedRecognition
+                recognition
             } else {
                 _state.value = RecognitionState.Error("Sikuweza kutambua bidhaa")
                 null
@@ -289,10 +303,10 @@ class ProductRecognitionHandler @Inject constructor(
         predicted: ProductRecognition,
         correctedSwahili: String
     ) {
-        correctionTracker.recordVoiceCorrection(
-            predictedProductSwahili = predicted.productSwahili,
-            correctedProductSwahili = correctedSwahili,
-            confidence = predicted.confidence,
+        // Route correction through VisionHarness for monitoring and learning
+        visionHarness.recordCorrection(
+            predicted = predicted,
+            correctedSwahili = correctedSwahili,
             workerId = currentWorkerId
         )
 

@@ -69,6 +69,10 @@ import com.msaidizi.app.social.*
 import com.msaidizi.app.vision.ProductClassifier
 import com.msaidizi.app.vision.ProductRecognitionHandler
 import com.msaidizi.app.vision.VisionCorrectionTracker
+import com.msaidizi.app.vision.VisionHarness
+import com.msaidizi.app.agent.harness.InferenceHarness
+import com.msaidizi.app.agent.harness.LearningHarness
+import com.msaidizi.app.voice.VoicePipelineHarness
 import com.msaidizi.app.loops.MorningBriefingLoop
 import com.msaidizi.app.loops.StreakProtectionLoop
 import com.msaidizi.app.loops.VariableRewardsLoop
@@ -843,10 +847,11 @@ object AppModule {
         transactionDao: TransactionDao,
         patternDao: PatternDao,
         patternTracker: BusinessPatternTracker,
-        learningAgent: LearningAgent
+        learningAgent: LearningAgent,
+        learningHarness: LearningHarness
     ): AdaptiveLearningEngine = AdaptiveLearningEngine(
         userVocabularyDao, userCorrectionDao, transactionDao, patternDao,
-        patternTracker, learningAgent
+        patternTracker, learningAgent, learningHarness
     )
 
     @Provides
@@ -1069,8 +1074,9 @@ object AppModule {
     fun provideModelRouter(
         @ApplicationContext context: Context,
         llmEngine: LlmEngine,
-        api: MsaidiziApi
-    ): ModelRouter = ModelRouter(context, llmEngine = llmEngine, apiClient = api)
+        api: MsaidiziApi,
+        inferenceHarness: InferenceHarness
+    ): ModelRouter = ModelRouter(context, llmEngine = llmEngine, apiClient = api, inferenceHarness = inferenceHarness)
 
     // === SYNC ===
 
@@ -1333,8 +1339,34 @@ object AppModule {
         inventoryDao: InventoryDao,
         workerVocabularyDao: com.msaidizi.app.core.model.WorkerVocabularyDao,
         correctionTracker: VisionCorrectionTracker,
-        tts: com.msaidizi.app.voice.TextToSpeech
+        tts: com.msaidizi.app.voice.TextToSpeech,
+        visionHarness: VisionHarness
     ): ProductRecognitionHandler = ProductRecognitionHandler(
-        classifier, inventoryDao, workerVocabularyDao, correctionTracker, tts
+        classifier, inventoryDao, workerVocabularyDao, correctionTracker, tts, visionHarness
     )
+
+    // === HARNESS LAYER ===
+
+    @Provides
+    @Singleton
+    fun provideInferenceHarness(
+        costTracker: com.msaidizi.app.agent.cost.InferenceCostTracker
+    ): InferenceHarness = InferenceHarness(costTracker)
+
+    @Provides
+    @Singleton
+    fun provideVoicePipelineHarness(
+        inferenceHarness: InferenceHarness
+    ): VoicePipelineHarness = VoicePipelineHarness(inferenceHarness)
+
+    @Provides
+    @Singleton
+    fun provideLearningHarness(): LearningHarness = LearningHarness()
+
+    @Provides
+    @Singleton
+    fun provideVisionHarness(
+        inferenceHarness: InferenceHarness,
+        correctionTracker: VisionCorrectionTracker
+    ): VisionHarness = VisionHarness(inferenceHarness, correctionTracker)
 }

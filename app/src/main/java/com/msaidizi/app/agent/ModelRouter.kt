@@ -17,6 +17,9 @@ import com.msaidizi.app.agent.cost.InferenceCostTracker
 import com.msaidizi.app.agent.cost.CostRecord
 import com.msaidizi.app.agent.version.ModelVersionManager
 import com.msaidizi.app.agent.multimodal.MultimodalPipeline
+import com.msaidizi.app.agent.harness.InferenceHarness
+import com.msaidizi.app.agent.harness.HarnessConfig
+import com.msaidizi.app.agent.harness.ProviderCandidate
 import com.msaidizi.app.core.util.DeviceCapability
 import com.msaidizi.app.loops.ReflexionLoop
 import com.msaidizi.app.loops.Critique
@@ -57,7 +60,8 @@ class ModelRouter(
     private val context: Context,
     private val config: RouterConfig = RouterConfig(),
     private val llmEngine: LlmEngine? = null,
-    private val apiClient: MsaidiziApi? = null
+    private val apiClient: MsaidiziApi? = null,
+    private val inferenceHarness: InferenceHarness? = null
 ) {
 
     // ── Emerging Architecture Components (Swarm 7) ──
@@ -67,6 +71,10 @@ class ModelRouter(
     private val modelVersionManager = ModelVersionManager(context)
     private val multimodalPipeline = MultimodalPipeline(context, this)
     private val reflexionLoop = ReflexionLoop()
+
+    // ── Harness integration: wraps every provider call ──
+    // If harness is injected, all provider calls go through timeout/retry/monitoring
+    private val useHarness: Boolean get() = inferenceHarness != null
 
     // ── Evolution Signals for Adaptive Routing ──
     /** Recent evolution quality scores (0.0–1.0) per task type */
@@ -954,10 +962,40 @@ class ModelRouter(
         val model = request.model ?: provider.models.firstOrNull() ?: "default"
         val inputTokens = estimateTokens(request.messages)
 
-        val content = when (provider.type) {
-            ProviderType.ON_DEVICE -> callOnDevice(provider, request)
-            ProviderType.CLOUD_REASONING, ProviderType.CLOUD_PREMIUM -> callCloud(provider, request)
-            ProviderType.BACKEND -> callBackend(provider, request)
+        // Use InferenceHarness if available for timeout/retry/monitoring
+        val content = if (useHarness && inferenceHarness != null) {
+            val harnessResult = inferenceHarness!!.execute(
+                config = HarnessConfig(
+                    timeoutMs = when (provider.type) {
+                        ProviderType.ON_DEVICE -> config.onDeviceTimeoutMs
+                        else -> config.cloudTimeoutMs
+                    },
+                    maxRetries = 1
+                ),
+                providers = listOf(
+                    ProviderCandidate(
+                        providerId = provider.id,
+                        modelId = model,
+                        provider = {
+                            when (provider.type) {
+                                ProviderType.ON_DEVICE -> callOnDevice(provider, request)
+                                ProviderType.CLOUD_REASONING,
+                                ProviderType.CLOUD_PREMIUM -> callCloud(provider, request)
+                                ProviderType.BACKEND -> callBackend(provider, request)
+                            }
+                        }
+                    )
+                ),
+                taskType = "llm:${request.taskType.name}",
+                userId = request.userId ?: "anonymous"
+            )
+            harnessResult.value
+        } else {
+            when (provider.type) {
+                ProviderType.ON_DEVICE -> callOnDevice(provider, request)
+                ProviderType.CLOUD_REASONING, ProviderType.CLOUD_PREMIUM -> callCloud(provider, request)
+                ProviderType.BACKEND -> callBackend(provider, request)
+            }
         }
 
         val outputTokens = estimateTokens(listOf(mapOf("content" to content)))
