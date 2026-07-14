@@ -5,6 +5,7 @@ import com.msaidizi.app.core.database.GamificationDao
 import com.msaidizi.app.core.database.PatternDao
 import com.msaidizi.app.core.database.TransactionDao
 import com.msaidizi.app.core.model.PatternType
+import com.msaidizi.app.core.model.Trend
 import timber.log.Timber
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -366,7 +367,7 @@ class InsightRewards(
     private suspend fun generatePlatinumInsight(language: String): InsightReward {
         return try {
             val trend = businessPatternTracker?.detectWeeklyTrend()
-            if (trend == null || trend.direction == com.msaidizi.app.agent.Trend.INSUFFICIENT_DATA) {
+            if (trend == null || trend.direction == Trend.INSUFFICIENT_DATA) {
                 return InsightReward(
                     tier = InsightLevel.PLATINUM,
                     title = if (language == "sw") "📈 Mwelekeo wa Mauzo" else "📈 Sales Trend",
@@ -381,8 +382,8 @@ class InsightRewards(
             }
 
             val direction = when (trend.direction) {
-                com.msaidizi.app.agent.Trend.RISING -> if (language == "sw") "inaongezeka" else "rising"
-                com.msaidizi.app.agent.Trend.FALLING -> if (language == "sw") "inapungua" else "falling"
+                Trend.RISING -> if (language == "sw") "inaongezeka" else "rising"
+                Trend.FALLING -> if (language == "sw") "inapungua" else "falling"
                 else -> if (language == "sw") "imara" else "stable"
             }
 
@@ -391,12 +392,12 @@ class InsightRewards(
             val message = if (language == "sw") {
                 "📈 Mauzo yako $direction ($changePercent% wiki hii)\n\n" +
                     when (trend.direction) {
-                        com.msaidizi.app.agent.Trend.RISING ->
+                        Trend.RISING ->
                             "📋 **Jinsi ya kutumia hii:**\n" +
                             "• Ongeza stock — mauzo yanaongezeka!\n" +
                             "• Fungua masaa zaidi wiki ijayo\n" +
                             "• Fikiria kupanua bidhaa zako"
-                        com.msaidizi.app.agent.Trend.FALLING ->
+                        Trend.FALLING ->
                             "📋 **Jinsi ya kutumia hii:**\n" +
                             "• Angalia bei zako — zinaweza kuwa juu\n" +
                             "• Jaribu promotion ndogo\n" +
@@ -410,12 +411,12 @@ class InsightRewards(
             } else {
                 "📈 Your sales are $direction ($changePercent% this week)\n\n" +
                     when (trend.direction) {
-                        com.msaidizi.app.agent.Trend.RISING ->
+                        Trend.RISING ->
                             "📋 **How to use this:**\n" +
                             "• Stock up — sales are increasing!\n" +
                             "• Open more hours next week\n" +
                             "• Consider expanding your products"
-                        com.msaidizi.app.agent.Trend.FALLING ->
+                        Trend.FALLING ->
                             "📋 **How to use this:**\n" +
                             "• Check your prices — they might be too high\n" +
                             "• Try a small promotion\n" +

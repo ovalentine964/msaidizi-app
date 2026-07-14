@@ -30,6 +30,7 @@ import com.msaidizi.app.agent.proactive.ProactiveAlertEngine
 import com.msaidizi.app.agent.a2a.A2AProtocol
 import com.msaidizi.app.agent.a2a.AgentProfile
 import com.msaidizi.app.agent.knowledge.CrossDomainKnowledgeGraph
+import com.msaidizi.app.social.SocialHandler
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import timber.log.Timber

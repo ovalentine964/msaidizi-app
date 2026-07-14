@@ -1000,7 +1000,8 @@ object AppModule {
         conversationLearningPipeline: ConversationLearningPipeline,
         llmEngine: LlmEngine,
         voicePersonality: VoicePersonality,
-        proactiveAlertEngine: ProactiveAlertEngine
+        proactiveAlertEngine: ProactiveAlertEngine,
+        socialHandler: SocialHandler
     ): Orchestrator = Orchestrator(
         intentRouter = intentRouter,
         businessAgent = businessAgent,
@@ -1034,7 +1035,8 @@ object AppModule {
         conversationLearningPipeline = conversationLearningPipeline,
         llmEngine = llmEngine,
         voicePersonality = voicePersonality,
-        proactiveAlertEngine = proactiveAlertEngine
+        proactiveAlertEngine = proactiveAlertEngine,
+        socialHandler = socialHandler
     )
 
     @Provides

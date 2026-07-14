@@ -165,7 +165,7 @@ class ModelRegistry @Inject constructor(
             "whisper-tiny-int4" to ModelDef(
                 id = "whisper-tiny-int4",
                 filename = "whisper-encoder-int8.onnx",
-                url = "https://huggingface.co/Xenova/whisper-tiny.en/resolve/main/onnx/encoder_model_quantized.onnx",
+                url = "https://huggingface.co/Xenova/whisper-tiny/resolve/main/onnx/encoder_model_quantized.onnx",
                 sha256 = "fbb207db0e0948f37e78faecf22487567f7e53bee373ef48ecb3271262ee8f95",  // TODO(release): compute real sha256sum for whisper-encoder-int8.onnx
                 sizeBytes = 39_000_000L,
                 priority = ModelPriority.LOW,
@@ -175,19 +175,19 @@ class ModelRegistry @Inject constructor(
                 files = mapOf(
                     "encoder" to ModelFileDef(
                         filename = "whisper-encoder-int8.onnx",
-                        url = "https://huggingface.co/Xenova/whisper-tiny.en/resolve/main/onnx/encoder_model_quantized.onnx",
+                        url = "https://huggingface.co/Xenova/whisper-tiny/resolve/main/onnx/encoder_model_quantized.onnx",
                         sha256 = "f0461d53e6c32a1fa314ac140f5a48643a6b39db92c99b5e5dbbf84b4c990d9c",  // TODO(release): replace with real sha256sum,
                         sizeBytes = 10_124_993L
                     ),
                     "decoder" to ModelFileDef(
                         filename = "whisper-decoder-int8.onnx",
-                        url = "https://huggingface.co/Xenova/whisper-tiny.en/resolve/main/onnx/decoder_model_merged_quantized.onnx",
+                        url = "https://huggingface.co/Xenova/whisper-tiny/resolve/main/onnx/decoder_model_merged_quantized.onnx",
                         sha256 = "ab11998ab0e800c16a3d613ceb38fb91a81e20fe140659b856aba1327ca5610f",  // TODO(release): replace with real sha256sum,
                         sizeBytes = 29_290_000L
                     ),
                     "tokens" to ModelFileDef(
                         filename = "whisper-tokens.json",
-                        url = "https://huggingface.co/Xenova/whisper-tiny.en/resolve/main/tokenizer.json",
+                        url = "https://huggingface.co/Xenova/whisper-tiny/resolve/main/tokenizer.json",
                         sha256 = "9e84c4260db0b8e800f374203767086fb0dd6ded6afbd48028cc02925ee90d5e",  // TODO(release): replace with real sha256sum,
                         sizeBytes = 2_000_000L
                     )
