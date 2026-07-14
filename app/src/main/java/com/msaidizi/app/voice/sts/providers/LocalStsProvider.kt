@@ -153,8 +153,6 @@ class LocalStsProvider @Inject constructor(
         // Split response into sentences
         val sentences = fullResponse.split(Regex("(?<=[.!?])\\s+")).filter { it.isNotBlank() }
         responseChunks.addAll(sentences)
-            responseChunks.add(remaining)
-        }
 
         // 4. Streaming TTS — synthesize each chunk with Kokoro (emotion-aware)
         for (chunk in responseChunks) {
