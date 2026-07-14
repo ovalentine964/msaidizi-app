@@ -490,6 +490,29 @@ data class ReceiptData(
     /** Whether the receipt has any useful data */
     val isValid: Boolean get() = items.isNotEmpty() || total > 0
 
+    companion object {
+        /**
+         * Parse ReceiptData from a ReceiptScanActivity result intent.
+         */
+        fun fromIntent(data: android.content.Intent?): ReceiptData? {
+            if (data == null) return null
+            val items = data.getParcelableArrayListExtra<ReceiptItemParcel>(
+                ReceiptScanActivity.EXTRA_RECEIPT_DATA
+            )
+            val rawText = data.getStringExtra(ReceiptScanActivity.EXTRA_RAW_OCR_TEXT) ?: ""
+            if (items.isNullOrEmpty() && rawText.isBlank()) return null
+
+            return ReceiptData(
+                merchantName = data.getStringExtra("merchant_name") ?: "",
+                date = data.getStringExtra("date") ?: "",
+                items = items?.map { it.toReceiptItem() } ?: emptyList(),
+                total = data.getDoubleExtra("total", 0.0),
+                paymentMethod = data.getStringExtra("payment_method") ?: "cash",
+                rawOcrText = rawText
+            )
+        }
+    }
+
     /** Summary text for voice feedback */
     fun toSummaryText(language: String = "sw"): String {
         return if (language == "sw") {

@@ -108,8 +108,32 @@
         app:tint="@color/white"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/scan_button"
+        android:layout_marginBottom="24dp"
+        android:layout_marginEnd="16dp" />
+
+    <!-- Scan Receipt Button -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/scan_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/ic_camera"
+        android:contentDescription="Scan Receipt / Piga risiti"
+        app:fabSize="mini"
+        app:backgroundTint="@color/secondary"
+        app:tint="@color/white"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginBottom="24dp" />
+        android:layout_marginBottom="32dp"
+        android:layout_marginEnd="24dp" />
+
+    <!-- Fragment container for receipt confirmation overlay -->
+    <FrameLayout
+        android:id="@+id/fragment_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        android:elevation="16dp" />
 
     <!-- Pronunciation Feedback (slides up from bottom) -->
     <com.msaidizi.app.ui.record.PronunciationFeedbackView

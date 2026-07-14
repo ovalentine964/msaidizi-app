@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -19,6 +20,9 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.msaidizi.app.R
+import com.msaidizi.app.scanner.ReceiptConfirmationFragment
+import com.msaidizi.app.scanner.ReceiptData
+import com.msaidizi.app.scanner.ReceiptScanActivity
 import com.msaidizi.app.ui.accessibility.AccessibilityTtsHelper
 import com.msaidizi.app.ui.accessibility.VoiceInputHelper
 import com.msaidizi.app.voice.PipelineState
@@ -43,6 +47,7 @@ class RecordFragment : Fragment() {
     private val viewModel: RecordViewModel by viewModels()
 
     private lateinit var micButton: FloatingActionButton
+    private lateinit var scanButton: FloatingActionButton
     private lateinit var statusText: TextView
     private lateinit var transcribedText: TextView
     private lateinit var responseText: TextView
@@ -57,6 +62,18 @@ class RecordFragment : Fragment() {
     private lateinit var textInputMicButton: ImageButton
 
     private var isRecording = false
+
+    // ── Receipt Scanner ──
+    private val receiptScanLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val receiptData = ReceiptData.fromIntent(result.data)
+            if (receiptData != null && receiptData.isValid) {
+                showReceiptConfirmation(receiptData)
+            }
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -77,6 +94,7 @@ class RecordFragment : Fragment() {
 
     private fun setupViews(view: View) {
         micButton = view.findViewById(R.id.mic_button)
+        scanButton = view.findViewById(R.id.scan_button)
         statusText = view.findViewById(R.id.status_text)
         transcribedText = view.findViewById(R.id.transcribed_text)
         responseText = view.findViewById(R.id.response_text)
@@ -109,6 +127,16 @@ class RecordFragment : Fragment() {
                 } else {
                     requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), 100)
                 }
+            }
+        }
+
+        // Scan receipt button — launch camera for receipt scanning
+        scanButton.setOnClickListener {
+            if (hasCameraPermission()) {
+                val intent = ReceiptScanActivity.newIntent(requireContext())
+                receiptScanLauncher.launch(intent)
+            } else {
+                requestPermissions(arrayOf(Manifest.permission.CAMERA), 1002)
             }
         }
 
@@ -174,8 +202,22 @@ class RecordFragment : Fragment() {
     private fun observeState() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiState.collect { state ->
-                    updateUI(state)
+                // Observe UI state
+                launch {
+                    viewModel.uiState.collect { state ->
+                        updateUI(state)
+                    }
+                }
+                // Observe one-shot events (e.g., launch receipt scanner)
+                launch {
+                    viewModel.events.collect { event ->
+                        when (event) {
+                            is RecordEvent.LaunchReceiptScanner -> {
+                                val intent = ReceiptScanActivity.newIntent(requireContext())
+                                receiptScanLauncher.launch(intent)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -241,6 +283,49 @@ class RecordFragment : Fragment() {
             requireContext(),
             Manifest.permission.RECORD_AUDIO
         ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun hasCameraPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            requireContext(),
+            Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    /**
+     * Show receipt confirmation fragment after successful scan.
+     * User can review and correct parsed items before saving.
+     */
+    private fun showReceiptConfirmation(receiptData: ReceiptData) {
+        val fragment = ReceiptConfirmationFragment.newInstance(receiptData)
+        fragment.setCallbacks(
+            onConfirmed = { items ->
+                // Create transactions from confirmed items
+                viewLifecycleOwner.lifecycleScope.launch {
+                    try {
+                        // Use the orchestrator to process each item as a purchase
+                        for (item in items) {
+                            val input = if (viewModel.uiState.value.pipelineState == PipelineState.IDLE) {
+                                "Nimenunua ${item.currentName} kwa KSh ${"%.0f".format(item.totalPrice)}"
+                            } else {
+                                "Nimenunua ${item.currentName} kwa KSh ${"%.0f".format(item.totalPrice)}"
+                            }
+                            viewModel.processTextInput(input)
+                        }
+                    } catch (e: Exception) {
+                        timber.log.Timber.e(e, "Error creating transactions from receipt")
+                    }
+                }
+            },
+            onCancelled = {
+                // User cancelled — do nothing
+            }
+        )
+
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.fragment_container, fragment)
+            .addToBackStack("receipt_confirmation")
+            .commit()
     }
 
     override fun onResume() {

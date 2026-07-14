@@ -350,3 +350,11 @@ data class ConversationEntry(
     val responseText: String,
     val timestamp: Long
 )
+
+/**
+ * One-shot events from the Record ViewModel.
+ */
+sealed class RecordEvent {
+    /** Launch the receipt scanner activity */
+    object LaunchReceiptScanner : RecordEvent()
+}
