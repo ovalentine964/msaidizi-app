@@ -148,7 +148,7 @@ android {
     // Don't compress large model files — they need to be memory-mapped or streamed
     // GGUF (~450MB) and ONNX (~40-30MB) models must remain uncompressed for mmap access
     aaptOptions {
-        noCompress("gguf", "onnx", "bin")
+        noCompress("gguf", "onnx", "bin", "tokens", "fst")
     }
 }
 
@@ -223,6 +223,11 @@ dependencies {
 
     // ONNX Runtime — 1.20.0: ARM inference optimization, NNAPI improvements
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.20.0")
+
+    // Sherpa-ONNX — gold-standard offline voice (ASR/TTS/VAD) for Android
+    // JNI libs (libsherpa-onnx-jni.so + libonnxruntime.so) are downloaded via
+    // scripts/setup-sherpa-onnx.sh and placed in app/src/main/jniLibs/arm64-v8a/
+    // The Kotlin API source files live in app/src/main/java/com/k2fsa/sherpa/onnx/
 
     // Lottie for animations
     implementation("com.airbnb.android:lottie:6.3.0")
