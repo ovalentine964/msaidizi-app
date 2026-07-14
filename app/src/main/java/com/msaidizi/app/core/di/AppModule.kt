@@ -1,6 +1,7 @@
 package com.msaidizi.app.core.di
 
 import android.content.Context
+import com.msaidizi.app.scanner.ReceiptScanner
 import com.msaidizi.app.data.api.MsaidiziApi
 import com.msaidizi.app.agent.AgentEventBus
 import androidx.room.Room
