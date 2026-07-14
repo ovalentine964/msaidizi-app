@@ -5,6 +5,8 @@
 // Requires: NDK r26b, CMake 3.22.1
 // ============================================================
 
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -114,7 +116,7 @@ android {
                 keyPassword = envKeyPassword ?: envStorePassword
             } else {
                 // Local path: read from keystore.properties
-                val props = java.util.Properties()
+                val props = Properties()
                 val propsFile = file("${rootProject.projectDir}/keystore.properties")
                 if (propsFile.exists()) {
                     props.load(propsFile.inputStream())
