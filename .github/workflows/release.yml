@@ -70,14 +70,12 @@ jobs:
           chmod +x scripts/download-models.sh
           ./scripts/download-models.sh --verify
 
-      - name: Apply KSP migration if needed
+      - name: Install NDK r26b and CMake 3.22.1
         run: |
-          if grep -q "com.google.devtools.ksp" app/build.gradle.kts; then
-            echo "✅ Already using KSP"
-          elif [ -f "app/build.gradle.ksp" ]; then
-            cp app/build.gradle.ksp app/build.gradle.kts
-            echo "✅ KSP migration applied"
-          fi
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+            "ndk;26.1.10909125" \
+            "cmake;3.22.1"
+          echo "✅ NDK r26b and CMake 3.22.1 installed"
 
       - name: Decode release keystore
         if: env.RELEASE_KEYSTORE_BASE64 != ''

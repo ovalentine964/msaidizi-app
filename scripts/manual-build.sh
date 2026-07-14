@@ -45,19 +45,7 @@ else
     echo "  ⚠️  No validation script found, skipping"
 fi
 
-# ── Step 2: KSP Migration ──
-echo ""
-echo -e "${YELLOW}📋 Step 2: KSP Migration...${NC}"
-if [ -f "app/build.gradle.ksp" ]; then
-    cp app/build.gradle.ksp app/build.gradle.kts
-    echo "  ✅ Copied app/build.gradle.ksp → app/build.gradle.kts"
-fi
-if [ -f "build.gradle.ksp" ]; then
-    cp build.gradle.ksp build.gradle.kts
-    echo "  ✅ Copied build.gradle.ksp → build.gradle.kts"
-fi
-
-# ── Step 3: Build ──
+# ── Step 2: Build ──
 echo ""
 echo -e "${YELLOW}📋 Step 3: Building APK...${NC}"
 

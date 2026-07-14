@@ -1,13 +1,8 @@
 // ============================================================
-// OPTION B: KSP Migration — Root build.gradle.ksp
+// Msaidizi — Root build.gradle.kts
 // ============================================================
-// To use: rename build.gradle.kts → build.gradle.kts.kapt-backup
-//         rename this file → build.gradle.kts
-//
-// Changes from original:
-//   - Replaced `org.jetbrains.kotlin.kapt` with `com.google.devtools.ksp`
-//   - Hilt plugin unchanged (supports KSP since 2.48)
-//   - Kotlin 1.9.24 retained (KSP 1.9.24-1.0.20 is stable)
+// Uses KSP for annotation processing (Room, Hilt, WorkManager).
+// Kotlin 1.9.24 + KSP 1.9.24-1.0.20
 // ============================================================
 
 plugins {

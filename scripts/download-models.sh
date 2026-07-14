@@ -101,13 +101,13 @@ download \
     "Qwen LLM (Q4_K_M)" \
     500000000
 
-# Fallback if unsloth fails
+# Fallback: try alternative GGUF source if primary fails
 if [ ! -f "$MODELS_DIR/qwen3.5-0.8b-q4_k_m.gguf" ] || [ "$(stat -c%s "$MODELS_DIR/qwen3.5-0.8b-q4_k_m.gguf" 2>/dev/null || echo 0)" -lt 100000 ]; then
-    echo -e "  ${YELLOW}↻${NC} Trying bartowski mirror..."
+    echo -e "  ${YELLOW}↻${NC} Trying Qwen official mirror..."
     download \
-        "https://huggingface.co/bartowski/Qwen_Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf" \
+        "https://huggingface.co/Qwen/Qwen3.5-0.8B-GGUF/resolve/main/qwen3.5-0.8b-q4_k_m.gguf" \
         "$MODELS_DIR/qwen3.5-0.8b-q4_k_m.gguf" \
-        "Qwen LLM (Q4_K_M, bartowski)" \
+        "Qwen LLM (Q4_K_M, Qwen official)" \
         500000000
 fi
 

@@ -89,15 +89,6 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: KSP Migration
-        run: |
-          if grep -q "com.google.devtools.ksp" app/build.gradle.kts; then
-            echo "✅ Already using KSP"
-          elif [ -f "app/build.gradle.ksp" ]; then
-            cp app/build.gradle.ksp app/build.gradle.kts
-            echo "✅ KSP migration applied"
-          fi
-
       - name: Run Unit Tests with Coverage
         run: ./gradlew testDebugUnitTest jacocoTestReportDebug --stacktrace
 
@@ -213,14 +204,12 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: KSP Migration
+      - name: Install NDK r26b and CMake 3.22.1
         run: |
-          if grep -q "com.google.devtools.ksp" app/build.gradle.kts; then
-            echo "✅ Already using KSP"
-          elif [ -f "app/build.gradle.ksp" ]; then
-            cp app/build.gradle.ksp app/build.gradle.kts
-            echo "✅ KSP migration applied"
-          fi
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+            "ndk;26.1.10909125" \
+            "cmake;3.22.1"
+          echo "✅ NDK r26b and CMake 3.22.1 installed"
 
       - name: Generate debug keystore
         run: |
@@ -283,8 +272,9 @@ jobs:
           # Expected SHA-256 hashes for bundled models
           # Update these when models are updated
           declare -A EXPECTED_HASHES=(
-            ["app/src/main/assets/models/whisper-tiny-int8.tflite"]="PLACEHOLDER_COMPUTE_ON_FIRST_RELEASE"
+            ["app/src/main/assets/models/ggml-tiny.en-q5_1.bin"]="PLACEHOLDER_COMPUTE_ON_FIRST_RELEASE"
             ["app/src/main/assets/models/piper-swahili.onnx"]="PLACEHOLDER_COMPUTE_ON_FIRST_RELEASE"
+            ["app/src/main/assets/models/qwen3.5-0.8b-q4_k_m.gguf"]="PLACEHOLDER_COMPUTE_ON_FIRST_RELEASE"
           )
 
           MANIFEST="model-integrity.txt"
@@ -357,14 +347,12 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: KSP Migration
+      - name: Install NDK r26b and CMake 3.22.1
         run: |
-          if grep -q "com.google.devtools.ksp" app/build.gradle.kts; then
-            echo "✅ Already using KSP"
-          elif [ -f "app/build.gradle.ksp" ]; then
-            cp app/build.gradle.ksp app/build.gradle.kts
-            echo "✅ KSP migration applied"
-          fi
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+            "ndk;26.1.10909125" \
+            "cmake;3.22.1"
+          echo "✅ NDK r26b and CMake 3.22.1 installed"
 
       - name: Decode keystore
         run: |

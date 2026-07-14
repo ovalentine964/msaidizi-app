@@ -1,15 +1,8 @@
 // ============================================================
-// OPTION B: KSP Migration — app/build.gradle.ksp
+// Msaidizi Android App — build.gradle.kts
 // ============================================================
-// To use: rename app/build.gradle.kts → app/build.gradle.kts.kapt-backup
-//         rename this file → app/build.gradle.kts
-//
-// Changes from original:
-//   - Replaced `id("org.jetbrains.kotlin.kapt")` with `id("com.google.devtools.ksp")`
-//   - All `kapt(...)` → `ksp(...)`
-//   - Room schema export uses KSP arguments (not javaCompileOptions)
-//   - Removed `kapt { correctErrorTypes = true }` (KSP doesn't need it)
-//   - Removed kapt-specific gradle.properties settings
+// Uses KSP (not kapt) for annotation processing.
+// Requires: NDK r26b, CMake 3.22.1
 // ============================================================
 
 plugins {

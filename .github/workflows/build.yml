@@ -45,6 +45,15 @@ jobs:
           restore-keys: |
             gradle-${{ runner.os }}-
 
+      - name: Install NDK r26b and CMake 3.22.1
+        run: |
+          # Install NDK r26b (26.1.10909125) and CMake 3.22.1
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+            "ndk;26.1.10909125" \
+            "cmake;3.22.1"
+          echo "✅ NDK r26b and CMake 3.22.1 installed"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
+
       - name: Generate debug keystore
         run: |
           keytool -genkeypair -v \
@@ -76,15 +85,6 @@ jobs:
         run: |
           chmod +x scripts/download-models.sh
           ./scripts/download-models.sh --verify
-
-      - name: Apply KSP migration if needed
-        run: |
-          if grep -q "com.google.devtools.ksp" app/build.gradle.kts; then
-            echo "✅ Already using KSP"
-          elif [ -f "app/build.gradle.ksp" ]; then
-            cp app/build.gradle.ksp app/build.gradle.kts
-            echo "✅ KSP migration applied"
-          fi
 
       - name: Build Debug APK
         run: |
