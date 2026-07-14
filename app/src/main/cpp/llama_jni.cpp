@@ -65,7 +65,7 @@ Java_com_msaidizi_app_voice_LlamaCppEngine_nativeLoadModel(
     // Do not lock pages in memory — let the OS page-in on demand
     model_params.use_mlock = false;
 
-    struct llama_model *model = llama_load_model_from_file(modelPath.c_str(), model_params);
+    struct llama_model *model = llama_model_load_from_file(modelPath.c_str(), model_params);
     if (!model) {
         LOGE("Failed to load model from: %s", modelPath.c_str());
         return 0;
@@ -222,7 +222,7 @@ Java_com_msaidizi_app_voice_LlamaCppEngine_nativeFreeModel(
 
     auto *mh = reinterpret_cast<ModelHandle *>(handle);
     if (mh->model) {
-        llama_free_model(mh->model);
+        llama_model_free(mh->model);
         LOGI("Model freed (handle=%p)", (void *)mh);
     }
     delete mh;
