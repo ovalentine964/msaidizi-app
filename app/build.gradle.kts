@@ -238,6 +238,9 @@ dependencies {
     // SwipeRefreshLayout
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
 
+    // Biometric authentication
+    implementation("androidx.biometric:biometric:1.1.0")
+
     // MPAndroidChart for dashboard
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
 

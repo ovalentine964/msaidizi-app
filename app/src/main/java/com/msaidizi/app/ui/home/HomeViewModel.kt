@@ -2,7 +2,6 @@ package com.msaidizi.app.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.msaidizi.app.agent.AgentResponse
 import com.msaidizi.app.agent.BusinessAgent
 import com.msaidizi.app.core.model.DailySummary
 import com.msaidizi.app.core.model.RestockAlert

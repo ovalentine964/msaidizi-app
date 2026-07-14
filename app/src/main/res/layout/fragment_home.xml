@@ -161,6 +161,17 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical" />
 
+            <!-- Accessibility: Listen button for audio readout -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/listen_button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="🔊 Sikiliza Muhtasari wa Leo"
+                android:textSize="18sp"
+                android:minHeight="48dp"
+                android:contentDescription="Sikiliza muhtasari wa biashara ya leo" />
+
         </LinearLayout>
     </ScrollView>
 </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>

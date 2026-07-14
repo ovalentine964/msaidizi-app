@@ -11,6 +11,7 @@ import com.msaidizi.app.core.database.PatternDao
 import com.msaidizi.app.core.database.TransactionDao
 import com.msaidizi.app.agent.Orchestrator
 import com.msaidizi.app.agent.IntentRouter
+import com.msaidizi.app.agent.IntentPatternConfig
 import com.msaidizi.app.agent.ContextManager
 import com.msaidizi.app.agent.ErrorCompactor
 import com.msaidizi.app.agent.UnifiedStateManager
@@ -567,7 +568,11 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideIntentRouter(): IntentRouter = IntentRouter()
+    fun provideIntentPatternConfig(@ApplicationContext context: Context): IntentPatternConfig = IntentPatternConfig(context)
+
+    @Provides
+    @Singleton
+    fun provideIntentRouter(config: IntentPatternConfig): IntentRouter = IntentRouter(config)
 
     @Provides
     @Singleton
