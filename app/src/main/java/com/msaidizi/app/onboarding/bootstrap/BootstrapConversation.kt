@@ -131,7 +131,8 @@ class BootstrapConversation {
             is BootstrapStep.AskWorkingHours -> handleWorkingHours(response)
             is BootstrapStep.AskCustomersAndPayment -> handleCustomersAndPayment(response)
             is BootstrapStep.AskChallenges -> handleChallenges(response)
-            is BootstrapStep.Summary -> currentStep
+            is BootstrapStep.Summary -> handleSummary()
+            is BootstrapStep.AskPin -> handlePin(response)
             is BootstrapStep.Complete -> currentStep
         }
     }
@@ -146,7 +147,8 @@ class BootstrapConversation {
             is BootstrapStep.AskWorkingHours -> 5f / 8f
             is BootstrapStep.AskCustomersAndPayment -> 6f / 8f
             is BootstrapStep.AskChallenges -> 7f / 8f
-            is BootstrapStep.Summary -> 1f
+            is BootstrapStep.Summary -> 9f / 10f
+            is BootstrapStep.AskPin -> 10f / 10f
             is BootstrapStep.Complete -> 1f
         }
     }
@@ -162,7 +164,8 @@ class BootstrapConversation {
             is BootstrapStep.AskCustomersAndPayment -> 7
             is BootstrapStep.AskChallenges -> 8
             is BootstrapStep.Summary -> 9
-            is BootstrapStep.Complete -> 9
+            is BootstrapStep.AskPin -> 10
+            is BootstrapStep.Complete -> 10
         }
     }
 
@@ -390,6 +393,99 @@ class BootstrapConversation {
      *   - Emotional language → stress, needs encouragement
      *   - Practical language → problem-solver, wants actionable advice
      */
+    /**
+     * Summary is display-only. When user taps continue, ask for PIN.
+     */
+    private fun handleSummary(): BootstrapStep {
+        val agentName = accumulated.msaidiziName
+        val prompt = if (language == "sw") {
+            "Sasa, weka PIN yako ya tarakimu 4 kubiriya data yako ya biashara.\n\n" +
+                "Sema tarakimu nne, kwa mfano: 'moja mbili tatu nne'"
+        } else {
+            "Now, set a 4-digit PIN to protect your business data.\n\n" +
+                "Say four digits, for example: 'one two three four'"
+        }
+        return BootstrapStep.AskPin(prompt = prompt)
+    }
+
+    /**
+     * Process PIN input from voice.
+     * Expects 4 digits spoken in Swahili or English.
+     */
+    private fun handlePin(response: String): BootstrapStep {
+        // Extract digits from voice input
+        val digits = extractDigits(response)
+
+        if (digits.length < 4) {
+            // Not enough digits — ask again
+            val prompt = if (language == "sw") {
+                "PIN inahitaji tarakimu 4. Jaribu tena. Sema tarakimu nne."
+            } else {
+                "PIN needs 4 digits. Try again. Say four digits."
+            }
+            return BootstrapStep.AskPin(prompt = prompt)
+        }
+
+        // PIN is valid — save it and complete onboarding
+        val pin = digits.take(4)
+        accumulated.pin = pin
+
+        // Generate completion message
+        val agentName = accumulated.msaidiziName
+        val workerName = accumulated.workerName
+
+        val readyMessage = if (language == "sw") {
+            "Pongezi $workerName! $agentName amekujua. Sasa $agentName ni msaidizi wako wa biashara.\n\n" +
+                "Anza kwa kusema chochote kuhusu biashara yako — mauzo, manunuzi, au changamoto. " +
+                "$agentName atasikiliza na kukusaidia."
+        } else {
+            "Congratulations $workerName! $agentName knows you now. $agentName is your business assistant.\n\n" +
+                "Start by saying anything about your business — sales, purchases, or challenges. " +
+                "$agentName will listen and help."
+        }
+
+        val profile = buildProfile()
+        return BootstrapStep.Complete(
+            profile = profile,
+            readyMessage = readyMessage,
+            agentName = agentName
+        )
+    }
+
+    /**
+     * Extract digits from spoken text.
+     * Handles Swahili numbers (moja, mbili, tatu...) and English (one, two, three...)
+     */
+    private fun extractDigits(text: String): String {
+        val swahiliDigits = mapOf(
+            "moja" to "1", "mbili" to "2", "tatu" to "3", "nne" to "4",
+            "tano" to "5", "sita" to "6", "saba" to "7", "nane" to "8", "tisa" to "9", "sifuri" to "0"
+        )
+        val englishDigits = mapOf(
+            "one" to "1", "two" to "2", "three" to "3", "four" to "4",
+            "five" to "5", "six" to "6", "seven" to "7", "eight" to "8", "nine" to "9", "zero" to "0"
+        )
+        val allDigits = swahiliDigits + englishDigits
+
+        var result = ""
+        val words = text.lowercase().split(Regex("\\s+"))
+        for (word in words) {
+            // Direct digit match
+            if (word in allDigits) {
+                result += allDigits[word]
+            }
+            // Numeric digit (e.g., "1", "2")
+            else if (word.length == 1 && word[0].isDigit()) {
+                result += word
+            }
+            // Multiple digits together (e.g., "1234")
+            else if (word.all { it.isDigit() }) {
+                result += word
+            }
+        }
+        return result
+    }
+
     private fun handleChallenges(response: String): BootstrapStep {
         accumulated.biggestChallenge = response
 
@@ -1324,6 +1420,7 @@ sealed class BootstrapStep {
     data class AskCustomersAndPayment(val prompt: String) : BootstrapStep()
     data class AskChallenges(val prompt: String) : BootstrapStep()
     data class Summary(val prompt: String) : BootstrapStep()
+    data class AskPin(val prompt: String) : BootstrapStep()
     data class Complete(val profile: WorkerProfile, val readyMessage: String, val agentName: String = "Msaidizi") : BootstrapStep()
 }
 
@@ -1348,4 +1445,5 @@ class AccumulatedData {
     var msaidiziName: String = "Msaidizi"
     var language: String = "sw"
     var conversationTurns: Int = 0
+    var pin: String = ""
 }

@@ -50,6 +50,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         // App lock: require PIN/biometric before showing financial data
+        // PIN is set during voice onboarding (BootstrapActivity)
         val appLockPrefs = getSharedPreferences("app_lock", 0)
         val pinHash = appLockPrefs.getString("pin_hash", null)
         if (pinHash != null) {
@@ -57,12 +58,8 @@ class MainActivity : AppCompatActivity() {
             showAppLockScreen()
             return
         }
-
-        // First launch after onboarding: require PIN setup
-        if (!appLockPrefs.getBoolean("pin_setup_done", false)) {
-            showPinSetupScreen()
-            return
-        }
+        // No PIN set yet — first launch after onboarding, show main app
+        // (PIN will be asked via voice during daily briefings if not set)
 
         setContentView(R.layout.activity_main)
 
@@ -77,68 +74,7 @@ class MainActivity : AppCompatActivity() {
      * Show app lock screen — PIN entry or biometric.
      * Financial data on shared phones MUST be protected.
      */
-    /**
-     * First launch PIN setup — mandatory for protecting financial data.
-     * Swahili UI for mama mboga.
-     */
-    private fun showPinSetupScreen() {
-        setContentView(R.layout.activity_app_lock)
-
-        val titleText = findViewById<TextView>(R.id.lock_title)
-        val subtitleText = findViewById<TextView>(R.id.lock_subtitle)
-        val pinInput = findViewById<EditText>(R.id.pin_input)
-        val unlockButton = findViewById<Button>(R.id.unlock_button)
-        val errorText = findViewById<TextView>(R.id.error_text)
-        val biometricButton = findViewById<Button>(R.id.biometric_button)
-
-        titleText.text = "Weka PIN Yako"
-        subtitleText.text = "Weka PIN ya tarakimu 4-6 kubiriya data yako ya biashara"
-        unlockButton.text = "Weka PIN"
-
-        var confirmPin: String? = null
-
-        unlockButton.setOnClickListener {
-            val enteredPin = pinInput.text.toString()
-            if (enteredPin.length < 4) {
-                errorText.text = "Weka PIN angalau tarakimu 4"
-                errorText.visibility = View.VISIBLE
-                return@setOnClickListener
-            }
-
-            if (confirmPin == null) {
-                // First entry — ask for confirmation
-                confirmPin = enteredPin
-                pinInput.text.clear()
-                titleText.text = "Thibitisha PIN Yako"
-                subtitleText.text = "Weka PIN tena kuthibitisha"
-                errorText.visibility = View.GONE
-            } else {
-                // Confirmation entry
-                if (enteredPin == confirmPin) {
-                    // PIN matches — save it
-                    val salt = java.util.UUID.randomUUID().toString()
-                    val hash = hashPin(enteredPin, salt)
-                    getSharedPreferences("app_lock", 0).edit().apply {
-                        putString("pin_hash", hash)
-                        putString("pin_salt", salt)
-                        putBoolean("pin_setup_done", true)
-                        apply()
-                    }
-                    // Show main content
-                    setContentView(R.layout.activity_main)
-                    setupNavigation()
-                    requestAudioPermission()
-                } else {
-                    errorText.text = "PIN hazifanani. Jaribu tena."
-                    errorText.visibility = View.VISIBLE
-                    confirmPin = null
-                    pinInput.text.clear()
-                    titleText.text = "Weka PIN Yako"
-                    subtitleText.text = "Weka PIN ya tarakimu 4-6 kubiriya data yako ya biashara"
-                }
-            }
-        }
-    }
+    
 
     private fun showAppLockScreen() {
         setContentView(R.layout.activity_app_lock)

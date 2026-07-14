@@ -154,6 +154,7 @@ class BootstrapViewModel @Inject constructor(application: Application) : Android
             is BootstrapStep.AskCustomersAndPayment -> "wanakuja mwenyewe, pesa taslimu"
             is BootstrapStep.AskChallenges -> "changamoto za kawaida"
             is BootstrapStep.Summary -> return // Summary is display-only, no skip needed
+            is BootstrapStep.AskPin -> return // Can't skip PIN — security requirement
             is BootstrapStep.Complete -> return // Can't skip completion
         }
         onVoiceInput(defaultResponse, confidence = 0.5f)
@@ -181,25 +182,17 @@ class BootstrapViewModel @Inject constructor(application: Application) : Android
      */
     fun proceedFromSummary() {
         if (currentStep is BootstrapStep.Summary) {
-            val profile = conversation.buildProfile()
-            val agentName = profile.msaidiziName
-            val workerName = profile.workerName
-
-            val readyMessage = if (_uiState.value.language == "sw") {
-                "Sawa! $agentName tayari kuanza kazi.\n\n" +
-                    "Karibu, $workerName. Sema chochote kuhusu biashara yako — $agentName atakusikiliza."
-            } else {
-                "Alright! $agentName is ready to work.\n\n" +
-                    "Welcome, $workerName. Say anything about your business — $agentName will listen."
-            }
-
-            currentStep = BootstrapStep.Complete(
-                profile = profile,
-                readyMessage = readyMessage,
-                agentName = agentName
-            )
+            // After summary, ask for PIN via voice
+            val pinStep = conversation.processResponse(currentStep as BootstrapStep.Summary, "")
+            currentStep = pinStep
             updateUiState()
-            saveProfile(profile)
+            // Speak the PIN prompt
+            val agentName = _uiState.value.agentName
+            _uiState.value = _uiState.value.copy(
+                isSummary = false,
+                isProcessing = false
+            )
+            // Return — the Activity will speak the prompt
             // Schedule daily briefing notifications
             try {
                 BriefingNotificationWorker.scheduleAllBriefings(getApplication())
@@ -312,6 +305,20 @@ class BootstrapViewModel @Inject constructor(application: Application) : Android
             putLong("onboarding_completed_at", profile.onboardingCompletedAt)
             putBoolean("onboarding_complete", true)
 
+            // Save PIN (set during voice onboarding)
+            val pin = conversation.accumulated.pin
+            if (pin.isNotEmpty()) {
+                val salt = java.util.UUID.randomUUID().toString()
+                val pinHash = hashPin(pin, salt)
+                getApplication<Application>()
+                    .getSharedPreferences("app_lock", 0)
+                    .edit()
+                    .putString("pin_hash", pinHash)
+                    .putString("pin_salt", salt)
+                    .putBoolean("pin_setup_done", true)
+                    .apply()
+            }
+
             // Understanding — drives personalization after onboarding
             putString("archetype", u.archetype.name)
             putString("relationship_type", u.relationshipType.name)
@@ -351,6 +358,12 @@ class BootstrapViewModel @Inject constructor(application: Application) : Android
     override fun onCleared() {
         super.onCleared()
         modelDownloadManager.destroy()
+    }
+
+    private fun hashPin(pin: String, salt: String): String {
+        val bytes = java.security.MessageDigest.getInstance("SHA-256")
+            .digest((salt + pin).toByteArray())
+        return bytes.joinToString("") { "%02x".format(it) }
     }
 }
 
