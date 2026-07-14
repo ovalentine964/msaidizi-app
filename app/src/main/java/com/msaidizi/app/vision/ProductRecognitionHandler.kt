@@ -122,7 +122,7 @@ class ProductRecognitionHandler @Inject constructor(
             lastClassifyTime = now
 
             // Route through VisionHarness for confidence gates, fallback, and monitoring
-            val visionResult = visionHarness.recognize(
+            val visionResult = visionHarness.recognizeProduct(
                 bitmap = bitmap,
                 classifyFn = { bmp -> classifier.classify(bmp) },
                 workerId = currentWorkerId
@@ -141,7 +141,12 @@ class ProductRecognitionHandler @Inject constructor(
                         _state.value = RecognitionState.AwaitingConfirmation(recognition)
                     }
                     VisionHarness.RecommendedAction.ASK_WORKER -> {
-                        _state.value = RecognitionState.Result(recognition)
+                        _state.value = RecognitionState.AwaitingConfirmation(recognition)
+                        tts.speak(visionResult.getVoicePrompt(), "sw")
+                    }
+                    VisionHarness.RecommendedAction.VOICE_FALLBACK -> {
+                        _state.value = RecognitionState.AwaitingConfirmation(recognition)
+                        tts.speak(visionResult.getVoicePrompt(), "sw")
                     }
                 }
 
@@ -184,6 +189,9 @@ class ProductRecognitionHandler @Inject constructor(
     suspend fun confirmAndAddToInventory(recognition: ProductRecognition): InventoryAction =
         withContext(Dispatchers.IO) {
             _state.value = RecognitionState.AwaitingConfirmation(recognition)
+
+            // Confirm recognition through harness for metrics tracking
+            visionHarness.confirmProductRecognition(recognition, currentWorkerId)
 
             // Check current stock
             val existingItem = inventoryDao.getItem(recognition.productSwahili)
@@ -304,7 +312,7 @@ class ProductRecognitionHandler @Inject constructor(
         correctedSwahili: String
     ) {
         // Route correction through VisionHarness for monitoring and learning
-        visionHarness.recordCorrection(
+        visionHarness.recordProductCorrection(
             predicted = predicted,
             correctedSwahili = correctedSwahili,
             workerId = currentWorkerId

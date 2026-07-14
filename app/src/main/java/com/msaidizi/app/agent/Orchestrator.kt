@@ -31,6 +31,7 @@ import com.msaidizi.app.agent.a2a.A2AProtocol
 import com.msaidizi.app.agent.a2a.AgentProfile
 import com.msaidizi.app.agent.knowledge.CrossDomainKnowledgeGraph
 import com.msaidizi.app.social.SocialHandler
+import com.msaidizi.app.agent.harness.InferenceHarness
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import timber.log.Timber
@@ -115,7 +116,9 @@ class Orchestrator(
     private val a2aProtocol: A2AProtocol? = null,
     private val knowledgeGraph: CrossDomainKnowledgeGraph? = null,
     // ── Social Layer ──
-    private val socialHandler: SocialHandler? = null
+    private val socialHandler: SocialHandler? = null,
+    // ── Inference Harness — wraps all model calls with monitoring/fallback/retry ──
+    private val inferenceHarness: InferenceHarness? = null
 ) {
     private val _responses = MutableSharedFlow<AgentResponse>(extraBufferCapacity = 8)
     val responses: SharedFlow<AgentResponse> = _responses
@@ -401,6 +404,16 @@ class Orchestrator(
     fun getReflexionCritiques(n: Int = 10): List<Map<String, Any>> = reflexionLoop.getCritiqueHistory(n)
     fun getReflexionAverageScore(): Double = reflexionLoop.getAverageScore()
     fun getPlanHistory(n: Int = 10): List<Map<String, Any>> = planExecuteLoop.getPlanHistory(n)
+
+    // ── Inference Harness metrics ──
+    /** Get aggregate inference harness stats (latency, success rate, circuit breakers). */
+    fun getInferenceHarnessStats() = inferenceHarness?.getAggregateStats()
+    /** Get per-provider inference metrics. */
+    fun getInferenceProviderMetrics() = inferenceHarness?.getAllMetrics()
+    /** Get circuit breaker states for all providers. */
+    fun getCircuitBreakerStates() = inferenceHarness?.getAllCircuitBreakerStates()
+    /** Get daily cost breakdown for a user. */
+    fun getUserDailyInferenceCosts(userId: String) = inferenceHarness?.getUserDailyCosts(userId)
     fun getConversationMemory(): ConversationMemory = conversationManager.getConversationMemory()
     fun clearConversationMemory() = conversationManager.clearConversationMemory()
 

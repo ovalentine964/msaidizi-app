@@ -5,6 +5,7 @@ import com.msaidizi.app.core.database.TransactionDao
 import com.msaidizi.app.core.model.*
 import com.msaidizi.app.core.util.SwahiliParser
 import com.msaidizi.app.agent.harness.LearningHarness
+import com.msaidizi.app.core.language.ConversationLearningPipeline
 import com.msaidizi.app.voice.LlmEngine
 import kotlinx.coroutines.*
 import kotlinx.serialization.encodeToString
@@ -45,7 +46,9 @@ class AdaptiveLearningEngine(
     private val patternDao: PatternDao,
     private val patternTracker: BusinessPatternTracker,
     private val learningAgent: LearningAgent,
-    private val learningHarness: LearningHarness? = null
+    private val learningHarness: LearningHarness? = null,
+    private val preferenceLearner: PreferenceLearner? = null,
+    private val conversationLearningPipeline: ConversationLearningPipeline? = null
 ) {
     private val json = Json { ignoreUnknownKeys = true }
     private val engineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -96,13 +99,16 @@ class AdaptiveLearningEngine(
         when (correctionType) {
             CorrectionType.ITEM -> {
                 // User corrected an item name: learn the mapping
+                // Harness wraps with validation, rollback on regression, learning rate tracking
                 if (learningHarness != null) {
+                    // Gather held-out validation pairs from recent vocabulary
+                    val heldOutPairs = gatherVocabularyValidationPairs()
                     learningHarness!!.wrapVocabularyUpdate(
                         spoken = originalValue,
                         canonical = correctedValue,
                         learningAgent = learningAgent,
+                        validationPairs = heldOutPairs,
                         qualityCheckFn = {
-                            // Quality = confidence of the learned mapping
                             val existing = userVocabularyDao.getBySpokenForm(originalValue.lowercase())
                             existing?.confidence ?: 0.5
                         }
@@ -160,7 +166,21 @@ class AdaptiveLearningEngine(
             }
         }
 
-        // 3. Mark correction as applied
+        // 3. Track preference learning for correction patterns (harness-wrapped)
+        if (preferenceLearner != null && learningHarness != null) {
+            val prefResult = learningHarness!!.wrapPreferenceUpdate(
+                preferenceKey = "correction_${correctionType.name.lowercase()}",
+                value = correctedValue,
+                weight = 1.0,
+                preferenceLearner = preferenceLearner!!
+            )
+            if (prefResult.shouldApply) {
+                Timber.d("Preference adopted for %s correction: strength=%.2f",
+                    correctionType, prefResult.adoptionStrength)
+            }
+        }
+
+        // 4. Mark correction as applied
         val allUnapplied = userCorrectionDao.getUnapplied()
         val thisCorrection = allUnapplied.lastOrNull { it.originalValue == originalValue }
         if (thisCorrection != null) {
@@ -604,6 +624,108 @@ class AdaptiveLearningEngine(
     fun launchBackgroundLearning() {
         engineScope.launch {
             runBackgroundLearning()
+        }
+    }
+
+    // ═══════════════ HARNESS INTEGRATION ═══════════════
+
+    /**
+     * Get the learning harness dashboard.
+     * Returns comprehensive stats on all wrapped learning systems.
+     */
+    fun getLearningHarnessDashboard(): LearningHarness.LearningDashboard? {
+        return learningHarness?.getDashboard()
+    }
+
+    /**
+     * Get the current learning rate statistics from the harness.
+     */
+    fun getLearningRateStats(): LearningHarness.LearningRateStats? {
+        return learningHarness?.getLearningRateStats()
+    }
+
+    /**
+     * Start an ASR calibration A/B experiment through the harness.
+     * Compares current calibration settings against new ones.
+     *
+     * @param baselineThreshold Current confidence threshold
+     * @param challengerThreshold New confidence threshold to test
+     * @return Experiment ID if started, null if harness not available
+     */
+    fun startAsrCalibrationExperiment(
+        baselineThreshold: Float = 0.60f,
+        challengerThreshold: Float = 0.55f
+    ): String? {
+        if (learningHarness == null || conversationLearningPipeline == null) return null
+
+        val experimentId = "asr_cal_${System.currentTimeMillis()}"
+        learningHarness!!.startAsrCalibrationExperiment(
+            experimentId = experimentId,
+            baselineConfig = LearningHarness.AsrCalibrationConfig(
+                confidenceThreshold = baselineThreshold,
+                description = "baseline"
+            ),
+            challengerConfig = LearningHarness.AsrCalibrationConfig(
+                confidenceThreshold = challengerThreshold,
+                description = "challenger"
+            ),
+            pipeline = conversationLearningPipeline!!
+        )
+        return experimentId
+
+    }
+
+    /**
+     * Route an ASR word through the active calibration experiment.
+     *
+     * @param experimentId Active experiment ID
+     * @param word The transcribed word
+     * @param rawConfidence Raw ASR confidence
+     * @param wasCorrect Whether the transcription was correct
+     */
+    fun routeAsrWord(
+        experimentId: String,
+        word: String,
+        rawConfidence: Float,
+        wasCorrect: Boolean
+    ): LearningHarness.AsrCalibrationConfig? {
+        return learningHarness?.routeAsrThroughExperiment(
+            experimentId, word, rawConfidence, wasCorrect
+        )
+    }
+
+    /**
+     * Learn a preference with harness-wrapped confidence gating.
+     *
+     * @param preferenceKey Unique preference identifier
+     * @param value The preference value
+     * @param weight Signal strength (higher for explicit feedback)
+     * @return Adoption result with confidence and whether to apply
+     */
+    suspend fun learnPreference(
+        preferenceKey: String,
+        value: String,
+        weight: Double = 1.0
+    ): LearningHarness.PreferenceAdoptionResult? {
+        if (learningHarness == null || preferenceLearner == null) return null
+        return learningHarness!!.wrapPreferenceUpdate(
+            preferenceKey = preferenceKey,
+            value = value,
+            weight = weight,
+            preferenceLearner = preferenceLearner!!
+        )
+    }
+
+    /**
+     * Gather vocabulary pairs from existing user vocabulary for held-out validation.
+     * Samples ~15% of high-confidence entries as validation data.
+     */
+    private suspend fun gatherVocabularyValidationPairs(): List<Pair<String, String>> {
+        val allVocab = userVocabularyDao.getTopByFrequency(100)
+        val highConfidence = allVocab.filter { it.confidence >= 0.7 }
+        val sampleSize = (highConfidence.size * 0.15).toInt().coerceIn(3, 20)
+        return highConfidence.shuffled().take(sampleSize).map {
+            Pair(it.spokenForm, it.canonicalForm)
         }
     }
 

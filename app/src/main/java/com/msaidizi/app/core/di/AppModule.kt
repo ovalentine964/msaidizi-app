@@ -935,13 +935,15 @@ object AppModule {
         learningAgent: LearningAgent,
         selfEvolution: SelfEvolutionManager,
         preferenceLearner: PreferenceLearner,
-        llmEngine: LlmEngine
+        llmEngine: LlmEngine,
+        inferenceHarness: com.msaidizi.app.agent.harness.InferenceHarness
     ): ConversationManager = ConversationManager(
         llmEngine = llmEngine,
         selfEvolution = selfEvolution,
         adaptiveLearning = adaptiveLearning,
         learningAgent = learningAgent,
-        preferenceLearner = preferenceLearner
+        preferenceLearner = preferenceLearner,
+        inferenceHarness = inferenceHarness
     )
 
     // === ON-DEVICE AI PREDICTORS ===
@@ -1016,7 +1018,8 @@ object AppModule {
         llmEngine: LlmEngine,
         voicePersonality: VoicePersonality,
         proactiveAlertEngine: ProactiveAlertEngine,
-        socialHandler: SocialHandler
+        socialHandler: SocialHandler,
+        inferenceHarness: com.msaidizi.app.agent.harness.InferenceHarness
     ): Orchestrator = Orchestrator(
         intentRouter = intentRouter,
         businessAgent = businessAgent,
@@ -1051,7 +1054,8 @@ object AppModule {
         llmEngine = llmEngine,
         voicePersonality = voicePersonality,
         proactiveAlertEngine = proactiveAlertEngine,
-        socialHandler = socialHandler
+        socialHandler = socialHandler,
+        inferenceHarness = inferenceHarness
     )
 
     @Provides
