@@ -100,6 +100,8 @@ All three CI failures shared the same root cause: **massive Kotlin compilation e
 2. `2875bd7` — Remove dangling code in LocalStsProvider
 3. `4eb109c` — Add ReceiptScanner import to AppModule
 4. `9ddfb52` — Fix TaskComplexity import position, add coroutines imports, fix Map type mismatch
+5. `9f7877e` — Swap PQC params, fix SpeechRecognizer HIGH, make ModelDownloader optional, fix DialectLearningEngine null safety
+6. `553d290` — Fix DialectAdapterFactory return type, make ConversationManager methods suspend
 
 ---
 

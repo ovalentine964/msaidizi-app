@@ -99,8 +99,8 @@ class OnboardingConversation {
         // Phase 2: Getting to Know You
         emit(ConversationStep.AskBusinessIntro(
             prompt = buildPrompt(language,
-                "Sasa $workerName, nieleze — unafanya biashara gani?",
-                "Now $workerName, tell me — what business do you do?"
+                "Sasa ${accumulated.workerName}, nieleze — unafanya biashara gani?",
+                "Now ${accumulated.workerName}, tell me — what business do you do?"
             )
         ))
     }
@@ -246,8 +246,8 @@ class OnboardingConversation {
                 // ── Phase 3b: WhatsApp Setup ──
                 ConversationStep.AskWhatsApp(
                     prompt = buildPrompt(accumulated.language,
-                        "Sasa $workerName — unatumia WhatsApp?",
-                        "Now $workerName — do you use WhatsApp?"
+                        "Sasa ${accumulated.workerName} — unatumia WhatsApp?",
+                        "Now ${accumulated.workerName} — do you use WhatsApp?"
                     )
                 )
             }

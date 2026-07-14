@@ -299,7 +299,7 @@ class WhisperTurboAsrProvider : ModelProvider {
     override val qualityScore = 0.92f
     override val averageLatencyMs = 200L
     override val costPerMinute = 0f
-    override fun isAvailable() = com.msaidizi.app.core.util.DeviceTier.current == com.msaidizi.app.core.util.DeviceTier.HIGH
+    override fun isAvailable() = com.msaidizi.app.core.util.DeviceTier.current == com.msaidizi.app.core.util.DeviceTier.Tier.ENHANCED
 }
 
 class KokoroTtsProvider : ModelProvider {

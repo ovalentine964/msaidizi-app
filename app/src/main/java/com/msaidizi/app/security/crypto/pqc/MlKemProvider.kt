@@ -117,7 +117,7 @@ class MlKemProvider(
         val bcPublicKey = MLKEMPublicKeyParameters(bcParams, publicKey)
 
         // Use MLKEMGenerator for encapsulation (deterministic with internal DRBG)
-        val generator = MLKEMGenerator()
+        val generator = MLKEMGenerator(java.security.SecureRandom())
         val encapsulated = generator.generateEncapsulated(bcPublicKey)
 
         val ciphertext = encapsulated.encapsulation
