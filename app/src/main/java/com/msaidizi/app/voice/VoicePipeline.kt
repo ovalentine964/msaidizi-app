@@ -755,10 +755,12 @@ enum class PipelineState {
 
 /**
  * Transcription result from ASR.
+ * Includes detected language for multi-language support.
  */
 data class TranscriptionResult(
     val text: String,
     val confidence: Float,
     val success: Boolean,
+    val language: String? = null,
     val error: String? = null
 )

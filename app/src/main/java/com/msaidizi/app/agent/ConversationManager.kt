@@ -189,12 +189,12 @@ class ConversationManager(
         val llmResponse = if (harness != null) {
             try {
                 val result = harness.execute(
-                    config = com.msaidizi.app.agent.harness.InferenceHarness.HarnessConfig(
+                    config = com.msaidizi.app.agent.harness.HarnessConfig(
                         timeoutMs = 15_000L,
                         maxRetries = 2
                     ),
                     providers = listOf(
-                        com.msaidizi.app.agent.harness.InferenceHarness.ProviderCandidate(
+                        com.msaidizi.app.agent.harness.ProviderCandidate(
                             providerId = "on-device-llm",
                             modelId = "qwen3.5-0.8b",
                             provider = {

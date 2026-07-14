@@ -71,7 +71,6 @@ class InferenceHarness @Inject constructor(
         // Circuit breaker defaults
         private const val CB_FAILURE_THRESHOLD = 5
         private const val CB_HALF_OPEN_COOLDOWN_MS = 30_000L
-        private const val CB_HALF_OPEN_MAX_ATTEMPTS = 1
 
         // Quality gate defaults per model type
         private val DEFAULT_CONFIDENCE_THRESHOLDS = mapOf(
@@ -110,7 +109,7 @@ class InferenceHarness @Inject constructor(
      *
      * @param T Return type of the model call
      * @param config Harness configuration (timeouts, retries, fallbacks)
-     * @param providers Ordered list of (providerId, providerFunction) to try
+     * @param providers Ordered list of [ProviderCandidate] to try (fallback chain)
      * @param taskType Human-readable task type for metrics (e.g. "llm:GENERAL", "stt:sw", "cv:classify")
      * @param userId User triggering the call (for cost attribution)
      * @param qualityThreshold Minimum confidence for the result (0.0–1.0). null = use default for task type.
@@ -569,53 +568,6 @@ class InferenceHarness @Inject constructor(
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // DATA TYPES
-    // ═══════════════════════════════════════════════════════════════
-
-    /**
-     * Configuration for a harness-wrapped call.
-     */
-    data class HarnessConfig(
-        /** Maximum time allowed for a single provider attempt */
-        val timeoutMs: Long = 15_000L,
-        /** Maximum retry attempts per provider */
-        val maxRetries: Int = 3,
-        /** Base backoff between retries (exponential, 3x multiplier) */
-        val retryBackoffBaseMs: Long = 500L,
-        /** Maximum backoff cap */
-        val retryBackoffMaxMs: Long = 10_000L
-    )
-
-    /**
-     * A candidate provider for a model call.
-     * Wraps the actual invocation with metadata for cost tracking and quality gates.
-     *
-     * @param confidenceExtractor Optional function to extract confidence from the result.
-     *        Used by quality gates to reject low-confidence outputs. If null, confidence = 1.0 (always passes).
-     */
-    data class ProviderCandidate<T>(
-        val providerId: String,
-        val modelId: String = "",
-        val inputTokens: Int = 0,
-        val outputTokens: Int = 0,
-        val costMicros: Long = 0,
-        val confidenceExtractor: ((T) -> Double)? = null,
-        val provider: suspend () -> T
-    )
-
-    /**
-     * Result of a harness-wrapped call.
-     */
-    data class HarnessResult<T>(
-        val value: T,
-        val providerId: String,
-        val latencyMs: Long,
-        val attempts: Int,
-        val fromFallback: Boolean,
-        val confidence: Double = 1.0
-    )
-
-    // ═══════════════════════════════════════════════════════════════
     // CIRCUIT BREAKER — Prevents cascading failures
     // ═══════════════════════════════════════════════════════════════
 
@@ -745,32 +697,6 @@ class InferenceHarness @Inject constructor(
         }
     }
 
-    data class ProviderMetricsSnapshot(
-        val providerId: String,
-        val totalCalls: Long,
-        val successfulCalls: Long,
-        val failedCalls: Long,
-        val successRate: Double,
-        val avgLatencyMs: Long,
-        val p50LatencyMs: Long,
-        val p95LatencyMs: Long,
-        val p99LatencyMs: Long
-    )
-
-    data class AggregateStats(
-        val totalCalls: Long,
-        val totalSuccesses: Long,
-        val totalFailures: Long,
-        val overallSuccessRate: Double,
-        val avgLatencyMs: Long,
-        val p50LatencyMs: Long,
-        val p95LatencyMs: Long,
-        val p99LatencyMs: Long,
-        val providerCount: Int,
-        val circuitBreakerStates: Map<String, String>,
-        val costTrackerStats: Map<String, Any>
-    )
-
     // ═══════════════════════════════════════════════════════════════
     // DAILY COST BUCKET — Per-user/per-model/per-day tracking
     // ═══════════════════════════════════════════════════════════════
@@ -789,6 +715,83 @@ class InferenceHarness @Inject constructor(
         }
     }
 }
+
+// ═══════════════════════════════════════════════════════════════
+// TOP-LEVEL TYPES — Used by ModelRouter and other callers
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Configuration for a harness-wrapped call.
+ */
+data class HarnessConfig(
+    /** Maximum time allowed for a single provider attempt */
+    val timeoutMs: Long = 15_000L,
+    /** Maximum retry attempts per provider */
+    val maxRetries: Int = 3,
+    /** Base backoff between retries (exponential, 3x multiplier) */
+    val retryBackoffBaseMs: Long = 500L,
+    /** Maximum backoff cap */
+    val retryBackoffMaxMs: Long = 10_000L
+)
+
+/**
+ * A candidate provider for a model call.
+ * Wraps the actual invocation with metadata for cost tracking and quality gates.
+ *
+ * @param confidenceExtractor Optional function to extract confidence from the result.
+ *        Used by quality gates to reject low-confidence outputs. If null, confidence = 1.0 (always passes).
+ */
+data class ProviderCandidate<T>(
+    val providerId: String,
+    val modelId: String = "",
+    val inputTokens: Int = 0,
+    val outputTokens: Int = 0,
+    val costMicros: Long = 0,
+    val confidenceExtractor: ((T) -> Double)? = null,
+    val provider: suspend () -> T
+)
+
+/**
+ * Result of a harness-wrapped call.
+ */
+data class HarnessResult<T>(
+    val value: T,
+    val providerId: String,
+    val latencyMs: Long,
+    val attempts: Int,
+    val fromFallback: Boolean,
+    val confidence: Double = 1.0
+)
+
+// ═══════════════════════════════════════════════════════════════
+// DATA TYPES — Metrics snapshots
+// ═══════════════════════════════════════════════════════════════
+
+data class ProviderMetricsSnapshot(
+    val providerId: String,
+    val totalCalls: Long,
+    val successfulCalls: Long,
+    val failedCalls: Long,
+    val successRate: Double,
+    val avgLatencyMs: Long,
+    val p50LatencyMs: Long,
+    val p95LatencyMs: Long,
+    val p99LatencyMs: Long
+)
+
+data class AggregateStats(
+    val totalCalls: Long,
+    val totalSuccesses: Long,
+    val totalFailures: Long,
+    val overallSuccessRate: Double,
+    val avgLatencyMs: Long,
+    val p50LatencyMs: Long,
+    val p95LatencyMs: Long,
+    val p99LatencyMs: Long,
+    val providerCount: Int,
+    val circuitBreakerStates: Map<String, String>,
+    val costTrackerStats: Map<String, Any>
+)
 
 // ═══════════════════════════════════════════════════════════════
 // EVENTS — Emitted for monitoring and observability
