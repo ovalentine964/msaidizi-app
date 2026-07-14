@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="shieldGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#22C55E"/>
+      <stop offset="100%" stop-color="#16A34A"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FBBF24"/>
+      <stop offset="100%" stop-color="#F59E0B"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Dark background circle -->
+  <circle cx="256" cy="256" r="256" fill="#0F172A"/>
+
+  <!-- Main shield shape -->
+  <path d="M256 56
+    C256 56 380 96 408 108
+    C416 112 424 124 424 136
+    L424 260
+    C424 320 380 396 256 448
+    C132 396 88 320 88 260
+    L88 136
+    C88 124 96 112 104 108
+    C132 96 256 56 256 56Z"
+    fill="url(#shieldGrad)"
+    stroke="#16A34A"
+    stroke-width="2"/>
+
+  <!-- Shield inner highlight -->
+  <path d="M256 76
+    C256 76 366 110 390 120
+    C396 123 400 132 400 140
+    L400 254
+    C400 308 360 376 256 424
+    C152 376 112 308 112 254
+    L112 140
+    C112 132 116 123 122 120
+    C146 110 256 76 256 76Z"
+    fill="none"
+    stroke="#4ADE80"
+    stroke-width="1"
+    opacity="0.3"/>
+
+  <!-- Speech bubble (subtle, integrated into upper curve) -->
+  <path d="M200 150
+    C200 138 212 128 228 128
+    L284 128
+    C300 128 312 138 312 150
+    L312 190
+    C312 202 300 212 284 212
+    L260 212
+    L240 232
+    L244 212
+    L228 212
+    C212 212 200 202 200 190Z"
+    fill="#FFFFFF"
+    opacity="0.15"
+    stroke="#FFFFFF"
+    stroke-width="1.5"
+    stroke-opacity="0.25"/>
+
+  <!-- Three dots in speech bubble -->
+  <circle cx="236" cy="170" r="5" fill="#FFFFFF" opacity="0.3"/>
+  <circle cx="256" cy="170" r="5" fill="#FFFFFF" opacity="0.3"/>
+  <circle cx="276" cy="170" r="5" fill="#FFFFFF" opacity="0.3"/>
+
+  <!-- Chart line flowing through shield -->
+  <path d="M120 340
+    L180 290
+    L230 310
+    L280 250
+    L340 220
+    L392 180"
+    fill="none"
+    stroke="url(#goldGrad)"
+    stroke-width="6"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    filter="url(#glow)"/>
+
+  <!-- Chart line data points -->
+  <circle cx="120" cy="340" r="8" fill="#F59E0B"/>
+  <circle cx="180" cy="290" r="8" fill="#F59E0B"/>
+  <circle cx="230" cy="310" r="8" fill="#F59E0B"/>
+  <circle cx="280" cy="250" r="8" fill="#F59E0B"/>
+  <circle cx="340" cy="220" r="8" fill="#F59E0B"/>
+  <circle cx="392" cy="180" r="10" fill="#FBBF24" stroke="#FFFFFF" stroke-width="2"/>
+
+  <!-- Subtle upward arrow at end of chart -->
+  <path d="M386 196 L392 176 L398 196" fill="none" stroke="#FBBF24" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

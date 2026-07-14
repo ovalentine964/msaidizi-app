@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#22C55E"/>
+      <stop offset="100%" stop-color="#15803D"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Dark background circle -->
+  <circle cx="96" cy="96" r="96" fill="#0F172A"/>
+
+  <!-- Hexagonal badge -->
+  <path d="M96 26
+    L146 46
+    L158 96
+    L146 146
+    L96 170
+    L46 146
+    L34 96
+    L46 46Z"
+    fill="url(#cg)"/>
+
+  <!-- Stylized "A" -->
+  <path d="M96 50
+    L122 120
+    L110 120
+    L104 104
+    L88 104
+    L82 120
+    L70 120Z"
+    fill="#FFFFFF"
+    opacity="0.95"/>
+
+  <!-- A crossbar -->
+  <path d="M90 92 L102 92 L100 98 L92 98Z"
+    fill="#0F172A"/>
+
+  <!-- Gold accent -->
+  <path d="M74 128 L118 128"
+    stroke="#F59E0B"
+    stroke-width="3"
+    stroke-linecap="round"/>
+
+  <!-- Gold diamond -->
+  <path d="M96 134 L100 140 L96 146 L92 140Z"
+    fill="#F59E0B"/>
+</svg>
