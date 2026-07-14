@@ -30,6 +30,11 @@ import com.msaidizi.app.social.PeerComparisonResult
 import com.msaidizi.app.social.PeerMetrics
 import com.msaidizi.app.social.TipDeliveryLog
 import com.msaidizi.app.social.WhatsAppGroup
+import com.msaidizi.app.social.SocialDao
+import com.msaidizi.app.core.model.UserVocabularyDao
+import com.msaidizi.app.core.model.UserCorrectionDao
+import com.msaidizi.app.core.database.RichHabitsDao
+import com.msaidizi.app.core.database.VocabularyLearningDao
 
 /**
  * Room database for Msaidizi.
@@ -81,7 +86,8 @@ import com.msaidizi.app.social.WhatsAppGroup
         LeaderboardSummary::class,
         LeaderboardEntry::class,
         CommunityTip::class,
-        BriefingDeliveryEntity::class
+        BriefingDeliveryEntity::class,
+        WorkerVocabulary::class
     ],
     version = 12,
     exportSchema = true

@@ -52,7 +52,13 @@ data class GamificationEntity(
     val earnedBadges: String = "",
 
     /** Unix timestamp of last update */
-    val updatedAt: Long = System.currentTimeMillis() / 1000
+    val updatedAt: Long = System.currentTimeMillis() / 1000,
+
+    /** Number of streak recoveries used this month */
+    val streakRecoveriesUsedThisMonth: Int = 0,
+
+    /** Month number for tracking streak recovery resets */
+    val streakRecoveryMonth: Int = 0
 )
 
 /**

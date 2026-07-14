@@ -172,18 +172,18 @@ dependencies {
 
     // Room Database — KSP replaces kapt for annotation processing
     // Updated 2.7.1: KMP support, improved paging, better KSP performance
-    implementation("androidx.room:room-runtime:2.7.1")
-    implementation("androidx.room:room-ktx:2.7.1")
-    implementation("androidx.room:room-paging:2.7.1")
-    ksp("androidx.room:room-compiler:2.7.1")  // was: kapt(...)
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    implementation("androidx.room:room-paging:2.6.1")
+    ksp("androidx.room:room-compiler:2.6.1")  // was: kapt(...)
 
     // SQLCipher for Room database encryption
     implementation("net.zetetic:android-database-sqlcipher:4.5.4")
     implementation("androidx.sqlite:sqlite:2.4.0")
 
     // Hilt DI — KSP replaces kapt
-    implementation("com.google.dagger:hilt-android:2.57.1")
-    ksp("com.google.dagger:hilt-android-compiler:2.57.1")  // was: kapt(...)
+    implementation("com.google.dagger:hilt-android:2.51.1")
+    ksp("com.google.dagger:hilt-android-compiler:2.51.1")  // was: kapt(...)
 
     // Kotlin reflect — MUST match Kotlin compiler 1.9.24
     implementation("org.jetbrains.kotlin:kotlin-reflect:1.9.24")
@@ -193,7 +193,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
     // Kotlin Serialization (for JSON)
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
     // Retrofit + Gson
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
@@ -263,7 +263,7 @@ dependencies {
     // Testing — Android Integration
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    androidTestImplementation("androidx.room:room-testing:2.7.1")
+    androidTestImplementation("androidx.room:room-testing:2.6.1")
     androidTestImplementation("androidx.test:runner:1.5.2")
 
     // Detekt linting
