@@ -170,6 +170,19 @@ interface MsaidiziApi {
     ): Response<SyncStatusResponse>
 
     // ═══════════════════════════════════════════════════════════════
+    // SMS VERIFICATION
+    // ═══════════════════════════════════════════════════════════════
+
+    @POST("api/v1/sms/verify/request")
+    suspend fun requestSmsVerification(@Body request: SmsVerificationRequest): Response<SmsVerificationResponse>
+
+    @POST("api/v1/sms/verify/confirm")
+    suspend fun confirmSmsVerification(@Body request: SmsVerifyCodeRequest): Response<SmsVerifyCodeResponse>
+
+    @GET("api/v1/sms/verify/{verificationId}/status")
+    suspend fun checkSmsVerificationStatus(@Path("verificationId") verificationId: String): Response<SmsVerifyCodeResponse>
+
+    // ═══════════════════════════════════════════════════════════════
     // WHATSAPP
     // ═══════════════════════════════════════════════════════════════
 

@@ -119,9 +119,22 @@ class KokoroTtsEngine @Inject constructor(
 
     /**
      * Load the Kokoro TTS ONNX model, voice styles, and phoneme map.
+     *
+     * Includes memory safety check: refuses to load if < 200MB free RAM.
+     * On 2GB (BASIC) devices, Kokoro (~90MB) is only loaded when Whisper is NOT loaded.
      */
     suspend fun loadModel(): Boolean = withContext(Dispatchers.IO) {
         if (isModelLoaded) return@withContext true
+
+        // ═══ MEMORY SAFETY: Check available RAM before loading ═══
+        val runtime = Runtime.getRuntime()
+        val usedMB = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)
+        val maxMB = runtime.maxMemory() / (1024 * 1024)
+        val freeMB = maxMB - usedMB
+        if (freeMB < 200) {
+            Timber.e("Kokoro TTS: REFUSING to load — only %dMB free (need 200MB buffer)", freeMB)
+            return@withContext false
+        }
 
         val modelDir = modelRegistry.getModelPath(MODEL_ID)
         if (modelDir == null) {
@@ -163,6 +176,14 @@ class KokoroTtsEngine @Inject constructor(
             val elapsed = System.currentTimeMillis() - startTime
             Timber.i("Kokoro TTS model loaded in %dms", elapsed)
             true
+        } catch (e: OutOfMemoryError) {
+            Timber.e("OOM loading Kokoro TTS model — device has insufficient memory")
+            isModelLoaded = false
+            ortSession?.close()
+            ortSession = null
+            ortEnvironment = null
+            System.gc()
+            false
         } catch (e: Exception) {
             Timber.e(e, "Failed to load Kokoro TTS model")
             isModelLoaded = false

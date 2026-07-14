@@ -65,6 +65,9 @@ class BusinessFlowFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Prevent screenshots of financial data on shared phones
+        activity?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+
         ttsHelper = AccessibilityTtsHelper(requireContext())
         setupViews(view)
         setupTabs()

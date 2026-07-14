@@ -17,6 +17,9 @@
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.READ_SMS" />
 
+    <!-- SMS verification sending -->
+    <uses-permission android:name="android.permission.SEND_SMS" />
+
     <!-- Bluetooth for peer model transfer -->
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />

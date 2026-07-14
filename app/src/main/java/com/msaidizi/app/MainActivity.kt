@@ -49,6 +49,15 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        // App lock: require PIN/biometric before showing financial data
+        val appLockPrefs = getSharedPreferences("app_lock", 0)
+        val pinHash = appLockPrefs.getString("pin_hash", null)
+        if (pinHash != null) {
+            // PIN is set — require authentication before showing content
+            showAppLockScreen()
+            return
+        }
+
         setContentView(R.layout.activity_main)
 
         setupNavigation()
@@ -57,6 +66,73 @@ class MainActivity : AppCompatActivity() {
 
         Timber.d("MainActivity: Created on ${DeviceTier.current} tier device")
     }
+
+    /**
+     * Show app lock screen — PIN entry or biometric.
+     * Financial data on shared phones MUST be protected.
+     */
+    private fun showAppLockScreen() {
+        setContentView(R.layout.activity_app_lock)
+
+        val pinInput = findViewById<EditText>(R.id.pin_input)
+        val unlockButton = findViewById<Button>(R.id.unlock_button)
+        val biometricButton = findViewById<Button>(R.id.biometric_button)
+        val errorText = findViewById<TextView>(R.id.error_text)
+
+        // Try biometric first if available
+        val biometricManager = androidx.biometric.BiometricManager.from(this)
+        if (biometricManager.canAuthenticate(androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG) == androidx.biometric.BiometricManager.BIOMETRIC_SUCCESS) {
+            biometricButton.visibility = View.VISIBLE
+            biometricButton.setOnClickListener {
+                val promptInfo = androidx.biometric.BiometricPrompt.PromptInfo.Builder()
+                    .setTitle("Fungua Msaidizi")
+                    .setNegativeButtonText("Tumia PIN")
+                    .build()
+                val biometricPrompt = androidx.biometric.BiometricPrompt(this, executor,
+                    object : androidx.biometric.BiometricPrompt.AuthenticationCallback() {
+                        override fun onAuthenticationSucceeded(result: androidx.biometric.BiometricPrompt.AuthenticationResult) {
+                            runOnUiThread { onUnlockSuccess() }
+                        }
+                    })
+                biometricPrompt.authenticate(promptInfo)
+            }
+        }
+
+        unlockButton.setOnClickListener {
+            val enteredPin = pinInput.text.toString()
+            if (enteredPin.length < 4) {
+                errorText.text = "Weka PIN angalau tarakimu 4"
+                errorText.visibility = View.VISIBLE
+                return@setOnClickListener
+            }
+            val appLockPrefs = getSharedPreferences("app_lock", 0)
+            val storedHash = appLockPrefs.getString("pin_hash", "") ?: ""
+            val salt = appLockPrefs.getString("pin_salt", "") ?: ""
+            val enteredHash = hashPin(enteredPin, salt)
+            if (enteredHash == storedHash) {
+                onUnlockSuccess()
+            } else {
+                errorText.text = "PIN si sahihi. Jaribu tena."
+                errorText.visibility = View.VISIBLE
+                pinInput.text.clear()
+            }
+        }
+    }
+
+    private fun onUnlockSuccess() {
+        setContentView(R.layout.activity_main)
+        setupNavigation()
+        requestAudioPermission()
+        handleUpdateIntent(intent)
+    }
+
+    private fun hashPin(pin: String, salt: String): String {
+        val bytes = java.security.MessageDigest.getInstance("SHA-256")
+            .digest((salt + pin).toByteArray())
+        return bytes.joinToString("") { "%02x".format(it) }
+    }
+
+    private val executor = java.util.concurrent.Executors.newSingleThreadExecutor()
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)

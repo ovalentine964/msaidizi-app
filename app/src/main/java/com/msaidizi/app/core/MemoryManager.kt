@@ -4,11 +4,14 @@ import android.app.ActivityManager
 import android.content.ComponentCallbacks2
 import android.content.Context
 import android.os.Debug
+import dagger.hilt.android.qualifiers.ApplicationContext
 import timber.log.Timber
 import java.lang.ref.WeakReference
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * Memory Manager for Msaidizi — critical for 2GB RAM devices.
@@ -33,7 +36,10 @@ import java.util.concurrent.atomic.AtomicLong
  *   // In Application.onTrimMemory():
  *   memManager.onTrimMemory(level)
  */
-class MemoryManager(private val context: Context) {
+@Singleton
+class MemoryManager @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
 
     // ═══ Memory Thresholds (MB) ═══
     // Tuned for 2GB devices: aggressive cleanup before Android's LMK kicks in
@@ -41,6 +47,14 @@ class MemoryManager(private val context: Context) {
         private const val LOW_MEMORY_THRESHOLD_MB = 150L      // ~150MB free = danger zone
         private const val CRITICAL_MEMORY_THRESHOLD_MB = 80L  // ~80MB free = emergency
         private const val MODEL_RELEASE_THRESHOLD_MB = 200L   // Release models below this
+
+        // Minimum free memory required to load a model (MB)
+        private const val MIN_FREE_TO_LOAD_MODEL_MB = 200L
+
+        // Estimated model memory footprints (MB)
+        const val WHISPER_MEMORY_MB = 40L
+        const val KOKORO_MEMORY_MB = 90L
+        const val PIPER_MEMORY_MB = 25L
 
         // Cache size limits for 2GB devices
         private const val MAX_CACHE_ENTRIES = 500
@@ -63,6 +77,12 @@ class MemoryManager(private val context: Context) {
     private val isMonitoring = AtomicBoolean(false)
     private val lastTrimTime = AtomicLong(0)
     private val trimCount = AtomicLong(0)
+
+    // ═══ Mutual Exclusion ═══
+    // Tracks which heavy model is currently loaded to enforce mutual exclusion on 2GB devices.
+    // Only ONE of {WHISPER, KOKORO} may be loaded at a time on BASIC tier.
+    enum class LoadedHeavyModel { NONE, WHISPER, KOKORO }
+    @Volatile private var loadedHeavyModel: LoadedHeavyModel = LoadedHeavyModel.NONE
 
     // ═══ Memory Levels ═══
     enum class MemoryLevel {
@@ -161,6 +181,77 @@ class MemoryManager(private val context: Context) {
         trimCount.incrementAndGet()
         lastTrimTime.set(System.currentTimeMillis())
     }
+
+    // ═══ Model Loading Guard ═══
+
+    /**
+     * Check if there is enough free memory to load a model of the given size.
+     * Returns true if safe to load, false otherwise.
+     *
+     * @param modelMemoryMB Estimated memory footprint of the model in MB
+     */
+    fun canLoadModel(modelMemoryMB: Long): Boolean {
+        val status = getMemoryStatus()
+        val safe = status.deviceFreeMB >= modelMemoryMB + MIN_FREE_TO_LOAD_MODEL_MB
+        if (!safe) {
+            Timber.w(
+                "MemoryManager: REFUSING to load model (%dMB) — only %dMB free (need %dMB buffer)",
+                modelMemoryMB, status.deviceFreeMB, MIN_FREE_TO_LOAD_MODEL_MB
+            )
+        }
+        return safe
+    }
+
+    /**
+     * Enforce mutual exclusion for heavy models on 2GB (BASIC tier) devices.
+     * Before loading [requested], unloads the currently loaded heavy model if different.
+     *
+     * @param requested The model about to be loaded
+     * @return true if the requested model may proceed to load, false if blocked by memory
+     */
+    fun acquireHeavyModelSlot(requested: LoadedHeavyModel): Boolean {
+        if (requested == LoadedHeavyModel.NONE) return true
+
+        val current = loadedHeavyModel
+        if (current == requested) return true  // Already loaded
+
+        // Must evict the current model first
+        if (current != LoadedHeavyModel.NONE) {
+            Timber.i("MemoryManager: Mutual exclusion — evicting %s to load %s", current, requested)
+            val releaser = modelReleasers[current.name.lowercase()]
+            releaser?.invoke()
+            loadedHeavyModel = LoadedHeavyModel.NONE
+        }
+
+        // Check memory before proceeding
+        val modelSize = when (requested) {
+            LoadedHeavyModel.WHISPER -> WHISPER_MEMORY_MB
+            LoadedHeavyModel.KOKORO -> KOKORO_MEMORY_MB
+            else -> 0L
+        }
+        if (!canLoadModel(modelSize)) {
+            Timber.e("MemoryManager: Not enough memory for %s (%dMB)", requested, modelSize)
+            return false
+        }
+
+        loadedHeavyModel = requested
+        return true
+    }
+
+    /**
+     * Release a heavy model slot (call after unloading a model).
+     */
+    fun releaseHeavyModelSlot(model: LoadedHeavyModel) {
+        if (loadedHeavyModel == model) {
+            loadedHeavyModel = LoadedHeavyModel.NONE
+            Timber.d("MemoryManager: Released heavy model slot: %s", model)
+        }
+    }
+
+    /**
+     * Get which heavy model is currently loaded.
+     */
+    fun getLoadedHeavyModel(): LoadedHeavyModel = loadedHeavyModel
 
     /**
      * Get current memory status for diagnostics.

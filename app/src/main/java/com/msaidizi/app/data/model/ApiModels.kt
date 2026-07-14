@@ -33,6 +33,70 @@ data class RefreshTokenRequest(
 )
 
 // ═══════════════════════════════════════════════════════════════
+// SMS VERIFICATION MODELS
+// ═══════════════════════════════════════════════════════════════
+
+data class SmsVerificationRequest(
+    @SerializedName("phone") val phone: String,
+    @SerializedName("user_id") val userId: String,
+    @SerializedName("language") val language: String = "sw"
+)
+
+data class SmsVerificationResponse(
+    @SerializedName("status") val status: String,
+    @SerializedName("verification_id") val verificationId: String?,
+    @SerializedName("message") val message: String?,
+    @SerializedName("expires_in") val expiresIn: Int = 300,
+    @SerializedName("error_code") val errorCode: String?
+)
+
+data class SmsVerifyCodeRequest(
+    @SerializedName("verification_id") val verificationId: String,
+    @SerializedName("code") val code: String
+)
+
+data class SmsVerifyCodeResponse(
+    @SerializedName("status") val status: String,
+    @SerializedName("user_id") val userId: String?,
+    @SerializedName("message") val message: String?,
+    @SerializedName("error_code") val errorCode: String?
+)
+
+enum class SmsVerificationError(val messageSw: String) {
+    INVALID_PHONE("Namba ya simu si sahihi. Tafadhali jaribu tena."),
+    NETWORK_ERROR("Mtandao haupatikani. Tafadhali jaribu tena."),
+    RATE_LIMIT("Umeomba mara nyingi sana. Tafadhali subiri dakika chache."),
+    CODE_EXPIRED("Muda wa nambari umekwisha. Tafadhali omba nambari mpya."),
+    INVALID_CODE("Nambari si sahihi. Tafadhali jaribu tena."),
+    TOO_MANY_ATTEMPTS("Umekosea mara nyingi. Subiri kabla ya kujaribu tena."),
+    SEND_FAILED("Imeshindikana kutuma SMS. Tafadhali jaribu tena."),
+    UNKNOWN_ERROR("Kuna tatizo. Tafadhali jaribu tena baadaye.");
+
+    companion object {
+        fun fromCode(code: String?): SmsVerificationError {
+            return when (code) {
+                "INVALID_PHONE" -> INVALID_PHONE
+                "NETWORK_ERROR" -> NETWORK_ERROR
+                "RATE_LIMIT" -> RATE_LIMIT
+                "CODE_EXPIRED" -> CODE_EXPIRED
+                "INVALID_CODE" -> INVALID_CODE
+                "TOO_MANY_ATTEMPTS" -> TOO_MANY_ATTEMPTS
+                "SEND_FAILED" -> SEND_FAILED
+                else -> UNKNOWN_ERROR
+            }
+        }
+    }
+}
+
+/**
+ * Delivery channel for phone verification.
+ */
+enum class VerificationChannel {
+    SMS,
+    WHATSAPP
+}
+
+// ═══════════════════════════════════════════════════════════════
 // USER MODELS
 // ═══════════════════════════════════════════════════════════════
 

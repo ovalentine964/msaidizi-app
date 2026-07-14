@@ -185,9 +185,9 @@ class ModelDownloadManager(
         updateStatusMessage("Ninapakia ${model.nameSwahili}...")
 
         return try {
-            // TODO: Integrate with actual ModelDownloader
-            // For now, simulate download progress
-            simulateDownload(model)
+            // Use actual ModelDownloader for real HTTP downloads
+            val downloader = ModelDownloader(context, ModelRegistry)
+            downloader.downloadModel(model.id)
         } catch (e: CancellationException) {
             updateModelState(model.id, ModelState.PAUSED)
             Timber.i(TAG, "Download cancelled for %s", model.id)
@@ -230,8 +230,19 @@ class ModelDownloadManager(
      * Check if a model is ready (downloaded and verified).
      */
     fun isModelReady(modelId: String): Boolean {
-        // TODO: Check actual model files on disk
-        return _modelStates.value[modelId] == ModelState.COMPLETED
+        // Check actual model files on disk via ModelRegistry
+        return try {
+            val registry = ModelRegistry
+            val def = registry.MODELS[modelId]
+            if (def != null) {
+                val file = java.io.File(context.filesDir, "models/${def.files.values.first().filename}")
+                file.exists() && file.length() > 0
+            } else {
+                _modelStates.value[modelId] == ModelState.COMPLETED
+            }
+        } catch (e: Exception) {
+            _modelStates.value[modelId] == ModelState.COMPLETED
+        }
     }
 
     /**

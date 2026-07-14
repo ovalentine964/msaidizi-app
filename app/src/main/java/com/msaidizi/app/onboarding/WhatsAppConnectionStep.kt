@@ -143,6 +143,14 @@ data class OnboardingSessionData(
     var whatsappPhone: String? = null,
     var whatsappConnected: Boolean = false,
     var whatsappSkipped: Boolean = false,
+    /** Phone number verified via SMS or WhatsApp */
+    var verifiedPhone: String? = null,
+    /** Whether phone was verified via SMS */
+    var phoneVerified: Boolean = false,
+    /** Verification channel used: SMS or WHATSAPP */
+    var verificationChannel: com.msaidizi.app.data.model.VerificationChannel? = null,
+    /** Whether the user chose to skip phone verification entirely */
+    var verificationSkipped: Boolean = false,
     var language: String? = null,
     var reportTime: String? = null,
     var speed: String? = null
