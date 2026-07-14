@@ -80,7 +80,7 @@ class MlKemProvider(
      */
     override fun generateKeyPair(): CryptoKeyPair {
         val keyPairGenerator = MLKEMKeyPairGenerator()
-        keyPairGenerator.init(MLKEMKeyGenerationParameters(bcParams, java.security.SecureRandom()))
+        keyPairGenerator.init(MLKEMKeyGenerationParameters(java.security.SecureRandom(), bcParams))
 
         val keyPair: AsymmetricCipherKeyPair = keyPairGenerator.generateKeyPair()
         val publicKey = keyPair.public as MLKEMPublicKeyParameters

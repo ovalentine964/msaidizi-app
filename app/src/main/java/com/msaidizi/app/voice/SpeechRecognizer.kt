@@ -217,7 +217,7 @@ class SpeechRecognizer @Inject constructor(
         val tier = DeviceTier.current
         return when {
             // High-end devices: can afford Turbo
-            tier == com.msaidizi.app.core.util.DeviceTier.HIGH -> {
+            tier == com.msaidizi.app.core.util.DeviceTier.Tier.ENHANCED -> {
                 when {
                     modelRegistry.isModelReady(MODEL_TURBO) -> MODEL_TURBO
                     modelRegistry.isModelReady(MODEL_MOONSHINE) -> MODEL_MOONSHINE

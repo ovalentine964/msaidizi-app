@@ -51,7 +51,7 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class ModelDownloadManager(
     private val context: Context,
-    private val modelDownloader: com.msaidizi.app.core.ai.ModelDownloader
+    private val modelDownloader: com.msaidizi.app.core.ai.ModelDownloader? = null
 ) {
     companion object {
         private const val TAG = "ModelDownloadManager"
@@ -187,7 +187,7 @@ class ModelDownloadManager(
 
         return try {
             // Use actual ModelDownloader for real HTTP downloads
-            modelDownloader.downloadModel(model.id)
+            modelDownloader?.downloadModel(model.id) ?: false
         } catch (e: CancellationException) {
             updateModelState(model.id, ModelState.PAUSED)
             Timber.i(TAG, "Download cancelled for %s", model.id)

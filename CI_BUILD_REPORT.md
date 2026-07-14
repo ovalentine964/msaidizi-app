@@ -99,6 +99,7 @@ All three CI failures shared the same root cause: **massive Kotlin compilation e
 1. `1b01005` — Main fix: 100+ compilation errors across 49 files
 2. `2875bd7` — Remove dangling code in LocalStsProvider
 3. `4eb109c` — Add ReceiptScanner import to AppModule
+4. `9ddfb52` — Fix TaskComplexity import position, add coroutines imports, fix Map type mismatch
 
 ---
 
