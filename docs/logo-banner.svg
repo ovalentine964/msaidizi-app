@@ -1,111 +1,92 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" width="1200" height="400">
   <defs>
-    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#C6922A"/>
-      <stop offset="100%" stop-color="#F7931A"/>
-    </linearGradient>
-    <linearGradient id="chartGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+    <pattern id="bgPattern" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse">
+      <rect width="16" height="16" fill="none"/>
+      <path d="M8 0 L16 8 L8 16 L0 8 Z" fill="none" stroke="#162040" stroke-width="0.4" opacity="0.5"/>
+    </pattern>
+    <pattern id="africaTex" x="0" y="0" width="6" height="6" patternUnits="userSpaceOnUse">
+      <rect width="6" height="6" fill="#C6922A"/>
+      <path d="M0 0 L3 3 M3 0 L6 3 M0 3 L3 6 M3 3 L6 6" stroke="#B07A1A" stroke-width="0.5" opacity="0.35"/>
+    </pattern>
+    <linearGradient id="pulseGrad" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" stop-color="#E0591A"/>
-      <stop offset="50%" stop-color="#F7931A"/>
-      <stop offset="100%" stop-color="#FFCC02"/>
+      <stop offset="45%" stop-color="#E0591A"/>
+      <stop offset="55%" stop-color="#F7931A"/>
+      <stop offset="100%" stop-color="#F7931A"/>
     </linearGradient>
     <clipPath id="roundClip">
       <rect width="1200" height="400" rx="24" ry="24"/>
     </clipPath>
-    <filter id="shieldGlow">
-      <feGaussianBlur stdDeviation="6" result="blur"/>
-      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
   </defs>
 
   <g clip-path="url(#roundClip)">
     <!-- Background -->
     <rect width="1200" height="400" fill="#0F1B3A"/>
-    <pattern id="bgPattern" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse">
-      <rect width="16" height="16" fill="none"/>
-      <path d="M8 0 L16 8 L8 16 L0 8 Z" fill="none" stroke="#162040" stroke-width="0.4" opacity="0.5"/>
-    </pattern>
     <rect width="1200" height="400" fill="url(#bgPattern)"/>
 
-    <!-- Left section: Shield CFO Icon -->
-    <g transform="translate(200, 200)" filter="url(#shieldGlow)">
-      <!-- Africa-contoured shield — shield outline follows Africa's silhouette -->
-      <path d="M0,-120
-               C16,-124 32,-120 44,-112
-               C56,-102 60,-88 62,-74
-               C64,-58 66,-44 70,-30
-               C74,-14 80,-2 84,10
-               C87,20 85,30 80,40
-               C75,50 70,58 68,68
-               C66,78 60,88 52,98
-               C44,106 34,112 22,116
-               C14,118 6,118 0,114
-               C-6,110 -12,102 -18,90
-               C-24,78 -30,66 -36,52
-               C-42,40 -48,28 -52,14
-               C-56,0 -58,-14 -56,-28
-               C-54,-44 -48,-58 -40,-72
-               C-32,-84 -22,-98 -14,-108
-               C-8,-116 -2,-120 0,-120 Z"
-           fill="url(#shieldGrad)" opacity="0.15" stroke="url(#shieldGrad)" stroke-width="2"/>
-      <!-- Madagascar bump on shield -->
-      <ellipse cx="74" cy="60" rx="6" ry="14" fill="url(#shieldGrad)" opacity="0.1" stroke="url(#shieldGrad)" stroke-width="1" transform="rotate(12,74,60)"/>
+    <!-- Left section: Icon mark -->
+    <g transform="translate(200, 200)">
+      <!-- Concentric circles -->
+      <circle r="155" fill="none" stroke="#162040" stroke-width="0.8" opacity="0.5"/>
+      <circle r="142" fill="none" stroke="#1a2848" stroke-width="0.6" opacity="0.35"/>
 
-      <!-- Inner shield border -->
-      <path d="M0,-100
-               C14,-104 28,-100 38,-92
-               C48,-82 52,-70 54,-58
-               C56,-44 58,-32 62,-20
-               C66,-6 72,4 76,14
-               C79,22 77,30 73,38
-               C68,46 64,52 62,60
-               C60,68 54,76 46,84
-               C38,90 30,94 20,96
-               C12,98 5,98 0,94
-               C-5,90 -10,82 -15,72
-               C-20,62 -26,52 -32,40
-               C-38,30 -42,20 -46,8
-               C-48,-4 -48,-16 -44,-28
-               C-40,-40 -36,-50 -30,-62
-               C-24,-72 -16,-84 -10,-92
-               C-5,-98 -2,-100 0,-100 Z"
-           fill="none" stroke="url(#shieldGrad)" stroke-width="1.2" opacity="0.4"/>
+      <!-- Africa continent -->
+      <g transform="scale(0.92)" opacity="0.95">
+        <path d="M-8,-90 C2,-95 12,-93 20,-88 C28,-82 32,-72 34,-62
+                 C36,-50 38,-40 42,-30 C46,-18 52,-8 56,2
+                 C59,10 58,18 54,26 C50,34 46,40 44,48
+                 C42,56 38,64 32,72 C26,78 18,82 10,84
+                 C4,85 -2,84 -8,80 C-14,74 -18,66 -22,56
+                 C-26,46 -30,36 -34,24 C-38,14 -42,4 -44,-6
+                 C-46,-16 -46,-26 -42,-36 C-38,-46 -32,-54 -26,-64
+                 C-20,-72 -14,-80 -8,-86 Z"
+             fill="url(#africaTex)" stroke="#B07A1A" stroke-width="0.5"/>
+        <ellipse cx="52" cy="42" rx="4" ry="10" fill="url(#africaTex)" stroke="#B07A1A" stroke-width="0.3" transform="rotate(12,52,42)"/>
+      </g>
 
-      <!-- Gold chart line (CFO element) inside shield -->
-      <path d="M-50,20 L-30,20 L-20,-5 L-10,10 L0,-20 L10,0 L20,-15 L30,5 L50,5"
-           fill="none" stroke="url(#chartGrad)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <!-- Chart data points -->
-      <circle cx="-20" cy="-5" r="3" fill="#F7931A"/>
-      <circle cx="0" cy="-20" r="3.5" fill="#FFCC02"/>
-      <circle cx="20" cy="-15" r="3" fill="#F7931A"/>
+      <!-- White B -->
+      <g>
+        <path d="M-50,-78 L-50,78 L6,78
+                 C30,78 48,66 48,50 C48,38 42,30 34,27
+                 C43,22 51,13 51,2 C51,-13 40,-24 19,-24
+                 L-50,-24 Z"
+             fill="#FFFFFF"/>
+        <path d="M-34,-62 L-34,-6 L14,-6
+                 C26,-6 32,-2 32,5 C32,11 27,14 14,14
+                 L-34,14 Z"
+             fill="#0F1B3A"/>
+        <path d="M-34,30 L-34,62 L11,62
+                 C22,62 29,56 29,48 C29,40 22,34 11,34
+                 L-34,34 Z"
+             fill="#0F1B3A"/>
+      </g>
 
-      <!-- Speech bubble (voice-first element) -->
-      <g transform="translate(-55, -55)">
-        <path d="M0,-24 C-14,-24 -24,-16 -24,-6 C-24,4 -14,12 0,12 L16,12 L10,22 L18,12 L28,12 C38,12 44,4 44,-6 C44,-16 38,-24 28,-24 Z"
-             fill="#0F1B3A" stroke="url(#shieldGrad)" stroke-width="1.5"/>
-        <!-- Sound waves inside bubble -->
-        <path d="M10,-12 C12,-10 12,-2 10,0" fill="none" stroke="#F7931A" stroke-width="1.5" stroke-linecap="round"/>
-        <path d="M16,-15 C20,-12 20,0 16,3" fill="none" stroke="#F7931A" stroke-width="1.5" stroke-linecap="round"/>
-        <path d="M22,-18 C28,-14 28,2 22,6" fill="none" stroke="#F7931A" stroke-width="1.5" stroke-linecap="round"/>
+      <!-- Pulse line -->
+      <g transform="translate(0, 0)">
+        <path d="M-148,0 L-55,0 L-42,-22 L-29,0 L-18,0 L-13,-38 L-4,13 L5,0 L148,0"
+             fill="none" stroke="url(#pulseGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="-42" cy="-22" r="2.5" fill="#E0591A"/>
+        <circle cx="-13" cy="-38" r="3" fill="#F7931A"/>
       </g>
     </g>
 
     <!-- Right section: Text -->
     <g transform="translate(420, 0)">
-      <!-- Msaidizi -->
-      <text x="0" y="180" font-family="'Arial Black','Arial',Helvetica,sans-serif" font-size="92" font-weight="900" fill="#FFFFFF" letter-spacing="6">Msaidizi</text>
+      <!-- ANGAVU -->
+      <text x="0" y="175" font-family="'Arial Black','Arial',Helvetica,sans-serif" font-size="82" font-weight="900" fill="#FFFFFF" letter-spacing="8">ANGAVU</text>
+
+      <!-- INTELLIGENCE -->
+      <text x="4" y="230" font-family="Arial,Helvetica,sans-serif" font-size="42" font-weight="400" fill="#FFFFFF" letter-spacing="12" opacity="0.95">INTELLIGENCE</text>
 
       <!-- Tagline bar -->
-      <line x1="4" y1="205" x2="730" y2="205" stroke="url(#shieldGrad)" stroke-width="2" opacity="0.5"/>
+      <line x1="4" y1="252" x2="730" y2="252" stroke="#FFFFFF" stroke-width="1.5" opacity="0.5"/>
 
-      <!-- Tagline -->
-      <text x="4" y="240" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#FFFFFF" letter-spacing="5" opacity="0.85">THE AI CFO FOR AFRICA'S INFORMAL WORKERS</text>
-
-      <!-- Sub-tagline -->
-      <text x="4" y="275" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="300" fill="#F7931A" letter-spacing="3" opacity="0.7">Voice-First · Offline-First · Speaks Your Language</text>
+      <!-- Tagline text -->
+      <text x="4" y="285" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="300" fill="#FFFFFF" letter-spacing="4" opacity="0.7">CLARITY FOR AFRICA'S INVISIBLE ECONOMY</text>
     </g>
 
     <!-- Corner dot clusters -->
+    <!-- Top-left -->
     <g transform="translate(42,42)">
       <circle r="2.8" fill="#FFCC02"/>
       <circle cx="-7" cy="-6" r="1.8" fill="#F7931A"/>
@@ -114,6 +95,7 @@
       <circle cx="9" cy="4" r="1.8" fill="#F7931A"/>
       <circle cy="9" r="1.8" fill="#F7931A"/>
     </g>
+    <!-- Top-right -->
     <g transform="translate(1158,42)">
       <circle r="2.8" fill="#FFCC02"/>
       <circle cx="-7" cy="-6" r="1.8" fill="#F7931A"/>
@@ -122,6 +104,7 @@
       <circle cx="9" cy="4" r="1.8" fill="#F7931A"/>
       <circle cy="9" r="1.8" fill="#F7931A"/>
     </g>
+    <!-- Bottom-left -->
     <g transform="translate(42,358)">
       <circle r="2.8" fill="#FFCC02"/>
       <circle cx="-7" cy="-6" r="1.8" fill="#F7931A"/>
@@ -130,6 +113,7 @@
       <circle cx="9" cy="4" r="1.8" fill="#F7931A"/>
       <circle cy="9" r="1.8" fill="#F7931A"/>
     </g>
+    <!-- Bottom-right -->
     <g transform="translate(1158,358)">
       <circle r="2.8" fill="#FFCC02"/>
       <circle cx="-7" cy="-6" r="1.8" fill="#F7931A"/>
