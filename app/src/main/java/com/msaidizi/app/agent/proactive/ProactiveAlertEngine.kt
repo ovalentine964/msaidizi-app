@@ -3,10 +3,10 @@ package com.msaidizi.app.agent.proactive
 import com.msaidizi.app.agent.AgentEvent
 import com.msaidizi.app.agent.AgentEventBus
 import com.msaidizi.app.agent.BusinessPatternTracker
+import com.msaidizi.app.core.database.InventoryDao
 import com.msaidizi.app.core.database.TransactionDao
 import com.msaidizi.app.core.model.PatternType
 import com.msaidizi.app.core.model.TransactionType
-import com.msaidizi.app.core.validation.AnomalyDetector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -23,38 +23,48 @@ import java.util.UUID
 /**
  * Proactive Alert Engine — monitors business health and fires alerts.
  *
- * Wires together existing intelligence components into a proactive
+ * Wires together all intelligence components into a proactive
  * monitoring pipeline that surfaces issues before the worker asks:
  *
- * ┌───────────────────┐     ┌──────────────────┐     ┌──────────────┐
- * │ BusinessPattern   │────▶│ ProactiveAlert   │────▶│  AgentEvent  │
- * │ Tracker           │     │ Engine           │     │  Bus         │
- * │ AnomalyDetector   │     │ (monitoring loop)│     │  (alerts)    │
- * └───────────────────┘     └──────────────────┘     └──────────────┘
- *                                   │
- *                                   ▼
- *                           ┌──────────────┐
- *                           │ Notification │
- *                           │ System       │
- *                           └──────────────┘
+ * ┌───────────────────────┐     ┌──────────────────┐     ┌──────────────┐
+ * │ BusinessPattern       │────▶│ ProactiveAlert   │────▶│  AgentEvent  │
+ * │ Tracker               │     │ Engine           │     │  Bus         │
+ * │ ProactiveAnomalyDet.  │     │ (monitoring loop)│     │  (alerts)    │
+ * │ StockOutPredictor     │     │                  │     │              │
+ * │ CashFlowPredictor     │     └──────────────────┘     └──────────────┘
+ * └───────────────────────┘             │
+ *                                       ▼
+ *                               ┌──────────────┐
+ *                               │ Notification │
+ *                               │ / TTS System │
+ *                               └──────────────┘
  *
  * ## Alert Types
- * 1. **Price Anomaly** — Significant price deviation from tracked average
+ * 1. **Price Anomaly** — Significant price deviation (Z-score based)
  * 2. **Cash Flow Warning** — Expenses exceeding income trajectory
- * 3. **Sales Drop** — Sudden decline in sales volume/rate
- * 4. **Fraud Detection** — Unusual transaction patterns
- * 5. **Stock Alert** — Best-selling items running low
- * 6. **Trend Shift** — Business trend direction changed
+ * 3. **Cash Flow Prediction** — Tomorrow's expected income/expense
+ * 4. **Sales Drop** — Sudden decline in sales volume/rate
+ * 5. **Fraud Detection** — Unusual transaction patterns (Z-score)
+ * 6. **Stock Alert** — Items predicted to stock out soon
+ * 7. **Trend Shift** — Business trend direction changed
+ * 8. **Volume Anomaly** — Unusual transaction count
+ * 9. **Missing Transactions** — Expected sales didn't happen
  *
  * @param patternTracker Business pattern analysis
- * @param anomalyDetector Transaction anomaly detection
+ * @param anomalyDetector Z-score based anomaly detection
+ * @param stockOutPredictor Stock-out prediction (Holt-Winters)
+ * @param cashFlowPredictor Cash flow prediction (Holt's)
  * @param transactionDao Direct transaction queries
+ * @param inventoryDao Inventory data for stock predictions
  * @param eventBus Event bus for publishing alerts
  */
 class ProactiveAlertEngine(
     private val patternTracker: BusinessPatternTracker,
-    private val anomalyDetector: AnomalyDetector,
+    private val anomalyDetector: ProactiveAnomalyDetector,
+    private val stockOutPredictor: StockOutPredictor,
+    private val cashFlowPredictor: CashFlowPredictor,
     private val transactionDao: TransactionDao,
+    private val inventoryDao: InventoryDao,
     private val eventBus: AgentEventBus = AgentEventBus.getInstance()
 ) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -72,10 +82,13 @@ class ProactiveAlertEngine(
         private val ALERT_COOLDOWNS = mapOf(
             AlertType.PRICE_ANOMALY to 4 * 60 * 60 * 1000L,    // 4 hours
             AlertType.CASH_FLOW_WARNING to 12 * 60 * 60 * 1000L, // 12 hours
+            AlertType.CASH_FLOW_PREDICTION to 20 * 60 * 60 * 1000L, // 20 hours (once/day)
             AlertType.SALES_DROP to 6 * 60 * 60 * 1000L,        // 6 hours
             AlertType.FRAUD_DETECTION to 1 * 60 * 60 * 1000L,   // 1 hour
-            AlertType.STOCK_ALERT to 24 * 60 * 60 * 1000L,      // 24 hours
-            AlertType.TREND_SHIFT to 24 * 60 * 60 * 1000L       // 24 hours
+            AlertType.STOCK_ALERT to 12 * 60 * 60 * 1000L,      // 12 hours
+            AlertType.TREND_SHIFT to 24 * 60 * 60 * 1000L,      // 24 hours
+            AlertType.VOLUME_ANOMALY to 6 * 60 * 60 * 1000L,    // 6 hours
+            AlertType.MISSING_TRANSACTIONS to 4 * 60 * 60 * 1000L // 4 hours
         )
     }
 
@@ -103,6 +116,7 @@ class ProactiveAlertEngine(
         if (isMonitoring) return
         isMonitoring = true
 
+        // Periodic check cycle
         scope.launch {
             Timber.d("Proactive alert monitoring started (interval=%dms)", MONITORING_INTERVAL_MS)
             while (isMonitoring) {
@@ -115,11 +129,11 @@ class ProactiveAlertEngine(
             }
         }
 
-        // Also subscribe to transaction events for real-time checks
+        // Real-time transaction checks (Z-score anomaly detection)
         scope.launch {
             eventBus.filterEvents<AgentEvent.TransactionRecorded>().collect { event ->
                 checkTransactionAnomaly(event)
-                checkPriceAnomaly(event.item, event.amount / event.quantity)
+                checkPriceAnomaly(event.item, event.amount / event.quantity.coerceAtLeast(1.0))
             }
         }
 
@@ -141,9 +155,11 @@ class ProactiveAlertEngine(
      */
     private suspend fun runAlertChecks() {
         checkCashFlowWarnings()
+        checkCashFlowPrediction()
         checkSalesDrop()
         checkTrendShift()
         checkStockAlerts()
+        checkAnomalyScan()
     }
 
     /**
@@ -180,11 +196,40 @@ class ProactiveAlertEngine(
                 type = AlertType.CASH_FLOW_WARNING,
                 severity = AlertSeverity.WARNING,
                 title = "Cash Flow Warning",
-                message = "You've had $negativeDays days with more expenses than income. " +
-                        "Consider reducing spending or increasing sales.",
-                data = mapOf("negativeDays" to negativeDays.toString())
+                message = "Umekuwa na siku $negativeDays mfululizo na matumizi zaidi ya mapato. " +
+                        "Punguza matumizi au ongeza mauzo.",
+                data = mapOf("negativeDays" to negativeDays.toString()),
+                ttsMessage = "Onyo: Umekuwa na siku $negativeDays na matumizi kuliko mapato."
             )
         }
+    }
+
+    /**
+     * Predict tomorrow's cash flow using Holt's exponential smoothing.
+     * Fires an alert with the prediction.
+     */
+    private suspend fun checkCashFlowPrediction() {
+        if (isOnCooldown(AlertType.CASH_FLOW_PREDICTION)) return
+
+        val prediction = cashFlowPredictor.predictTomorrow()
+
+        // Only alert if we have reasonable confidence
+        if (prediction.confidence < 0.3) return
+
+        fireAlert(
+            type = AlertType.CASH_FLOW_PREDICTION,
+            severity = if (prediction.trend == CashFlowTrend.DECLINING) AlertSeverity.WARNING else AlertSeverity.INFO,
+            title = "Cash Flow Prediction",
+            message = prediction.message,
+            data = mapOf(
+                "predictedIncome" to prediction.predictedIncome.toString(),
+                "predictedExpenses" to prediction.predictedExpenses.toString(),
+                "predictedNet" to prediction.predictedNet.toString(),
+                "trend" to prediction.trend.name,
+                "confidence" to prediction.confidence.toString()
+            ),
+            ttsMessage = prediction.message
+        )
     }
 
     /**
@@ -202,13 +247,14 @@ class ProactiveAlertEngine(
                 type = AlertType.SALES_DROP,
                 severity = AlertSeverity.WARNING,
                 title = "Sales Declining",
-                message = "Your sales dropped ${kotlin.math.abs(trend.changePercent).toInt()}% " +
-                        "compared to last week. Average: KSh ${"%.0f".format(trend.currentWeekAvg)}/day.",
+                message = "Mauzo yako yameshuka kwa ${kotlin.math.abs(trend.changePercent).toInt()}% " +
+                        "ikilinganishwa na wiki iliyopita. Wastani: KSh ${"%.0f".format(trend.currentWeekAvg)}/siku.",
                 data = mapOf(
                     "changePercent" to trend.changePercent.toString(),
                     "currentAvg" to trend.currentWeekAvg.toString(),
                     "previousAvg" to trend.previousWeekAvg.toString()
-                )
+                ),
+                ttsMessage = "Mauzo yako yameshuka kwa asilimia ${kotlin.math.abs(trend.changePercent).toInt()}."
             )
         }
     }
@@ -222,20 +268,20 @@ class ProactiveAlertEngine(
         val trend = patternTracker.detectWeeklyTrend()
         val healthScore = patternTracker.calculateBusinessHealthScore()
 
-        // Alert if business health is concerning
         if (healthScore.totalScore < 30 && trend.confidence > 0.5) {
             fireAlert(
                 type = AlertType.TREND_SHIFT,
                 severity = AlertSeverity.CRITICAL,
                 title = "Business Health Low",
-                message = "Your business health score is ${healthScore.totalScore.toInt()}/100. " +
-                        "Trend: ${trend.direction.name.lowercase()}. " +
-                        "Let's review your sales strategy.",
+                message = "Alama ya afya ya biashara yako ni ${healthScore.totalScore.toInt()}/100. " +
+                        "Mwelekeo: ${trend.direction.name.lowercase()}. " +
+                        "Hebu tuangalie mkakati wako wa mauzo.",
                 data = mapOf(
                     "healthScore" to healthScore.totalScore.toString(),
                     "marginScore" to healthScore.marginScore.toString(),
                     "trendScore" to healthScore.trendScore.toString()
-                )
+                ),
+                ttsMessage = "Afya ya biashara yako ni chini. Alama ni ${healthScore.totalScore.toInt()} kati ya 100."
             )
         }
     }
@@ -252,26 +298,28 @@ class ProactiveAlertEngine(
 
             val deviation = kotlin.math.abs(unitPrice - priceInsight.averagePrice) / priceInsight.averagePrice
             if (deviation > PRICE_DEVIATION_THRESHOLD) {
+                val direction = if (unitPrice > priceInsight.averagePrice) "imepanda" else "imeshuka"
                 fireAlert(
                     type = AlertType.PRICE_ANOMALY,
                     severity = AlertSeverity.INFO,
                     title = "Price Change: $item",
-                    message = "The price of $item (KSh ${"%.0f".format(unitPrice)}) is " +
-                            "${(deviation * 100).toInt()}% ${if (unitPrice > priceInsight.averagePrice) "higher" else "lower"} " +
-                            "than your usual KSh ${"%.0f".format(priceInsight.averagePrice)}.",
+                    message = "Bei ya $item (KSh ${"%.0f".format(unitPrice)}) $direction " +
+                            "kwa ${(deviation * 100).toInt()}% ukilinganishwa na wastani wako wa " +
+                            "KSh ${"%.0f".format(priceInsight.averagePrice)}.",
                     data = mapOf(
                         "item" to item,
                         "currentPrice" to unitPrice.toString(),
                         "averagePrice" to priceInsight.averagePrice.toString(),
                         "deviation" to deviation.toString()
-                    )
+                    ),
+                    ttsMessage = "Bei ya $item $direction kwa asilimia ${(deviation * 100).toInt()}."
                 )
             }
         }
     }
 
     /**
-     * Check for transaction anomalies using the AnomalyDetector.
+     * Check for transaction anomalies using Z-score based ProactiveAnomalyDetector.
      */
     private fun checkTransactionAnomaly(event: AgentEvent.TransactionRecorded) {
         scope.launch {
@@ -282,73 +330,115 @@ class ProactiveAlertEngine(
             val dayAgo = now - 86400
             val recentTxns = transactionDao.getTransactionsInRangeSuspend(dayAgo, now)
 
-            val anomalyResult = anomalyDetector.checkTransaction(
-                transaction = com.msaidizi.app.core.model.Transaction(
-                    id = 0,
-                    type = when (event.type) {
-                        "SALE" -> TransactionType.SALE
-                        "PURCHASE" -> TransactionType.PURCHASE
-                        else -> TransactionType.EXPENSE
-                    },
-                    item = event.item,
-                    quantity = event.quantity,
-                    unitPrice = event.amount / event.quantity.coerceAtLeast(1.0),
-                    totalAmount = event.amount,
-                    createdAt = event.timestamp / 1000
-                ),
-                recentTransactions = recentTxns
+            val transaction = com.msaidizi.app.core.model.Transaction(
+                id = 0,
+                type = when (event.type) {
+                    "SALE" -> TransactionType.SALE
+                    "PURCHASE" -> TransactionType.PURCHASE
+                    else -> TransactionType.EXPENSE
+                },
+                item = event.item,
+                quantity = event.quantity,
+                unitPrice = event.amount / event.quantity.coerceAtLeast(1.0),
+                totalAmount = event.amount,
+                createdAt = event.timestamp / 1000
             )
 
-            if (anomalyResult.isAnomaly) {
+            val anomalies = anomalyDetector.checkTransactionRealtime(transaction, recentTxns)
+
+            // Fire alert for the most severe anomaly
+            val mostSevere = anomalies.maxByOrNull {
+                when (it.severity) {
+                    AnomalySeverity.CRITICAL -> 3
+                    AnomalySeverity.WARNING -> 2
+                    AnomalySeverity.INFO -> 1
+                }
+            }
+
+            if (mostSevere != null) {
                 fireAlert(
                     type = AlertType.FRAUD_DETECTION,
-                    severity = if (anomalyResult.severity > 0.8) AlertSeverity.CRITICAL else AlertSeverity.WARNING,
+                    severity = when (mostSevere.severity) {
+                        AnomalySeverity.CRITICAL -> AlertSeverity.CRITICAL
+                        AnomalySeverity.WARNING -> AlertSeverity.WARNING
+                        AnomalySeverity.INFO -> AlertSeverity.INFO
+                    },
                     title = "Unusual Transaction Detected",
-                    message = anomalyResult.description,
-                    data = mapOf(
+                    message = mostSevere.message,
+                    data = mostSevere.data + mapOf(
                         "item" to event.item,
                         "amount" to event.amount.toString(),
-                        "anomalyScore" to anomalyResult.severity.toString()
-                    )
+                        "zScore" to mostSevere.zScore.toString()
+                    ),
+                    ttsMessage = mostSevere.message
                 )
             }
         }
     }
 
     /**
-     * Check stock levels for best-selling items.
+     * Check stock levels using Holt-Winters based StockOutPredictor.
      */
     private suspend fun checkStockAlerts() {
         if (isOnCooldown(AlertType.STOCK_ALERT)) return
 
-        val products = patternTracker.analyzeProductPerformance(14)
-        val topSellers = products.filter { it.isTopSeller }
+        val predictions = stockOutPredictor.predictAll()
 
-        for (product in topSellers) {
-            // Check if sales velocity suggests stock might run out
-            // This is a heuristic: if selling > 5/day and no recent restock
-            if (product.salesVelocity > 5.0) {
-                val recentPurchases = transactionDao.getTransactionsInRangeSuspend(
-                    System.currentTimeMillis() / 1000 - 7 * 86400,
-                    System.currentTimeMillis() / 1000
-                ).filter {
-                    it.type == TransactionType.PURCHASE && it.item.equals(product.item, ignoreCase = true)
-                }
-
-                if (recentPurchases.isEmpty()) {
-                    fireAlert(
-                        type = AlertType.STOCK_ALERT,
-                        severity = AlertSeverity.INFO,
-                        title = "Restock: ${product.item}",
-                        message = "${product.item} is selling well (${product.salesVelocity.toInt()}/day) " +
-                                "but you haven't restocked in 7 days. Consider buying more.",
-                        data = mapOf(
-                            "item" to product.item,
-                            "velocity" to product.salesVelocity.toString()
-                        )
-                    )
-                }
+        for (prediction in predictions) {
+            if (prediction.isCritical) {
+                fireAlert(
+                    type = AlertType.STOCK_ALERT,
+                    severity = if (prediction.daysUntilStockout < 1.0) AlertSeverity.CRITICAL else AlertSeverity.WARNING,
+                    title = "Stock Alert: ${prediction.item}",
+                    message = prediction.alertMessage,
+                    data = mapOf(
+                        "item" to prediction.item,
+                        "currentStock" to prediction.currentStock.toString(),
+                        "dailyDemand" to prediction.dailyDemand.toString(),
+                        "daysUntilStockout" to prediction.daysUntilStockout.toString(),
+                        "confidence" to prediction.confidence.toString()
+                    ),
+                    ttsMessage = prediction.alertMessage
+                )
             }
+        }
+    }
+
+    /**
+     * Run Z-score anomaly scan on today's data.
+     */
+    private suspend fun checkAnomalyScan() {
+        val anomalies = anomalyDetector.runDailyScan()
+
+        for (anomaly in anomalies) {
+            val alertType = when (anomaly.type) {
+                AnomalyType.VOLUME_ANOMALY -> AlertType.VOLUME_ANOMALY
+                AnomalyType.MISSING_TRANSACTIONS -> AlertType.MISSING_TRANSACTIONS
+                AnomalyType.AMOUNT_ANOMALY -> AlertType.FRAUD_DETECTION
+                AnomalyType.TIMING_ANOMALY -> AlertType.FRAUD_DETECTION
+                AnomalyType.PRICE_ANOMALY -> AlertType.PRICE_ANOMALY
+            }
+
+            if (isOnCooldown(alertType)) continue
+
+            fireAlert(
+                type = alertType,
+                severity = when (anomaly.severity) {
+                    AnomalySeverity.CRITICAL -> AlertSeverity.CRITICAL
+                    AnomalySeverity.WARNING -> AlertSeverity.WARNING
+                    AnomalySeverity.INFO -> AlertSeverity.INFO
+                },
+                title = when (anomaly.type) {
+                    AnomalyType.VOLUME_ANOMALY -> "Unusual Activity"
+                    AnomalyType.MISSING_TRANSACTIONS -> "No Sales Today"
+                    AnomalyType.AMOUNT_ANOMALY -> "Unusual Amount"
+                    AnomalyType.TIMING_ANOMALY -> "Unusual Timing"
+                    AnomalyType.PRICE_ANOMALY -> "Price Anomaly"
+                },
+                message = anomaly.message,
+                data = anomaly.data,
+                ttsMessage = anomaly.message
+            )
         }
     }
 
@@ -356,13 +446,21 @@ class ProactiveAlertEngine(
 
     /**
      * Fire a proactive alert. Publishes to event bus and alert stream.
+     *
+     * @param type Alert type for cooldown tracking
+     * @param severity Alert severity level
+     * @param title Short title for display
+     * @param message Full message in Swahili
+     * @param data Additional data for analytics
+     * @param ttsMessage Optional TTS-friendly message (shorter, spoken form)
      */
     private fun fireAlert(
         type: AlertType,
         severity: AlertSeverity,
         title: String,
         message: String,
-        data: Map<String, String> = emptyMap()
+        data: Map<String, String> = emptyMap(),
+        ttsMessage: String = message
     ) {
         // Update cooldown
         lastAlertTimes[type] = System.currentTimeMillis()
@@ -373,6 +471,7 @@ class ProactiveAlertEngine(
             severity = severity,
             title = title,
             message = message,
+            ttsMessage = ttsMessage,
             data = data,
             timestamp = System.currentTimeMillis()
         )
@@ -416,6 +515,7 @@ class ProactiveAlertEngine(
                 severity = AlertSeverity.valueOf(event.severity),
                 title = event.title,
                 message = event.message,
+                ttsMessage = event.message,
                 data = event.data,
                 timestamp = event.timestamp
             )
@@ -434,6 +534,7 @@ data class ProactiveAlertData(
     val severity: AlertSeverity,
     val title: String,
     val message: String,
+    val ttsMessage: String = message,
     val data: Map<String, String> = emptyMap(),
     val timestamp: Long
 )
@@ -444,10 +545,13 @@ data class ProactiveAlertData(
 enum class AlertType {
     PRICE_ANOMALY,
     CASH_FLOW_WARNING,
+    CASH_FLOW_PREDICTION,
     SALES_DROP,
     FRAUD_DETECTION,
     STOCK_ALERT,
-    TREND_SHIFT
+    TREND_SHIFT,
+    VOLUME_ANOMALY,
+    MISSING_TRANSACTIONS
 }
 
 /**

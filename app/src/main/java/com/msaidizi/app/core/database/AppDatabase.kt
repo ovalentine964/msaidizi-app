@@ -87,6 +87,31 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun loanDao(): LoanDao
     abstract fun mindsetLessonDao(): MindsetLessonDao
     abstract fun briefingDeliveryDao(): BriefingDeliveryDao
+
+    companion object {
+        @Volatile
+        private var INSTANCE: AppDatabase? = null
+
+        /**
+         * Set the database instance (called from Hilt/AppModule).
+         * Allows WorkManager workers to access the database without Hilt injection.
+         */
+        fun setInstance(database: AppDatabase) {
+            INSTANCE = database
+        }
+
+        /**
+         * Get the database instance.
+         * Returns null if not yet initialized (before Application.onCreate).
+         */
+        fun getInstance(context: android.content.Context): AppDatabase {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: throw IllegalStateException(
+                    "AppDatabase not initialized. Call setInstance() from AppModule first."
+                )
+            }
+        }
+    }
 }
 
 // Converters class moved to Converters.kt

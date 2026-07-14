@@ -48,7 +48,8 @@ import timber.log.Timber
  */
 class AdvisorAgent(
     private val businessAgent: BusinessAgent,
-    private val analysisAgent: AnalysisAgent
+    private val analysisAgent: AnalysisAgent,
+    private val voicePersonality: VoicePersonality? = null
 ) {
 
     // ═══════════════════════════════════════════════════════════════
@@ -464,9 +465,20 @@ class AdvisorAgent(
      * combined with immediate business intelligence (inverted pyramid).
      */
     suspend fun getGreeting(language: String = "sw"): String {
-        val hour = java.time.LocalTime.now().hour
         val profit = businessAgent.getDailyProfit()
 
+        // Use VoicePersonality for rich contextual greeting if available
+        val personality = voicePersonality
+        if (personality != null) {
+            return personality.getGreetingWithContext(
+                workerName = "",
+                profit = profit,
+                language = language
+            )
+        }
+
+        // Fallback to basic greeting
+        val hour = java.time.LocalTime.now().hour
         return if (language == "sw") {
             when {
                 hour < 12 -> "🌅 Habari za asubuhi! Faida yako leo ni KSh ${"%.0f".format(profit)}."

@@ -104,6 +104,8 @@ class Orchestrator(
     private val planExecuteLoop: PlanExecuteLoop = PlanExecuteLoop(),
     private val eventBus: AgentEventBus = AgentEventBus.getInstance(),
     private val llmEngine: LlmEngine? = null,
+    // ── Voice Personality ──
+    private val voicePersonality: VoicePersonality? = null,
     // ── AGI Components ──
     private val progressiveAutonomy: ProgressiveAutonomy? = null,
     private val proactiveAlertEngine: ProactiveAlertEngine? = null,
@@ -184,7 +186,10 @@ class Orchestrator(
         // Steps 5-8: Post-processing + output sanitization (defense-in-depth)
         val sanitizedResponse = sanitizeOutput(response, language)
         val critiqueScore = conversationManager.postProcess(enhancedText, intentResult, sanitizedResponse, language, trace)
-        _responses.emit(sanitizedResponse)
+
+        // Step 8b: Apply voice personality — warmth, proverbs, cultural flavor
+        val personalityResponse = applyPersonality(sanitizedResponse, language)
+        _responses.emit(personalityResponse)
         reActLoop.complete(trace, sanitizedResponse.type != ResponseType.ERROR, sanitizedResponse.text)
 
         conversationManager.publishTaskCompleted(trace, response)
@@ -193,7 +198,34 @@ class Orchestrator(
         recordAutonomyOutcome(intentResult, response)
         generateCrossDomainInsights()
 
-        return response
+        return personalityResponse
+    }
+
+    // ═══════════════ VOICE PERSONALITY — warmth layer ═══════════════
+
+    /**
+     * Apply voice personality to make Msaidizi sound like a warm friend.
+     * Adds Swahili proverbs, cultural greetings, and encouragement.
+     *
+     * Applied AFTER sanitization (defense-in-depth) but BEFORE emission.
+     *
+     * @see VoicePersonality for personality engine details
+     */
+    private fun applyPersonality(response: AgentResponse, language: String): AgentResponse {
+        val personality = voicePersonality ?: return response
+
+        val personalizedText = personality.wrapResponse(
+            text = response.text,
+            responseType = response.type,
+            language = language
+        )
+
+        return if (personalizedText != response.text) {
+            Timber.d("Voice personality applied: %d → %d chars", response.text.length, personalizedText.length)
+            response.copy(text = personalizedText)
+        } else {
+            response
+        }
     }
 
     // ═══════════════ OUTPUT SANITIZATION — defense-in-depth ═══════════════
@@ -304,7 +336,27 @@ class Orchestrator(
         Timber.d("Stickiness features initialized")
     }
 
-    fun getSessionWelcome(language: String = "sw"): String? = ahaMomentFlow?.onSessionStart(language)?.getText(language)
+    /**
+     * Get session welcome with voice personality.
+     * Uses contextual greeting based on time of day + worker name.
+     */
+    fun getSessionWelcome(language: String = "sw"): String? {
+        // Try AhaMomentFlow first (existing system)
+        val ahaWelcome = ahaMomentFlow?.onSessionStart(language)?.getText(language)
+
+        // If VoicePersonality is available, enhance with contextual greeting
+        val personality = voicePersonality
+        if (personality != null) {
+            val greeting = personality.getGreeting(language = language)
+            return if (ahaWelcome != null) {
+                "$greeting\n\n$ahaWelcome"
+            } else {
+                greeting
+            }
+        }
+
+        return ahaWelcome
+    }
     suspend fun getGamificationState() = gamificationEngine?.getState()
     suspend fun getStreakProtection() = gamificationEngine?.getStreakFreezeStatus()
     suspend fun getBriefingLoopPerformance() = briefingDelivery?.getBriefingPerformance()

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.msaidizi.app.agent.AgentResponse
 import com.msaidizi.app.agent.Orchestrator
+import com.msaidizi.app.agent.VoicePersonality
 import com.msaidizi.app.core.language.CalibratedConfidence
 import com.msaidizi.app.core.language.ConfidenceCalibrator
 import com.msaidizi.app.core.util.SwahiliParser
@@ -22,7 +23,8 @@ import javax.inject.Inject
 class RecordViewModel @Inject constructor(
     private val voicePipeline: VoicePipeline,
     private val orchestrator: Orchestrator,
-    private val confidenceCalibrator: ConfidenceCalibrator
+    private val confidenceCalibrator: ConfidenceCalibrator,
+    private val voicePersonality: VoicePersonality
 ) : ViewModel() {
 
     // UI State
@@ -219,9 +221,22 @@ class RecordViewModel @Inject constructor(
 
     /**
      * Process transcription through the agent orchestrator.
+     *
+     * Plays a short processing feedback audio cue so the worker knows
+     * Msaidizi heard them and is thinking — prevents the "app froze" feeling.
      */
     private suspend fun processTranscription(text: String) {
         try {
+            // Play processing feedback — "Sawa, nimesikia..." style cue
+            // This tells the worker: "I heard you, give me a moment"
+            val processingFeedback = voicePersonality.getProcessingFeedback(currentLanguage)
+            _uiState.value = _uiState.value.copy(
+                statusMessage = processingFeedback
+            )
+            // Speak the processing cue briefly (non-blocking pattern)
+            voicePipeline.speak(processingFeedback, currentLanguage)
+
+            // Process through orchestrator (now with personality wrapping)
             val response = orchestrator.processInput(text, currentLanguage)
 
             _uiState.value = _uiState.value.copy(
@@ -230,7 +245,7 @@ class RecordViewModel @Inject constructor(
                 statusMessage = "Ready"
             )
 
-            // Speak the response
+            // Speak the full response
             if (response.shouldSpeak) {
                 voicePipeline.speak(response.text, currentLanguage)
             }

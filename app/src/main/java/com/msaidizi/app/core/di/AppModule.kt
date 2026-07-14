@@ -71,6 +71,7 @@ import com.msaidizi.app.agent.AdviceHandler
 import com.msaidizi.app.agent.GamificationHandler
 import com.msaidizi.app.agent.DomainRouter
 import com.msaidizi.app.agent.ConversationManager
+import com.msaidizi.app.agent.VoicePersonality
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -99,7 +100,7 @@ object AppModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
-        return Room.databaseBuilder(
+        val db = Room.databaseBuilder(
             context,
             AppDatabase::class.java,
             "msaidizi.db"
@@ -447,6 +448,8 @@ object AppModule {
             })
             .fallbackToDestructiveMigration()
             .build()
+        AppDatabase.setInstance(db)
+        return db
     }
 
     @Provides
@@ -591,8 +594,9 @@ object AppModule {
     @Singleton
     fun provideAdvisorAgent(
         businessAgent: BusinessAgent,
-        analysisAgent: AnalysisAgent
-    ): AdvisorAgent = AdvisorAgent(businessAgent, analysisAgent)
+        analysisAgent: AnalysisAgent,
+        voicePersonality: VoicePersonality
+    ): AdvisorAgent = AdvisorAgent(businessAgent, analysisAgent, voicePersonality)
 
     @Provides
     @Singleton
@@ -744,7 +748,8 @@ object AppModule {
         selfEvolution: SelfEvolutionManager,
         preferenceLearner: PreferenceLearner,
         adaptiveVocabulary: AdaptiveVocabulary,
-        llmEngine: LlmEngine
+        llmEngine: LlmEngine,
+        voicePersonality: VoicePersonality
     ): Orchestrator = Orchestrator(
         intentRouter = intentRouter,
         businessAgent = businessAgent,
@@ -775,7 +780,8 @@ object AppModule {
         selfEvolution = selfEvolution,
         preferenceLearner = preferenceLearner,
         adaptiveVocabulary = adaptiveVocabulary,
-        llmEngine = llmEngine
+        llmEngine = llmEngine,
+        voicePersonality = voicePersonality
     )
 
     @Provides

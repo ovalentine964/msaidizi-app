@@ -19,10 +19,12 @@ import com.msaidizi.app.agent.WorkerType
 import com.msaidizi.app.cfo.BriefingDelivery
 import com.msaidizi.app.cfo.BriefingResult
 import com.msaidizi.app.cfo.BriefingType
+import com.msaidizi.app.core.database.TransactionDao
 import timber.log.Timber
+import java.time.LocalDate
+import java.time.ZoneId
 import java.time.Duration
 import java.time.LocalTime
-import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.util.concurrent.TimeUnit
 
@@ -51,8 +53,10 @@ class BriefingNotificationWorker(
         private const val MORNING_NOTIFICATION_ID = 1001
         private const val EVENING_NOTIFICATION_ID = 1002
         private const val WEEKLY_NOTIFICATION_ID = 1003
+        private const val MIDDAY_NOTIFICATION_ID = 1004
+        private const val STREAK_NOTIFICATION_ID = 1005
 
-        /** Input key: briefing type (MORNING, EVENING, WEEKLY) */
+        /** Input key: briefing type (MORNING, EVENING, WEEKLY, MIDDAY, STREAK) */
         const val KEY_BRIEFING_TYPE = "briefing_type"
 
         /**
@@ -68,6 +72,22 @@ class BriefingNotificationWorker(
          */
         fun scheduleEveningSummary(context: Context) {
             scheduleDaily(context, "evening_summary", 19, 0, "EVENING")
+        }
+
+        /**
+         * Schedule the mid-day nudge at 12 PM EAT.
+         * Prompts worker to report sales using voice.
+         */
+        fun scheduleMidDayNudge(context: Context) {
+            scheduleDaily(context, "midday_nudge", 12, 0, "MIDDAY")
+        }
+
+        /**
+         * Schedule the evening streak reminder at 6 PM EAT.
+         * Only fires if worker hasn't recorded any transactions today.
+         */
+        fun scheduleStreakReminder(context: Context) {
+            scheduleDaily(context, "streak_reminder", 18, 0, "STREAK")
         }
 
         /**
@@ -111,7 +131,9 @@ class BriefingNotificationWorker(
         fun scheduleAllBriefings(context: Context) {
             createNotificationChannel(context)
             scheduleMorningBriefing(context)
+            scheduleMidDayNudge(context)
             scheduleEveningSummary(context)
+            scheduleStreakReminder(context)
             scheduleWeeklySummary(context)
             Timber.i(TAG, "All briefing notifications scheduled")
         }
@@ -121,7 +143,9 @@ class BriefingNotificationWorker(
          */
         fun cancelAllBriefings(context: Context) {
             WorkManager.getInstance(context).cancelUniqueWork("morning_briefing")
+            WorkManager.getInstance(context).cancelUniqueWork("midday_nudge")
             WorkManager.getInstance(context).cancelUniqueWork("evening_summary")
+            WorkManager.getInstance(context).cancelUniqueWork("streak_reminder")
             WorkManager.getInstance(context).cancelUniqueWork("weekly_summary")
             Timber.i(TAG, "All briefing notifications cancelled")
         }
@@ -204,6 +228,14 @@ class BriefingNotificationWorker(
         }
 
         return try {
+            // Handle MIDDAY and STREAK types which don't need BriefingDelivery
+            if (briefingType == "MIDDAY") {
+                return handleMidDayNudge(workerName, agentName, language)
+            }
+            if (briefingType == "STREAK") {
+                return handleStreakReminder(workerName, language)
+            }
+
             val briefingDelivery = app.briefingDelivery
                 ?: return Result.failure(workDataOf("error" to "BriefingDelivery not available"))
 
@@ -225,11 +257,18 @@ class BriefingNotificationWorker(
                     )
                 }
                 "WEEKLY" -> {
+                    // Fetch real transaction data for weekly report
+                    val transactionDao = getTransactionDao()
+                    val now = System.currentTimeMillis() / 1000
+                    val weekAgo = now - 7 * 86400L
+                    val twoWeeksAgo = now - 14 * 86400L
+                    val thisWeek = transactionDao?.getTransactionsInRangeSuspend(weekAgo, now) ?: emptyList()
+                    val lastWeek = transactionDao?.getTransactionsInRangeSuspend(twoWeeksAgo, weekAgo) ?: emptyList()
                     briefingDelivery.deliverWeeklySummary(
                         workerName = workerName,
                         assistantName = agentName,
-                        thisWeek = emptyList(),
-                        lastWeek = emptyList()
+                        thisWeek = thisWeek,
+                        lastWeek = lastWeek
                     )
                 }
                 else -> return Result.failure(workDataOf("error" to "Unknown type: $briefingType"))
@@ -242,6 +281,114 @@ class BriefingNotificationWorker(
             Timber.e(e, "Failed to deliver %s briefing", briefingType)
             if (runAttemptCount < 3) Result.retry()
             else Result.failure(workDataOf("error" to e.message))
+        }
+    }
+
+    /**
+     * Handle mid-day nudge: prompt worker to report sales.
+     * Uses personalized voice message with worker's name.
+     */
+    private suspend fun handleMidDayNudge(
+        workerName: String,
+        agentName: String,
+        language: String
+    ): Result {
+        // Check if worker has already recorded today
+        val transactionDao = getTransactionDao()
+        if (transactionDao != null) {
+            val todayStart = LocalDate.now().atStartOfDay(ZoneId.of("Africa/Nairobi")).toEpochSecond()
+            val now = System.currentTimeMillis() / 1000
+            val todayCount = transactionDao.getTransactionCount(todayStart, now)
+            if (todayCount > 0) {
+                Timber.d(TAG, "Worker has already recorded %d transactions today, skipping midday nudge", todayCount)
+                return Result.success()
+            }
+        }
+
+        val message = if (language == "sw") {
+            "$workerName, umeshauza ngapi leo? Sema 'Nimeuza...' kuripoti kwa $agentName"
+        } else {
+            "$workerName, how many sales today? Say 'I sold...' to report to $agentName"
+        }
+
+        val result = BriefingResult(
+            message = message,
+            type = BriefingType.ALERT,
+            priority = com.msaidizi.app.cfo.BriefingPriority.NORMAL,
+            data = mapOf("nudgeType" to "MIDDAY")
+        )
+
+        showNotification(result, "MIDDAY", language)
+        Timber.i(TAG, "Mid-day nudge delivered for %s", workerName)
+        return Result.success()
+    }
+
+    /**
+     * Handle streak reminder at 6PM.
+     * Only fires if worker hasn't recorded any transactions today.
+     * Uses loss aversion psychology to drive engagement.
+     */
+    private suspend fun handleStreakReminder(
+        workerName: String,
+        language: String
+    ): Result {
+        val transactionDao = getTransactionDao()
+        if (transactionDao != null) {
+            val todayStart = LocalDate.now().atStartOfDay(ZoneId.of("Africa/Nairobi")).toEpochSecond()
+            val now = System.currentTimeMillis() / 1000
+            val todayCount = transactionDao.getTransactionCount(todayStart, now)
+            if (todayCount > 0) {
+                Timber.d(TAG, "Worker recorded today, no streak reminder needed")
+                return Result.success()
+            }
+        }
+
+        // Read streak info from gamification database
+        var currentStreak = 0
+        try {
+            val db = com.msaidizi.app.core.database.AppDatabase.getInstance(applicationContext)
+            val gamification = db.gamificationDao().getGamification()
+            currentStreak = gamification?.currentStreak ?: 0
+        } catch (e: Exception) {
+            Timber.w(e, "Could not read gamification state for streak reminder")
+        }
+
+        val message = if (language == "sw") {
+            if (currentStreak > 0) {
+                "$workerName, usipoteze streak yako ya siku $currentStreak! Sema chochote kuhusu biashara yako leo"
+            } else {
+                "$workerName, hujaerekodi leo! Sema chochote kuhusu biashara yako ili kuanza streak yako"
+            }
+        } else {
+            if (currentStreak > 0) {
+                "$workerName, don't lose your $currentStreak-day streak! Say anything about your business today"
+            } else {
+                "$workerName, you haven't recorded today! Say something about your business to start your streak"
+            }
+        }
+
+        val result = BriefingResult(
+            message = message,
+            type = BriefingType.ALERT,
+            priority = com.msaidizi.app.cfo.BriefingPriority.HIGH,
+            data = mapOf("nudgeType" to "STREAK", "streak" to currentStreak.toString())
+        )
+
+        showNotification(result, "STREAK", language)
+        Timber.i(TAG, "Streak reminder delivered for %s (streak=%d)", workerName, currentStreak)
+        return Result.success()
+    }
+
+    /**
+     * Get TransactionDao via Room database instance.
+     */
+    private fun getTransactionDao(): TransactionDao? {
+        return try {
+            val db = com.msaidizi.app.core.database.AppDatabase.getInstance(applicationContext)
+            db.transactionDao()
+        } catch (e: Exception) {
+            Timber.w(e, "Could not get TransactionDao")
+            null
         }
     }
 
@@ -270,6 +417,8 @@ class BriefingNotificationWorker(
             "MORNING" -> MORNING_NOTIFICATION_ID
             "EVENING" -> EVENING_NOTIFICATION_ID
             "WEEKLY" -> WEEKLY_NOTIFICATION_ID
+            "MIDDAY" -> MIDDAY_NOTIFICATION_ID
+            "STREAK" -> STREAK_NOTIFICATION_ID
             else -> MORNING_NOTIFICATION_ID
         }
 
@@ -290,6 +439,8 @@ class BriefingNotificationWorker(
             "MORNING" -> "☀️"
             "EVENING" -> "🌆"
             "WEEKLY" -> "📋"
+            "MIDDAY" -> "📢"
+            "STREAK" -> "🔥"
             else -> "📊"
         }
 
@@ -297,6 +448,8 @@ class BriefingNotificationWorker(
             "MORNING" -> if (language == "sw") "Habari za Asubuhi! $emoji" else "Good Morning! $emoji"
             "EVENING" -> if (language == "sw") "Muhtasari wa Leo $emoji" else "Today's Summary $emoji"
             "WEEKLY" -> if (language == "sw") "Ripoti ya Wiki $emoji" else "Weekly Report $emoji"
+            "MIDDAY" -> if (language == "sw") "Wakati wa Kuuza! $emoji" else "Time to Sell! $emoji"
+            "STREAK" -> if (language == "sw") "Streak Yako $emoji" else "Your Streak $emoji"
             else -> "Msaidizi $emoji"
         }
 
