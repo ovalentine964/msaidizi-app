@@ -73,7 +73,7 @@ class ModelDownloadManager(
                 nameSwahili = "Usikilizaji wa Sauti",
                 sizeBytes = 150_000_000L,  // ~150MB
                 priority = 1,
-                url = "https://models.msaidizi.ai/whisper-tiny-int4.bin"
+                url = "https://huggingface.co/Xenova/whisper-tiny.en/resolve/main/onnx/encoder_model_quantized.onnx"
             ),
             ModelDef(
                 id = "qwen-0.5b-q4km",
@@ -81,7 +81,7 @@ class ModelDownloadManager(
                 nameSwahili = "Akili ya AI",
                 sizeBytes = 300_000_000L,  // ~300MB
                 priority = 2,
-                url = "https://models.msaidizi.ai/qwen-0.5b-q4km.gguf"
+                url = "https://huggingface.co/bartowski/Qwen_Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf"
             ),
             ModelDef(
                 id = "piper-swahili",
@@ -89,7 +89,7 @@ class ModelDownloadManager(
                 nameSwahili = "Sauti ya Kuzungumza",
                 sizeBytes = 50_000_000L,   // ~50MB
                 priority = 3,
-                url = "https://models.msaidizi.ai/piper-swahili.onnx"
+                url = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-sw_CD-lanfrica-medium.tar.bz2"
             )
         )
     }

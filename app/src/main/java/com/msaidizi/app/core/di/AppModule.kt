@@ -444,7 +444,7 @@ object AppModule {
                     db.execSQL("CREATE INDEX IF NOT EXISTS `index_briefing_deliveries_briefingType_deliveredAt` ON `briefing_deliveries` (`briefingType`, `deliveredAt`)")
                 }
             })
-            .fallbackToDestructiveMigrationOnDowngrade()
+            .fallbackToDestructiveMigration()
             .build()
     }
 

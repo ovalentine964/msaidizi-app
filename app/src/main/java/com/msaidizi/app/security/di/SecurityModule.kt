@@ -1,6 +1,7 @@
 package com.msaidizi.app.security.di
 
 import android.content.Context
+import com.msaidizi.app.data.api.MsaidiziApi
 import com.msaidizi.app.security.auth.BiometricAuthManager
 import com.msaidizi.app.security.auth.JwtTokenManager
 import com.msaidizi.app.security.auth.OtpManager
@@ -50,8 +51,9 @@ object SecurityModule {
     @Singleton
     fun provideJwtTokenManager(
         @ApplicationContext context: Context,
-        tokenStorage: SecureTokenStorage
-    ): JwtTokenManager = JwtTokenManager(context, tokenStorage)
+        tokenStorage: SecureTokenStorage,
+        api: MsaidiziApi
+    ): JwtTokenManager = JwtTokenManager(context, tokenStorage, api)
 
     @Provides
     @Singleton

@@ -1,4 +1,5 @@
 ![Msaidizi](docs/logo-banner.svg)
+[![Build Msaidizi APK](https://github.com/ovalentine964/Msaidizi-app/actions/workflows/build.yml/badge.svg)](https://github.com/ovalentine964/Msaidizi-app/actions/workflows/build.yml)
 
 # Msaidizi — The AI Employee for Africa's 600M+ Informal Workers
 

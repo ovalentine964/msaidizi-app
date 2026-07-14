@@ -778,6 +778,33 @@ Good morning! [yesterday recap]. Today's focus: [priority]. [Goal update]. [Tip/
     }
 
     /**
+     * Build a prompt with thinking mode instructions for Qwen 3.5 native thinking.
+     *
+     * Qwen 3.5 models support chain-of-thought reasoning via</think> blocks.
+     * This method wraps the template prompt with thinking mode activation instructions.
+     *
+     * @param type Template type to build
+     * @param context Context values to inject into the template
+     * @return Prompt with thinking mode instructions, or null if template not found
+     */
+    fun buildThinkingPrompt(type: TemplateType, context: Map<String, String> = emptyMap()): String? {
+        val template = templates[type] ?: return null
+
+        val thinkingInstruction = """Use <think> tags to show your step-by-step reasoning before giving your final answer. Wrap your reasoning like this:
+<think>
+[your step-by-step thinking here]
+</think>
+[your final answer here]"""
+
+        var prompt = template.systemPrompt
+        for ((key, value) in context) {
+            prompt = prompt.replace("{$key}", value)
+        }
+
+        return "$thinkingInstruction\n\n$prompt"
+    }
+
+    /**
      * Get the task type mapping for a template.
      */
     fun getTaskType(type: TemplateType): ModelRouter.TaskType {

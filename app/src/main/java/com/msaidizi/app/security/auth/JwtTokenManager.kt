@@ -2,6 +2,8 @@ package com.msaidizi.app.security.auth
 
 import android.content.Context
 import android.util.Base64
+import com.msaidizi.app.data.api.MsaidiziApi
+import com.msaidizi.app.data.model.RefreshTokenRequest
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,7 +41,8 @@ import kotlin.math.min
 @Singleton
 class JwtTokenManager @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val tokenStorage: SecureTokenStorage
+    private val tokenStorage: SecureTokenStorage,
+    private val api: MsaidiziApi
 ) {
     companion object {
         private const val ACCESS_TOKEN_DURATION_MS = 15 * 60 * 1000L   // 15 minutes
@@ -123,21 +126,41 @@ class JwtTokenManager @Inject constructor(
         _state.value = TokenState.Refreshing
 
         return try {
-            // In production, this would call the API to refresh tokens.
-            // The server would:
-            // 1. Validate the refresh token hash
-            // 2. Check token family for replay attacks
-            // 3. Issue new access + refresh tokens (rotation)
-            // 4. Invalidate the old refresh token
-            //
-            // For now, we simulate the refresh call.
-            Timber.i("Refreshing tokens...")
+            Timber.i("Refreshing tokens via API...")
 
-            // TODO: Replace with actual API call
-            // val response = api.refreshToken(RefreshTokenRequest(refreshToken))
-            // if (response.isSuccessful) { ... }
+            val response = api.refreshToken(RefreshTokenRequest(refreshToken))
 
-            null // Placeholder — actual API integration needed
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) {
+                    val newAccessToken = body.accessToken
+                    val newRefreshToken = body.refreshToken
+                    val userId = body.user?.id ?: tokenStorage.getUserId() ?: ""
+                    val deviceId = tokenStorage.getDeviceId() ?: ""
+
+                    // Persist new tokens (token rotation)
+                    storeTokens(newAccessToken, newRefreshToken, userId, deviceId)
+
+                    Timber.i("Token refresh succeeded — new tokens stored")
+                    return newAccessToken
+                } else {
+                    Timber.w("Token refresh returned empty body")
+                    _state.value = TokenState.Error("Refresh failed: empty response")
+                    return null
+                }
+            } else {
+                val code = response.code()
+                Timber.w("Token refresh rejected by server: HTTP %d", code)
+
+                // 401/403 means the refresh token itself is invalid — force re-login
+                if (code == 401 || code == 403) {
+                    _state.value = TokenState.Expired("Session expired. Please log in again.")
+                    tokenStorage.clearAll()
+                } else {
+                    _state.value = TokenState.Error("Refresh failed (HTTP $code). Please try again.")
+                }
+                return null
+            }
         } catch (e: Exception) {
             Timber.e(e, "Token refresh failed")
             _state.value = TokenState.Error("Connection error. Please try again.")

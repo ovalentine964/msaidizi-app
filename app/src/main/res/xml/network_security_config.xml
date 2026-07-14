@@ -55,13 +55,12 @@
         </pin-set>
     </domain-config>
 
-    <!-- Model CDN — secure model distribution -->
+    <!-- Model download hosts — HuggingFace and GitHub Releases -->
     <domain-config>
-        <domain includeSubdomains="true">models.msaidizi.app</domain>
-        <pin-set expiration="2027-12-31">
-            <pin digest="SHA-256">YLh1dUR9y6Kja30RrAn7JKnbQG/uEtLMkBgFF2Fuihg=</pin>
-            <pin digest="SHA-256">C/5hW8MVw+3h8YoFOUoRz2OgNFNPTq3MwGE/2siEpx0=</pin>
-        </pin-set>
+        <domain includeSubdomains="true">huggingface.co</domain>
+        <domain includeSubdomains="true">cdn-lfs.huggingface.co</domain>
+        <domain includeSubdomains="true">github.com</domain>
+        <domain includeSubdomains="true">objects.githubusercontent.com</domain>
     </domain-config>
 
     <!-- Angavu Intelligence Backend API -->

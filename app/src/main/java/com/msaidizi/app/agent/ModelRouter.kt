@@ -979,7 +979,11 @@ class ModelRouter(
 
         val prompt = buildPromptFromMessages(request.messages)
 
-        // Apply test-time compute scaling
+        // Determine if thinking mode should be activated based on reasoning effort
+        val thinkingEnabled = request.reasoningEffort != ReasoningEffort.NONE
+
+        // Apply test-time compute scaling — when thinking is enabled,
+        // the LlmEngine adds THINKING_TOKEN_BUDGET on top of maxTokens
         val maxTokens = if (config.enableTestTimeCompute) {
             when (request.reasoningEffort) {
                 ReasoningEffort.NONE -> request.maxTokens
@@ -993,7 +997,8 @@ class ModelRouter(
         return engine.generate(
             prompt = prompt,
             maxTokens = maxTokens,
-            temperature = request.temperature
+            temperature = request.temperature,
+            thinkingEnabled = thinkingEnabled
         )
     }
 

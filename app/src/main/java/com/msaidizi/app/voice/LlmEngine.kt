@@ -56,6 +56,16 @@ class LlmEngine @Inject constructor(
         // Whether the underlying native library is available
         val isNativeAvailable: Boolean get() = LlamaCppEngine.isNativeAvailable
 
+        /** Extra tokens allocated for thinking mode chain-of-thought */
+        const val THINKING_TOKEN_BUDGET = 512
+
+        /** Prefix instruction to activate Qwen 3.5 native thinking mode */
+        private const val THINKING_MODE_INSTRUCTION = """Use <think> tags to show your step-by-step reasoning before giving your final answer. Wrap your reasoning like this:
+<think>
+[your step-by-step thinking here]
+</think>
+[your final answer here]"""
+
         // System prompts by language
         private val SYSTEM_PROMPTS = mapOf(
             "sw" to """Wewe ni Msaidizi, msaidizi wa biashara kwa wafanyabiashara wadogo Afrika.
@@ -174,13 +184,17 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
      * @param maxTokens Maximum tokens to generate (default 256 for speed)
      * @param temperature Sampling temperature (0.1 for factual, 0.7 for creative)
      * @param onToken Callback for streaming token output (unused — llama.cpp returns full text)
-     * @return Complete generated text
+     * @param thinkingEnabled If true, activates Qwen 3.5 native thinking mode with
+     *        <think>...</think> tags. Extra token budget is allocated for the reasoning chain.
+     * @return Complete generated text (includes raw thinking tags if thinkingEnabled; 
+     *         use [generateWithThinking] to get separated thinking/response)
      */
     suspend fun generate(
         prompt: String,
         maxTokens: Int = DEFAULT_MAX_TOKENS,
         temperature: Float = DEFAULT_TEMPERATURE,
-        onToken: ((String) -> Unit)? = null
+        onToken: ((String) -> Unit)? = null,
+        thinkingEnabled: Boolean = false
     ): String {
         if (!llamaCppEngine.isModelLoaded()) {
             val loaded = loadModel()
@@ -196,12 +210,21 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
         try {
             val startTime = System.currentTimeMillis()
 
+            // When thinking is enabled, prepend thinking instructions and add extra token budget
+            val effectivePrompt = if (thinkingEnabled) {
+                prependThinkingInstructions(prompt)
+            } else prompt
+
+            val effectiveMaxTokens = if (thinkingEnabled) {
+                maxTokens + THINKING_TOKEN_BUDGET
+            } else maxTokens
+
             val maxCtx = getMaxContextLength()
-            val actualPrompt = truncatePrompt(prompt, maxCtx - maxTokens)
+            val actualPrompt = truncatePrompt(effectivePrompt, maxCtx - effectiveMaxTokens)
 
             val result = llamaCppEngine.generate(
                 actualPrompt,
-                maxTokens = maxTokens,
+                maxTokens = effectiveMaxTokens,
                 temperature = temperature
             )
 
@@ -212,9 +235,10 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
 
             val elapsed = System.currentTimeMillis() - startTime
             Timber.d(
-                "LLM generated %d chars in %dms (%.1f tok/s)",
+                "LLM generated %d chars in %dms (%.1f tok/s) [thinking=%b]",
                 result.length, elapsed,
-                if (elapsed > 0) result.length * 4.0 / elapsed * 1000 else 0.0
+                if (elapsed > 0) result.length * 4.0 / elapsed * 1000 else 0.0,
+                thinkingEnabled
             )
             return result
         } catch (e: Exception) {
@@ -489,6 +513,137 @@ JSON:"""
         }
     }
 
+    // ────────────────────── Thinking Mode ──────────────────────
+
+    /**
+     * Generate a response with thinking mode enabled, returning separated
+     * thinking content and final response.
+     *
+     * Qwen 3.5 models natively support chain-of-thought reasoning via
+     *<think>...</think> tags. This method activates that mode and parses
+     * the output into separate components.
+     *
+     * @param prompt The full prompt (system + user)
+     * @param maxTokens Maximum tokens for the final answer (thinking budget added on top)
+     * @param temperature Sampling temperature
+     * @return [ThinkingResult] with separated thinking and response content
+     */
+    suspend fun generateWithThinking(
+        prompt: String,
+        maxTokens: Int = DEFAULT_MAX_TOKENS,
+        temperature: Float = DEFAULT_TEMPERATURE
+    ): ThinkingResult {
+        val rawOutput = generate(
+            prompt = prompt,
+            maxTokens = maxTokens,
+            temperature = temperature,
+            thinkingEnabled = true
+        )
+        return parseThinkingOutput(rawOutput)
+    }
+
+    /**
+     * Generate a Msaidizi response with thinking mode enabled.
+     *
+     * @param userInput User's message
+     * @param context Business context (recent transactions, inventory, etc.)
+     * @param language Response language ("sw", "en", "sheng")
+     * @return [ThinkingResult] with thinking chain and final answer separated
+     */
+    suspend fun generateResponseWithThinking(
+        userInput: String,
+        context: String = "",
+        language: String = "sw"
+    ): ThinkingResult {
+        val systemPrompt = SYSTEM_PROMPTS[language] ?: requireNotNull(SYSTEM_PROMPTS["sw"]) { "Missing fallback Swahili system prompt" }
+
+        val fullPrompt = buildString {
+            append(systemPrompt)
+            append("\n\n")
+            if (context.isNotBlank()) {
+                append("Maelezo ya biashara:\n")
+                append(context)
+                append("\n\n")
+            }
+            append("Mteja: ")
+            append(userInput)
+            append("\nMsaidizi:")
+        }
+
+        return generateWithThinking(
+            fullPrompt,
+            maxTokens = DEFAULT_MAX_TOKENS_RESPONSE,
+            temperature = DEFAULT_TEMPERATURE
+        )
+    }
+
+    /**
+     * Prepend thinking mode instructions to a prompt.
+     * Tells the Qwen 3.5 model to use</think> blocks.
+     */
+    private fun prependThinkingInstructions(prompt: String): String {
+        return "$THINKING_MODE_INSTRUCTION\n\n$prompt"
+    }
+
+    /**
+     * Parse model output to separate thinking content from the final response.
+     *
+     * Qwen 3.5 outputs thinking in<think>...</think> blocks.
+     * This method extracts the thinking chain and the final answer.
+     *
+     * @param rawOutput Raw model output containing potential</think> tags
+     * @return [ThinkingResult] with separated content
+     */
+    fun parseThinkingOutput(rawOutput: String): ThinkingResult {
+        if (rawOutput.isBlank()) {
+            return ThinkingResult(
+                thinkingContent = "",
+                responseContent = "",
+                hasThinking = false
+            )
+        }
+
+        // Match</think> blocks (support multiline)
+        val thinkPattern = Regex("""<think>\s*(.*?)\s*</think>""", RegexOption.DOT_MATCHES_ALL)
+        val thinkMatches = thinkPattern.findAll(rawOutput).toList()
+
+        if (thinkMatches.isEmpty()) {
+            // No thinking tags found — entire output is the response
+            return ThinkingResult(
+                thinkingContent = "",
+                responseContent = rawOutput.trim(),
+                hasThinking = false
+            )
+        }
+
+        // Extract thinking content (join multiple blocks if present)
+        val thinking = thinkMatches.joinToString("\n") { it.groupValues[1].trim() }
+
+        // Extract response: everything outside</think> tags
+        var response = rawOutput
+        for (match in thinkMatches.reversed()) {
+            response = response.removeRange(match.range)
+        }
+        response = response.trim()
+
+        // If response is empty, the model only thought but didn't answer — use last thinking as response
+        if (response.isBlank()) {
+            Timber.w("Model produced thinking but no final answer; using thinking as response")
+            return ThinkingResult(
+                thinkingContent = thinking,
+                responseContent = thinking,
+                hasThinking = true,
+                thinkingOnly = true
+            )
+        }
+
+        return ThinkingResult(
+            thinkingContent = thinking,
+            responseContent = response,
+            hasThinking = true
+        )
+    }
+
     // ────────────────────── Helpers ──────────────────────
 
     /**
@@ -536,4 +691,22 @@ data class Correction(
     val originalItem: String? = null,
     val correctedQuantity: Double? = null,
     val originalQuantity: Double? = null
+)
+
+/**
+ * Result from a thinking-mode generation.
+ *
+ * When the Qwen 3.5 model uses native thinking mode (<think>...</think> tags),
+ * the output is parsed into separate thinking and response components.
+ *
+ * @property thinkingContent The chain-of-thought reasoning extracted from</think> tags
+ * @property responseContent The final answer text (everything outside</think> tags)
+ * @property hasThinking Whether any thinking blocks were found in the output
+ * @property thinkingOnly True if the model produced thinking but no separate final answer
+ */
+data class ThinkingResult(
+    val thinkingContent: String,
+    val responseContent: String,
+    val hasThinking: Boolean = false,
+    val thinkingOnly: Boolean = false
 )

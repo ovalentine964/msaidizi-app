@@ -17,6 +17,7 @@ import com.msaidizi.app.core.util.DeviceTier
 import com.msaidizi.app.cfo.BriefingDelivery
 import com.msaidizi.app.loops.BriefingNotificationWorker
 import dagger.hilt.android.HiltAndroidApp
+import io.sentry.android.core.SentryAndroid
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import timber.log.Timber
 import java.security.Security
@@ -55,6 +56,29 @@ class MsaidiziApp : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+
+        // Initialize Sentry crash reporting (must be before other init)
+        val sentryDsn = BuildConfig.SENTRY_DSN
+        if (sentryDsn.isNotBlank()) {
+            SentryAndroid.init(this) { options ->
+                options.dsn = sentryDsn
+                options.environment = if (BuildConfig.DEBUG) "development" else "production"
+                options.release = "${BuildConfig.APPLICATION_ID}@${BuildConfig.VERSION_NAME}"
+                options.tracesSampleRate = if (BuildConfig.DEBUG) 1.0 else 0.2
+                options.isEnableAutoSessionTracking = true
+                options.sessionTrackingIntervalMillis = 30_000L
+                options.isAttachStacktrace = true
+                options.isSendDefaultPii = false
+                // Performance monitoring
+                options.isEnableUserInteractionTracing = true
+                options.isEnableActivityLifecycleBreadcrumbs = true
+                options.isEnableAppLifecycleBreadcrumbs = true
+                options.isEnableSystemEventBreadcrumbs = true
+            }
+            Timber.i("Sentry crash reporting initialized")
+        } else {
+            Timber.d("Sentry DSN not configured, skipping crash reporting")
+        }
 
         // Initialize logging
         if (BuildConfig.DEBUG) {

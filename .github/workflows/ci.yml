@@ -222,6 +222,18 @@ jobs:
             echo "✅ KSP migration applied"
           fi
 
+      - name: Generate debug keystore
+        run: |
+          keytool -genkeypair -v \
+            -keystore debug.keystore \
+            -alias androiddebugkey \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass android \
+            -keypass android \
+            -dname "CN=Android Debug,O=Msaidizi,C=KE"
+
       - name: Build Debug APK
         run: |
           set -o pipefail
