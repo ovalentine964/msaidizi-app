@@ -15,7 +15,7 @@ package com.msaidizi.app.core.model
 enum class AfricanCurrency(
     val code: String,
     val symbol: String,
-    val name: String,
+    val displayName: String,
     val nameLocal: String,
     val country: String,
     val subunitFactor: Int,  // 1 main unit = N subunits (e.g., 1 KES = 100 cents)
@@ -25,7 +25,7 @@ enum class AfricanCurrency(
     KES(
         code = "KES",
         symbol = "KSh",
-        name = "Kenyan Shilling",
+        displayName = "Kenyan Shilling",
         nameLocal = "Shilingi ya Kenya",
         country = "Kenya",
         subunitFactor = 100,
@@ -38,7 +38,7 @@ enum class AfricanCurrency(
     NGN(
         code = "NGN",
         symbol = "₦",
-        name = "Nigerian Naira",
+        displayName = "Nigerian Naira",
         nameLocal = "Naira ta Nigeria",
         country = "Nigeria",
         subunitFactor = 100,
@@ -50,7 +50,7 @@ enum class AfricanCurrency(
     ETB(
         code = "ETB",
         symbol = "Br",
-        name = "Ethiopian Birr",
+        displayName = "Ethiopian Birr",
         nameLocal = "Birr Itiyoophiyaa",
         country = "Ethiopia",
         subunitFactor = 100,
@@ -59,7 +59,7 @@ enum class AfricanCurrency(
     TZS(
         code = "TZS",
         symbol = "TSh",
-        name = "Tanzanian Shilling",
+        displayName = "Tanzanian Shilling",
         nameLocal = "Shilingi ya Tanzania",
         country = "Tanzania",
         subunitFactor = 100,
@@ -71,7 +71,7 @@ enum class AfricanCurrency(
     ZAR(
         code = "ZAR",
         symbol = "R",
-        name = "South African Rand",
+        displayName = "South African Rand",
         nameLocal = "iRandi yaseNingizimu Afrika",
         country = "South Africa",
         subunitFactor = 100,
@@ -80,7 +80,7 @@ enum class AfricanCurrency(
     GHS(
         code = "GHS",
         symbol = "GH₵",
-        name = "Ghanaian Cedi",
+        displayName = "Ghanaian Cedi",
         nameLocal = "Sidi a Ghana",
         country = "Ghana",
         subunitFactor = 100,

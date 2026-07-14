@@ -230,11 +230,13 @@ dependencies {
     implementation("com.google.code.gson:gson:2.10.1")
 
     // Network (Ktor client for sync)
-    implementation("io.ktor:ktor-client-core:3.0.3")
-    implementation("io.ktor:ktor-client-okhttp:3.0.3")
-    implementation("io.ktor:ktor-client-content-negotiation:3.0.3")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:3.0.3")
-    implementation("io.ktor:ktor-client-logging:3.0.3")
+    // Ktor 2.3.x is the last series compatible with Kotlin 1.9.x
+    // Ktor 3.x requires Kotlin 2.0+ (transitively pulls kotlinx-serialization 1.7.x)
+    implementation("io.ktor:ktor-client-core:2.3.12")
+    implementation("io.ktor:ktor-client-okhttp:2.3.12")
+    implementation("io.ktor:ktor-client-content-negotiation:2.3.12")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.12")
+    implementation("io.ktor:ktor-client-logging:2.3.12")
 
     // DataStore (preferences)
     implementation("androidx.datastore:datastore-preferences:1.0.0")
@@ -329,6 +331,10 @@ configurations.all {
         force("org.jetbrains.kotlin:kotlin-stdlib:1.9.24")
         force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.24")
         force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.24")
+        // kotlinx-serialization 1.6.3 is the last version compatible with Kotlin 1.9.x
+        // 1.7.x requires Kotlin 2.0+ — force to prevent transitive upgrades from Ktor
+        force("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+        force("org.jetbrains.kotlinx:kotlinx-serialization-core:1.6.3")
     }
 }
 

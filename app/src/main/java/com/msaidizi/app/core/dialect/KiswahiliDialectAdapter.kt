@@ -1,5 +1,7 @@
 package com.msaidizi.app.core.dialect
 
+import com.msaidizi.app.core.model.DialectRegion
+
 /**
  * KiswahiliDialectAdapter — Handles Kiswahili and its variants.
  *
@@ -15,7 +17,10 @@ package com.msaidizi.app.core.dialect
  *
  * @author Angavu Intelligence — Implementation Swarm 9
  */
-class KiswahiliDialectAdapter : DialectAdapter {
+class KiswahiliDialectAdapter : IDialectAdapter {
+
+    override val asrLanguageHint: String = "sw"
+    override val ttsLanguage: String = "sw"
 
     companion object {
         // Sheng markers — words that indicate the speaker uses Sheng
@@ -45,30 +50,106 @@ class KiswahiliDialectAdapter : DialectAdapter {
         )
     }
 
-    override fun detectDialect(text: String): String {
+    override fun detectCodeSwitching(text: String): CodeSwitchResult {
         val lower = text.lowercase()
         val words = lower.split("\\s+".toRegex()).toSet()
 
-        // Check for Sheng
+        val dialectFound = mutableListOf<String>()
+        val swahiliFound = mutableListOf<String>()
+
+        // Check for Sheng markers
+        val shengScore = words.intersect(SHENG_MARKERS).size
+        if (shengScore >= 1) dialectFound.addAll(words.intersect(SHENG_MARKERS))
+
+        // Check for code-switching with English
+        val englishScore = words.intersect(ENGLISH_WORDS).size
+        if (englishScore >= 1) dialectFound.addAll(words.intersect(ENGLISH_WORDS))
+
+        // Check for coastal markers
+        val coastalScore = words.intersect(COASTAL_MARKERS).size
+        if (coastalScore >= 1) dialectFound.addAll(words.intersect(COASTAL_MARKERS))
+
+        // Remaining words assumed to be Swahili
+        swahiliFound.addAll(words.minus(SHENG_MARKERS).minus(ENGLISH_WORDS).minus(COASTAL_MARKERS))
+
+        val hasCodeSwitching = dialectFound.isNotEmpty() && swahiliFound.isNotEmpty()
+        val confidence = when {
+            shengScore >= 2 -> 0.9f
+            englishScore >= 1 -> 0.8f
+            coastalScore >= 1 -> 0.85f
+            hasCodeSwitching -> 0.7f
+            else -> 0.5f
+        }
+
+        return CodeSwitchResult(
+            hasCodeSwitching = hasCodeSwitching,
+            primaryLanguage = if (dialectFound.size > swahiliFound.size) "sw_variant" else "sw",
+            dialectWords = dialectFound,
+            swahiliWords = swahiliFound,
+            confidence = confidence
+        )
+    }
+
+    override fun normalize(text: String): String {
+        // Standard Kiswahili doesn't need normalization
+        return text
+    }
+
+    override fun translateToStandard(term: String): String? {
+        // Standard Kiswahili is already the standard form
+        return null
+    }
+
+    override fun detectRegion(text: String): DialectRegion {
+        val lower = text.lowercase()
+        val words = lower.split("\\s+".toRegex()).toSet()
+
+        val shengScore = words.intersect(SHENG_MARKERS).size
+        if (shengScore >= 2) return DialectRegion.SHENG
+
+        val coastalScore = words.intersect(COASTAL_MARKERS).size
+        if (coastalScore >= 1) return DialectRegion.COAST
+
+        return DialectRegion.STANDARD
+    }
+
+    override fun process(text: String): ProcessedResult {
+        val codeSwitch = detectCodeSwitching(text)
+        val normalized = normalize(text)
+        val region = detectRegion(text)
+
+        return ProcessedResult(
+            originalText = text,
+            normalizedText = normalized,
+            codeSwitchResult = codeSwitch,
+            dialectRegion = region,
+            translations = emptyMap(),
+            confidence = codeSwitch.confidence
+        )
+    }
+
+    // ── Additional helpers used by other components ──
+
+    fun detectDialect(text: String): String {
+        val lower = text.lowercase()
+        val words = lower.split("\\s+".toRegex()).toSet()
+
         val shengScore = words.intersect(SHENG_MARKERS).size
         if (shengScore >= 2) return "sheng"
 
-        // Check for code-switching
         val englishScore = words.intersect(ENGLISH_WORDS).size
         if (englishScore >= 1) return "sw_english_mix"
 
-        // Check for coastal
         val coastalScore = words.intersect(COASTAL_MARKERS).size
         if (coastalScore >= 1) return "coastal_swahili"
 
-        // Check for formal
         val formalScore = words.intersect(FORMAL_MARKERS).size
         if (formalScore >= 1) return "formal_swahili"
 
         return "standard_swahili"
     }
 
-    override fun getResponseRegister(dialect: String): String {
+    fun getResponseRegister(dialect: String): String {
         return when (dialect) {
             "sheng" -> "sheng"
             "sw_english_mix" -> "sw_english_mix"
@@ -78,12 +159,12 @@ class KiswahiliDialectAdapter : DialectAdapter {
         }
     }
 
-    override fun hasCodeSwitching(text: String): Boolean {
+    fun hasCodeSwitching(text: String): Boolean {
         val words = text.lowercase().split("\\s+".toRegex()).toSet()
         return words.intersect(ENGLISH_WORDS).isNotEmpty()
     }
 
-    override fun getGreeting(hourOfDay: Int): String {
+    fun getGreeting(hourOfDay: Int): String {
         return when {
             hourOfDay < 12 -> "Habari za asubuhi"
             hourOfDay < 17 -> "Habari za mchana"
@@ -92,11 +173,9 @@ class KiswahiliDialectAdapter : DialectAdapter {
         }
     }
 
-    override fun getAcknowledgment(): String {
-        return "Sawa"
-    }
+    fun getAcknowledgment(): String = "Sawa"
 
-    override fun formatCurrency(amount: Double): String {
+    fun formatCurrency(amount: Double): String {
         val amountInt = amount.toInt()
         return when {
             amountInt >= 1000000 -> String.format("milioni %.1f", amount / 1_000_000)
@@ -106,7 +185,7 @@ class KiswahiliDialectAdapter : DialectAdapter {
         }
     }
 
-    override fun getBusinessTerm(term: BusinessTerm): String {
+    fun getBusinessTerm(term: BusinessTerm): String {
         return when (term) {
             BusinessTerm.SALE -> "mauzo"
             BusinessTerm.PURCHASE -> "manunuzi"
@@ -126,3 +205,5 @@ class KiswahiliDialectAdapter : DialectAdapter {
         }
     }
 }
+
+

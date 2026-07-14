@@ -19,7 +19,7 @@ import java.time.format.DateTimeFormatter
 enum class AfricanTimezone(
     val id: String,
     val zoneId: ZoneId,
-    val name: String,
+    val displayName: String,
     val nameLocal: String,
     val utcOffset: String,
     val countries: List<String>,
@@ -30,7 +30,7 @@ enum class AfricanTimezone(
     EAT(
         id = "EAT",
         zoneId = ZoneId.of("Africa/Nairobi"),
-        name = "East Africa Time",
+        displayName = "East Africa Time",
         nameLocal = "Saa za Afrika Mashariki",
         utcOffset = "UTC+3",
         countries = listOf("Kenya", "Tanzania", "Uganda", "Ethiopia", "Somalia", "Eritrea", "Djibouti"),
@@ -41,7 +41,7 @@ enum class AfricanTimezone(
     WAT(
         id = "WAT",
         zoneId = ZoneId.of("Africa/Lagos"),
-        name = "West Africa Time",
+        displayName = "West Africa Time",
         nameLocal = "Saa za Afrika Magharibi",
         utcOffset = "UTC+1",
         countries = listOf("Nigeria", "Ghana", "Cameroon", "Senegal", "Mali", "Niger", "Benin", "Togo"),
@@ -52,7 +52,7 @@ enum class AfricanTimezone(
     CAT(
         id = "CAT",
         zoneId = ZoneId.of("Africa/Johannesburg"),
-        name = "Central Africa Time",
+        displayName = "Central Africa Time",
         nameLocal = "Saa za Afrika Kati",
         utcOffset = "UTC+2",
         countries = listOf("South Africa", "Zimbabwe", "Zambia", "Mozambique", "Malawi", "Botswana"),
