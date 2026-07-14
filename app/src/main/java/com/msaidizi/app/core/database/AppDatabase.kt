@@ -22,6 +22,14 @@ import com.msaidizi.app.onboarding.WorkerProfile
 import com.msaidizi.app.data.sync.SyncableGoal
 import com.msaidizi.app.data.sync.SyncableInventory
 import com.msaidizi.app.data.sync.SyncableTransaction
+import com.msaidizi.app.social.CommunityTip
+import com.msaidizi.app.social.LeaderboardEntry
+import com.msaidizi.app.social.LeaderboardSummary
+import com.msaidizi.app.social.PeerChallenge
+import com.msaidizi.app.social.PeerComparisonResult
+import com.msaidizi.app.social.PeerMetrics
+import com.msaidizi.app.social.TipDeliveryLog
+import com.msaidizi.app.social.WhatsAppGroup
 
 /**
  * Room database for Msaidizi.
@@ -65,8 +73,15 @@ import com.msaidizi.app.data.sync.SyncableTransaction
         SyncableTransaction::class,
         SyncableInventory::class,
         SyncableGoal::class,
-        BriefingDeliveryEntity::class,
-        WorkerVocabulary::class
+        WhatsAppGroup::class,
+        TipDeliveryLog::class,
+        PeerMetrics::class,
+        PeerComparisonResult::class,
+        PeerChallenge::class,
+        LeaderboardSummary::class,
+        LeaderboardEntry::class,
+        CommunityTip::class,
+        BriefingDeliveryEntity::class
     ],
     version = 11,
     exportSchema = true
