@@ -55,8 +55,8 @@
         android:name="com.msaidizi.app.onboarding.PersonalityFragment"
         android:label="Mapendeleo">
         <action
-            android:id="@+id/action_personality_to_first_use"
-            app:destination="@id/firstUseFragment" />
+            android:id="@+id/action_personality_to_model_setup"
+            app:destination="@id/modelSetupFragment" />
     </fragment>
 
     <!-- Step 4: Model Setup — Downloads happening in background -->

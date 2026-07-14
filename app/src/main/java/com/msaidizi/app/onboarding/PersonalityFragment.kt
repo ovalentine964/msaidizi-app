@@ -44,7 +44,7 @@ class PersonalityFragment : Fragment() {
         val button = Button(requireContext()).apply {
             text = "Endelea"
             setOnClickListener {
-                findNavController().navigate(R.id.action_personality_to_first_use)
+                findNavController().navigate(R.id.action_personality_to_model_setup)
             }
         }
 

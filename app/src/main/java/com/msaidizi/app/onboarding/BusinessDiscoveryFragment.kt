@@ -478,6 +478,7 @@ class BusinessDiscoveryFragment : Fragment() {
             putBoolean("work_alone", profile.workAlone)
             putString("biggest_challenge", profile.biggestChallenge)
             putLong("onboarding_completed_at", profile.onboardingCompletedAt)
+            putBoolean("onboarding_complete", true)
             apply()
         }
     }

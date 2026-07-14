@@ -15,6 +15,7 @@
         android:layout_marginBottom="24dp"/>
 
     <TextView
+        android:id="@+id/lock_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Fungua Msaidizi"
@@ -24,6 +25,7 @@
         android:layout_marginBottom="8dp"/>
 
     <TextView
+        android:id="@+id/lock_subtitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Weka PIN yako kuendelea"
