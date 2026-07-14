@@ -20,47 +20,80 @@
   <!-- Dark background circle -->
   <circle cx="256" cy="256" r="256" fill="#0F172A"/>
 
-  <!-- Main shield shape -->
-  <path d="M256 56
-    C256 56 380 96 408 108
-    C416 112 424 124 424 136
-    L424 260
-    C424 320 380 396 256 448
-    C132 396 88 320 88 260
-    L88 136
-    C88 124 96 112 104 108
-    C132 96 256 56 256 56Z"
+  <!-- Shield shape contoured to Africa's coastline -->
+  <!-- The shield IS Africa — West bulge, Horn, southern cape -->
+  <path d="M256 48
+    C256 48 310 52 340 60
+    C360 66 380 78 395 95
+    C410 112 420 130 425 150
+    L428 180
+    C432 200 434 220 432 240
+    L428 260
+    C424 280 418 298 408 315
+    L395 335
+    C380 355 360 370 340 382
+    L310 398
+    C290 408 270 415 256 420
+    C242 415 222 408 202 398
+    L172 382
+    C152 370 132 355 118 335
+    L105 315
+    C95 298 89 280 85 260
+    L82 240
+    C80 220 82 200 85 180
+    L88 150
+    C93 130 103 112 118 95
+    C133 78 153 66 173 60
+    C203 52 256 48 256 48Z"
     fill="url(#shieldGrad)"
     stroke="#16A34A"
     stroke-width="2"/>
 
-  <!-- Shield inner highlight -->
-  <path d="M256 76
-    C256 76 366 110 390 120
-    C396 123 400 132 400 140
-    L400 254
-    C400 308 360 376 256 424
-    C152 376 112 308 112 254
-    L112 140
-    C112 132 116 123 122 120
-    C146 110 256 76 256 76Z"
+  <!-- Africa silhouette as subtle inner highlight -->
+  <!-- West Africa bulge at left, Horn of Africa at right-top -->
+  <path d="M240 75
+    C220 78 200 85 185 95
+    C175 102 168 110 162 120
+    L158 135
+    C155 145 153 155 152 165
+    L150 180
+    C148 195 150 210 155 225
+    L162 245
+    C168 260 175 275 185 288
+    L198 305
+    C210 318 225 328 240 335
+    L256 342
+    C272 335 287 325 298 312
+    L308 298
+    C318 285 325 270 330 255
+    L335 240
+    C338 225 340 210 340 195
+    L340 180
+    C340 165 338 150 335 138
+    L330 122
+    C325 108 318 96 308 86
+    C298 78 285 72 272 68
+    C265 66 256 65 248 68
+    L240 75Z"
     fill="none"
     stroke="#4ADE80"
-    stroke-width="1"
-    opacity="0.3"/>
+    stroke-width="1.5"
+    opacity="0.25"/>
 
-  <!-- Speech bubble (subtle, integrated into upper curve) -->
-  <path d="M200 150
-    C200 138 212 128 228 128
-    L284 128
-    C300 128 312 138 312 150
-    L312 190
-    C312 202 300 212 284 212
-    L260 212
-    L240 232
-    L244 212
-    L228 212
-    C212 212 200 202 200 190Z"
+  <!-- Speech bubble (subtle, integrated into upper curve — Africa's horn area) -->
+  <path d="M280 120
+    C280 110 292 102 308 102
+    L345 105
+    C358 106 368 115 368 126
+    L367 155
+    C367 166 357 175 344 176
+    L325 177
+    L310 195
+    L314 176
+    L308 176
+    C295 175 285 166 285 155
+    L285 130
+    C285 126 282 122 280 120Z"
     fill="#FFFFFF"
     opacity="0.15"
     stroke="#FFFFFF"
@@ -68,17 +101,18 @@
     stroke-opacity="0.25"/>
 
   <!-- Three dots in speech bubble -->
-  <circle cx="236" cy="170" r="5" fill="#FFFFFF" opacity="0.3"/>
-  <circle cx="256" cy="170" r="5" fill="#FFFFFF" opacity="0.3"/>
-  <circle cx="276" cy="170" r="5" fill="#FFFFFF" opacity="0.3"/>
+  <circle cx="310" cy="140" r="4" fill="#FFFFFF" opacity="0.3"/>
+  <circle cx="325" cy="140" r="4" fill="#FFFFFF" opacity="0.3"/>
+  <circle cx="340" cy="140" r="4" fill="#FFFFFF" opacity="0.3"/>
 
-  <!-- Chart line flowing through shield -->
-  <path d="M120 340
-    L180 290
-    L230 310
-    L280 250
-    L340 220
-    L392 180"
+  <!-- Chart line flowing through shield — follows Africa's east coast -->
+  <path d="M140 340
+    L185 295
+    L220 310
+    L260 260
+    L300 230
+    L345 195
+    L380 165"
     fill="none"
     stroke="url(#goldGrad)"
     stroke-width="6"
@@ -87,13 +121,14 @@
     filter="url(#glow)"/>
 
   <!-- Chart line data points -->
-  <circle cx="120" cy="340" r="8" fill="#F59E0B"/>
-  <circle cx="180" cy="290" r="8" fill="#F59E0B"/>
-  <circle cx="230" cy="310" r="8" fill="#F59E0B"/>
-  <circle cx="280" cy="250" r="8" fill="#F59E0B"/>
-  <circle cx="340" cy="220" r="8" fill="#F59E0B"/>
-  <circle cx="392" cy="180" r="10" fill="#FBBF24" stroke="#FFFFFF" stroke-width="2"/>
+  <circle cx="140" cy="340" r="7" fill="#F59E0B"/>
+  <circle cx="185" cy="295" r="7" fill="#F59E0B"/>
+  <circle cx="220" cy="310" r="7" fill="#F59E0B"/>
+  <circle cx="260" cy="260" r="7" fill="#F59E0B"/>
+  <circle cx="300" cy="230" r="7" fill="#F59E0B"/>
+  <circle cx="345" cy="195" r="7" fill="#F59E0B"/>
+  <circle cx="380" cy="165" r="9" fill="#FBBF24" stroke="#FFFFFF" stroke-width="2"/>
 
   <!-- Subtle upward arrow at end of chart -->
-  <path d="M386 196 L392 176 L398 196" fill="none" stroke="#FBBF24" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M374 180 L380 160 L386 180" fill="none" stroke="#FBBF24" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
