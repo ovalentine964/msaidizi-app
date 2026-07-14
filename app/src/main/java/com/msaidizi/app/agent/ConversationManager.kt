@@ -42,10 +42,20 @@ class ConversationManager(
     private val inferenceHarness: com.msaidizi.app.agent.harness.InferenceHarness? = null,
     private val reActLoop: ReActLoop = ReActLoop(),
     private val reflexionLoop: ReflexionLoop = ReflexionLoop(),
-    private val eventBus: AgentEventBus = AgentEventBus.getInstance()
+    private val eventBus: AgentEventBus = AgentEventBus.getInstance(),
+    /** Hermes session manager for worker-keyed sessions and skill learning */
+    val hermesSession: com.msaidizi.app.agent.hermes.HermesSessionManager? = null
 ) {
     /** Conversation learning pipeline — set by Orchestrator after injection */
     var conversationLearningPipeline: com.msaidizi.app.core.language.ConversationLearningPipeline? = null
+
+    /** Current worker ID for Hermes session tracking */
+    var currentWorkerId: String? = null
+        private set
+
+    /** Active Hermes trace ID */
+    private var hermesTraceId: String? = null
+
     companion object {
         private const val CONFIDENCE_AUTO = 0.90
         private const val CONFIDENCE_CONFIRM = 0.70
@@ -249,6 +259,67 @@ class ConversationManager(
 
     // ═══════════════ POST-PROCESSING ═══════════════
 
+    // ═══════════════ HERMES SESSION MANAGEMENT ═══════════════
+
+    /**
+     * Initialize the Hermes session for a worker.
+     * Call this before processing input to set up worker-keyed tracking.
+     *
+     * @param workerId The worker's unique identifier
+     * @param channel The current channel (app, whatsapp, ussd)
+     */
+    fun initHermesSession(workerId: String, channel: String = "app") {
+        currentWorkerId = workerId
+        hermesSession?.getOrCreateSession(workerId, channel)
+    }
+
+    /**
+     * Discover relevant skills from Hermes before processing.
+     * Returns skills that match the current query.
+     */
+    fun discoverHermesSkills(text: String): List<com.msaidizi.app.agent.hermes.LearnedSkill> {
+        val workerId = currentWorkerId ?: return emptyList()
+        return hermesSession?.discoverSkills(workerId, text) ?: emptyList()
+    }
+
+    /**
+     * Start a Hermes interaction trace.
+     * Call before processing to enable skill generation.
+     */
+    fun startHermesTrace(text: String): String? {
+        val workerId = currentWorkerId ?: return null
+        val traceId = hermesSession?.startTrace(workerId, text)
+        hermesTraceId = traceId
+        return traceId
+    }
+
+    /**
+     * Complete the Hermes interaction trace.
+     * May generate a new skill if the interaction was complex + successful.
+     *
+     * @return A LearnedSkill if generated, null otherwise
+     */
+    fun completeHermesTrace(
+        response: String,
+        outcome: String = "success"
+    ): com.msaidizi.app.agent.hermes.LearnedSkill? {
+        val workerId = currentWorkerId ?: return null
+        val traceId = hermesTraceId ?: return null
+        val skill = hermesSession?.completeInteraction(workerId, traceId, response, outcome)
+        hermesTraceId = null
+        return skill
+    }
+
+    /**
+     * Record feedback on a Hermes skill.
+     */
+    fun recordHermesFeedback(skillId: String, success: Boolean, feedback: String? = null) {
+        val workerId = currentWorkerId ?: return
+        hermesSession?.recordFeedback(workerId, skillId, success, feedback)
+    }
+
+    // ═══════════════ POST-PROCESSING ═══════════════
+
     /**
      * Perform post-processing after response generation.
      * Updates conversation memory, learning signals, and reflexion critique.
@@ -303,6 +374,19 @@ class ConversationManager(
 
         // Feed critique to SelfEvolutionManager for learning
         feedCritiqueToEvolution(critique, intentResult.intent.name, language)
+
+        // Record Hermes trace step
+        hermesTraceId?.let { traceId ->
+            currentWorkerId?.let { workerId ->
+                hermesSession?.recordTraceStep(
+                    workerId = workerId,
+                    traceId = traceId,
+                    action = "response_generated",
+                    toolUsed = intentResult.intent.name,
+                    success = critique.score >= 0.5
+                )
+            }
+        }
 
         lastResponse = response.text
         return critique.score

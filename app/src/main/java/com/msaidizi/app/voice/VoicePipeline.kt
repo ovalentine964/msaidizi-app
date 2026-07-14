@@ -60,7 +60,8 @@ class VoicePipeline @Inject constructor(
     private val adaptiveAsrEngine: AdaptiveAsrEngine,
     private val memoryManager: MemoryManager,
     private val conversationLearningPipeline: ConversationLearningPipeline,
-    private val harness: VoicePipelineHarness
+    private val harness: VoicePipelineHarness,
+    private val sherpaVoiceEngine: SherpaVoiceEngine
 ) {
     // Pipeline state
     private val _pipelineState = MutableStateFlow(PipelineState.IDLE)
@@ -89,6 +90,12 @@ class VoicePipeline @Inject constructor(
     private var kokoroLoadAttempted = false
     private var kokoroLoadSucceeded = false
 
+    // ── Sherpa-ONNX integration flag ──
+    // When true, uses SherpaVoiceEngine for ASR/TTS/VAD instead of raw ONNX Runtime.
+    // Set to true when sherpa-onnx JNI libs and models are available.
+    // Falls back to legacy pipeline if sherpa-onnx initialization fails.
+    private var useSherpaOnnx = false
+
     // ────────────────────── Initialization ──────────────────────
 
     /**
@@ -106,11 +113,61 @@ class VoicePipeline @Inject constructor(
         _pipelineState.value = PipelineState.INITIALIZING
 
         // Wire conversation learning pipeline to ASR engine
-        // This enables unknown word capture and per-worker vocabulary building
         adaptiveAsrEngine.conversationLearningPipeline = conversationLearningPipeline
         Timber.d("VoicePipeline: Conversation learning pipeline wired to ASR engine")
 
-        val isBasicTier = DeviceTier.current == DeviceTier.Tier.BASIC
+        // ── Try Sherpa-ONNX first (preferred) ──
+        useSherpaOnnx = tryInitSherpaOnnx()
+        if (useSherpaOnnx) {
+            Timber.i("VoicePipeline: Using Sherpa-ONNX voice engine")
+            _pipelineState.value = PipelineState.IDLE
+            return
+        }
+
+        // ── Fallback: Legacy ONNX Runtime pipeline ──
+        Timber.i("VoicePipeline: Sherpa-ONNX unavailable, using legacy ONNX Runtime")
+        initLegacyPipeline()
+    }
+
+    /**
+     * Try to initialize sherpa-onnx voice engine.
+     * Returns true if successful, false to fall back to legacy.
+     */
+    private suspend fun tryInitSherpaOnnx(): Boolean {
+        return try {
+            // Load VAD (lightweight, always useful)
+            val vadLoaded = sherpaVoiceEngine.loadVad()
+            if (vadLoaded) {
+                Timber.d("VoicePipeline: Sherpa VAD loaded")
+            }
+
+            // Load ASR (Whisper via sherpa-onnx)
+            val asrLoaded = sherpaVoiceEngine.loadAsr("sw")
+            if (!asrLoaded) {
+                Timber.w("VoicePipeline: Sherpa ASR failed to load")
+            }
+
+            // Load TTS (Piper via sherpa-onnx)
+            val ttsLoaded = sherpaVoiceEngine.loadTts()
+            if (!ttsLoaded) {
+                Timber.w("VoicePipeline: Sherpa TTS failed to load")
+            }
+
+            val anyLoaded = vadLoaded || asrLoaded || ttsLoaded
+            if (!anyLoaded) {
+                Timber.w("VoicePipeline: No sherpa-onnx components loaded")
+            }
+            anyLoaded
+        } catch (e: Exception) {
+            Timber.w(e, "VoicePipeline: Sherpa-ONNX init failed")
+            false
+        }
+    }
+
+    /**
+     * Initialize the legacy ONNX Runtime pipeline (original behavior).
+     */
+    private suspend fun initLegacyPipeline() {
 
         if (isBasicTier) {
             // ═══ 2GB DEVICE: Conservative initialization ═══
