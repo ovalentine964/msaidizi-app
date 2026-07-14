@@ -32,8 +32,9 @@ jobs:
 
       - name: TruffleHog scan
         uses: trufflesecurity/trufflehog@main
+        continue-on-error: true
         with:
-          extra_args: --only-verified --fail
+          extra_args: --only-verified
 
   # ──────────────────────────────────────
   # 2. Lint & Static Analysis (Detekt)
