@@ -46,6 +46,11 @@ import javax.inject.Singleton
  * All sha256 values MUST be real hashes computed from actual distribution files.
  * Run `sha256sum <model_file>` after building/converting each model.
  * Using placeholder hashes in production is a CRITICAL security risk.
+ *
+ * Hash status (2026-07-14):
+ *   ✅ silero-vad, whisper-tiny-int4 (all files), piper-swahili, qwen-3.5-0.8b-q4km
+ *   ⏳ PENDING: whisper-turbo, moonshine-tiny, kokoro-swahili, mms-tts-*, waxal-*
+ *      (hosted on ovalentine964/msaidizi-models which is not yet publicly accessible)
  */
 @Singleton
 class ModelRegistry @Inject constructor(
@@ -88,8 +93,8 @@ class ModelRegistry @Inject constructor(
                 id = "silero-vad",
                 filename = "silero_vad.onnx",
                 url = "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx",
-                sha256 = "0c29a5f56b18a553f00c7f8b0f3c4e8b1a2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f",  // TODO(release): compute real sha256sum from github.com/k2-fsa/sherpa-onnx
-                sizeBytes = 2_500_000L,
+                sha256 = "9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6",
+                sizeBytes = 643_854L,
                 priority = ModelPriority.CRITICAL,
                 requiredFor = listOf(Feature.VOICE_INPUT),
                 tier = ModelTier.BUNDLED,
@@ -104,7 +109,7 @@ class ModelRegistry @Inject constructor(
                 id = "whisper-turbo",
                 filename = "whisper-turbo-encoder.onnx",
                 url = "$MODEL_CDN/asr/whisper-turbo-encoder.onnx",
-                sha256 = "e09b593edf608c329f13051efaae007cef004bbfa55f4c2713178a4e743a7b90",
+                sha256 = "PENDING",
                 sizeBytes = 150_000_000L,
                 priority = ModelPriority.HIGH,
                 requiredFor = listOf(Feature.VOICE_INPUT),
@@ -114,19 +119,19 @@ class ModelRegistry @Inject constructor(
                     "encoder" to ModelFileDef(
                         filename = "whisper-turbo-encoder.onnx",
                         url = "$MODEL_CDN/asr/whisper-turbo-encoder.onnx",
-                        sha256 = "5c1145e0b69be4fddfd2027af4684a50719c2122e0d2f9968133bd64628fa037",  // TODO(release): compute real sha256sum for whisper-turbo-encoder.onnx
+                        sha256 = "PENDING",
                         sizeBytes = 80_000_000L
                     ),
                     "decoder" to ModelFileDef(
                         filename = "whisper-turbo-decoder.onnx",
                         url = "$MODEL_CDN/asr/whisper-turbo-decoder.onnx",
-                        sha256 = "f8038f76121f35963ea5f4259bb15df00fee19f3e655fd58b528176e742c19aa",  // TODO(release): compute real sha256sum for whisper-turbo-decoder.onnx
+                        sha256 = "PENDING",
                         sizeBytes = 70_000_000L
                     ),
                     "tokens" to ModelFileDef(
                         filename = "whisper-turbo-tokens.json",
                         url = "$MODEL_CDN/asr/whisper-turbo-tokens.json",
-                        sha256 = "d08d77bc57b9a272b2848a6d5ee0c80bc2d8186ac38149e3fdb6c936ba044736",  // TODO(release): compute real sha256sum for whisper-turbo-tokens.json
+                        sha256 = "PENDING",
                         sizeBytes = 2_500_000L
                     )
                 )
@@ -139,7 +144,7 @@ class ModelRegistry @Inject constructor(
                 id = "moonshine-tiny",
                 filename = "moonshine-tiny-encoder.onnx",
                 url = "$MODEL_CDN/asr/moonshine-tiny-encoder.onnx",
-                sha256 = "5a8bf082221dbaf3919f07fe13c0893b677ccdda191c47f5d8697fc18c971d0c",  // TODO(release): compute real sha256sum for moonshine-tiny-encoder.onnx
+                sha256 = "PENDING",
                 sizeBytes = 40_000_000L,
                 priority = ModelPriority.HIGH,
                 requiredFor = listOf(Feature.VOICE_INPUT),
@@ -149,13 +154,13 @@ class ModelRegistry @Inject constructor(
                     "encoder" to ModelFileDef(
                         filename = "moonshine-tiny-encoder.onnx",
                         url = "$MODEL_CDN/asr/moonshine-tiny-encoder.onnx",
-                        sha256 = "9370c028f59343ee1a5977b56f0a9699e0f3266eedc24e6d1e690aea3b63a60d",  // TODO(release): compute real sha256sum for moonshine-tiny-encoder.onnx
+                        sha256 = "PENDING",
                         sizeBytes = 20_000_000L
                     ),
                     "decoder" to ModelFileDef(
                         filename = "moonshine-tiny-decoder.onnx",
                         url = "$MODEL_CDN/asr/moonshine-tiny-decoder.onnx",
-                        sha256 = "2049ca9763bf0b2ac9ee2f81e4db1ef92c58f10cd5165b38e9704517e3be9521",  // TODO(release): compute real sha256sum for moonshine-tiny-decoder.onnx
+                        sha256 = "PENDING",
                         sizeBytes = 20_000_000L
                     )
                 )
@@ -166,7 +171,7 @@ class ModelRegistry @Inject constructor(
                 id = "whisper-tiny-int4",
                 filename = "whisper-encoder-int8.onnx",
                 url = "https://huggingface.co/Xenova/whisper-tiny/resolve/main/onnx/encoder_model_quantized.onnx",
-                sha256 = "fbb207db0e0948f37e78faecf22487567f7e53bee373ef48ecb3271262ee8f95",  // TODO(release): compute real sha256sum for whisper-encoder-int8.onnx
+                sha256 = "ce5c71b1bc4869685aa63aa266c6b95083527fe8886fac1aaafec079789c13d9",
                 sizeBytes = 39_000_000L,
                 priority = ModelPriority.LOW,
                 requiredFor = listOf(Feature.VOICE_INPUT),
@@ -176,20 +181,20 @@ class ModelRegistry @Inject constructor(
                     "encoder" to ModelFileDef(
                         filename = "whisper-encoder-int8.onnx",
                         url = "https://huggingface.co/Xenova/whisper-tiny/resolve/main/onnx/encoder_model_quantized.onnx",
-                        sha256 = "f0461d53e6c32a1fa314ac140f5a48643a6b39db92c99b5e5dbbf84b4c990d9c",  // TODO(release): replace with real sha256sum,
-                        sizeBytes = 10_124_993L
+                        sha256 = "fd9d995b9dcb0520f0dbf6cf68651af639fc385f594d9d876e69ca2802dc438e",
+                        sizeBytes = 10_124_910L
                     ),
                     "decoder" to ModelFileDef(
                         filename = "whisper-decoder-int8.onnx",
                         url = "https://huggingface.co/Xenova/whisper-tiny/resolve/main/onnx/decoder_model_merged_quantized.onnx",
-                        sha256 = "ab11998ab0e800c16a3d613ceb38fb91a81e20fe140659b856aba1327ca5610f",  // TODO(release): replace with real sha256sum,
-                        sizeBytes = 29_290_000L
+                        sha256 = "6c0c125986b007d2e3734bec84c18bda0152071b90b87fadac6d7764499927a0",
+                        sizeBytes = 30_727_765L
                     ),
                     "tokens" to ModelFileDef(
                         filename = "whisper-tokens.json",
                         url = "https://huggingface.co/Xenova/whisper-tiny/resolve/main/tokenizer.json",
-                        sha256 = "9e84c4260db0b8e800f374203767086fb0dd6ded6afbd48028cc02925ee90d5e",  // TODO(release): replace with real sha256sum,
-                        sizeBytes = 2_000_000L
+                        sha256 = "27fc476bfe7f17299480be2273fc0608e4d5a99aba2ab5dec5374b4482d1a566",
+                        sizeBytes = 2_480_466L
                     )
                 )
             ),
@@ -207,7 +212,7 @@ class ModelRegistry @Inject constructor(
                 id = "kokoro-swahili",
                 filename = "kokoro-swahili.onnx",
                 url = "$MODEL_CDN/tts/kokoro-swahili.onnx",
-                sha256 = "eea881a8c41748a121fb51832e9d53b5a44a05ca0181b66c93381d4e602bc4e5",  // TODO(release): compute real sha256sum for kokoro-swahili.onnx
+                sha256 = "PENDING",
                 sizeBytes = 82_000_000L,
                 priority = ModelPriority.HIGH,
                 requiredFor = listOf(Feature.VOICE_OUTPUT),
@@ -217,19 +222,19 @@ class ModelRegistry @Inject constructor(
                     "model" to ModelFileDef(
                         filename = "kokoro-swahili.onnx",
                         url = "$MODEL_CDN/tts/kokoro-swahili.onnx",
-                        sha256 = "6266fb61496aec1dd46b90cc9fbab06adc64d7ef7b7cb5b62264d7fc6b9414ac",  // TODO(release): compute real sha256sum for kokoro-swahili.onnx
+                        sha256 = "PENDING",
                         sizeBytes = 82_000_000L
                     ),
                     "voices" to ModelFileDef(
                         filename = "kokoro-voices.bin",
                         url = "$MODEL_CDN/tts/kokoro-voices.bin",
-                        sha256 = "0fa648cb25aa4a7868334e0467f75fabc008357ec34070f28cb1dc5756fd7115",  // TODO(release): compute real sha256sum for kokoro-voices.bin
+                        sha256 = "PENDING",
                         sizeBytes = 5_000_000L
                     ),
                     "config" to ModelFileDef(
                         filename = "kokoro-config.json",
                         url = "$MODEL_CDN/tts/kokoro-config.json",
-                        sha256 = "b2e92371ffbe45fb37fe748e297abd6be17b718348ebf3390468b12ffce4cbf5",  // TODO(release): compute real sha256sum for kokoro-config.json
+                        sha256 = "PENDING",
                         sizeBytes = 10_000L
                     )
                 )
@@ -240,8 +245,8 @@ class ModelRegistry @Inject constructor(
                 id = "piper-swahili",
                 filename = "piper-swahili.onnx",
                 url = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-sw_CD-lanfrica-medium.tar.bz2",
-                sha256 = "c06ed75f5c44916681dd9dcf598e469075092741a97e29d746e771d4b7dbdf98",  // TODO(release): compute real sha256sum for piper-swahili.onnx (after extraction)
-                sizeBytes = 26_000_000L,
+                sha256 = "b775c2a4c6797c539e5acc456b11dcde93267bd688bc796ea82946d7ae2eaf03",
+                sizeBytes = 63_149_224L,
                 priority = ModelPriority.LOW,
                 requiredFor = listOf(Feature.VOICE_OUTPUT),
                 tier = ModelTier.ON_DEMAND,
@@ -250,8 +255,8 @@ class ModelRegistry @Inject constructor(
                     "model" to ModelFileDef(
                         filename = "piper-swahili.onnx",
                         url = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-sw_CD-lanfrica-medium.tar.bz2",
-                        sha256 = "14589d5134330770b48d51b131fdcf852765653927fc8422814fde6e9b658bae",  // TODO(release): replace with real sha256sum,
-                        sizeBytes = 26_000_000L
+                        sha256 = "b775c2a4c6797c539e5acc456b11dcde93267bd688bc796ea82946d7ae2eaf03",
+                        sizeBytes = 63_149_224L
                     )
                 )
             ),
@@ -267,9 +272,9 @@ class ModelRegistry @Inject constructor(
             "qwen-3.5-0.8b-q4km" to ModelDef(
                 id = "qwen-3.5-0.8b-q4km",
                 filename = "Qwen3.5-0.8B-Q4_K_M.gguf",
-                url = "https://huggingface.co/bartowski/Qwen_Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf",
-                sha256 = "1d59ef2315d595981cc4733e396cc4c55e4c927c9b430558a352f82dd669499e",  // TODO(release): compute real sha256sum for Qwen3.5-0.8B-Q4_K_M.gguf
-                sizeBytes = 580_000_000L,
+                url = "https://huggingface.co/bartowski/Qwen_Qwen3.5-0.8B-GGUF/resolve/main/Qwen_Qwen3.5-0.8B-Q4_K_M.gguf",
+                sha256 = "fb044e93939a70469c905781334f5de1e6c8b608ced6cbc8c9249bd4127d9526",
+                sizeBytes = 579_615_840L,
                 priority = ModelPriority.LOW,
                 requiredFor = listOf(Feature.LLM_INFERENCE),
                 tier = ModelTier.ON_DEMAND,
@@ -284,7 +289,7 @@ class ModelRegistry @Inject constructor(
                 id = "mms-tts-swa",
                 filename = "mms-tts-swa.onnx",
                 url = "$MODEL_CDN/mms/vits-mms-swa.onnx",
-                sha256 = "e160914e17c296f6294f354f8ea5011b9657828cf63bb8199c92c2531338edf7",  // TODO(release): compute real sha256sum for vits-mms-swa.onnx
+                sha256 = "PENDING",
                 sizeBytes = 65_000_000L,
                 priority = ModelPriority.OPTIONAL,
                 requiredFor = listOf(Feature.VOICE_OUTPUT),
@@ -295,7 +300,7 @@ class ModelRegistry @Inject constructor(
                 id = "mms-tts-eng",
                 filename = "mms-tts-eng.onnx",
                 url = "$MODEL_CDN/mms/vits-mms-eng.onnx",
-                sha256 = "f11df02f8e36d53af3be0f83ecb5d0e190f0c9c0f78f4cac83c583beb7af476b",  // TODO(release): compute real sha256sum for vits-mms-eng.onnx
+                sha256 = "PENDING",
                 sizeBytes = 65_000_000L,
                 priority = ModelPriority.OPTIONAL,
                 requiredFor = listOf(Feature.VOICE_OUTPUT),
@@ -306,7 +311,7 @@ class ModelRegistry @Inject constructor(
                 id = "mms-tts-yor",
                 filename = "mms-tts-yor.onnx",
                 url = "$MODEL_CDN/mms/vits-mms-yor.onnx",
-                sha256 = "1a0ff27973e4cf7ae8273b8e92419100d38352ebbea775de18abf4793f93a088",  // TODO(release): compute real sha256sum for vits-mms-yor.onnx
+                sha256 = "PENDING",
                 sizeBytes = 65_000_000L,
                 priority = ModelPriority.OPTIONAL,
                 requiredFor = listOf(Feature.VOICE_OUTPUT),
@@ -317,7 +322,7 @@ class ModelRegistry @Inject constructor(
                 id = "mms-tts-hau",
                 filename = "mms-tts-hau.onnx",
                 url = "$MODEL_CDN/mms/vits-mms-hau.onnx",
-                sha256 = "6461d1b04ef02d7c8940197669d1f4b62fedc924b6e323e1610c3d37ad2fe8e4",  // TODO(release): compute real sha256sum for vits-mms-hau.onnx
+                sha256 = "PENDING",
                 sizeBytes = 65_000_000L,
                 priority = ModelPriority.OPTIONAL,
                 requiredFor = listOf(Feature.VOICE_OUTPUT),
@@ -328,7 +333,7 @@ class ModelRegistry @Inject constructor(
                 id = "mms-tts-amh",
                 filename = "mms-tts-amh.onnx",
                 url = "$MODEL_CDN/mms/vits-mms-amh.onnx",
-                sha256 = "5e5da4defacd8ad4b327f6f67682c32eb818cf15a2f34ddd2fcd723d2029c50d",  // TODO(release): compute real sha256sum for vits-mms-amh.onnx
+                sha256 = "PENDING",
                 sizeBytes = 65_000_000L,
                 priority = ModelPriority.OPTIONAL,
                 requiredFor = listOf(Feature.VOICE_OUTPUT),
@@ -339,7 +344,7 @@ class ModelRegistry @Inject constructor(
                 id = "mms-tts-zul",
                 filename = "mms-tts-zul.onnx",
                 url = "$MODEL_CDN/mms/vits-mms-zul.onnx",
-                sha256 = "f5a322b0980cadb4ba53cea6eb8c769dd264c206d3c907c6a0a6c3e8503f9ebe",  // TODO(release): compute real sha256sum for vits-mms-zul.onnx
+                sha256 = "PENDING",
                 sizeBytes = 65_000_000L,
                 priority = ModelPriority.OPTIONAL,
                 requiredFor = listOf(Feature.VOICE_OUTPUT),
@@ -350,7 +355,7 @@ class ModelRegistry @Inject constructor(
                 id = "mms-tts-ibo",
                 filename = "mms-tts-ibo.onnx",
                 url = "$MODEL_CDN/mms/vits-mms-ibo.onnx",
-                sha256 = "f7f70711c8279f7837dbcd1ab38a5faac5cc5bea2890cd6547b1803c64c3b96c",  // TODO(release): compute real sha256sum for vits-mms-ibo.onnx
+                sha256 = "PENDING",
                 sizeBytes = 65_000_000L,
                 priority = ModelPriority.OPTIONAL,
                 requiredFor = listOf(Feature.VOICE_OUTPUT),
@@ -361,7 +366,7 @@ class ModelRegistry @Inject constructor(
                 id = "mms-tts-xho",
                 filename = "mms-tts-xho.onnx",
                 url = "$MODEL_CDN/mms/vits-mms-xho.onnx",
-                sha256 = "c4af2c72ebc662b710b1bf81f0956304b53484d91bb244602b86ea8b01c2007a",  // TODO(release): compute real sha256sum for vits-mms-xho.onnx
+                sha256 = "PENDING",
                 sizeBytes = 65_000_000L,
                 priority = ModelPriority.OPTIONAL,
                 requiredFor = listOf(Feature.VOICE_OUTPUT),
@@ -372,7 +377,7 @@ class ModelRegistry @Inject constructor(
                 id = "mms-tts-sna",
                 filename = "mms-tts-sna.onnx",
                 url = "$MODEL_CDN/mms/vits-mms-sna.onnx",
-                sha256 = "51ecda25fc8b9a68e9b680156c5f92d7e99c9573cf4c275bc68e843f90d27f54",  // TODO(release): compute real sha256sum for vits-mms-sna.onnx
+                sha256 = "PENDING",
                 sizeBytes = 65_000_000L,
                 priority = ModelPriority.OPTIONAL,
                 requiredFor = listOf(Feature.VOICE_OUTPUT),
@@ -383,7 +388,7 @@ class ModelRegistry @Inject constructor(
                 id = "mms-tts-nso",
                 filename = "mms-tts-nso.onnx",
                 url = "$MODEL_CDN/mms/vits-mms-nso.onnx",
-                sha256 = "448df743db58ac79b30c727158f0aedd138fccb6042e3685f18d4c912319975a",  // TODO(release): compute real sha256sum for vits-mms-nso.onnx
+                sha256 = "PENDING",
                 sizeBytes = 65_000_000L,
                 priority = ModelPriority.OPTIONAL,
                 requiredFor = listOf(Feature.VOICE_OUTPUT),
@@ -403,7 +408,7 @@ class ModelRegistry @Inject constructor(
                 id = "waxal-swahili-adapter",
                 filename = "waxal-swahili-adapter.onnx",
                 url = "$MODEL_CDN/waxal/waxal-swahili-adapter.onnx",
-                sha256 = "a54cebd20b072cc31452841ca72ad363f213ae553b9edd0e5578ad21460bce62",  // TODO(release): compute real sha256sum for waxal-swahili-adapter.onnx
+                sha256 = "PENDING",
                 sizeBytes = 5_000_000L,
                 priority = ModelPriority.OPTIONAL,
                 requiredFor = listOf(Feature.VOICE_INPUT),
@@ -833,7 +838,7 @@ class ModelRegistry @Inject constructor(
         file: File,
         context: String
     ): Boolean {
-        if (def.sha256.isEmpty()) {
+        if (def.sha256.isEmpty() || def.sha256 == "PENDING") {
             if (BuildConfig.DEBUG) {
                 Timber.w(
                     "SHA-256 hash missing for %s (%s) — skipping in debug build. " +
@@ -926,7 +931,7 @@ class ModelRegistry @Inject constructor(
         expectedHash: String,
         file: File
     ): Boolean {
-        if (expectedHash.isEmpty()) {
+        if (expectedHash.isEmpty() || expectedHash == "PENDING") {
             Timber.w("SHA-256 hash missing for %s — skipping verification", fileLabel)
             return true
         }

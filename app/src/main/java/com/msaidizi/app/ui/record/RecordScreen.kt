@@ -28,6 +28,7 @@ import com.msaidizi.app.ui.accessibility.VoiceInputHelper
 import com.msaidizi.app.voice.PipelineState
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 /**
  * Record screen — voice recording and interaction UI.
@@ -104,6 +105,7 @@ class RecordFragment : Fragment() {
 
         // ACCESSIBILITY: Content descriptions
         micButton.contentDescription = "Kitufe kikubcha cha sauti. Gusa kuanza kurekodi."
+        scanButton.contentDescription = "Piga picha risiti. Gusa kufungua kamera."
         textInput.contentDescription = "Andika ujumbe wako hapa, au tumia sauti"
         sendButton.contentDescription = "Tuma ujumbe"
         statusText.contentDescription = "Hali ya sasa"
@@ -297,9 +299,14 @@ class RecordFragment : Fragment() {
      * User can review and correct parsed items before saving.
      */
     private fun showReceiptConfirmation(receiptData: ReceiptData) {
+        // Show the fragment container
+        view?.findViewById<android.widget.FrameLayout>(R.id.fragment_container)?.visibility = View.VISIBLE
+
         val fragment = ReceiptConfirmationFragment.newInstance(receiptData)
         fragment.setCallbacks(
             onConfirmed = { items ->
+                // Hide fragment container
+                view?.findViewById<android.widget.FrameLayout>(R.id.fragment_container)?.visibility = View.GONE
                 // Create transactions from confirmed items
                 viewLifecycleOwner.lifecycleScope.launch {
                     try {
@@ -313,12 +320,13 @@ class RecordFragment : Fragment() {
                             viewModel.processTextInput(input)
                         }
                     } catch (e: Exception) {
-                        timber.log.Timber.e(e, "Error creating transactions from receipt")
+                        Timber.e(e, "Error creating transactions from receipt")
                     }
                 }
             },
             onCancelled = {
-                // User cancelled — do nothing
+                // User cancelled — hide fragment container
+                view?.findViewById<android.widget.FrameLayout>(R.id.fragment_container)?.visibility = View.GONE
             }
         )
 
