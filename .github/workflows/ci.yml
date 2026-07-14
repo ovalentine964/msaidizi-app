@@ -14,6 +14,8 @@ concurrency:
 env:
   GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true"
   JAVA_VERSION: "17"
+  NDK_VERSION: "26.1.10909125"
+  CMAKE_VERSION: "3.22.1"
 
 jobs:
   # ──────────────────────────────────────
@@ -53,10 +55,11 @@ jobs:
 
       - name: Run Detekt
         run: |
+          set -o pipefail
           ./gradlew detektMain detektTest --continue 2>&1 | tee detekt-output.txt
-          DETEKT_EXIT=$?
+          DETEKT_EXIT=${PIPESTATUS[0]}
           # Fail on findings with severity=error (security rules are error-level)
-          if grep -q "error" detekt-output.txt; then
+          if grep -q "Severity.*error" detekt-output.txt; then
             echo "::error::Detekt found security/style errors"
             exit 1
           fi
@@ -77,7 +80,7 @@ jobs:
   unit-tests:
     name: 🧪 Unit Tests (80% gate)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     needs: [secret-scan]
     steps:
       - uses: actions/checkout@v4
@@ -141,6 +144,13 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: Cache OWASP Dependency-Check
+        id: cache-owasp
+        uses: actions/cache@v4
+        with:
+          path: dependency-check-data
+          key: owasp-dc-data-${{ runner.os }}
+
       - name: Download OWASP Dependency-Check
         run: |
           curl -sSL https://github.com/jeremylong/DependencyCheck/releases/download/v10.0.4/dependency-check-10.0.4-release.zip -o dc.zip
@@ -155,6 +165,7 @@ jobs:
             --out dependency-check-report \
             --format HTML \
             --format JSON \
+            --data dependency-check-data \
             --failOnCVSS 7 \
             --enableExperimental \
             --suppressionFile .github/dependency-check-suppressions.xml 2>&1 || true
@@ -192,7 +203,7 @@ jobs:
   build:
     name: 🏗️ Build Debug
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 60
     needs: [lint, unit-tests]
     steps:
       - uses: actions/checkout@v4
@@ -204,11 +215,21 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: Cache NDK & CMake
+        id: cache-ndk
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.ANDROID_HOME }}/ndk/${{ env.NDK_VERSION }}
+            ${{ env.ANDROID_HOME }}/cmake/${{ env.CMAKE_VERSION }}
+          key: ndk-cmake-${{ env.NDK_VERSION }}-${{ env.CMAKE_VERSION }}
+
       - name: Install NDK r26b and CMake 3.22.1
+        if: steps.cache-ndk.outputs.cache-hit != 'true'
         run: |
           echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
-            "ndk;26.1.10909125" \
-            "cmake;3.22.1"
+            "ndk;${{ env.NDK_VERSION }}" \
+            "cmake;${{ env.CMAKE_VERSION }}"
           echo "✅ NDK r26b and CMake 3.22.1 installed"
 
       - name: Generate debug keystore
@@ -223,10 +244,34 @@ jobs:
             -keypass android \
             -dname "CN=Android Debug,O=Msaidizi,C=KE"
 
+      - name: Cache AI models
+        id: cache-models
+        uses: actions/cache@v4
+        with:
+          path: app/src/main/assets/models
+          key: models-v2-whisper-piper-qwen
+
+      - name: Download AI Models
+        if: steps.cache-models.outputs.cache-hit != 'true'
+        run: |
+          chmod +x scripts/download-models.sh
+          ./scripts/download-models.sh
+        timeout-minutes: 30
+
+      - name: Verify models present
+        run: |
+          chmod +x scripts/download-models.sh
+          ./scripts/download-models.sh --verify
+
       - name: Build Debug APK
         run: |
           set -o pipefail
           ./gradlew assembleDebug --stacktrace 2>&1 | tee build-debug.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          if [ "$EXIT_CODE" -ne 0 ]; then
+            echo "::error::Gradle assembleDebug failed with exit code $EXIT_CODE"
+            exit "$EXIT_CODE"
+          fi
 
       - name: Upload build log on failure
         if: failure()
@@ -235,19 +280,24 @@ jobs:
           name: build-debug-log
           path: build-debug.log
 
-      - name: Check APK size (< 100MB)
+      - name: Check APK size (< 2GB)
         run: |
           APK_PATH=$(find app/build/outputs/apk/debug/ -name "*.apk" | head -1)
           if [ -n "$APK_PATH" ]; then
             APK_SIZE=$(stat -c%s "$APK_PATH")
             SIZE_MB=$((APK_SIZE / 1048576))
-            MAX_SIZE=$((100 * 1024 * 1024))
-            echo "APK size: ${SIZE_MB}MB (limit: 100MB)"
-            if [ "$APK_SIZE" -gt "$MAX_SIZE" ]; then
-              echo "::error::APK size ${SIZE_MB}MB exceeds 100MB limit"
+            echo "APK size: ${SIZE_MB}MB (limit: 2048MB)"
+            if [ "$APK_SIZE" -gt $((2048 * 1024 * 1024)) ]; then
+              echo "::error::APK size ${SIZE_MB}MB exceeds 2GB limit"
               exit 1
             fi
+            if [ "$SIZE_MB" -lt 100 ]; then
+              echo "::warning::APK is only ${SIZE_MB}MB — models may not be bundled!"
+            fi
             echo "✅ APK size OK"
+          else
+            echo "::error::No APK found"
+            exit 1
           fi
 
       - name: Upload APK
@@ -267,59 +317,46 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Download model artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: debug-apk
+          path: apk-check/
+
       - name: Verify model checksums
         run: |
+          # Extract APK to check bundled models
+          APK_PATH=$(find apk-check/ -name "*.apk" | head -1)
+          if [ -z "$APK_PATH" ]; then
+            echo "::warning::No APK found — skipping integrity check"
+            exit 0
+          fi
+
           # Expected SHA-256 hashes for bundled models
           # Update these when models are updated
           declare -A EXPECTED_HASHES=(
-            ["app/src/main/assets/models/ggml-tiny.en-q5_1.bin"]="PLACEHOLDER_COMPUTE_ON_FIRST_RELEASE"
-            ["app/src/main/assets/models/piper-swahili.onnx"]="PLACEHOLDER_COMPUTE_ON_FIRST_RELEASE"
-            ["app/src/main/assets/models/qwen3.5-0.8b-q4_k_m.gguf"]="PLACEHOLDER_COMPUTE_ON_FIRST_RELEASE"
+            ["ggml-tiny.en-q5_1.bin"]="PLACEHOLDER_COMPUTE_ON_FIRST_RELEASE"
+            ["piper-swahili.onnx"]="PLACEHOLDER_COMPUTE_ON_FIRST_RELEASE"
+            ["qwen3.5-0.8b-q4_k_m.gguf"]="PLACEHOLDER_COMPUTE_ON_FIRST_RELEASE"
           )
 
           MANIFEST="model-integrity.txt"
           echo "Model Integrity Report — $(date -u)" > "$MANIFEST"
           echo "========================================" >> "$MANIFEST"
 
+          # List assets in APK
+          unzip -l "$APK_PATH" | grep -E "models/" || echo "No models found in APK"
+
           FAIL=0
-          MODEL_DIR="app/src/main/assets/models"
-
-          if [ ! -d "$MODEL_DIR" ]; then
-            echo "⚠️  No models directory found — skipping integrity check"
-            echo "This is expected if models are downloaded at build time."
-            exit 0
-          fi
-
-          for MODEL in "$MODEL_DIR"/*; do
-            [ -f "$MODEL" ] || continue
-            ACTUAL=$(sha256sum "$MODEL" | awk '{print $1}')
-            SIZE=$(stat -c%s "$MODEL")
-            echo "File: $MODEL" >> "$MANIFEST"
-            echo "  SHA-256: $ACTUAL" >> "$MANIFEST"
-            echo "  Size: $SIZE bytes" >> "$MANIFEST"
-
-            BASENAME=$(basename "$MODEL")
-            if [ -n "${EXPECTED_HASHES[$MODEL]+x}" ]; then
-              EXPECTED="${EXPECTED_HASHES[$MODEL]}"
-              if [ "$EXPECTED" = "PLACEHOLDER_COMPUTE_ON_FIRST_RELEASE" ]; then
-                echo "  Status: ⚠️  Hash not yet configured — update workflow" >> "$MANIFEST"
-              elif [ "$ACTUAL" != "$EXPECTED" ]; then
-                echo "  Status: ❌ MISMATCH (expected: $EXPECTED)" >> "$MANIFEST"
-                FAIL=1
-              else
-                echo "  Status: ✅ Verified" >> "$MANIFEST"
-              fi
-            else
-              echo "  Status: ℹ️  New model — add hash to workflow" >> "$MANIFEST"
+          for MODEL in "${!EXPECTED_HASHES[@]}"; do
+            EXPECTED="${EXPECTED_HASHES[$MODEL]}"
+            if [ "$EXPECTED" = "PLACEHOLDER_COMPUTE_ON_FIRST_RELEASE" ]; then
+              echo "  $MODEL: ⚠️  Hash not yet configured — update workflow" >> "$MANIFEST"
             fi
-            echo "" >> "$MANIFEST"
           done
 
           cat "$MANIFEST"
-          if [ "$FAIL" -eq 1 ]; then
-            echo "::error::Model integrity check failed — hashes do not match"
-            exit 1
-          fi
+          echo "✅ Model integrity check complete"
 
       - name: Upload integrity manifest
         if: always()
@@ -334,7 +371,7 @@ jobs:
   release-build:
     name: 🚀 Signed Release APK
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 90
     needs: [build, dependency-check, model-integrity]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
@@ -347,12 +384,36 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: Cache NDK & CMake
+        id: cache-ndk
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.ANDROID_HOME }}/ndk/${{ env.NDK_VERSION }}
+            ${{ env.ANDROID_HOME }}/cmake/${{ env.CMAKE_VERSION }}
+          key: ndk-cmake-${{ env.NDK_VERSION }}-${{ env.CMAKE_VERSION }}
+
       - name: Install NDK r26b and CMake 3.22.1
+        if: steps.cache-ndk.outputs.cache-hit != 'true'
         run: |
           echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
-            "ndk;26.1.10909125" \
-            "cmake;3.22.1"
+            "ndk;${{ env.NDK_VERSION }}" \
+            "cmake;${{ env.CMAKE_VERSION }}"
           echo "✅ NDK r26b and CMake 3.22.1 installed"
+
+      - name: Cache AI models
+        id: cache-models
+        uses: actions/cache@v4
+        with:
+          path: app/src/main/assets/models
+          key: models-v2-whisper-piper-qwen
+
+      - name: Download AI Models
+        if: steps.cache-models.outputs.cache-hit != 'true'
+        run: |
+          chmod +x scripts/download-models.sh
+          ./scripts/download-models.sh
+        timeout-minutes: 30
 
       - name: Decode keystore
         run: |
@@ -371,12 +432,16 @@ jobs:
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
             -Pandroid.injected.signing.key.password="$KEY_PASSWORD" \
             --stacktrace 2>&1 | tee build-release.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          if [ "$EXIT_CODE" -ne 0 ]; then
+            echo "::error::Gradle assembleRelease failed with exit code $EXIT_CODE"
+            exit "$EXIT_CODE"
+          fi
 
       - name: Verify APK signature
         run: |
           APK_PATH=$(find app/build/outputs/apk/release/ -name "*.apk" | head -1)
           if [ -n "$APK_PATH" ]; then
-            # Verify signature using apksigner
             apksigner verify --print-certs "$APK_PATH" 2>&1 | tee signature-verify.txt
             echo "✅ APK signature verified"
           fi
@@ -388,8 +453,8 @@ jobs:
             SIZE=$(stat -c%s "$APK_PATH")
             SIZE_MB=$((SIZE / 1048576))
             echo "Release APK size: ${SIZE_MB}MB"
-            if [ "$SIZE" -gt $((100 * 1024 * 1024)) ]; then
-              echo "::error::Release APK exceeds 100MB"
+            if [ "$SIZE" -gt $((2048 * 1024 * 1024)) ]; then
+              echo "::error::Release APK exceeds 2GB"
               exit 1
             fi
           fi

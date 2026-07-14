@@ -13,76 +13,173 @@ permissions:
 jobs:
   validate-8-dimensions:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+
     steps:
       - uses: actions/checkout@v4
 
       - name: 🔬 Dimension 1: Research Validation
         run: |
           echo "━━━ RESEARCH FINDINGS IMPLEMENTATION CHECK ━━━"
-          
+          FAIL=0
+
           # Voice pipeline (Swarm 1)
-          [ -f "app/src/main/java/com/msaidizi/app/voice/dialect/DialectDetectionEngine.kt" ] && echo "✅ Voice dialect detection" || echo "❌ Voice dialect detection missing"
-          
+          if [ -f "app/src/main/java/com/msaidizi/app/voice/dialect/DialectDetectionEngine.kt" ]; then
+            echo "✅ Voice dialect detection"
+          else
+            echo "❌ Voice dialect detection missing"
+            FAIL=1
+          fi
+
           # Reasoning router (Swarm 2)
-          [ -f "app/src/main/java/com/msaidizi/app/agent/ModelRouter.kt" ] && echo "✅ Model router" || echo "❌ Model router missing"
-          
+          if [ -f "app/src/main/java/com/msaidizi/app/agent/ModelRouter.kt" ]; then
+            echo "✅ Model router"
+          else
+            echo "❌ Model router missing"
+            FAIL=1
+          fi
+
           # Agent protocols (Swarm 3)
-          [ -f "app/agents/protocols/mcp.py" ] && echo "✅ MCP protocol" || echo "⚠️ MCP protocol missing"
-          
+          if [ -f "app/agents/protocols/mcp.py" ]; then
+            echo "✅ MCP protocol"
+          else
+            echo "⚠️ MCP protocol missing"
+          fi
+
           # Loop systems (Swarm 4/7)
-          [ -f "app/agents/loops/ooda_loop.py" ] && echo "✅ OODA loop" || echo "⚠️ OODA loop missing"
-          
+          if [ -f "app/agents/loops/ooda_loop.py" ]; then
+            echo "✅ OODA loop"
+          else
+            echo "⚠️ OODA loop missing"
+          fi
+
           # PQC security (Swarm 5)
-          [ -f "app/src/main/java/com/msaidizi/app/core/security/MlKemProvider.kt" ] && echo "✅ PQC (ML-KEM)" || echo "⚠️ PQC missing"
-          
+          if [ -f "app/src/main/java/com/msaidizi/app/core/security/MlKemProvider.kt" ]; then
+            echo "✅ PQC (ML-KEM)"
+          else
+            echo "⚠️ PQC missing"
+          fi
+
           # Language training (Swarm 8)
-          [ -f "app/src/main/java/com/msaidizi/app/core/language/LanguageLearningPipeline.kt" ] && echo "✅ Language training" || echo "❌ Language training missing"
+          if [ -f "app/src/main/java/com/msaidizi/app/core/language/LanguageLearningPipeline.kt" ]; then
+            echo "✅ Language training"
+          else
+            echo "❌ Language training missing"
+            FAIL=1
+          fi
+
+          if [ "$FAIL" -eq 1 ]; then
+            echo "::warning::Some research dimensions missing — review before merging"
+          fi
 
       - name: 🏗️ Dimension 2: Architecture Validation
         run: |
           echo "━━━ ARCHITECTURE ALIGNMENT CHECK ━━━"
-          
+
           # Offline-first
-          grep -rq "offline\|Offline" app/src/main/java/com/msaidizi/app/ && echo "✅ Offline-first" || echo "❌ Offline-first missing"
-          
+          if grep -rq "offline\|Offline" app/src/main/java/com/msaidizi/app/ 2>/dev/null; then
+            echo "✅ Offline-first"
+          else
+            echo "❌ Offline-first missing"
+          fi
+
           # On-device AI
-          [ -f "app/src/main/java/com/msaidizi/app/core/ai/ModelManager.kt" ] && echo "✅ On-device AI" || echo "❌ On-device AI missing"
-          
+          if [ -f "app/src/main/java/com/msaidizi/app/core/ai/ModelManager.kt" ]; then
+            echo "✅ On-device AI"
+          else
+            echo "❌ On-device AI missing"
+          fi
+
           # Federated learning
-          [ -f "app/src/main/java/com/msaidizi/app/core/language/FederatedLearningClient.kt" ] && echo "✅ Federated learning" || echo "⚠️ Federated learning missing"
-          
+          if [ -f "app/src/main/java/com/msaidizi/app/core/language/FederatedLearningClient.kt" ]; then
+            echo "✅ Federated learning"
+          else
+            echo "⚠️ Federated learning missing"
+          fi
+
           # Multi-agent
-          AGENTS=$(find app/src/main/java -name "*Agent.kt" | wc -l)
+          AGENTS=$(find app/src/main/java -name "*Agent.kt" 2>/dev/null | wc -l)
           echo "✅ Multi-agent: $AGENTS agents found"
 
       - name: 🔒 Dimension 4: Security Validation
         run: |
           echo "━━━ SECURITY CHECK ━━━"
-          
-          [ -f "app/src/main/java/com/msaidizi/app/core/security/TlsConfig.kt" ] && echo "✅ TLS" || echo "❌ TLS missing"
-          [ -f "app/src/main/java/com/msaidizi/app/core/security/InputSanitizer.kt" ] && echo "✅ Input sanitization" || echo "⚠️ Input sanitization missing"
-          [ -f "app/src/main/java/com/msaidizi/app/core/security/ConsentManager.kt" ] && echo "✅ Consent management" || echo "⚠️ Consent missing"
-          
+
+          if [ -f "app/src/main/java/com/msaidizi/app/core/security/TlsConfig.kt" ]; then
+            echo "✅ TLS"
+          else
+            echo "❌ TLS missing"
+          fi
+
+          if [ -f "app/src/main/java/com/msaidizi/app/core/security/InputSanitizer.kt" ]; then
+            echo "✅ Input sanitization"
+          else
+            echo "⚠️ Input sanitization missing"
+          fi
+
+          if [ -f "app/src/main/java/com/msaidizi/app/core/security/ConsentManager.kt" ]; then
+            echo "✅ Consent management"
+          else
+            echo "⚠️ Consent missing"
+          fi
+
           # Check for hardcoded secrets
           SECRETS=$(grep -r "api_key\|secret_key\|password" app/src/main/java/ --include="*.kt" 2>/dev/null | grep -v "BuildConfig\|R.string\|//\|import\|class\|val\|var" | wc -l)
-          [ "$SECRETS" -eq 0 ] && echo "✅ No hardcoded secrets" || echo "❌ Possible hardcoded secrets: $SECRETS"
+          if [ "$SECRETS" -eq 0 ]; then
+            echo "✅ No hardcoded secrets"
+          else
+            echo "❌ Possible hardcoded secrets: $SECRETS"
+          fi
 
       - name: ⚛️ Dimension 7: Quantum Readiness
         run: |
           echo "━━━ QUANTUM READINESS CHECK ━━━"
-          
-          [ -f "app/src/main/java/com/msaidizi/app/core/security/MlKemProvider.kt" ] && echo "✅ ML-KEM (Kyber)" || echo "⚠️ ML-KEM missing"
-          [ -f "app/src/main/java/com/msaidizi/app/core/security/MlDsaProvider.kt" ] && echo "✅ ML-DSA (Dilithium)" || echo "⚠️ ML-DSA missing"
-          [ -f "app/src/main/java/com/msaidizi/app/core/security/AlgorithmRegistry.kt" ] && echo "✅ Crypto-agile" || echo "⚠️ Crypto agility missing"
-          [ -f "app/src/main/java/com/msaidizi/app/core/security/HybridKeyExchange.kt" ] && echo "✅ Hybrid key exchange" || echo "⚠️ Hybrid KEX missing"
+
+          if [ -f "app/src/main/java/com/msaidizi/app/core/security/MlKemProvider.kt" ]; then
+            echo "✅ ML-KEM (Kyber)"
+          else
+            echo "⚠️ ML-KEM missing"
+          fi
+
+          if [ -f "app/src/main/java/com/msaidizi/app/core/security/MlDsaProvider.kt" ]; then
+            echo "✅ ML-DSA (Dilithium)"
+          else
+            echo "⚠️ ML-DSA missing"
+          fi
+
+          if [ -f "app/src/main/java/com/msaidizi/app/core/security/AlgorithmRegistry.kt" ]; then
+            echo "✅ Crypto-agile"
+          else
+            echo "⚠️ Crypto agility missing"
+          fi
+
+          if [ -f "app/src/main/java/com/msaidizi/app/core/security/HybridKeyExchange.kt" ]; then
+            echo "✅ Hybrid key exchange"
+          else
+            echo "⚠️ Hybrid KEX missing"
+          fi
 
       - name: 🤖 Dimension 8: AGI Readiness
         run: |
           echo "━━━ AGI READINESS CHECK ━━━"
-          
-          [ -f "app/agents/loops/human_in_the_loop.py" ] && echo "✅ Progressive autonomy" || echo "⚠️ Progressive autonomy missing"
-          [ -f "app/src/main/java/com/msaidizi/app/agent/cost/InferenceCostTracker.kt" ] && echo "✅ Inference cost tracking" || echo "⚠️ Cost tracking missing"
-          [ -f "app/agents/loops/feedback_loop.py" ] && echo "✅ Self-improvement loops" || echo "⚠️ Self-improvement missing"
+
+          if [ -f "app/agents/loops/human_in_the_loop.py" ]; then
+            echo "✅ Progressive autonomy"
+          else
+            echo "⚠️ Progressive autonomy missing"
+          fi
+
+          if [ -f "app/src/main/java/com/msaidizi/app/agent/cost/InferenceCostTracker.kt" ]; then
+            echo "✅ Inference cost tracking"
+          else
+            echo "⚠️ Cost tracking missing"
+          fi
+
+          if [ -f "app/agents/loops/feedback_loop.py" ]; then
+            echo "✅ Self-improvement loops"
+          else
+            echo "⚠️ Self-improvement missing"
+          fi
 
       - name: 📊 Validation Summary
         run: |

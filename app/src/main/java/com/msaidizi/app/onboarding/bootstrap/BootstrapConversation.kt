@@ -87,10 +87,7 @@ class BootstrapConversation {
     // Accumulated raw data from conversation
     private val accumulated = AccumulatedData()
 
-    /** Public accessor for PIN (set during voice onboarding) */
-    val pin: String get() = accumulated.pin
-
-    /** Public accessor for PIN — needed by ViewModel to save to app_lock prefs */
+    /** Public accessor for PIN (set during voice onboarding) — needed by ViewModel to save to app_lock prefs */
     val pin: String get() = accumulated.pin
 
     // Derived understanding — this is what makes it a CONVERSATION, not a form

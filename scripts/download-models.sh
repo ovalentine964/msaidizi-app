@@ -47,13 +47,15 @@ download() {
 
     if [ "$VERIFY_ONLY" = true ]; then
         echo -e "  ${RED}✗${NC} $name MISSING"
+        VERIFY_FAILED=1
         return 1
     fi
 
     echo -e "  ${YELLOW}↓${NC} Downloading $name..."
     for attempt in 1 2 3; do
         if curl -L --progress-bar --fail -o "$dest" "$url"; then
-            local size=$(stat -c%s "$dest" 2>/dev/null || stat -f%z "$dest" 2>/dev/null)
+            local size
+            size=$(stat -c%s "$dest" 2>/dev/null || stat -f%z "$dest" 2>/dev/null)
             if [ "$size" -gt 1000 ]; then
                 echo -e "  ${GREEN}✓${NC} $name downloaded ($(echo "scale=0; $size/1048576" | bc)MB)"
                 return 0
@@ -64,8 +66,12 @@ download() {
     done
 
     echo -e "  ${RED}✗${NC} Failed to download $name"
+    DOWNLOAD_FAILED=1
     return 1
 }
+
+VERIFY_FAILED=0
+DOWNLOAD_FAILED=0
 
 # ── 1. Whisper tiny.en (Q5_1 quantized, whisper.cpp format) ──
 echo "📋 Whisper Speech Recognition (ggml Q5_1):"
@@ -92,9 +98,9 @@ download \
     1000
 
 # ── 3. Qwen3.5-0.8B Q4_K_M (GGUF) ──
+# Primary: unsloth GGUF (confirmed working)
 echo ""
 echo "📋 Qwen 3.5 0.8B LLM:"
-# Try unsloth first, fallback to bartowski
 download \
     "https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf" \
     "$MODELS_DIR/qwen3.5-0.8b-q4_k_m.gguf" \
@@ -103,12 +109,12 @@ download \
 
 # Fallback: try alternative GGUF source if primary fails
 if [ ! -f "$MODELS_DIR/qwen3.5-0.8b-q4_k_m.gguf" ] || [ "$(stat -c%s "$MODELS_DIR/qwen3.5-0.8b-q4_k_m.gguf" 2>/dev/null || echo 0)" -lt 100000 ]; then
-    echo -e "  ${YELLOW}↻${NC} Trying Qwen official mirror..."
+    echo -e "  ${YELLOW}↻${NC} Trying unsloth Qwen3-0.6B as fallback..."
     download \
-        "https://huggingface.co/Qwen/Qwen3.5-0.8B-GGUF/resolve/main/qwen3.5-0.8b-q4_k_m.gguf" \
+        "https://huggingface.co/unsloth/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q4_K_M.gguf" \
         "$MODELS_DIR/qwen3.5-0.8b-q4_k_m.gguf" \
-        "Qwen LLM (Q4_K_M, Qwen official)" \
-        500000000
+        "Qwen LLM (Q4_K_M, fallback)" \
+        400000000
 fi
 
 # ── Summary ──
@@ -135,8 +141,17 @@ echo "Note: Models are stored uncompressed (noCompress) in assets/"
 echo "      for mmap access at runtime. APK will be large but runtime"
 echo "      memory usage is efficient via memory-mapped file I/O."
 echo ""
+
 if [ "$VERIFY_ONLY" = true ]; then
-    echo -e "${GREEN}✅ Verification complete${NC}"
+    if [ "$VERIFY_FAILED" -eq 1 ]; then
+        echo -e "${RED}❌ Verification FAILED — missing models${NC}"
+        exit 1
+    else
+        echo -e "${GREEN}✅ Verification complete — all models present${NC}"
+    fi
+elif [ "$DOWNLOAD_FAILED" -eq 1 ]; then
+    echo -e "${RED}❌ Some models failed to download${NC}"
+    exit 1
 else
     echo -e "${GREEN}✅ Models ready for APK build${NC}"
 fi

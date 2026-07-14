@@ -7,6 +7,8 @@
 # Prerequisites:
 #   - JDK 17+ (recommended: JDK 21)
 #   - Android SDK (API 26+)
+#   - NDK r26b (26.1.10909125)
+#   - CMake 3.22.1
 #   - Gradle 8.5+
 #
 # Usage:
@@ -45,9 +47,27 @@ else
     echo "  ⚠️  No validation script found, skipping"
 fi
 
-# ── Step 2: Build ──
+# ── Step 2: Download models ──
 echo ""
-echo -e "${YELLOW}📋 Step 3: Building APK...${NC}"
+echo -e "${YELLOW}📋 Step 2: Checking AI models...${NC}"
+if [ -f "scripts/download-models.sh" ]; then
+    bash scripts/download-models.sh
+else
+    echo "  ⚠️  No download-models.sh found, skipping"
+fi
+
+# ── Step 3: Generate debug keystore if needed ──
+echo ""
+echo -e "${YELLOW}📋 Step 3: Checking debug keystore...${NC}"
+if [ -f "scripts/generate-debug-keystore.sh" ]; then
+    bash scripts/generate-debug-keystore.sh
+else
+    echo "  ⚠️  No generate-debug-keystore.sh found, skipping"
+fi
+
+# ── Step 4: Build ──
+echo ""
+echo -e "${YELLOW}📋 Step 4: Building APK...${NC}"
 
 if [ "$BUILD_TYPE" = "release" ]; then
     echo "  Building release APK..."
@@ -59,9 +79,9 @@ else
     APK_PATH="app/build/outputs/apk/debug/*.apk"
 fi
 
-# ── Step 4: Copy APK ──
+# ── Step 5: Copy APK ──
 echo ""
-echo -e "${YELLOW}📋 Step 4: Copying APK...${NC}"
+echo -e "${YELLOW}📋 Step 5: Copying APK...${NC}"
 mkdir -p release-apk
 cp $APK_PATH release-apk/msaidizi.apk 2>/dev/null || {
     echo -e "${RED}❌ No APK found at $APK_PATH${NC}"
@@ -69,13 +89,13 @@ cp $APK_PATH release-apk/msaidizi.apk 2>/dev/null || {
 }
 
 APK_SIZE=$(stat -c%s release-apk/msaidizi.apk 2>/dev/null || stat -f%z release-apk/msaidizi.apk 2>/dev/null)
-echo -e "  ✅ APK ready: release-apk/msaidizi.apk (${APK_SIZE} bytes)"
+echo -e "  ✅ APK ready: release-apk/msaidizi.apk ($(echo "scale=0; $APK_SIZE/1048576" | bc)MB)"
 
-# ── Step 5: Upload (optional) ──
+# ── Step 6: Upload (optional) ──
 if [ "$BUILD_TYPE" = "upload" ]; then
     echo ""
-    echo -e "${YELLOW}📋 Step 5: Uploading to GitHub release...${NC}"
-    
+    echo -e "${YELLOW}📋 Step 6: Uploading to GitHub release...${NC}"
+
     # Check for gh CLI
     if command -v gh &> /dev/null; then
         gh release upload latest release-apk/msaidizi.apk --clobber
