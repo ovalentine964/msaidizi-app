@@ -4,6 +4,7 @@ import android.content.Context
 import com.msaidizi.app.core.MemoryManager
 import com.msaidizi.app.core.util.DeviceTier
 import com.msaidizi.app.core.language.AdaptiveAsrEngine
+import com.msaidizi.app.core.language.ConversationLearningPipeline
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -57,7 +58,8 @@ class VoicePipeline @Inject constructor(
     private val piperTts: TextToSpeech,
     private val mmsTtsEngine: MMSTextToSpeech,
     private val adaptiveAsrEngine: AdaptiveAsrEngine,
-    private val memoryManager: MemoryManager
+    private val memoryManager: MemoryManager,
+    private val conversationLearningPipeline: ConversationLearningPipeline
 ) {
     // Pipeline state
     private val _pipelineState = MutableStateFlow(PipelineState.IDLE)
@@ -282,6 +284,21 @@ class VoicePipeline @Inject constructor(
                 confidence = result.calibratedConfidence.calibratedConfidence,
                 success = true
             ))
+
+            // Feed word-level confidence to conversation learning pipeline
+            // This captures unknown words and builds personalized vocabulary
+            try {
+                conversationLearningPipeline.processTranscription(
+                    rawTranscript = result.rawTranscript,
+                    correctedTranscript = result.transcript,
+                    wordConfidences = result.wordConfidences,
+                    language = result.language,
+                    dialectRegion = result.dialectRegion,
+                    isConfirmed = false  // Not yet confirmed at this point
+                )
+            } catch (e: Exception) {
+                Timber.w(e, "VoicePipeline: Failed to feed learning pipeline")
+            }
 
             // ═══ MUTUAL EXCLUSION: Unload Whisper after STT completes ═══
             // STT result is already captured; no need to keep Whisper in memory.

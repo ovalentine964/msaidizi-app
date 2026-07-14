@@ -43,6 +43,8 @@ class ConversationManager(
     private val reflexionLoop: ReflexionLoop = ReflexionLoop(),
     private val eventBus: AgentEventBus = AgentEventBus.getInstance()
 ) {
+    /** Conversation learning pipeline — set by Orchestrator after injection */
+    var conversationLearningPipeline: com.msaidizi.app.core.language.ConversationLearningPipeline? = null
     companion object {
         private const val CONFIDENCE_AUTO = 0.90
         private const val CONFIDENCE_CONFIRM = 0.70
@@ -77,6 +79,19 @@ class ConversationManager(
 
         if (isCorrection) {
             selfEvolution?.recordFeatureUsage("CORRECTION")
+
+            // Feed correction to conversation learning pipeline
+            // This updates per-worker vocabulary and Bayesian ASR calibration
+            try {
+                conversationLearningPipeline?.recordCorrection(
+                    originalText = lastTransaction?.item ?: "",
+                    correctedText = text,
+                    language = language
+                )
+            } catch (e: Exception) {
+                Timber.w(e, "Failed to feed correction to learning pipeline")
+            }
+
             val response = AgentResponse(
                 text = if (language == "sw") "✅ Nimekumbuka! Nitakumbuka kwa mara ijayo."
                 else "✅ Got it! I'll remember that for next time.",

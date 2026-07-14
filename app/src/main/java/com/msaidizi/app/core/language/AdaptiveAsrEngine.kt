@@ -93,6 +93,9 @@ class AdaptiveAsrEngine(
     /** Pre-loaded vocabulary set for fast confidence estimation (avoids runBlocking) */
     private var knownVocabulary: Set<String> = emptySet()
 
+    /** Conversation learning pipeline for wiring word-level confidence */
+    var conversationLearningPipeline: com.msaidizi.app.core.language.ConversationLearningPipeline? = null
+
     // ════════════════════════════════════════════════════════════════════
     // INITIALIZATION
     // ════════════════════════════════════════════════════════════════════
@@ -250,6 +253,24 @@ class AdaptiveAsrEngine(
             rawConfidence, calibratedConfidence.calibratedConfidence
         )
 
+        // Step 9: Generate per-word confidence scores for learning pipeline
+        val wordConfidences = generateWordConfidences(rawTranscript, patternCorrected, rawConfidence, detectedLanguage)
+
+        // Step 10: Feed word-level data to conversation learning pipeline
+        conversationLearningPipeline?.let { pipeline ->
+            try {
+                pipeline.processTranscription(
+                    rawTranscript = rawTranscript,
+                    correctedTranscript = patternCorrected,
+                    wordConfidences = wordConfidences,
+                    language = detectedLanguage,
+                    dialectRegion = detectDialectRegion(rawTranscript, detectedLanguage)
+                )
+            } catch (e: Exception) {
+                Timber.tag(TAG).w(e, "Failed to feed learning pipeline")
+            }
+        }
+
         AdaptiveTranscription(
             rawTranscript = rawTranscript,
             correctedTranscript = patternCorrected,
@@ -259,7 +280,8 @@ class AdaptiveAsrEngine(
             dialectRegion = detectDialectRegion(rawTranscript, detectedLanguage),
             correctionsApplied = countCorrections(rawTranscript, patternCorrected),
             driftDetected = driftDetected,
-            latencyMs = elapsed
+            latencyMs = elapsed,
+            wordConfidences = wordConfidences
         )
     }
 
@@ -791,6 +813,43 @@ class AdaptiveAsrEngine(
     }
 
     /**
+     * Generate per-word confidence scores for the learning pipeline.
+     *
+     * Estimates confidence for each word based on:
+     * 1. Whether the word is in user vocabulary (higher confidence)
+     * 2. Whether the word was corrected (lower confidence)
+     * 3. Word length (shorter words are harder)
+     * 4. Overall ASR confidence as baseline
+     *
+     * @return List of (word, confidence) pairs
+     */
+    private suspend fun generateWordConfidences(
+        rawTranscript: String,
+        correctedTranscript: String,
+        overallConfidence: Float,
+        language: String
+    ): List<Pair<String, Float>> {
+        val rawWords = rawTranscript.lowercase().split(" ")
+        val correctedWords = correctedTranscript.lowercase().split(" ")
+
+        return correctedWords.mapIndexed { index, word ->
+            val wasCorrected = index < rawWords.size && rawWords[index] != word
+            val isKnown = correctionCache.containsKey(word) ||
+                    userVocabularyDao.getBySpokenForm(word) != null ||
+                    knownVocabulary.contains(word)
+
+            val wordConfidence = when {
+                wasCorrected -> (overallConfidence * 0.4f).coerceAtLeast(0.1f)  // Corrected = low confidence
+                isKnown -> (overallConfidence * 1.3f).coerceAtMost(0.95f)        // Known = high confidence
+                word.length < 3 -> (overallConfidence * 0.5f).coerceAtLeast(0.1f) // Short = uncertain
+                else -> overallConfidence                                          // Baseline
+            }
+
+            Pair(word, wordConfidence)
+        }
+    }
+
+    /**
      * Levenshtein edit distance for fuzzy matching.
      */
     private fun editDistance(s1: String, s2: String): Int {
@@ -830,7 +889,9 @@ data class AdaptiveTranscription(
     val dialectRegion: String,
     val correctionsApplied: Int,
     val driftDetected: Boolean,
-    val latencyMs: Long
+    val latencyMs: Long,
+    /** Per-word confidence scores for the learning pipeline */
+    val wordConfidences: List<Pair<String, Float>> = emptyList()
 ) {
     /** Final transcript to use (corrected version) */
     val transcript: String get() = correctedTranscript
@@ -862,7 +923,8 @@ data class AdaptiveTranscription(
             dialectRegion = "standard",
             correctionsApplied = 0,
             driftDetected = false,
-            latencyMs = 0
+            latencyMs = 0,
+            wordConfidences = emptyList()
         )
     }
 }

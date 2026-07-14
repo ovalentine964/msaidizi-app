@@ -65,9 +65,10 @@ import com.msaidizi.app.data.sync.SyncableTransaction
         SyncableTransaction::class,
         SyncableInventory::class,
         SyncableGoal::class,
-        BriefingDeliveryEntity::class
+        BriefingDeliveryEntity::class,
+        WorkerVocabulary::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -87,6 +88,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun loanDao(): LoanDao
     abstract fun mindsetLessonDao(): MindsetLessonDao
     abstract fun briefingDeliveryDao(): BriefingDeliveryDao
+    abstract fun workerVocabularyDao(): WorkerVocabularyDao
 
     companion object {
         @Volatile

@@ -72,6 +72,10 @@ import com.msaidizi.app.agent.GamificationHandler
 import com.msaidizi.app.agent.DomainRouter
 import com.msaidizi.app.agent.ConversationManager
 import com.msaidizi.app.agent.VoicePersonality
+import com.msaidizi.app.agent.proactive.ProactiveAnomalyDetector
+import com.msaidizi.app.agent.proactive.StockOutPredictor
+import com.msaidizi.app.agent.proactive.CashFlowPredictor
+import com.msaidizi.app.agent.proactive.ProactiveAlertEngine
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -446,6 +450,37 @@ object AppModule {
                     db.execSQL("CREATE INDEX IF NOT EXISTS `index_briefing_deliveries_briefingType_deliveredAt` ON `briefing_deliveries` (`briefingType`, `deliveredAt`)")
                 }
             })
+            // Migration v10 → v11: Added worker_vocabulary table for per-worker personalized vocabulary
+            .addMigrations(object : androidx.room.migration.Migration(10, 11) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `worker_vocabulary` (
+                            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            `workerId` INTEGER NOT NULL DEFAULT 1,
+                            `spokenForm` TEXT NOT NULL,
+                            `canonicalForm` TEXT NOT NULL,
+                            `language` TEXT NOT NULL DEFAULT 'sw',
+                            `wordType` TEXT NOT NULL DEFAULT 'PRODUCT',
+                            `frequency` INTEGER NOT NULL DEFAULT 1,
+                            `confidence` REAL NOT NULL DEFAULT 0.3,
+                            `pronunciationVariants` TEXT NOT NULL DEFAULT '[]',
+                            `categoryHint` TEXT NOT NULL DEFAULT 'unknown',
+                            `dialectRegion` TEXT NOT NULL DEFAULT 'STANDARD',
+                            `avgAsrConfidence` REAL NOT NULL DEFAULT 0.0,
+                            `lowConfidenceCount` INTEGER NOT NULL DEFAULT 0,
+                            `autoPromoted` INTEGER NOT NULL DEFAULT 0,
+                            `workerConfirmed` INTEGER NOT NULL DEFAULT 0,
+                            `firstSeenAt` INTEGER NOT NULL DEFAULT 0,
+                            `lastSeenAt` INTEGER NOT NULL DEFAULT 0,
+                            FOREIGN KEY(`workerId`) REFERENCES `worker_profile`(`id`) ON DELETE CASCADE
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_worker_vocabulary_workerId` ON `worker_vocabulary` (`workerId`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_worker_vocabulary_spokenForm` ON `worker_vocabulary` (`spokenForm`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_worker_vocabulary_wordType` ON `worker_vocabulary` (`wordType`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_worker_vocabulary_frequency` ON `worker_vocabulary` (`frequency`)")
+                }
+            })
             .fallbackToDestructiveMigration()
             .build()
         AppDatabase.setInstance(db)
@@ -716,6 +751,42 @@ object AppModule {
         preferenceLearner = preferenceLearner
     )
 
+    // === ON-DEVICE AI PREDICTORS ===
+
+    @Provides
+    @Singleton
+    fun provideProactiveAnomalyDetector(
+        transactionDao: TransactionDao
+    ): ProactiveAnomalyDetector = ProactiveAnomalyDetector(transactionDao)
+
+    @Provides
+    @Singleton
+    fun provideStockOutPredictor(
+        inventoryDao: InventoryDao,
+        transactionDao: TransactionDao
+    ): StockOutPredictor = StockOutPredictor(inventoryDao, transactionDao)
+
+    @Provides
+    @Singleton
+    fun provideCashFlowPredictor(
+        transactionDao: TransactionDao
+    ): CashFlowPredictor = CashFlowPredictor(transactionDao)
+
+    @Provides
+    @Singleton
+    fun provideProactiveAlertEngine(
+        patternTracker: BusinessPatternTracker,
+        anomalyDetector: ProactiveAnomalyDetector,
+        stockOutPredictor: StockOutPredictor,
+        cashFlowPredictor: CashFlowPredictor,
+        transactionDao: TransactionDao,
+        inventoryDao: InventoryDao,
+        eventBus: AgentEventBus
+    ): ProactiveAlertEngine = ProactiveAlertEngine(
+        patternTracker, anomalyDetector, stockOutPredictor, cashFlowPredictor,
+        transactionDao, inventoryDao, eventBus
+    )
+
     @Provides
     @Singleton
     fun provideOrchestrator(
@@ -749,7 +820,8 @@ object AppModule {
         preferenceLearner: PreferenceLearner,
         adaptiveVocabulary: AdaptiveVocabulary,
         llmEngine: LlmEngine,
-        voicePersonality: VoicePersonality
+        voicePersonality: VoicePersonality,
+        proactiveAlertEngine: ProactiveAlertEngine
     ): Orchestrator = Orchestrator(
         intentRouter = intentRouter,
         businessAgent = businessAgent,
@@ -781,7 +853,8 @@ object AppModule {
         preferenceLearner = preferenceLearner,
         adaptiveVocabulary = adaptiveVocabulary,
         llmEngine = llmEngine,
-        voicePersonality = voicePersonality
+        voicePersonality = voicePersonality,
+        proactiveAlertEngine = proactiveAlertEngine
     )
 
     @Provides

@@ -21,6 +21,7 @@ import com.msaidizi.app.loops.ReActLoop
 import com.msaidizi.app.loops.ReflexionLoop
 import com.msaidizi.app.loops.PlanExecuteLoop
 import com.msaidizi.app.core.dialect.AdaptiveVocabulary
+import com.msaidizi.app.core.language.ConversationLearningPipeline
 import com.msaidizi.app.evolution.SelfEvolutionManager
 import com.msaidizi.app.agent.autonomy.ProgressiveAutonomy
 import com.msaidizi.app.agent.autonomy.Domain
@@ -99,6 +100,7 @@ class Orchestrator(
     private val selfEvolution: SelfEvolutionManager? = null,
     private val preferenceLearner: PreferenceLearner? = null,
     private val adaptiveVocabulary: AdaptiveVocabulary? = null,
+    private val conversationLearningPipeline: ConversationLearningPipeline? = null,
     private val reActLoop: ReActLoop = ReActLoop(),
     private val reflexionLoop: ReflexionLoop = ReflexionLoop(),
     private val planExecuteLoop: PlanExecuteLoop = PlanExecuteLoop(),
@@ -127,6 +129,9 @@ class Orchestrator(
         // Self-evolution signals
         conversationManager.recordEvolutionSignals(language)
         conversationManager.publishTaskStarted()
+
+        // Wire conversation learning pipeline to conversation manager
+        conversationManager.conversationLearningPipeline = conversationLearningPipeline
 
         // Text enhancement
         val enhancedText = adaptiveVocabulary?.applyToTranscription(
