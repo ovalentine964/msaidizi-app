@@ -1,134 +1,145 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="shieldGrad" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="africaGreen" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#22C55E"/>
-      <stop offset="100%" stop-color="#16A34A"/>
+      <stop offset="100%" stop-color="#15803D"/>
     </linearGradient>
-    <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#FBBF24"/>
-      <stop offset="100%" stop-color="#F59E0B"/>
-    </linearGradient>
-    <filter id="glow">
-      <feGaussianBlur stdDeviation="4" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
   </defs>
 
   <!-- Dark background circle -->
   <circle cx="256" cy="256" r="256" fill="#0F172A"/>
 
-  <!-- Shield shape contoured to Africa's coastline -->
-  <!-- The shield IS Africa — West bulge, Horn, southern cape -->
-  <path d="M256 48
-    C256 48 310 52 340 60
-    C360 66 380 78 395 95
-    C410 112 420 130 425 150
-    L428 180
-    C432 200 434 220 432 240
-    L428 260
-    C424 280 418 298 408 315
-    L395 335
-    C380 355 360 370 340 382
-    L310 398
-    C290 408 270 415 256 420
-    C242 415 222 408 202 398
-    L172 382
-    C152 370 132 355 118 335
-    L105 315
-    C95 298 89 280 85 260
-    L82 240
-    C80 220 82 200 85 180
-    L88 150
-    C93 130 103 112 118 95
-    C133 78 153 66 173 60
-    C203 52 256 48 256 48Z"
-    fill="url(#shieldGrad)"
-    stroke="#16A34A"
-    stroke-width="2"/>
+  <!-- Shield outline — thick gold border -->
+  <path d="M256 48 C318 48 382 68 420 112 C452 150 465 200 465 260 C465 332 438 386 398 420 C362 448 314 464 256 466 C198 464 150 448 114 420 C74 386 47 332 47 260 C47 200 60 150 92 112 C130 68 194 48 256 48Z"
+    fill="none" stroke="#FBBF24" stroke-width="8" stroke-linejoin="round"/>
 
-  <!-- Africa silhouette as subtle inner highlight -->
-  <!-- West Africa bulge at left, Horn of Africa at right-top -->
-  <path d="M240 75
-    C220 78 200 85 185 95
-    C175 102 168 110 162 120
-    L158 135
-    C155 145 153 155 152 165
-    L150 180
-    C148 195 150 210 155 225
-    L162 245
-    C168 260 175 275 185 288
-    L198 305
-    C210 318 225 328 240 335
-    L256 342
-    C272 335 287 325 298 312
-    L308 298
-    C318 285 325 270 330 255
-    L335 240
-    C338 225 340 210 340 195
-    L340 180
-    C340 165 338 150 335 138
-    L330 122
-    C325 108 318 96 308 86
-    C298 78 285 72 272 68
-    C265 66 256 65 248 68
-    L240 75Z"
-    fill="none"
-    stroke="#4ADE80"
-    stroke-width="1.5"
-    opacity="0.25"/>
+  <!-- AFRICA CONTINENT — clean polygon based on key geographic features -->
+  <!-- Recognizable: NW corner, West African bulge, Gulf of Guinea, Horn, Cape -->
+  <path d="
+    M240 78
+    L215 82
+    L192 90
+    L175 102
+    L162 118
+    L152 138
+    L145 158
+    L140 178
+    L136 198
+    L130 215
+    L122 230
+    L128 248
+    L138 260
+    L142 275
+    L140 292
+    L138 310
+    L142 328
+    L150 345
+    L162 360
+    L178 375
+    L198 388
+    L218 398
+    L238 406
+    L256 410
+    L274 406
+    L294 398
+    L314 388
+    L332 375
+    L348 360
+    L360 345
+    L368 328
+    L372 310
+    L370 292
+    L368 275
+    L372 260
+    L380 248
+    L386 230
+    L380 215
+    L376 198
+    L372 178
+    L378 158
+    L382 138
+    L378 118
+    L368 102
+    L352 90
+    L335 82
+    L310 78
+    L285 75
+    L265 75
+    L240 78Z
+  " fill="url(#africaGreen)"/>
 
-  <!-- Speech bubble (subtle, integrated into upper curve — Africa's horn area) -->
-  <path d="M280 120
-    C280 110 292 102 308 102
-    L345 105
-    C358 106 368 115 368 126
-    L367 155
-    C367 166 357 175 344 176
-    L325 177
-    L310 195
-    L314 176
-    L308 176
-    C295 175 285 166 285 155
-    L285 130
-    C285 126 282 122 280 120Z"
-    fill="#FFFFFF"
-    opacity="0.15"
-    stroke="#FFFFFF"
-    stroke-width="1.5"
-    stroke-opacity="0.25"/>
+  <!-- Inner detail: West Africa bulge enhancement -->
+  <path d="
+    M152 138
+    L138 155
+    L128 175
+    L122 198
+    L118 218
+    L120 238
+    L128 252
+    L138 260
+    L142 275
+    L140 292
+    L138 310
+    L142 328
+    L150 345
+    L162 360
+    L178 375
+    L198 388
+    L218 398
+    L238 406
+    L256 410
+    L274 406
+    L294 398
+    L314 388
+    L332 375
+    L348 360
+    L360 345
+    L368 328
+    L372 310
+    L370 292
+    L368 275
+    L372 260
+    L380 248
+    L386 230
+    L380 215
+    L376 198
+    L372 178
+    L378 158
+    L382 138
+    L378 118
+    L368 102
+    L352 90
+    L335 82
+    L310 78
+    L285 75
+    L265 75
+    L240 78
+    L215 82
+    L192 90
+    L175 102
+    L162 118
+    L152 138Z
+  " fill="url(#africaGreen)" opacity="0.3"/>
 
-  <!-- Three dots in speech bubble -->
-  <circle cx="310" cy="140" r="4" fill="#FFFFFF" opacity="0.3"/>
-  <circle cx="325" cy="140" r="4" fill="#FFFFFF" opacity="0.3"/>
-  <circle cx="340" cy="140" r="4" fill="#FFFFFF" opacity="0.3"/>
+  <!-- SPEECH BUBBLE — upper right, bold white -->
+  <path d="
+    M348 82 C348 68 366 58 388 58 L450 60 C468 61 480 74 480 90 L479 134 C479 150 467 161 449 162 L422 163 L402 188 L407 163 L388 162 C370 161 358 150 358 134 L358 96 C358 90 354 84 348 82Z
+  " fill="#FFFFFF"/>
 
-  <!-- Chart line flowing through shield — follows Africa's east coast -->
-  <path d="M140 340
-    L185 295
-    L220 310
-    L260 260
-    L300 230
-    L345 195
-    L380 165"
-    fill="none"
-    stroke="url(#goldGrad)"
-    stroke-width="6"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    filter="url(#glow)"/>
+  <circle cx="396" cy="110" r="9" fill="#0F172A"/>
+  <circle cx="422" cy="110" r="9" fill="#0F172A"/>
+  <circle cx="448" cy="110" r="9" fill="#0F172A"/>
 
-  <!-- Chart line data points -->
-  <circle cx="140" cy="340" r="7" fill="#F59E0B"/>
-  <circle cx="185" cy="295" r="7" fill="#F59E0B"/>
-  <circle cx="220" cy="310" r="7" fill="#F59E0B"/>
-  <circle cx="260" cy="260" r="7" fill="#F59E0B"/>
-  <circle cx="300" cy="230" r="7" fill="#F59E0B"/>
-  <circle cx="345" cy="195" r="7" fill="#F59E0B"/>
-  <circle cx="380" cy="165" r="9" fill="#FBBF24" stroke="#FFFFFF" stroke-width="2"/>
+  <!-- CHART LINE — bold gold -->
+  <polyline points="75,398 155,315 228,335 298,255 372,188 452,108"
+    fill="none" stroke="#FBBF24" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
 
-  <!-- Subtle upward arrow at end of chart -->
-  <path d="M374 180 L380 160 L386 180" fill="none" stroke="#FBBF24" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="75" cy="398" r="12" fill="#F59E0B" stroke="#0F172A" stroke-width="4"/>
+  <circle cx="155" cy="315" r="12" fill="#F59E0B" stroke="#0F172A" stroke-width="4"/>
+  <circle cx="228" cy="335" r="12" fill="#F59E0B" stroke="#0F172A" stroke-width="4"/>
+  <circle cx="298" cy="255" r="12" fill="#F59E0B" stroke="#0F172A" stroke-width="4"/>
+  <circle cx="372" cy="188" r="16" fill="#FBBF24" stroke="#FFFFFF" stroke-width="4"/>
+
+  <path d="M362 210 L372 176 L382 210" fill="none" stroke="#FBBF24" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

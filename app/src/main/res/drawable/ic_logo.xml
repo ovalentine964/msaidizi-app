@@ -1,18 +1,63 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="80dp"
-    android:height="80dp"
+    android:width="108dp"
+    android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Background circle -->
+
+    <!-- Shield outline — gold border -->
     <path
-        android:fillColor="#1B2A4A"
-        android:pathData="M54,54m-48,0a48,48 0,1 1,96 0a48,48 0,1 1,-96 0"/>
-    <!-- Letter M -->
+        android:fillColor="#00000000"
+        android:strokeColor="#FBBF24"
+        android:strokeWidth="3"
+        android:pathData="M54,10 C66,10 78,14 86,22 C92,28 96,38 96,50 C96,66 90,78 82,86 C74,94 66,98 54,99 C42,98 34,94 26,86 C18,78 12,66 12,50 C12,38 16,28 22,22 C30,14 42,10 54,10Z"/>
+
+    <!-- Africa continent — bold green, recognizable shape -->
+    <path
+        android:fillColor="#22C55E"
+        android:pathData="M50,14 L44,16 L38,20 L34,26 L31,34 L29,42 L27,50 L25,58 L24,66 L26,74 L30,80 L36,86 L42,90 L48,93 L54,94 L60,93 L66,90 L72,86 L78,80 L82,74 L84,66 L82,58 L80,50 L82,42 L84,34 L82,26 L78,20 L72,16 L66,14 L60,13 L54,13 L50,14Z"/>
+
+    <!-- West Africa bulge — extends the shape leftward -->
+    <path
+        android:fillColor="#22C55E"
+        android:pathData="M31,34 L26,40 L22,48 L20,58 L18,66 L20,72 L24,78 L28,82 L30,80 L36,86 L42,90 L48,93 L54,94 L60,93 L66,90 L72,86 L78,80 L82,74 L84,66 L82,58 L80,50 L82,42 L84,34 L82,26 L78,20 L72,16 L66,14 L60,13 L54,13 L50,14 L44,16 L38,20 L34,26 L31,34Z"/>
+
+    <!-- Horn of Africa — extends rightward -->
+    <path
+        android:fillColor="#22C55E"
+        android:pathData="M82,26 L86,22 L88,28 L86,34 L84,38 L82,42 L80,50 L82,58 L84,66 L82,74 L78,80 L72,86 L66,90 L60,93 L54,94 L48,93 L42,90 L36,86 L30,80 L26,74 L24,66 L25,58 L27,50 L29,42 L31,34 L34,26 L38,20 L44,16 L50,14 L54,13 L60,13 L66,14 L72,16 L78,20 L82,26Z"/>
+
+    <!-- Speech bubble — white -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M30,76L30,34L42,34L54,58L66,34L78,34L78,76L66,76L66,52L54,74L42,52L42,76Z"/>
-    <!-- Accent underline -->
+        android:pathData="M72,12 C72,10 76,8 80,8 L92,8 C96,9 98,12 98,16 L98,28 C98,32 96,34 92,34 L88,34 L84,38 L86,34 L80,34 C76,34 74,32 74,28 L74,18 C74,16 72,14 72,12Z"/>
+
+    <!-- Speech bubble dots -->
+    <path android:fillColor="#0F172A" android:pathData="M80,21 m-2,0 a2,2 0,1 1,4 0 a2,2 0,1 1,-4 0"/>
+    <path android:fillColor="#0F172A" android:pathData="M86,21 m-2,0 a2,2 0,1 1,4 0 a2,2 0,1 1,-4 0"/>
+    <path android:fillColor="#0F172A" android:pathData="M92,21 m-2,0 a2,2 0,1 1,4 0 a2,2 0,1 1,-4 0"/>
+
+    <!-- Chart line — gold -->
     <path
-        android:fillColor="#E8853D"
-        android:pathData="M30,78L78,78L78,82L30,82Z"/>
+        android:fillColor="#00000000"
+        android:strokeColor="#FBBF24"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M14,82 L28,64 L42,68 L54,50 L68,36 L84,18"/>
+
+    <!-- Chart data points -->
+    <path android:fillColor="#F59E0B" android:pathData="M14,82 m-3,0 a3,3 0,1 1,6 0 a3,3 0,1 1,-6 0"/>
+    <path android:fillColor="#F59E0B" android:pathData="M28,64 m-3,0 a3,3 0,1 1,6 0 a3,3 0,1 1,-6 0"/>
+    <path android:fillColor="#F59E0B" android:pathData="M42,68 m-3,0 a3,3 0,1 1,6 0 a3,3 0,1 1,-6 0"/>
+    <path android:fillColor="#F59E0B" android:pathData="M54,50 m-3,0 a3,3 0,1 1,6 0 a3,3 0,1 1,-6 0"/>
+    <path android:fillColor="#FBBF24" android:pathData="M68,36 m-4,0 a4,4 0,1 1,8 0 a4,4 0,1 1,-8 0"/>
+
+    <!-- Upward arrow at chart end -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FBBF24"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M65,42 L68,32 L71,42"/>
 </vector>

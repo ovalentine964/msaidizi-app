@@ -1,45 +1,34 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108">
   <defs>
-    <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="ag" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#22C55E"/>
-      <stop offset="100%" stop-color="#16A34A"/>
+      <stop offset="100%" stop-color="#15803D"/>
     </linearGradient>
   </defs>
 
-  <!-- Shield (centered in adaptive icon safe zone) -->
-  <path d="M54 16
-    C54 16 74 24 78 26
-    C80 27 81 29 81 31
-    L81 52
-    C81 66 74 82 54 90
-    C34 82 27 66 27 52
-    L27 31
-    C27 29 28 27 30 26
-    C34 24 54 16 54 16Z"
-    fill="url(#sg)"/>
+  <!-- Shield outline — gold -->
+  <path d="M54 10 C66 10 78 14 86 22 C92 28 96 38 96 50 C96 66 90 78 82 86 C74 94 66 98 54 99 C42 98 34 94 26 86 C18 78 12 66 12 50 C12 38 16 28 22 22 C30 14 42 10 54 10Z"
+    fill="none" stroke="#FBBF24" stroke-width="3" stroke-linejoin="round"/>
+
+  <!-- Africa — simplified for adaptive icon -->
+  <path d="
+    M50 14 L44 16 L38 20 L34 26 L31 34 L29 42 L27 50 L25 58 L24 66 L26 74 L30 80 L36 86 L42 90 L48 93 L54 94 L60 93 L66 90 L72 86 L78 80 L82 74 L84 66 L82 58 L80 50 L82 42 L84 34 L82 26 L78 20 L72 16 L66 14 L60 13 L54 13 L50 14Z
+  " fill="url(#ag)"/>
 
   <!-- Speech bubble -->
-  <path d="M42 34
-    C42 31 45 28 49 28
-    L59 28
-    C63 28 66 31 66 34
-    L66 44
-    C66 47 63 50 59 50
-    L55 50
-    L51 55
-    L52 50
-    L49 50
-    C45 50 42 47 42 44Z"
-    fill="#FFFFFF"
-    opacity="0.18"/>
+  <path d="M72 12 C72 10 76 8 80 8 L92 8 C96 9 98 12 98 16 L98 28 C98 32 96 34 92 34 L88 34 L84 38 L86 34 L80 34 C76 34 74 32 74 28 L74 18 C74 16 72 14 72 12Z"
+    fill="#FFFFFF"/>
+  <circle cx="80" cy="21" r="2" fill="#0F172A"/>
+  <circle cx="86" cy="21" r="2" fill="#0F172A"/>
+  <circle cx="92" cy="21" r="2" fill="#0F172A"/>
 
   <!-- Chart line -->
-  <path d="M32 70 L42 60 L50 64 L58 54 L66 48 L74 40"
-    fill="none"
-    stroke="#F59E0B"
-    stroke-width="3"
-    stroke-linecap="round"
-    stroke-linejoin="round"/>
-
-  <circle cx="74" cy="40" r="3" fill="#FBBF24"/>
+  <polyline points="14,82 28,64 42,68 54,50 68,36 84,18"
+    fill="none" stroke="#FBBF24" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="14" cy="82" r="3" fill="#F59E0B"/>
+  <circle cx="28" cy="64" r="3" fill="#F59E0B"/>
+  <circle cx="42" cy="68" r="3" fill="#F59E0B"/>
+  <circle cx="54" cy="50" r="3" fill="#F59E0B"/>
+  <circle cx="68" cy="36" r="4" fill="#FBBF24" stroke="#FFFFFF" stroke-width="1.5"/>
+  <path d="M65 42 L68 32 L71 42" fill="none" stroke="#FBBF24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

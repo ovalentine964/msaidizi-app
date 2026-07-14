@@ -1,56 +1,41 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
   <defs>
-    <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="ag" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#22C55E"/>
-      <stop offset="100%" stop-color="#16A34A"/>
+      <stop offset="100%" stop-color="#15803D"/>
     </linearGradient>
   </defs>
 
-  <!-- Dark background circle -->
   <circle cx="96" cy="96" r="96" fill="#0F172A"/>
 
-  <!-- Simplified shield -->
-  <path d="M96 24
-    C96 24 144 40 154 45
-    C158 47 160 52 160 56
-    L160 100
-    C160 124 144 152 96 170
-    C48 152 32 124 32 100
-    L32 56
-    C32 52 34 47 38 45
-    C48 40 96 24 96 24Z"
-    fill="url(#sg)"/>
+  <!-- Shield border -->
+  <path d="M96 18 C120 18 144 26 160 42 C174 56 180 76 180 98 C180 126 170 148 154 164 C140 178 120 186 96 187 C72 186 52 178 38 164 C22 148 12 126 12 98 C12 76 18 56 32 42 C48 26 72 18 96 18Z"
+    fill="none" stroke="#FBBF24" stroke-width="4" stroke-linejoin="round"/>
 
-  <!-- Simplified speech bubble -->
-  <path d="M74 58
-    C74 53 80 48 88 48
-    L104 48
-    C112 48 118 53 118 58
-    L118 74
-    C118 79 112 84 104 84
-    L96 84
-    L90 92
-    L92 84
-    L88 84
-    C80 84 74 79 74 74Z"
-    fill="#FFFFFF"
-    opacity="0.18"/>
+  <!-- Africa — simplified polygon -->
+  <path d="
+    M90 30 L78 34 L68 42 L60 52 L55 64 L52 78 L48 92 L44 106 L42 120 L44 134 L50 146 L58 156 L68 164 L80 172 L90 176 L100 176 L110 172 L120 164 L130 156 L138 146 L144 134 L146 120 L144 106 L148 92 L152 78 L150 64 L144 52 L136 42 L126 34 L114 30 L104 28 L96 28 L90 30Z
+  " fill="url(#ag)"/>
 
-  <!-- Dots -->
-  <circle cx="86" cy="66" r="3" fill="#FFFFFF" opacity="0.3"/>
-  <circle cx="96" cy="66" r="3" fill="#FFFFFF" opacity="0.3"/>
-  <circle cx="106" cy="66" r="3" fill="#FFFFFF" opacity="0.3"/>
+  <!-- West Africa bulge -->
+  <path d="
+    M55 64 L46 74 L40 88 L36 104 L34 118 L38 132 L44 142 L50 146 L58 156 L68 164 L80 172 L90 176 L100 176 L110 172 L120 164 L130 156 L138 146 L144 134 L146 120 L144 106 L148 92 L152 78 L150 64 L144 52 L136 42 L126 34 L114 30 L104 28 L96 28 L90 30 L78 34 L68 42 L60 52 L55 64Z
+  " fill="url(#ag)" opacity="0.3"/>
 
-  <!-- Simplified chart line -->
-  <path d="M46 130 L68 110 L88 118 L108 96 L128 84 L148 68"
-    fill="none"
-    stroke="#F59E0B"
-    stroke-width="4"
-    stroke-linecap="round"
-    stroke-linejoin="round"/>
+  <!-- Speech bubble -->
+  <path d="M130 28 C130 22 138 18 148 18 L172 18 C180 19 184 26 184 34 L184 50 C184 58 178 62 170 62 L160 62 L152 72 L154 62 L148 62 C140 62 134 56 134 48 L134 34 C134 32 132 30 130 28Z"
+    fill="#FFFFFF"/>
+  <circle cx="150" cy="40" r="4" fill="#0F172A"/>
+  <circle cx="160" cy="40" r="4" fill="#0F172A"/>
+  <circle cx="170" cy="40" r="4" fill="#0F172A"/>
 
-  <!-- Data points -->
-  <circle cx="46" cy="130" r="4" fill="#F59E0B"/>
-  <circle cx="108" cy="96" r="4" fill="#F59E0B"/>
-  <circle cx="148" cy="68" r="5" fill="#FBBF24"/>
+  <!-- Chart line -->
+  <polyline points="28,152 58,118 86,130 112,94 140,68 170,38"
+    fill="none" stroke="#FBBF24" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="28" cy="152" r="5" fill="#F59E0B" stroke="#0F172A" stroke-width="2"/>
+  <circle cx="58" cy="118" r="5" fill="#F59E0B" stroke="#0F172A" stroke-width="2"/>
+  <circle cx="86" cy="130" r="5" fill="#F59E0B" stroke="#0F172A" stroke-width="2"/>
+  <circle cx="112" cy="94" r="5" fill="#F59E0B" stroke="#0F172A" stroke-width="2"/>
+  <circle cx="140" cy="68" r="7" fill="#FBBF24" stroke="#FFFFFF" stroke-width="2"/>
+  <path d="M136 76 L140 62 L144 76" fill="none" stroke="#FBBF24" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
