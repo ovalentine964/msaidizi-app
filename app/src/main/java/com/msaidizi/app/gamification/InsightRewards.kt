@@ -195,7 +195,7 @@ class InsightRewards(
             }
 
             val bestDay = dayAverages.maxByOrNull { it.second }
-            val worstDay = dayAverages.minByOrNull { it.second && it.second > 0 }
+            val worstDay = dayAverages.filter { it.second > 0 }.minByOrNull { it.second }
 
             if (bestDay == null || bestDay.second <= 0) {
                 return InsightReward.error(language)

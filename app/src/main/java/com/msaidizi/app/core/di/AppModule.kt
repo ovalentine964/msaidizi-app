@@ -43,6 +43,7 @@ import com.msaidizi.app.core.language.ConfidenceCalibrator
 import com.msaidizi.app.core.language.PhonemeMapper
 import com.msaidizi.app.core.language.LanguageModelRegistry
 import com.msaidizi.app.core.language.FederatedLearningClient
+import com.msaidizi.app.core.language.ConversationLearningPipeline
 import com.msaidizi.app.security.privacy.ConsentManager
 import com.msaidizi.app.core.network.PinnedHttpClient
 import com.msaidizi.app.sync.SyncManager
@@ -56,12 +57,15 @@ import com.msaidizi.app.finance.TitheTracker
 import com.msaidizi.app.finance.GoalPlanner
 import com.msaidizi.app.finance.LoanManager
 import com.msaidizi.app.gamification.GamificationEngine
+import com.msaidizi.app.gamification.InsightRewards
+import com.msaidizi.app.gamification.MicroRewards
 import com.msaidizi.app.mindset.MindsetAcademy
 import com.msaidizi.app.mindset.RichHabitsScore
 import com.msaidizi.app.onboarding.AhaMomentFlow
 import com.msaidizi.app.cfo.BriefingDelivery
 import com.msaidizi.app.cfo.CFOEngine
 import com.msaidizi.app.skills.SkillBridge
+import com.msaidizi.app.social.*
 import com.msaidizi.app.loops.MorningBriefingLoop
 import com.msaidizi.app.loops.StreakProtectionLoop
 import com.msaidizi.app.loops.VariableRewardsLoop
@@ -481,6 +485,177 @@ object AppModule {
                     db.execSQL("CREATE INDEX IF NOT EXISTS `index_worker_vocabulary_frequency` ON `worker_vocabulary` (`frequency`)")
                 }
             })
+            // Migration v11 → v12: Added social layer tables for peer comparison, leaderboard, community tips, WhatsApp groups
+            .addMigrations(object : androidx.room.migration.Migration(11, 12) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    // Peer metrics — aggregated peer data by location × business type
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `peer_metrics` (
+                            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            `location` TEXT NOT NULL,
+                            `businessType` TEXT NOT NULL,
+                            `periodStart` INTEGER NOT NULL,
+                            `periodType` TEXT NOT NULL DEFAULT 'DAILY',
+                            `avgDailySales` REAL NOT NULL DEFAULT 0.0,
+                            `medianDailySales` REAL NOT NULL DEFAULT 0.0,
+                            `p25DailySales` REAL NOT NULL DEFAULT 0.0,
+                            `p75DailySales` REAL NOT NULL DEFAULT 0.0,
+                            `p90DailySales` REAL NOT NULL DEFAULT 0.0,
+                            `avgDailyProfit` REAL NOT NULL DEFAULT 0.0,
+                            `medianDailyProfit` REAL NOT NULL DEFAULT 0.0,
+                            `avgTransactionCount` REAL NOT NULL DEFAULT 0.0,
+                            `avgStreak` REAL NOT NULL DEFAULT 0.0,
+                            `maxStreak` INTEGER NOT NULL DEFAULT 0,
+                            `peerCount` INTEGER NOT NULL DEFAULT 0,
+                            `computedAt` INTEGER NOT NULL DEFAULT 0
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_peer_metrics_location_businessType` ON `peer_metrics` (`location`, `businessType`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_peer_metrics_periodStart` ON `peer_metrics` (`periodStart`)")
+
+                    // Peer comparison result — cached comparison for current user
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `peer_comparisons` (
+                            `id` INTEGER NOT NULL DEFAULT 1,
+                            `location` TEXT NOT NULL DEFAULT '',
+                            `businessType` TEXT NOT NULL DEFAULT '',
+                            `workerDailySales` REAL NOT NULL DEFAULT 0.0,
+                            `salesPercentile` INTEGER NOT NULL DEFAULT 0,
+                            `workerDailyProfit` REAL NOT NULL DEFAULT 0.0,
+                            `profitPercentile` INTEGER NOT NULL DEFAULT 0,
+                            `workerTransactionCount` INTEGER NOT NULL DEFAULT 0,
+                            `transactionPercentile` INTEGER NOT NULL DEFAULT 0,
+                            `workerStreak` INTEGER NOT NULL DEFAULT 0,
+                            `peerAvgDailySales` REAL NOT NULL DEFAULT 0.0,
+                            `peerCount` INTEGER NOT NULL DEFAULT 0,
+                            `comparedAt` INTEGER NOT NULL DEFAULT 0,
+                            PRIMARY KEY(`id`)
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_peer_comparisons_comparedAt` ON `peer_comparisons` (`comparedAt`)")
+
+                    // Leaderboard entries — weekly rankings
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `leaderboard_entries` (
+                            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            `location` TEXT NOT NULL,
+                            `businessType` TEXT NOT NULL,
+                            `weekStart` INTEGER NOT NULL,
+                            `rank` INTEGER NOT NULL,
+                            `weeklySales` REAL NOT NULL DEFAULT 0.0,
+                            `weeklyProfit` REAL NOT NULL DEFAULT 0.0,
+                            `transactionCount` INTEGER NOT NULL DEFAULT 0,
+                            `streak` INTEGER NOT NULL DEFAULT 0,
+                            `totalPoints` INTEGER NOT NULL DEFAULT 0,
+                            `isCurrentUser` INTEGER NOT NULL DEFAULT 0,
+                            `totalParticipants` INTEGER NOT NULL DEFAULT 0,
+                            `syncedAt` INTEGER NOT NULL DEFAULT 0
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_leaderboard_entries_location_businessType_weekStart` ON `leaderboard_entries` (`location`, `businessType`, `weekStart`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_leaderboard_entries_weekStart` ON `leaderboard_entries` (`weekStart`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_leaderboard_entries_rank` ON `leaderboard_entries` (`rank`)")
+
+                    // Leaderboard summary — cached user position
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `leaderboard_summary` (
+                            `id` INTEGER NOT NULL DEFAULT 1,
+                            `myRank` INTEGER NOT NULL DEFAULT 0,
+                            `totalParticipants` INTEGER NOT NULL DEFAULT 0,
+                            `myWeeklySales` REAL NOT NULL DEFAULT 0.0,
+                            `myWeeklyProfit` REAL NOT NULL DEFAULT 0.0,
+                            `rankChange` INTEGER NOT NULL DEFAULT 0,
+                            `weekStart` INTEGER NOT NULL DEFAULT 0,
+                            `location` TEXT NOT NULL DEFAULT '',
+                            `businessType` TEXT NOT NULL DEFAULT '',
+                            `updatedAt` INTEGER NOT NULL DEFAULT 0,
+                            PRIMARY KEY(`id`)
+                        )
+                    """.trimIndent())
+
+                    // Community tips — anonymous business tips
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `community_tips` (
+                            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            `content` TEXT NOT NULL,
+                            `location` TEXT NOT NULL,
+                            `businessType` TEXT NOT NULL,
+                            `category` TEXT NOT NULL DEFAULT 'general',
+                            `upvotes` INTEGER NOT NULL DEFAULT 0,
+                            `featured` INTEGER NOT NULL DEFAULT 0,
+                            `featuredCount` INTEGER NOT NULL DEFAULT 0,
+                            `isOwnTip` INTEGER NOT NULL DEFAULT 0,
+                            `hasUpvoted` INTEGER NOT NULL DEFAULT 0,
+                            `serverId` TEXT NOT NULL DEFAULT '',
+                            `createdAt` INTEGER NOT NULL DEFAULT 0
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_community_tips_location_businessType` ON `community_tips` (`location`, `businessType`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_community_tips_upvotes` ON `community_tips` (`upvotes`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_community_tips_createdAt` ON `community_tips` (`createdAt`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_community_tips_featured` ON `community_tips` (`featured`)")
+
+                    // Tip delivery log — tracks which tips were shown
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `tip_delivery_log` (
+                            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            `tipId` INTEGER NOT NULL,
+                            `deliveredAt` INTEGER NOT NULL DEFAULT 0,
+                            `engaged` INTEGER NOT NULL DEFAULT 0
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_tip_delivery_log_tipId` ON `tip_delivery_log` (`tipId`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_tip_delivery_log_deliveredAt` ON `tip_delivery_log` (`deliveredAt`)")
+
+                    // WhatsApp groups — community group metadata
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `whatsapp_groups` (
+                            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            `groupId` TEXT NOT NULL,
+                            `groupName` TEXT NOT NULL,
+                            `location` TEXT NOT NULL,
+                            `businessType` TEXT NOT NULL,
+                            `memberCount` INTEGER NOT NULL DEFAULT 0,
+                            `isMember` INTEGER NOT NULL DEFAULT 0,
+                            `isMuted` INTEGER NOT NULL DEFAULT 0,
+                            `lastBriefSharedAt` INTEGER NOT NULL DEFAULT 0,
+                            `lastChallengeAt` INTEGER NOT NULL DEFAULT 0,
+                            `inviteLink` TEXT NOT NULL DEFAULT '',
+                            `createdAt` INTEGER NOT NULL DEFAULT 0
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_whatsapp_groups_location_businessType` ON `whatsapp_groups` (`location`, `businessType`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_whatsapp_groups_groupId` ON `whatsapp_groups` (`groupId`)")
+
+                    // Peer challenges — friendly competition via WhatsApp
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `peer_challenges` (
+                            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            `groupId` INTEGER NOT NULL,
+                            `challengeType` TEXT NOT NULL,
+                            `description` TEXT NOT NULL,
+                            `metric` TEXT NOT NULL,
+                            `targetValue` REAL NOT NULL DEFAULT 0.0,
+                            `currentProgress` REAL NOT NULL DEFAULT 0.0,
+                            `status` TEXT NOT NULL DEFAULT 'ACTIVE',
+                            `startsAt` INTEGER NOT NULL,
+                            `endsAt` INTEGER NOT NULL,
+                            `participantCount` INTEGER NOT NULL DEFAULT 0,
+                            `createdAt` INTEGER NOT NULL DEFAULT 0
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_peer_challenges_groupId` ON `peer_challenges` (`groupId`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_peer_challenges_status` ON `peer_challenges` (`status`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_peer_challenges_endsAt` ON `peer_challenges` (`endsAt`)")
+                }
+            })
+            // Migration v11 → v12: Added streak recovery tracking columns to gamification table
+            .addMigrations(object : androidx.room.migration.Migration(11, 12) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE `gamification` ADD COLUMN `streakRecoveriesUsedThisMonth` INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL("ALTER TABLE `gamification` ADD COLUMN `streakRecoveryMonth` INTEGER NOT NULL DEFAULT 0")
+                }
+            })
             .fallbackToDestructiveMigration()
             .build()
         AppDatabase.setInstance(db)
@@ -822,6 +997,7 @@ object AppModule {
         selfEvolution: SelfEvolutionManager,
         preferenceLearner: PreferenceLearner,
         adaptiveVocabulary: AdaptiveVocabulary,
+        conversationLearningPipeline: ConversationLearningPipeline,
         llmEngine: LlmEngine,
         voicePersonality: VoicePersonality,
         proactiveAlertEngine: ProactiveAlertEngine
@@ -855,6 +1031,7 @@ object AppModule {
         selfEvolution = selfEvolution,
         preferenceLearner = preferenceLearner,
         adaptiveVocabulary = adaptiveVocabulary,
+        conversationLearningPipeline = conversationLearningPipeline,
         llmEngine = llmEngine,
         voicePersonality = voicePersonality,
         proactiveAlertEngine = proactiveAlertEngine
@@ -966,8 +1143,16 @@ object AppModule {
     @Provides
     @Singleton
     fun provideGamificationEngine(
-        gamificationDao: GamificationDao
-    ): GamificationEngine = GamificationEngine(gamificationDao)
+        gamificationDao: GamificationDao,
+        transactionDao: TransactionDao,
+        patternDao: PatternDao
+    ): GamificationEngine {
+        val engine = GamificationEngine(gamificationDao)
+        // Wire up the data-dependent reward subsystems
+        engine.microRewards = MicroRewards(gamificationDao, transactionDao, patternDao)
+        engine.insightRewards = InsightRewards(gamificationDao, transactionDao, patternDao)
+        return engine
+    }
 
     @Provides
     @Singleton
@@ -1018,11 +1203,14 @@ object AppModule {
         gamificationEngine: GamificationEngine,
         mindsetAcademy: MindsetAcademy,
         richHabitsScore: RichHabitsScore,
-        briefingDeliveryDao: BriefingDeliveryDao
+        briefingDeliveryDao: BriefingDeliveryDao,
+        peerComparison: PeerComparison,
+        communityTips: CommunityTips,
+        leaderboardService: LeaderboardService
     ): BriefingDelivery = BriefingDelivery(
         cfoEngine, businessAgent, loanManager,
         gamificationEngine, mindsetAcademy, richHabitsScore,
-        briefingDeliveryDao
+        briefingDeliveryDao, peerComparison, communityTips, leaderboardService
     )
 
     // === LOOPS — Foundation engagement cycles ===
@@ -1069,4 +1257,45 @@ object AppModule {
         httpClient: HttpClient,
         json: Json
     ): SkillBridge = SkillBridge(httpClient, json)
+
+    // === SOCIAL LAYER — Peer comparison, leaderboard, community tips, WhatsApp ===
+
+    @Provides
+    fun provideSocialDao(db: AppDatabase): SocialDao = db.socialDao()
+
+    @Provides
+    @Singleton
+    fun providePeerComparison(
+        socialDao: SocialDao,
+        transactionDao: TransactionDao
+    ): PeerComparison = PeerComparison(socialDao, transactionDao)
+
+    @Provides
+    @Singleton
+    fun provideLeaderboardService(
+        socialDao: SocialDao,
+        transactionDao: TransactionDao,
+        gamificationEngine: GamificationEngine
+    ): LeaderboardService = LeaderboardService(socialDao, transactionDao, gamificationEngine)
+
+    @Provides
+    @Singleton
+    fun provideCommunityTips(
+        socialDao: SocialDao
+    ): CommunityTips = CommunityTips(socialDao)
+
+    @Provides
+    @Singleton
+    fun provideWhatsAppCommunity(
+        socialDao: SocialDao
+    ): WhatsAppCommunity = WhatsAppCommunity(socialDao)
+
+    @Provides
+    @Singleton
+    fun provideSocialHandler(
+        peerComparison: PeerComparison,
+        leaderboardService: LeaderboardService,
+        communityTips: CommunityTips,
+        whatsappCommunity: WhatsAppCommunity
+    ): SocialHandler = SocialHandler(peerComparison, leaderboardService, communityTips, whatsappCommunity)
 }

@@ -124,7 +124,7 @@ class MicroRewards(
                 type = MicroRewardType.STREAK,
                 threshold = milestone,
                 unlocked = unlocked,
-                label = if (language == "sw") "Siku $milestone mfululizo" else "$milesonstone-day streak",
+                label = if (language == "sw") "Siku $milestone mfululizo" else "$milestone-day streak",
                 emoji = getStreakEmoji(milestone),
                 points = MILESTONE_POINTS[key] ?: 0
             ))

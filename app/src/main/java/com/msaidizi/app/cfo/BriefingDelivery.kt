@@ -10,6 +10,9 @@ import com.msaidizi.app.finance.LoanManager
 import com.msaidizi.app.gamification.GamificationEngine
 import com.msaidizi.app.mindset.MindsetAcademy
 import com.msaidizi.app.mindset.RichHabitsScore
+import com.msaidizi.app.social.CommunityTips
+import com.msaidizi.app.social.LeaderboardService
+import com.msaidizi.app.social.PeerComparison
 import timber.log.Timber
 import java.time.LocalTime
 import java.time.LocalDate
@@ -57,7 +60,10 @@ class BriefingDelivery(
     private val gamificationEngine: GamificationEngine? = null,
     private val mindsetAcademy: MindsetAcademy? = null,
     private val richHabitsScore: RichHabitsScore? = null,
-    private val briefingDeliveryDao: BriefingDeliveryDao? = null
+    private val briefingDeliveryDao: BriefingDeliveryDao? = null,
+    private val peerComparison: PeerComparison? = null,
+    private val communityTips: CommunityTips? = null,
+    private val leaderboardService: LeaderboardService? = null
 ) {
     companion object {
         private const val TAG = "BriefingDelivery"
@@ -97,7 +103,8 @@ class BriefingDelivery(
         workerType: WorkerType,
         todayTransactions: List<Transaction>,
         yesterdayTransactions: List<Transaction>,
-        recentTransactions: List<Transaction>
+        recentTransactions: List<Transaction>,
+        language: String = "sw"
     ): BriefingResult {
         Timber.tag(TAG).d("Generating morning briefing for %s (%s)", workerName, workerType)
 
@@ -158,6 +165,49 @@ class BriefingDelivery(
                     val lessonPrompt = ma.getDailyLessonPrompt()
                     if (lessonPrompt != null) {
                         append("\n\n$lessonPrompt")
+                    }
+                } catch (_: Exception) {}
+            }
+
+            // ═══ SOCIAL LAYER — Peer comparison, leaderboard, community tips ═══
+
+            // Community tip from a peer
+            communityTips?.let { ct ->
+                try {
+                    val tip = ct.getBriefingTip(
+                        profile = com.msaidizi.app.onboarding.WorkerProfile(),
+                        language = language
+                    )
+                    if (tip != null) {
+                        append("\n\n$tip")
+                    }
+                } catch (_: Exception) {}
+            }
+
+            // Peer comparison social proof
+            peerComparison?.let { pc ->
+                try {
+                    val proof = pc.getQuickSocialProof(
+                        location = workerType.name,  // Will be replaced with actual location from profile
+                        businessType = workerType.name,
+                        language = language
+                    )
+                    if (proof != null) {
+                        append("\n\n${proof.message}")
+                    }
+                } catch (_: Exception) {}
+            }
+
+            // Leaderboard position
+            leaderboardService?.let { ls ->
+                try {
+                    val positionMsg = ls.getQuickPositionMessage(
+                        location = workerType.name,  // Will be replaced with actual location
+                        businessType = workerType.name,
+                        language = language
+                    )
+                    if (positionMsg != null) {
+                        append("\n\n${positionMsg.message}")
                     }
                 } catch (_: Exception) {}
             }

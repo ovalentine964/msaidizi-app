@@ -41,11 +41,14 @@ import java.util.Locale
 class GamificationEngine(
     private val gamificationDao: GamificationDao
 ) {
-    // Lazy-initialized reward subsystems
+    // Streak recovery subsystem (only needs DAO)
     val streakRecovery: StreakRecovery by lazy { StreakRecovery(gamificationDao) }
-    val microRewards: MicroRewards by lazy { MicroRewards(gamificationDao, com.msaidizi.app.core.database.TransactionDao::class.java, com.msaidizi.app.core.database.PatternDao::class.java) }
-    val insightRewards: InsightRewards by lazy { InsightRewards(gamificationDao, com.msaidizi.app.core.database.TransactionDao::class.java, com.msaidizi.app.core.database.PatternDao::class.java) }
+    // Level progression subsystem (only needs DAO)
     val levelProgression: LevelProgressionRewards by lazy { LevelProgressionRewards(gamificationDao) }
+    // Micro-rewards and insight rewards — set externally by AppModule after construction
+    // since they need TransactionDao and PatternDao
+    var microRewards: MicroRewards? = null
+    var insightRewards: InsightRewards? = null
     companion object {
         private const val TAG = "GamificationEngine"
 

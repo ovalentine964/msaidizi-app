@@ -101,6 +101,11 @@ class VoicePipeline @Inject constructor(
         Timber.d("VoicePipeline: Initializing (tier=%s)...", DeviceTier.current)
         _pipelineState.value = PipelineState.INITIALIZING
 
+        // Wire conversation learning pipeline to ASR engine
+        // This enables unknown word capture and per-worker vocabulary building
+        adaptiveAsrEngine.conversationLearningPipeline = conversationLearningPipeline
+        Timber.d("VoicePipeline: Conversation learning pipeline wired to ASR engine")
+
         val isBasicTier = DeviceTier.current == DeviceTier.Tier.BASIC
 
         if (isBasicTier) {

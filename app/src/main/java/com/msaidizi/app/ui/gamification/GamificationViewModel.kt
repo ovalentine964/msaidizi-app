@@ -6,8 +6,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.msaidizi.app.gamification.BadgeStatus
 import com.msaidizi.app.gamification.GamificationEngine
+import com.msaidizi.app.gamification.InsightReward
+import com.msaidizi.app.gamification.InsightTier
 import com.msaidizi.app.gamification.LevelInfo
+import com.msaidizi.app.gamification.LevelUnlockCelebration
+import com.msaidizi.app.gamification.MicroReward
+import com.msaidizi.app.gamification.MicroRewardStatus
+import com.msaidizi.app.gamification.RecoveryStatus
 import com.msaidizi.app.gamification.StreakInfo
+import com.msaidizi.app.gamification.UnlockSummary
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -59,6 +66,38 @@ class GamificationViewModel @Inject constructor(
     private val _socialProof = MutableLiveData<SocialProofData>()
     val socialProof: LiveData<SocialProofData> = _socialProof
 
+    // ── Streak Recovery ───────────────────────────────────────────
+
+    private val _recoveryStatus = MutableLiveData<RecoveryStatus>()
+    val recoveryStatus: LiveData<RecoveryStatus> = _recoveryStatus
+
+    private val _recoveryOffer = MutableLiveData<com.msaidizi.app.gamification.StreakRecoveryOffer?>()
+    val recoveryOffer: LiveData<com.msaidizi.app.gamification.StreakRecoveryOffer?> = _recoveryOffer
+
+    // ── Micro-Rewards ─────────────────────────────────────────────
+
+    private val _microRewards = MutableLiveData<List<MicroRewardStatus>>()
+    val microRewards: LiveData<List<MicroRewardStatus>> = _microRewards
+
+    private val _newMicroReward = MutableLiveData<MicroReward?>()
+    val newMicroReward: LiveData<MicroReward?> = _newMicroReward
+
+    // ── Insight Rewards ───────────────────────────────────────────
+
+    private val _insightTier = MutableLiveData<InsightTier>()
+    val insightTier: LiveData<InsightTier> = _insightTier
+
+    private val _latestInsight = MutableLiveData<InsightReward?>()
+    val latestInsight: LiveData<InsightReward?> = _latestInsight
+
+    // ── Level Progression ─────────────────────────────────────────
+
+    private val _unlockSummary = MutableLiveData<UnlockSummary>()
+    val unlockSummary: LiveData<UnlockSummary> = _unlockSummary
+
+    private val _levelCelebration = MutableLiveData<LevelUnlockCelebration?>()
+    val levelCelebration: LiveData<LevelUnlockCelebration?> = _levelCelebration
+
     // ── Variable Reward Popup ─────────────────────────────────────
 
     private val _variableReward = MutableLiveData<VariableRewardPopup?>()
@@ -100,6 +139,18 @@ class GamificationViewModel @Inject constructor(
 
                 // Load social proof
                 loadSocialProof()
+
+                // Load streak recovery status
+                _recoveryStatus.value = gamificationEngine.streakRecovery.getRecoveryStatus("sw")
+
+                // Load micro-rewards
+                _microRewards.value = gamificationEngine.microRewards?.getAvailableRewards("sw") ?: emptyList()
+
+                // Load insight tier
+                _insightTier.value = gamificationEngine.insightRewards?.getUnlockedInsights("sw")
+
+                // Load level unlock summary
+                _unlockSummary.value = gamificationEngine.levelProgression.getUnlockSummary("sw")
 
                 // Maybe trigger a variable reward surprise (10% chance on screen open)
                 maybeShowVariableReward()
@@ -266,6 +317,106 @@ class GamificationViewModel @Inject constructor(
 
     // ═══════════════════════════════════════════════════════════════
     // LEVEL PERKS
+    // ═══════════════════════════════════════════════════════════════
+
+    // ═══════════════════════════════════════════════════════════════
+    // STREAK RECOVERY
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * Offer streak recovery after a streak break.
+     */
+    suspend fun offerStreakRecovery(lostStreak: Int) {
+        val offer = gamificationEngine.streakRecovery.checkAndOfferRecovery(lostStreak, "sw")
+        _recoveryOffer.postValue(offer)
+    }
+
+    /**
+     * Execute streak recovery.
+     */
+    suspend fun executeRecovery(lostStreak: Int): Boolean {
+        val result = gamificationEngine.streakRecovery.executeRecovery(lostStreak, "sw")
+        if (result.success) {
+            // Refresh all data
+            loadGamificationData()
+        }
+        return result.success
+    }
+
+    /**
+     * Dismiss recovery offer.
+     */
+    fun dismissRecoveryOffer() {
+        _recoveryOffer.value = null
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // MICRO-REWARDS
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * Check for new micro-rewards after an action.
+     */
+    suspend fun checkMicroRewards() {
+        val rewards = gamificationEngine.microRewards?.checkMilestones("sw") ?: emptyList()
+        if (rewards.isNotEmpty()) {
+            _newMicroReward.postValue(rewards.first())
+            // Refresh available rewards list
+            _microRewards.postValue(gamificationEngine.microRewards?.getAvailableRewards("sw") ?: emptyList())
+        }
+    }
+
+    /**
+     * Dismiss micro-reward popup.
+     */
+    fun dismissMicroReward() {
+        _newMicroReward.value = null
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // INSIGHT REWARDS
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * Generate an insight reward for a streak milestone.
+     */
+    suspend fun generateInsightReward(streakMilestone: Int) {
+        val insight = gamificationEngine.insightRewards?.generateInsight(streakMilestone, "sw")
+        _latestInsight.postValue(insight)
+        // Refresh tier
+        _insightTier.postValue(gamificationEngine.insightRewards?.getUnlockedInsights("sw"))
+    }
+
+    /**
+     * Dismiss insight popup.
+     */
+    fun dismissInsight() {
+        _latestInsight.value = null
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // LEVEL PROGRESSION
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * Celebrate a level unlock.
+     */
+    suspend fun celebrateLevelUnlock(newLevel: Int) {
+        val celebration = gamificationEngine.levelProgression.celebrateLevelUnlock(newLevel, "sw")
+        _levelCelebration.postValue(celebration)
+        // Refresh unlock summary
+        _unlockSummary.postValue(gamificationEngine.levelProgression.getUnlockSummary("sw"))
+    }
+
+    /**
+     * Dismiss level celebration.
+     */
+    fun dismissLevelCelebration() {
+        _levelCelebration.value = null
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // LEVEL PERKS (existing)
     // ═══════════════════════════════════════════════════════════════
 
     /**

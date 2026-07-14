@@ -3,6 +3,7 @@ package com.msaidizi.app.data.api
 import com.msaidizi.app.data.model.*
 import com.msaidizi.app.ui.infrastructure.DataCenterRoadmap
 import com.msaidizi.app.ui.infrastructure.WorkerContribution
+import com.msaidizi.app.social.*
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -219,4 +220,66 @@ interface MsaidiziApi {
 
     @GET("api/v1/infrastructure/worker-value/me")
     suspend fun getWorkerContribution(): Response<WorkerContribution>
+
+    // ═══════════════════════════════════════════════════════════════
+    // SOCIAL — Peer comparison, leaderboard, community tips
+    // ═══════════════════════════════════════════════════════════════
+
+    @GET("api/v1/social/peer-metrics")
+    suspend fun getPeerMetrics(
+        @Header("Authorization") token: String,
+        @Query("location") location: String,
+        @Query("businessType") businessType: String
+    ): Response<PeerMetricsResponse>
+
+    @GET("api/v1/social/leaderboard")
+    suspend fun getLeaderboard(
+        @Header("Authorization") token: String,
+        @Query("location") location: String,
+        @Query("businessType") businessType: String,
+        @Query("weekStart") weekStart: Long? = null
+    ): Response<LeaderboardResponse>
+
+    @POST("api/v1/social/leaderboard/submit")
+    suspend fun submitLeaderboardStats(
+        @Header("Authorization") token: String,
+        @Body stats: WeeklyStats
+    ): Response<Unit>
+
+    @GET("api/v1/social/tips")
+    suspend fun getCommunityTips(
+        @Header("Authorization") token: String,
+        @Query("location") location: String,
+        @Query("businessType") businessType: String
+    ): Response<CommunityTipsResponse>
+
+    @POST("api/v1/social/tips")
+    suspend fun submitTip(
+        @Header("Authorization") token: String,
+        @Body request: SubmitTipRequest
+    ): Response<Unit>
+
+    @POST("api/v1/social/tips/{tipId}/upvote")
+    suspend fun upvoteTip(
+        @Header("Authorization") token: String,
+        @Path("tipId") tipId: String
+    ): Response<Unit>
+
+    @POST("api/v1/social/whatsapp/group")
+    suspend fun createWhatsAppGroup(
+        @Header("Authorization") token: String,
+        @Body request: CreateGroupRequest
+    ): Response<WhatsAppGroup>
+
+    @POST("api/v1/social/whatsapp/share-brief")
+    suspend fun shareWhatsAppBrief(
+        @Header("Authorization") token: String,
+        @Body request: ShareBriefRequest
+    ): Response<Unit>
+
+    @POST("api/v1/social/challenges")
+    suspend fun createChallenge(
+        @Header("Authorization") token: String,
+        @Body request: CreateChallengeRequest
+    ): Response<PeerChallenge>
 }

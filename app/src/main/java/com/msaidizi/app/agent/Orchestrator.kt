@@ -112,10 +112,18 @@ class Orchestrator(
     private val progressiveAutonomy: ProgressiveAutonomy? = null,
     private val proactiveAlertEngine: ProactiveAlertEngine? = null,
     private val a2aProtocol: A2AProtocol? = null,
-    private val knowledgeGraph: CrossDomainKnowledgeGraph? = null
+    private val knowledgeGraph: CrossDomainKnowledgeGraph? = null,
+    // ── Social Layer ──
+    private val socialHandler: SocialHandler? = null
 ) {
     private val _responses = MutableSharedFlow<AgentResponse>(extraBufferCapacity = 8)
     val responses: SharedFlow<AgentResponse> = _responses
+
+    init {
+        // Wire conversation learning pipeline to conversation manager
+        // This enables vocabulary learning from corrections and confirmations
+        conversationManager.conversationLearningPipeline = conversationLearningPipeline
+    }
 
     /**
      * Process user input and generate a response.
@@ -129,9 +137,6 @@ class Orchestrator(
         // Self-evolution signals
         conversationManager.recordEvolutionSignals(language)
         conversationManager.publishTaskStarted()
-
-        // Wire conversation learning pipeline to conversation manager
-        conversationManager.conversationLearningPipeline = conversationLearningPipeline
 
         // Text enhancement
         val enhancedText = adaptiveVocabulary?.applyToTranscription(
