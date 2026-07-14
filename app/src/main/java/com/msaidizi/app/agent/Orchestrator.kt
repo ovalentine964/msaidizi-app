@@ -258,6 +258,26 @@ class Orchestrator(
         }
     }
 
+    // ═══════════════ RECEIPT SCANNING ═══════════════
+
+    /**
+     * Handle receipt scan intent.
+     * Returns a prompt for the UI to launch the camera activity.
+     * The actual scanning is handled by ReceiptScanManager (camera → OCR → parse → confirm → save).
+     */
+    private fun handleReceiptScan(language: String): AgentResponse {
+        return AgentResponse(
+            text = if (language == "sw") {
+                "📸 Piga picha risiti yako. Weka risiti mbele ya kamera na ubonyeze kitufe cha kamera."
+            } else {
+                "📸 Take a photo of your receipt. Hold the receipt in front of the camera and press the capture button."
+            },
+            type = ResponseType.INFORMATION,
+            shouldSpeak = true,
+            data = mapOf("action" to "LAUNCH_RECEIPT_SCANNER")
+        )
+    }
+
     // ═══════════════ ROUTING — delegates to domain handlers ═══════════════
 
     /**
@@ -296,6 +316,9 @@ class Orchestrator(
                 IntentType.GIVING_RECORD -> gamificationHandler.handleGivingRecord(intentResult, language) { domainRouter.handleDomainIntent(intentResult, language) }
                 IntentType.GIVING_QUERY -> gamificationHandler.handleGivingQuery(intentResult, language) { domainRouter.handleDomainIntent(intentResult, language) }
                 IntentType.GIVING_GOAL -> gamificationHandler.handleGivingGoal(intentResult, language) { domainRouter.handleDomainIntent(intentResult, language) }
+
+                // Receipt Scanning → returns a prompt to launch camera
+                IntentType.RECEIPT_SCAN -> handleReceiptScan(language)
 
                 // Goals → GamificationHandler
                 IntentType.GOAL_CREATE -> gamificationHandler.handleGoalCreate(intentResult, language) { domainRouter.handleDomainIntent(intentResult, language) }
@@ -477,6 +500,7 @@ class Orchestrator(
             IntentType.GOAL_REPORT, IntentType.LOAN_REPORT -> Domain.REPORTING
             IntentType.ASK_ADVICE, IntentType.GIVING_RECORD,
             IntentType.GIVING_QUERY, IntentType.GIVING_GOAL -> Domain.GIVING
+            IntentType.RECEIPT_SCAN -> Domain.SALES
             else -> Domain.ADVICE
         }
     }

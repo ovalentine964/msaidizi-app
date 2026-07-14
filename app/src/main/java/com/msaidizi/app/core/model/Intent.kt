@@ -86,6 +86,9 @@ enum class IntentType {
     // Giving/tithing: set giving goal
     GIVING_GOAL,
 
+    // Receipt scanning: "Piga picha risiti"
+    RECEIPT_SCAN,
+
     // Goal planning: "Lengo langu ni kununua friji"
     GOAL_CREATE,
 

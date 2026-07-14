@@ -31,6 +31,10 @@ class RecordViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(RecordUiState())
     val uiState: StateFlow<RecordUiState> = _uiState.asStateFlow()
 
+    // One-shot events (launch scanner, etc.)
+    private val _events = MutableSharedFlow<RecordEvent>(extraBufferCapacity = 4)
+    val events: SharedFlow<RecordEvent> = _events
+
     // Language preference
     private var currentLanguage = "sw"
 
@@ -244,6 +248,12 @@ class RecordViewModel @Inject constructor(
                 lastResponse = response,
                 statusMessage = "Ready"
             )
+
+            // Check for special actions (e.g., launch receipt scanner)
+            val action = response.data["action"]
+            if (action == "LAUNCH_RECEIPT_SCANNER") {
+                _events.tryEmit(RecordEvent.LaunchReceiptScanner)
+            }
 
             // Speak the full response
             if (response.shouldSpeak) {

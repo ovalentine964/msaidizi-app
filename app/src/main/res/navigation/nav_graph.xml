@@ -50,4 +50,10 @@
         android:name="com.msaidizi.app.ui.models.ModelDownloadFragment"
         android:label="Models"
         tools:layout="@layout/fragment_model_download" />
+
+    <fragment
+        android:id="@+id/cameraCaptureFragment"
+        android:name="com.msaidizi.app.ui.vision.CameraCaptureFragment"
+        android:label="Piga Picha"
+        tools:layout="@layout/fragment_camera_capture" />
 </navigation>

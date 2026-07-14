@@ -66,6 +66,9 @@ import com.msaidizi.app.cfo.BriefingDelivery
 import com.msaidizi.app.cfo.CFOEngine
 import com.msaidizi.app.skills.SkillBridge
 import com.msaidizi.app.social.*
+import com.msaidizi.app.vision.ProductClassifier
+import com.msaidizi.app.vision.ProductRecognitionHandler
+import com.msaidizi.app.vision.VisionCorrectionTracker
 import com.msaidizi.app.loops.MorningBriefingLoop
 import com.msaidizi.app.loops.StreakProtectionLoop
 import com.msaidizi.app.loops.VariableRewardsLoop
@@ -729,6 +732,13 @@ object AppModule {
         userVocabDao: UserVocabularyDao
     ): AdaptiveVocabulary = AdaptiveVocabulary(learningDao, userVocabDao)
 
+    // === RECEIPT SCANNING ===
+
+    @Provides
+    @Singleton
+    fun provideReceiptScanner(): com.msaidizi.app.scanner.ReceiptScanner =
+        com.msaidizi.app.scanner.ReceiptScanner()
+
     // === NETWORK ===
 
     @Provides
@@ -1300,4 +1310,31 @@ object AppModule {
         communityTips: CommunityTips,
         whatsappCommunity: WhatsAppCommunity
     ): SocialHandler = SocialHandler(peerComparison, leaderboardService, communityTips, whatsappCommunity)
+
+    // === VISION — Product Recognition ===
+
+    @Provides
+    @Singleton
+    fun provideProductClassifier(
+        @ApplicationContext context: Context
+    ): ProductClassifier = ProductClassifier(context)
+
+    @Provides
+    @Singleton
+    fun provideVisionCorrectionTracker(
+        workerVocabularyDao: com.msaidizi.app.core.model.WorkerVocabularyDao,
+        federatedLearningClient: FederatedLearningClient
+    ): VisionCorrectionTracker = VisionCorrectionTracker(workerVocabularyDao, federatedLearningClient)
+
+    @Provides
+    @Singleton
+    fun provideProductRecognitionHandler(
+        classifier: ProductClassifier,
+        inventoryDao: InventoryDao,
+        workerVocabularyDao: com.msaidizi.app.core.model.WorkerVocabularyDao,
+        correctionTracker: VisionCorrectionTracker,
+        tts: com.msaidizi.app.voice.TextToSpeech
+    ): ProductRecognitionHandler = ProductRecognitionHandler(
+        classifier, inventoryDao, workerVocabularyDao, correctionTracker, tts
+    )
 }

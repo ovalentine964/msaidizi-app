@@ -241,6 +241,16 @@ dependencies {
     // Biometric authentication
     implementation("androidx.biometric:biometric:1.1.0")
 
+    // CameraX — receipt scanning
+    val cameraxVersion = "1.4.1"
+    implementation("androidx.camera:camera-core:$cameraxVersion")
+    implementation("androidx.camera:camera-camera2:$cameraxVersion")
+    implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
+    implementation("androidx.camera:camera-view:$cameraxVersion")
+
+    // ML Kit Text Recognition — on-device OCR (260KB, handles Latin script = English + Swahili)
+    implementation("com.google.mlkit:text-recognition:16.0.1")
+
     // MPAndroidChart for dashboard
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
 

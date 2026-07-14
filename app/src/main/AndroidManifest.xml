@@ -30,6 +30,11 @@
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
 
+    <!-- Camera for receipt scanning -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+
     <!-- Audio recording feature -->
     <uses-feature android:name="android.hardware.microphone" android:required="true" />
 
@@ -108,6 +113,13 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Receipt Scan Activity -->
+        <activity
+            android:name=".scanner.ReceiptScanActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.Msaidizi" />
 
         <!-- M-Pesa SMS auto-capture -->
         <receiver

@@ -274,6 +274,13 @@ class IntentRouter(private val config: IntentPatternConfig) {
                 )
             }
 
+            // ── RECEIPT SCAN intent ──
+            intentKey == "RECEIPT_SCAN" -> IntentResult(
+                intent = IntentType.RECEIPT_SCAN,
+                confidence = intentConfig.confidence,
+                extractedData = mapOf("rawText" to originalText)
+            )
+
             // ── GOAL intents ──
             intentKey == "GOAL_CREATE" -> {
                 val amount = groups.lastOrNull { it.replace(",", "").toDoubleOrNull() != null }

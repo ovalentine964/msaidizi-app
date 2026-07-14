@@ -265,6 +265,21 @@
       "keywords": ["lengo", "kutoa", "sadaka", "giving goal"],
       "responseHint": "giving_goal_set"
     },
+    "RECEIPT_SCAN": {
+      "priority": 3,
+      "confidence": 0.95,
+      "patterns": [
+        "(?i)(piga\s+picha|scan|skani|soma|capture)\s+(ya\s+)?(risiti|receipt|stakabadhi)",
+        "(?i)(risiti|receipt)\s+(yangu|yako|ya\s+leo)",
+        "(?i)(nataka|nataka\s+ku)\s+(scan|skani|soma)\s+(risiti|receipt)",
+        "(?i)(take|photograph|snap)\s+(a\s+)?(photo|picture|pic)\s+(of\s+)?(my\s+)?(receipt|bill)",
+        "(?i)(scan|read|capture)\s+(my\s+)?(receipt|bill|invoice)",
+        "(?i)(piga|chukua)\s+picha\s+(ya\s+)?(risiti|stakabadhi)",
+        "(?i)(risiti|receipt)\s+(scan|skani|soma)"
+      ],
+      "keywords": ["piga picha", "risiti", "scan", "skani", "receipt", "stakabadhi"],
+      "responseHint": "receipt_scan"
+    },
     "GOAL_CREATE": {
       "priority": 5,
       "confidence": 0.90,
