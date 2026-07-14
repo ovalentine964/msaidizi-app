@@ -71,7 +71,20 @@ android {
     // Signing Configuration
     // ============================================================
     // Debug: auto-generates a keystore if none exists (CI-friendly)
-    // Release: reads from keystore.properties (not committed to git)
+    // Release: reads from keystore.properties OR env vars (CI-friendly)
+    //
+    // To sign release builds locally:
+    //   1. Run: ./scripts/generate-keystore.sh
+    //   2. Fill in keystore.properties with your passwords
+    //   3. Build: ./gradlew assembleRelease
+    //
+    // To sign in CI (GitHub Actions):
+    //   Set these repository secrets:
+    //     RELEASE_KEYSTORE_BASE64  — base64-encoded .keystore file
+    //     RELEASE_STORE_PASSWORD   — keystore password
+    //     RELEASE_KEY_ALIAS        — key alias name
+    //     RELEASE_KEY_PASSWORD     — key password
+    // ============================================================
     signingConfigs {
         getByName("debug") {
             // Use project-local debug.keystore if present, otherwise fall back to
@@ -86,26 +99,40 @@ android {
             keyAlias = "androiddebugkey"
             keyPassword = "android"
         }
-        // Release signing — uncomment and configure for production builds
-        // create("release") {
-        //     val props = java.util.Properties()
-        //     val propsFile = file("${rootProject.projectDir}/keystore.properties")
-        //     if (propsFile.exists()) {
-        //         props.load(propsFile.inputStream())
-        //     }
-        //     storeFile = file(props.getProperty("storeFile", "release.keystore"))
-        //     storePassword = props.getProperty("storePassword", "")
-        //     keyAlias = props.getProperty("keyAlias", "")
-        //     keyPassword = props.getProperty("keyPassword", "")
-        // }
+        create("release") {
+            // Priority: environment variables (CI) > keystore.properties file (local)
+            val envStoreFile = System.getenv("RELEASE_KEYSTORE_FILE")
+            val envStorePassword = System.getenv("RELEASE_STORE_PASSWORD")
+            val envKeyAlias = System.getenv("RELEASE_KEY_ALIAS")
+            val envKeyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+
+            if (!envStoreFile.isNullOrBlank() && !envStorePassword.isNullOrBlank()) {
+                // CI path: read from environment variables
+                storeFile = file(envStoreFile)
+                storePassword = envStorePassword
+                keyAlias = envKeyAlias ?: "msaidizi-release"
+                keyPassword = envKeyPassword ?: envStorePassword
+            } else {
+                // Local path: read from keystore.properties
+                val props = java.util.Properties()
+                val propsFile = file("${rootProject.projectDir}/keystore.properties")
+                if (propsFile.exists()) {
+                    props.load(propsFile.inputStream())
+                }
+                storeFile = file(props.getProperty("storeFile",
+                    "${rootProject.projectDir}/release.keystore"))
+                storePassword = props.getProperty("storePassword", "")
+                keyAlias = props.getProperty("keyAlias", "msaidizi-release")
+                keyPassword = props.getProperty("keyPassword", "")
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            // Uncomment the line below once release signing is configured:
-            // signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

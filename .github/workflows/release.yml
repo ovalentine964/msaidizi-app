@@ -12,11 +12,16 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true"
+  NDK_VERSION: "26.1.10909125"
+  CMAKE_VERSION: "3.22.1"
+
 jobs:
   build-release:
     name: Build Release AAB & APK
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
 
     steps:
       - name: Checkout code
@@ -37,26 +42,31 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: '8.5'
+        uses: gradle/actions/setup-gradle@v4
 
-      - name: Cache Gradle packages
+      - name: Cache NDK & CMake
+        id: cache-ndk
         uses: actions/cache@v4
         with:
           path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            gradle-${{ runner.os }}-
+            ${{ env.ANDROID_HOME }}/ndk/${{ env.NDK_VERSION }}
+            ${{ env.ANDROID_HOME }}/cmake/${{ env.CMAKE_VERSION }}
+          key: ndk-cmake-${{ env.NDK_VERSION }}-${{ env.CMAKE_VERSION }}
+
+      - name: Install NDK r26b and CMake 3.22.1
+        if: steps.cache-ndk.outputs.cache-hit != 'true'
+        run: |
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+            "ndk;${{ env.NDK_VERSION }}" \
+            "cmake;${{ env.CMAKE_VERSION }}"
+          echo "✅ NDK r26b and CMake 3.22.1 installed"
 
       - name: Cache AI models
         id: cache-models
         uses: actions/cache@v4
         with:
           path: app/src/main/assets/models
-          key: models-v1-whisper-piper-qwen
+          key: models-v2-whisper-piper-qwen
 
       - name: Download AI Models
         if: steps.cache-models.outputs.cache-hit != 'true'
@@ -70,30 +80,31 @@ jobs:
           chmod +x scripts/download-models.sh
           ./scripts/download-models.sh --verify
 
-      - name: Install NDK r26b and CMake 3.22.1
-        run: |
-          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
-            "ndk;26.1.10909125" \
-            "cmake;3.22.1"
-          echo "✅ NDK r26b and CMake 3.22.1 installed"
-
       - name: Decode release keystore
-        if: env.RELEASE_KEYSTORE_BASE64 != ''
+        if: ${{ secrets.RELEASE_KEYSTORE_BASE64 != '' }}
         run: |
           echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > release.keystore
           echo "✅ Release keystore decoded"
-        env:
-          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
 
       - name: Build Release AAB
         run: |
           set -o pipefail
           ./gradlew bundleRelease --stacktrace --info 2>&1 | tee build-release.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          if [ "$EXIT_CODE" -ne 0 ]; then
+            echo "::error::Gradle bundleRelease failed with exit code $EXIT_CODE"
+            exit "$EXIT_CODE"
+          fi
 
       - name: Build Release APK
         run: |
           set -o pipefail
           ./gradlew assembleRelease --stacktrace --info 2>&1 | tee build-release-apk.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          if [ "$EXIT_CODE" -ne 0 ]; then
+            echo "::error::Gradle assembleRelease failed with exit code $EXIT_CODE"
+            exit "$EXIT_CODE"
+          fi
 
       - name: Upload build log on failure
         if: failure()
@@ -116,6 +127,8 @@ jobs:
             cp "$AAB_PATH" "release-assets/msaidizi-v${VERSION}.aab"
             echo "aab=release-assets/msaidizi-v${VERSION}.aab" >> "$GITHUB_OUTPUT"
             echo "✅ AAB: $(ls -lh "release-assets/msaidizi-v${VERSION}.aab")"
+          else
+            echo "::warning::No AAB found"
           fi
 
           # Copy APK
@@ -124,6 +137,8 @@ jobs:
             cp "$APK_PATH" "release-assets/msaidizi-v${VERSION}.apk"
             echo "apk=release-assets/msaidizi-v${VERSION}.apk" >> "$GITHUB_OUTPUT"
             echo "✅ APK: $(ls -lh "release-assets/msaidizi-v${VERSION}.apk")"
+          else
+            echo "::warning::No APK found"
           fi
 
       - name: Upload release artifacts
