@@ -116,11 +116,23 @@ class SpeechRecognizer @Inject constructor(
      * Load the best available ASR model.
      * Priority: Whisper Turbo > Moonshine > Whisper Tiny (legacy)
      *
+     * Includes memory safety check: refuses to load if < 200MB free RAM.
+     *
      * @param preferredModelId Optional: force a specific model
      * @return true if a model loaded successfully
      */
     suspend fun loadModel(preferredModelId: String? = null): Boolean = withContext(Dispatchers.IO) {
         if (isModelLoaded) return@withContext true
+
+        // ═══ MEMORY SAFETY: Check available RAM before loading ═══
+        val runtime = Runtime.getRuntime()
+        val usedMB = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)
+        val maxMB = runtime.maxMemory() / (1024 * 1024)
+        val freeMB = maxMB - usedMB
+        if (freeMB < 200) {
+            Timber.e("SpeechRecognizer: REFUSING to load — only %dMB free (need 200MB buffer)", freeMB)
+            return@withContext false
+        }
 
         // Determine which model to load
         val modelId = preferredModelId
@@ -174,6 +186,16 @@ class SpeechRecognizer @Inject constructor(
             val elapsed = System.currentTimeMillis() - startTime
             Timber.i("ASR model '%s' loaded in %dms", modelId, elapsed)
             true
+        } catch (e: OutOfMemoryError) {
+            Timber.e("OOM loading ASR model: %s — device has insufficient memory", modelId)
+            isModelLoaded = false
+            encoderSession?.close()
+            encoderSession = null
+            decoderSession?.close()
+            decoderSession = null
+            ortEnvironment = null
+            System.gc()
+            false
         } catch (e: Exception) {
             Timber.e(e, "Failed to load ASR model: %s", modelId)
             isModelLoaded = false

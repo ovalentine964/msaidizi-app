@@ -68,6 +68,11 @@ class OnboardingActivity : AppCompatActivity() {
         ViewModelProvider(this, WhatsAppStepFactory(application, api, onboardingData)).get(WhatsAppConnectionStep::class.java)
     }
 
+    /** Unified phone verification step (SMS + WhatsApp) */
+    val phoneVerificationStep: PhoneVerificationStep by lazy {
+        ViewModelProvider(this, PhoneVerificationStepFactory(application, api, onboardingData)).get(PhoneVerificationStep::class.java)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityOnboardingBinding.inflate(layoutInflater)
@@ -103,30 +108,33 @@ class OnboardingActivity : AppCompatActivity() {
      * Update progress indicator based on current navigation destination.
      */
     private fun updateProgress(destinationId: Int) {
-        // Updated 5-step onboarding flow:
+        // Updated 6-step onboarding flow:
         // 1. Karibu! (Introduction)
         // 2. Naming (AgentNaming)
         // 3. Business Discovery (BusinessDiscovery)
-        // 4. Model Setup (ModelSetup)
-        // 5. Ready! (FirstUse)
+        // 4. Phone Verification (PhoneVerification)
+        // 5. Personality (Personality)
+        // 6. Ready! (FirstUse)
         val step = when (destinationId) {
             R.id.introductionFragment -> 1
             R.id.agentNamingFragment -> 2
             R.id.businessDiscoveryFragment -> 3
-            R.id.modelSetupFragment -> 4
-            R.id.firstUseFragment -> 5
+            R.id.phoneVerificationFragment -> 4
+            R.id.personalityFragment -> 5
+            R.id.firstUseFragment -> 6
             else -> 0
         }
         binding.progressOnboarding.progress = step
-        binding.progressOnboarding.max = 5
+        binding.progressOnboarding.max = 6
 
         // Update step indicator text
         val stepText = when (step) {
             1 -> "Karibu! Welcome"
             2 -> "Name Your Helper"
             3 -> "Getting to Know You"
-            4 -> "Preparing AI"
-            5 -> "Ready!"
+            4 -> "Verify Phone"
+            5 -> "Preferences"
+            6 -> "Ready!"
             else -> ""
         }
         binding.textViewStepIndicator.text = stepText
@@ -197,6 +205,20 @@ class WhatsAppStepFactory(
     override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(WhatsAppConnectionStep::class.java)) {
             return WhatsAppConnectionStep(application, api, onboardingData) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
+    }
+}
+
+class PhoneVerificationStepFactory(
+    private val application: android.app.Application,
+    private val api: MsaidiziApi,
+    private val onboardingData: OnboardingSessionData
+) : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(PhoneVerificationStep::class.java)) {
+            return PhoneVerificationStep(application, api, onboardingData) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }

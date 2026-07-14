@@ -144,5 +144,51 @@
             android:layout_marginTop="24dp"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
 
+        <!-- ══════════════════════════════════════════════════════ -->
+        <!-- WhatsApp Connection (Optional)                         -->
+        <!-- ══════════════════════════════════════════════════════ -->
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="16dp"
+            android:background="#E0E0E0" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="WhatsApp (Si Lazima)"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:id="@+id/whatsapp_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Haujaunganisha WhatsApp bado."
+            android:textSize="14sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="12dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/whatsapp_connect_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📱 Unganisha WhatsApp"
+            android:textSize="16sp"
+            android:layout_marginBottom="8dp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Unganisha WhatsApp ili kupata ripoti kupitia WhatsApp. Si lazima — SMS inafanya kazi pia."
+            android:textSize="12sp"
+            android:textColor="@color/text_secondary"
+            android:lineSpacingExtra="2dp" />
+
     </LinearLayout>
 </ScrollView>

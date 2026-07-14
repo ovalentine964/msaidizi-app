@@ -54,6 +54,9 @@ class MsaidiziApp : Application(), Configuration.Provider {
     @Inject
     lateinit var briefingDelivery: BriefingDelivery
 
+    @Inject
+    lateinit var memoryManager: com.msaidizi.app.core.MemoryManager
+
     override fun onCreate() {
         super.onCreate()
 
@@ -150,25 +153,24 @@ class MsaidiziApp : Application(), Configuration.Provider {
      * Critical for 2GB devices where Android's LMK is aggressive.
      */
     private fun handleMemoryPressure(level: Int) {
+        // Delegate to MemoryManager for systematic cleanup
+        memoryManager.onTrimMemory(level)
+
         when (level) {
             android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN -> {
                 Timber.d("Memory pressure: UI hidden — releasing UI caches")
-                // Release UI caches, image caches
             }
             android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_MODERATE -> {
                 Timber.w("Memory pressure: moderate — releasing non-essential caches")
             }
             android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW -> {
                 Timber.w("Memory pressure: low — releasing ASR/TTS models if idle")
-                // VoicePipeline will handle model release
             }
             android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL -> {
                 Timber.e("Memory pressure: CRITICAL — emergency cleanup")
-                // Release all models, keep only DB and foreground state
             }
             android.content.ComponentCallbacks2.TRIM_MEMORY_COMPLETE -> {
                 Timber.e("Memory pressure: COMPLETE — app may be killed soon")
-                // Save all state, prepare for process death
             }
         }
     }

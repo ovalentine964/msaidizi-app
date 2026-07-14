@@ -34,6 +34,10 @@ class SettingsViewModel @Inject constructor(
         val BUSINESS_NAME_KEY = stringPreferencesKey("business_name")
         val BUSINESS_TYPE_KEY = stringPreferencesKey("business_type")
         val ONBOARDING_KEY = booleanPreferencesKey("onboarding_complete")
+        val WHATSAPP_CONNECTED_KEY = booleanPreferencesKey("whatsapp_connected")
+        val WHATSAPP_PHONE_KEY = stringPreferencesKey("whatsapp_phone")
+        val PHONE_VERIFIED_KEY = booleanPreferencesKey("phone_verified")
+        val VERIFICATION_CHANNEL_KEY = stringPreferencesKey("verification_channel")
     }
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -53,7 +57,11 @@ class SettingsViewModel @Inject constructor(
                     wifiOnly = prefs[WIFI_ONLY_KEY] ?: true,
                     businessName = prefs[BUSINESS_NAME_KEY] ?: "",
                     businessType = prefs[BUSINESS_TYPE_KEY] ?: "",
-                    onboardingComplete = prefs[ONBOARDING_KEY] ?: false
+                    onboardingComplete = prefs[ONBOARDING_KEY] ?: false,
+                    whatsappConnected = prefs[WHATSAPP_CONNECTED_KEY] ?: false,
+                    whatsappPhone = prefs[WHATSAPP_PHONE_KEY] ?: "",
+                    phoneVerified = prefs[PHONE_VERIFIED_KEY] ?: false,
+                    verificationChannel = prefs[VERIFICATION_CHANNEL_KEY] ?: ""
                 )
             }
         }
@@ -113,6 +121,26 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setWhatsAppConnected(connected: Boolean, phone: String = "") {
+        viewModelScope.launch {
+            context.dataStore.edit { prefs ->
+                prefs[WHATSAPP_CONNECTED_KEY] = connected
+                if (phone.isNotBlank()) {
+                    prefs[WHATSAPP_PHONE_KEY] = phone
+                }
+            }
+        }
+    }
+
+    fun disconnectWhatsApp() {
+        viewModelScope.launch {
+            context.dataStore.edit { prefs ->
+                prefs[WHATSAPP_CONNECTED_KEY] = false
+                prefs[WHATSAPP_PHONE_KEY] = ""
+            }
+        }
+    }
+
     suspend fun getSyncInfo(): Map<String, Any> {
         return syncManager.getSyncInfo()
     }
@@ -125,5 +153,13 @@ data class SettingsUiState(
     val wifiOnly: Boolean = true,
     val businessName: String = "",
     val businessType: String = "",
-    val onboardingComplete: Boolean = false
+    val onboardingComplete: Boolean = false,
+    /** Whether WhatsApp is connected for report delivery */
+    val whatsappConnected: Boolean = false,
+    /** WhatsApp phone number if connected */
+    val whatsappPhone: String = "",
+    /** Whether phone was verified via SMS */
+    val phoneVerified: Boolean = false,
+    /** Verification channel used during onboarding */
+    val verificationChannel: String = ""
 )

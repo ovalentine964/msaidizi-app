@@ -335,9 +335,9 @@ class BusinessDiscoveryFragment : Fragment() {
                 continueButton.visibility = View.VISIBLE
             }
             is ConversationStep.Complete -> {
-                // Save profile and navigate to main
+                // Save profile and navigate to phone verification
                 saveProfile(step.profile)
-                navigateToMain()
+                navigateToPhoneVerification()
             }
         }
     }
@@ -495,14 +495,14 @@ class BusinessDiscoveryFragment : Fragment() {
     }
 
     /**
-     * Navigate to main activity after onboarding completes.
+     * Navigate to phone verification after business discovery.
      */
-    private fun navigateToMain() {
+    private fun navigateToPhoneVerification() {
         findNavController().navigate(
-            R.id.action_business_discovery_to_main,
+            R.id.action_business_discovery_to_phone_verification,
             null,
             androidx.navigation.NavOptions.Builder()
-                .setPopUpTo(R.id.nav_onboarding, true)
+                .setPopUpTo(R.id.nav_onboarding, false)
                 .build()
         )
     }

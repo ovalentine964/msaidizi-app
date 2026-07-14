@@ -42,6 +42,8 @@ class SettingsFragment : Fragment() {
     private lateinit var businessTypeSpinner: Spinner
     private lateinit var syncButton: Button
     private lateinit var syncStatus: TextView
+    private lateinit var whatsappStatus: TextView
+    private lateinit var whatsappConnectButton: com.google.android.material.button.MaterialButton
 
     // ── Accessibility ──
     private var ttsHelper: AccessibilityTtsHelper? = null
@@ -147,6 +149,22 @@ class SettingsFragment : Fragment() {
             findNavController().navigate(R.id.action_settings_to_models)
         }
 
+        // ── WhatsApp Connection (Optional) ──
+        whatsappStatus = view.findViewById(R.id.whatsapp_status)
+        whatsappConnectButton = view.findViewById(R.id.whatsapp_connect_button)
+
+        whatsappConnectButton.setOnClickListener {
+            val state = viewModel.uiState.value
+            if (state.whatsappConnected) {
+                // Disconnect WhatsApp
+                viewModel.disconnectWhatsApp()
+                ttsHelper?.disconnectWhatsApp()
+            } else {
+                // Launch WhatsApp connection dialog
+                showWhatsAppConnectDialog()
+            }
+        }
+
         // ── Accessibility: Voice input for business name ──
         businessNameMicButton = ImageButton(requireContext()).apply {
             setImageResource(android.R.drawable.ic_btn_speak_now)
@@ -216,6 +234,57 @@ class SettingsFragment : Fragment() {
         autoSyncSwitch.isChecked = state.autoSync
         wifiOnlySwitch.isChecked = state.wifiOnly
         businessNameInput.setText(state.businessName)
+
+        // Update WhatsApp status
+        if (state.whatsappConnected) {
+            whatsappStatus.text = "✅ WhatsApp imeunganishwa: ${state.whatsappPhone}"
+            whatsappStatus.setTextColor(resources.getColor(android.R.color.holo_green_dark, null))
+            whatsappConnectButton.text = "🔌 Tenganisha WhatsApp"
+        } else {
+            whatsappStatus.text = "Haujaunganisha WhatsApp bado."
+            whatsappStatus.setTextColor(resources.getColor(android.R.color.darker_gray, null))
+            whatsappConnectButton.text = "📱 Unganisha WhatsApp"
+        }
+    }
+
+    /**
+     * Show WhatsApp connection dialog.
+     * Prompts for phone number and initiates WhatsApp verification.
+     */
+    private fun showWhatsAppConnectDialog() {
+        val context = requireContext()
+        val layout = android.widget.LinearLayout(context).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(48, 32, 48, 16)
+        }
+
+        val phoneInput = EditText(context).apply {
+            hint = "Namba ya WhatsApp (mfano: 0712345678)"
+            inputType = android.text.InputType.TYPE_CLASS_PHONE
+            textSize = 16f
+        }
+        layout.addView(phoneInput)
+
+        val statusText = TextView(context).apply {
+            text = ""
+            textSize = 14f
+            setPadding(0, 16, 0, 0)
+        }
+        layout.addView(statusText)
+
+        android.app.AlertDialog.Builder(context)
+            .setTitle("📱 Unganisha WhatsApp")
+            .setMessage("Weka namba yako ya WhatsApp ili kupata ripoti kupitia WhatsApp. Huu ni hiari — unaweza kutumia SMS badala yake.")
+            .setView(layout)
+            .setPositiveButton("Unganisha") { _, _ ->
+                val phone = phoneInput.text.toString().trim()
+                if (phone.isNotBlank()) {
+                    viewModel.setWhatsAppConnected(true, phone)
+                    ttsHelper?.speak("WhatsApp imeunganishwa")
+                }
+            }
+            .setNegativeButton("Ghairi", null)
+            .show()
     }
 
     override fun onDestroyView() {

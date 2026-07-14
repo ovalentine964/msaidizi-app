@@ -30,13 +30,33 @@
         android:name="com.msaidizi.app.onboarding.BusinessDiscoveryFragment"
         android:label="Getting to Know You">
         <action
-            android:id="@+id/action_business_discovery_to_model_setup"
-            app:destination="@id/modelSetupFragment" />
+            android:id="@+id/action_business_discovery_to_phone_verification"
+            app:destination="@id/phoneVerificationFragment" />
         <action
             android:id="@+id/action_business_discovery_to_main"
             app:destination="@id/mainActivity"
             app:popUpTo="@id/nav_onboarding"
             app:popUpToInclusive="true" />
+    </fragment>
+
+    <!-- Step 3.5: Phone Verification — SMS or WhatsApp -->
+    <fragment
+        android:id="@+id/phoneVerificationFragment"
+        android:name="com.msaidizi.app.onboarding.PhoneVerificationFragment"
+        android:label="Hakikisha Namba">
+        <action
+            android:id="@+id/action_phone_verification_to_personality"
+            app:destination="@id/personalityFragment" />
+    </fragment>
+
+    <!-- Personality / Preferences -->
+    <fragment
+        android:id="@+id/personalityFragment"
+        android:name="com.msaidizi.app.onboarding.PersonalityFragment"
+        android:label="Mapendeleo">
+        <action
+            android:id="@+id/action_personality_to_first_use"
+            app:destination="@id/firstUseFragment" />
     </fragment>
 
     <!-- Step 4: Model Setup — Downloads happening in background -->

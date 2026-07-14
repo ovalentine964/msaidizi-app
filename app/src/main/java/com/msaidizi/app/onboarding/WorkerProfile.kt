@@ -104,6 +104,16 @@ data class WorkerProfile(
     /** WhatsApp phone number for report delivery (254XXXXXXXXX format) */
     val whatsappPhone: String = "",
 
+    // ── Phone Verification ──
+    /** Whether the phone number was verified during onboarding */
+    val phoneVerified: Boolean = false,
+
+    /** Verification channel used: "SMS" or "WHATSAPP" */
+    val verificationChannel: String = "",
+
+    /** Verified phone number (E.164 format) */
+    val verifiedPhone: String = "",
+
     // ── Language & Communication (BCB 108) ──
     /** Primary language code (e.g., "sw", "en", "ha") */
     val language: String = "sw",

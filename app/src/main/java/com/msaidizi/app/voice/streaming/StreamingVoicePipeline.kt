@@ -1,6 +1,7 @@
 package com.msaidizi.app.voice.streaming
 
 import android.content.Context
+import com.msaidizi.app.core.MemoryManager
 import com.msaidizi.app.core.util.DeviceTier
 import com.msaidizi.app.voice.*
 import com.msaidizi.app.voice.emotion.AudioFeatureExtractor
@@ -51,7 +52,8 @@ class StreamingVoicePipeline @Inject constructor(
     private val llmEngine: LlmEngine,
     private val featureExtractor: AudioFeatureExtractor,
     private val emotionDetector: VoiceEmotionDetector,
-    private val dialectEngine: DialectDetectionEngine
+    private val dialectEngine: DialectDetectionEngine,
+    private val memoryManager: MemoryManager
 ) {
     companion object {
         private const val TAG = "StreamingPipeline"
@@ -97,27 +99,35 @@ class StreamingVoicePipeline @Inject constructor(
 
     /**
      * Initialize the streaming pipeline.
+     * On BASIC (2GB) tier: only loads Piper TTS. Kokoro and ASR lazy-load with mutual exclusion.
      */
     suspend fun initialize() {
-        Timber.tag(TAG).d("Initializing streaming pipeline...")
+        Timber.tag(TAG).d("Initializing streaming pipeline (tier=%s)...", DeviceTier.current)
         _pipelineState.value = StreamingPipelineState.INITIALIZING
 
-        // Load primary TTS: Kokoro
-        val kokoroLoaded = kokoroTts.loadModel()
-        if (!kokoroLoaded) {
-            Timber.tag(TAG).w("Kokoro not available, falling back to Piper")
-            piperTts.loadModel()
-        }
+        val isBasicTier = DeviceTier.current == DeviceTier.Tier.BASIC
 
-        // ASR lazy-loads on first use
-        if (DeviceTier.preloadASR()) {
-            speechRecognizer.loadModel()
+        if (isBasicTier) {
+            // 2GB: Only load Piper TTS (25MB)
+            piperTts.loadModel()
+            Timber.tag(TAG).i("Streaming pipeline: BASIC tier — Piper TTS only")
+        } else {
+            // 3GB+: Load Kokoro with memory check
+            val kokoroLoaded = kokoroTts.loadModel()
+            if (!kokoroLoaded) {
+                Timber.tag(TAG).w("Kokoro not available, falling back to Piper")
+                piperTts.loadModel()
+            } else {
+                memoryManager.acquireHeavyModelSlot(MemoryManager.LoadedHeavyModel.KOKORO)
+            }
+
+            if (DeviceTier.preloadASR()) {
+                speechRecognizer.loadModel()
+            }
         }
 
         _pipelineState.value = StreamingPipelineState.IDLE
-        Timber.tag(TAG).i("Streaming pipeline ready (ASR: %s, TTS: %s)",
-            if (speechRecognizer.isModelReady()) speechRecognizer.getActiveModelId() else "lazy",
-            if (kokoroLoaded) "Kokoro" else "Piper")
+        Timber.tag(TAG).i("Streaming pipeline ready")
     }
 
     // ────────────────────── Voice Processing ──────────────────────
@@ -207,6 +217,7 @@ class StreamingVoicePipeline @Inject constructor(
 
     /**
      * Process end of speech — full pipeline execution.
+     * MUTUAL EXCLUSION: Unloads Kokoro before ASR on 2GB devices.
      */
     private suspend fun processEndOfSpeech() {
         val speechAudio = vad.getAccumulatedAudio()
@@ -219,6 +230,14 @@ class StreamingVoicePipeline @Inject constructor(
         val startTime = System.currentTimeMillis()
 
         try {
+            // ═══ MUTUAL EXCLUSION: Free memory for ASR on 2GB devices ═══
+            val isBasicTier = DeviceTier.current == DeviceTier.Tier.BASIC
+            if (isBasicTier && kokoroTts.isModelReady()) {
+                Timber.tag(TAG).d("Unloading Kokoro for ASR on 2GB device")
+                kokoroTts.unloadModel()
+                memoryManager.releaseHeavyModelSlot(MemoryManager.LoadedHeavyModel.KOKORO)
+            }
+
             // Step 1: Extract features for emotion + dialect detection (parallel)
             val featuresJob = processingScope?.async(Dispatchers.Default) {
                 val emotionFeatures = featureExtractor.extractEmotionFeatures(speechAudio)
@@ -231,6 +250,13 @@ class StreamingVoicePipeline @Inject constructor(
             if (transcript.isNullOrBlank()) {
                 _pipelineState.value = StreamingPipelineState.IDLE
                 return
+            }
+
+            // ═══ MUTUAL EXCLUSION: Unload ASR after transcription ═══
+            if (isBasicTier) {
+                speechRecognizer.unloadModel()
+                memoryManager.releaseHeavyModelSlot(MemoryManager.LoadedHeavyModel.WHISPER)
+                Timber.tag(TAG).d("Unloaded ASR after transcription on 2GB device")
             }
 
             // Step 3: Get features
@@ -270,6 +296,14 @@ class StreamingVoicePipeline @Inject constructor(
                 detectedEmotion, speechRecognizer.getActiveModelId()
             )
 
+        } catch (e: OutOfMemoryError) {
+            Timber.tag(TAG).e("OOM during streaming processing")
+            speechRecognizer.unloadModel()
+            kokoroTts.unloadModel()
+            memoryManager.releaseHeavyModelSlot(MemoryManager.LoadedHeavyModel.WHISPER)
+            memoryManager.releaseHeavyModelSlot(MemoryManager.LoadedHeavyModel.KOKORO)
+            System.gc()
+            _pipelineState.value = StreamingPipelineState.ERROR
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Error in streaming pipeline")
             _pipelineState.value = StreamingPipelineState.ERROR
@@ -280,7 +314,7 @@ class StreamingVoicePipeline @Inject constructor(
 
     /**
      * Speak a response with emotion-aware voice personality.
-     * Uses Kokoro's emotion-to-voice mapping for empathetic responses.
+     * On 2GB devices: prefers Piper, loads Kokoro only if memory allows.
      */
     suspend fun speakWithEmotion(
         text: String,
@@ -289,11 +323,21 @@ class StreamingVoicePipeline @Inject constructor(
     ) {
         _pipelineState.value = StreamingPipelineState.SPEAKING
 
-        if (kokoroTts.isModelReady()) {
+        val isBasicTier = DeviceTier.current == DeviceTier.Tier.BASIC
+
+        if (!isBasicTier && kokoroTts.isModelReady()) {
             kokoroTts.setVoiceForEmotion(emotion)
             kokoroTts.speak(text, language)
         } else if (piperTts.isModelReady()) {
             piperTts.speak(text, language)
+        } else if (!isBasicTier) {
+            // Try loading Kokoro on non-basic devices
+            val loaded = kokoroTts.loadModel()
+            if (loaded) {
+                memoryManager.acquireHeavyModelSlot(MemoryManager.LoadedHeavyModel.KOKORO)
+                kokoroTts.setVoiceForEmotion(emotion)
+                kokoroTts.speak(text, language)
+            }
         }
 
         _pipelineState.value = StreamingPipelineState.IDLE
@@ -320,12 +364,20 @@ class StreamingVoicePipeline @Inject constructor(
     // ────────────────────── Resource Management ──────────────────────
 
     fun onBackground() {
+        val isBasicTier = DeviceTier.current == DeviceTier.Tier.BASIC
         speechRecognizer.unloadModel()
         mmsTtsEngine.unloadModel()
+        memoryManager.releaseHeavyModelSlot(MemoryManager.LoadedHeavyModel.WHISPER)
+
+        if (isBasicTier) {
+            kokoroTts.unloadModel()
+            memoryManager.releaseHeavyModelSlot(MemoryManager.LoadedHeavyModel.KOKORO)
+        }
     }
 
     suspend fun onForeground() {
-        if (DeviceTier.preloadASR()) {
+        val isBasicTier = DeviceTier.current == DeviceTier.Tier.BASIC
+        if (!isBasicTier && DeviceTier.preloadASR()) {
             speechRecognizer.loadModel()
         }
     }
@@ -337,6 +389,8 @@ class StreamingVoicePipeline @Inject constructor(
         kokoroTts.unloadModel()
         piperTts.unloadModel()
         mmsTtsEngine.unloadModel()
+        memoryManager.releaseHeavyModelSlot(MemoryManager.LoadedHeavyModel.WHISPER)
+        memoryManager.releaseHeavyModelSlot(MemoryManager.LoadedHeavyModel.KOKORO)
         _pipelineState.value = StreamingPipelineState.IDLE
     }
 

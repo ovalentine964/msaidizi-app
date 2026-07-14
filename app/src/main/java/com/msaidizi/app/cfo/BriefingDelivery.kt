@@ -25,8 +25,8 @@ import java.time.DayOfWeek
  * Delivery channels:
  * - Android notification (morning briefing at 7 AM)
  * - In-app message (when worker opens the app)
- * - WhatsApp (future — via Business API)
- * - Voice call (future — via IVR for feature phones)
+ * - SMS (via Africa's Talking API — for workers without WhatsApp)
+ * - WhatsApp (optional — via Business API)
  *
  * Morning briefing at 7 AM:
  * "Habari Maria! Leo utapata KSh 1,800 ikiwa unafuata mpango huu.
@@ -44,6 +44,11 @@ import java.time.DayOfWeek
  * - ECO 201 (Micro): Profit-maximizing restocking times
  * - STA 244 (Time Series): Trend-based alerts
  * - STA 341 (Estimation): Forecast-based briefings
+ *
+ * Delivery channel selection:
+ * - SMS: Default for workers without WhatsApp (30% of Kenyan informal workers)
+ * - WhatsApp: Optional, for workers who have it and prefer it
+ * - Notification: Always available as fallback
  */
 class BriefingDelivery(
     private val cfoEngine: CFOEngine,
