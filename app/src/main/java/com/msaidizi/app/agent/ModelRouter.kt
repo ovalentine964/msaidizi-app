@@ -824,7 +824,7 @@ class ModelRouter(
                             // On retry, inject critique as feedback
                             if (previousCritique != null && previousCritique.shouldRetry) {
                                 val feedbackMessages = enhancedMessages + listOf(
-                                    mapOf("role" to "system",
+                                    mapOf<String, String>("role" to "system",
                                         "content" to "Previous response had issues: ${previousCritique.issues.joinToString("; ")}. Suggestions: ${previousCritique.suggestions.joinToString("; ")}. Improve the response.")
                                 )
                                 callProvider(provider, request.copy(messages = feedbackMessages), effectiveComplexity)
