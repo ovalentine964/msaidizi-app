@@ -1,124 +1,145 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <pattern id="bgPattern" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse">
-      <rect width="16" height="16" fill="none"/>
-      <path d="M8 0 L16 8 L8 16 L0 8 Z" fill="none" stroke="#162040" stroke-width="0.4" opacity="0.5"/>
-    </pattern>
-    <pattern id="africaTex" x="0" y="0" width="6" height="6" patternUnits="userSpaceOnUse">
-      <rect width="6" height="6" fill="#C6922A"/>
-      <path d="M0 0 L3 3 M3 0 L6 3 M0 3 L3 6 M3 3 L6 6" stroke="#B07A1A" stroke-width="0.5" opacity="0.35"/>
-    </pattern>
-    <linearGradient id="pulseGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#E0591A"/>
-      <stop offset="45%" stop-color="#E0591A"/>
-      <stop offset="55%" stop-color="#F7931A"/>
-      <stop offset="100%" stop-color="#F7931A"/>
+    <linearGradient id="africaGreen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#22C55E"/>
+      <stop offset="100%" stop-color="#15803D"/>
     </linearGradient>
-    <clipPath id="roundClip">
-      <rect width="512" height="512" rx="36" ry="36"/>
-    </clipPath>
   </defs>
 
-  <g clip-path="url(#roundClip)">
-    <!-- Background -->
-    <rect width="512" height="512" fill="#0F1B3A"/>
-    <rect width="512" height="512" fill="url(#bgPattern)"/>
+  <!-- Dark background circle -->
+  <circle cx="256" cy="256" r="256" fill="#0F172A"/>
 
-    <!-- Concentric guide circles -->
-    <circle cx="256" cy="232" r="192" fill="none" stroke="#162040" stroke-width="0.8" opacity="0.5"/>
-    <circle cx="256" cy="232" r="178" fill="none" stroke="#1a2848" stroke-width="0.6" opacity="0.35"/>
+  <!-- Shield outline — thick gold border -->
+  <path d="M256 48 C318 48 382 68 420 112 C452 150 465 200 465 260 C465 332 438 386 398 420 C362 448 314 464 256 466 C198 464 150 448 114 420 C74 386 47 332 47 260 C47 200 60 150 92 112 C130 68 194 48 256 48Z"
+    fill="none" stroke="#FBBF24" stroke-width="8" stroke-linejoin="round"/>
 
-    <!-- Africa continent (behind B) -->
-    <g transform="translate(256, 225) scale(1.15)" opacity="0.95">
-      <path d="M-8,-90 C2,-95 12,-93 20,-88 C28,-82 32,-72 34,-62
-               C36,-50 38,-40 42,-30 C46,-18 52,-8 56,2
-               C59,10 58,18 54,26 C50,34 46,40 44,48
-               C42,56 38,64 32,72 C26,78 18,82 10,84
-               C4,85 -2,84 -8,80 C-14,74 -18,66 -22,56
-               C-26,46 -30,36 -34,24 C-38,14 -42,4 -44,-6
-               C-46,-16 -46,-26 -42,-36 C-38,-46 -32,-54 -26,-64
-               C-20,-72 -14,-80 -8,-86 Z"
-           fill="url(#africaTex)" stroke="#B07A1A" stroke-width="0.5"/>
-      <!-- Madagascar -->
-      <ellipse cx="52" cy="42" rx="4" ry="10" fill="url(#africaTex)" stroke="#B07A1A" stroke-width="0.3" transform="rotate(12,52,42)"/>
-    </g>
+  <!-- AFRICA CONTINENT — clean polygon based on key geographic features -->
+  <!-- Recognizable: NW corner, West African bulge, Gulf of Guinea, Horn, Cape -->
+  <path d="
+    M240 78
+    L215 82
+    L192 90
+    L175 102
+    L162 118
+    L152 138
+    L145 158
+    L140 178
+    L136 198
+    L130 215
+    L122 230
+    L128 248
+    L138 260
+    L142 275
+    L140 292
+    L138 310
+    L142 328
+    L150 345
+    L162 360
+    L178 375
+    L198 388
+    L218 398
+    L238 406
+    L256 410
+    L274 406
+    L294 398
+    L314 388
+    L332 375
+    L348 360
+    L360 345
+    L368 328
+    L372 310
+    L370 292
+    L368 275
+    L372 260
+    L380 248
+    L386 230
+    L380 215
+    L376 198
+    L372 178
+    L378 158
+    L382 138
+    L378 118
+    L368 102
+    L352 90
+    L335 82
+    L310 78
+    L285 75
+    L265 75
+    L240 78Z
+  " fill="url(#africaGreen)"/>
 
-    <!-- White B letterform -->
-    <g transform="translate(256, 228)">
-      <!-- Outer B shape with two bowls -->
-      <path d="M-62,-98 L-62,98 L8,98
-               C38,98 60,82 60,62 C60,48 52,38 42,34
-               C54,28 64,16 64,2 C64,-16 50,-30 24,-30
-               L-62,-30 Z"
-           fill="#FFFFFF"/>
-      <!-- Upper counter (hole) -->
-      <path d="M-42,-78 L-42,-8 L18,-8
-               C32,-8 40,-2 40,6 C40,14 34,18 18,18
-               L-42,18 Z"
-           fill="#0F1B3A"/>
-      <!-- Lower counter (hole) -->
-      <path d="M-42,38 L-42,78 L14,78
-               C28,78 36,70 36,60 C36,50 28,42 14,42
-               L-42,42 Z"
-           fill="#0F1B3A"/>
-    </g>
+  <!-- Inner detail: West Africa bulge enhancement -->
+  <path d="
+    M152 138
+    L138 155
+    L128 175
+    L122 198
+    L118 218
+    L120 238
+    L128 252
+    L138 260
+    L142 275
+    L140 292
+    L138 310
+    L142 328
+    L150 345
+    L162 360
+    L178 375
+    L198 388
+    L218 398
+    L238 406
+    L256 410
+    L274 406
+    L294 398
+    L314 388
+    L332 375
+    L348 360
+    L360 345
+    L368 328
+    L372 310
+    L370 292
+    L368 275
+    L372 260
+    L380 248
+    L386 230
+    L380 215
+    L376 198
+    L372 178
+    L378 158
+    L382 138
+    L378 118
+    L368 102
+    L352 90
+    L335 82
+    L310 78
+    L285 75
+    L265 75
+    L240 78
+    L215 82
+    L192 90
+    L175 102
+    L162 118
+    L152 138Z
+  " fill="url(#africaGreen)" opacity="0.3"/>
 
-    <!-- Pulse heartbeat line -->
-    <g transform="translate(0, 228)">
-      <path d="M55,0 L168,0 L182,-28 L196,0 L208,0 L214,-48 L224,16 L234,0 L457,0"
-           fill="none" stroke="url(#pulseGrad)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="182" cy="-28" r="3" fill="#E0591A"/>
-      <circle cx="214" cy="-48" r="3.5" fill="#F7931A"/>
-    </g>
+  <!-- SPEECH BUBBLE — upper right, bold white -->
+  <path d="
+    M348 82 C348 68 366 58 388 58 L450 60 C468 61 480 74 480 90 L479 134 C479 150 467 161 449 162 L422 163 L402 188 L407 163 L388 162 C370 161 358 150 358 134 L358 96 C358 90 354 84 348 82Z
+  " fill="#FFFFFF"/>
 
-    <!-- ANGAVU text -->
-    <text x="126" y="358" font-family="'Arial Black','Arial',Helvetica,sans-serif" font-size="44" font-weight="900" fill="#FFFFFF" letter-spacing="5">ANGAVU</text>
+  <circle cx="396" cy="110" r="9" fill="#0F172A"/>
+  <circle cx="422" cy="110" r="9" fill="#0F172A"/>
+  <circle cx="448" cy="110" r="9" fill="#0F172A"/>
 
-    <!-- INTELLIGENCE text -->
-    <text x="158" y="392" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="400" fill="#FFFFFF" letter-spacing="7" opacity="0.95">INTELLIGENCE</text>
+  <!-- CHART LINE — bold gold -->
+  <polyline points="75,398 155,315 228,335 298,255 372,188 452,108"
+    fill="none" stroke="#FBBF24" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
 
-    <!-- Tagline bar -->
-    <line x1="145" y1="406" x2="367" y2="406" stroke="#FFFFFF" stroke-width="1.2" opacity="0.5"/>
+  <circle cx="75" cy="398" r="12" fill="#F59E0B" stroke="#0F172A" stroke-width="4"/>
+  <circle cx="155" cy="315" r="12" fill="#F59E0B" stroke="#0F172A" stroke-width="4"/>
+  <circle cx="228" cy="335" r="12" fill="#F59E0B" stroke="#0F172A" stroke-width="4"/>
+  <circle cx="298" cy="255" r="12" fill="#F59E0B" stroke="#0F172A" stroke-width="4"/>
+  <circle cx="372" cy="188" r="16" fill="#FBBF24" stroke="#FFFFFF" stroke-width="4"/>
 
-    <!-- Corner dot clusters -->
-    <!-- Top-left -->
-    <g transform="translate(52,52)">
-      <circle r="3.2" fill="#FFCC02"/>
-      <circle cx="-8" cy="-7" r="2" fill="#F7931A"/>
-      <circle cx="8" cy="-7" r="2" fill="#F7931A"/>
-      <circle cx="-10" cy="5" r="2" fill="#F7931A"/>
-      <circle cx="10" cy="5" r="2" fill="#F7931A"/>
-      <circle cy="11" r="2" fill="#F7931A"/>
-    </g>
-    <!-- Top-right -->
-    <g transform="translate(460,52)">
-      <circle r="3.2" fill="#FFCC02"/>
-      <circle cx="-8" cy="-7" r="2" fill="#F7931A"/>
-      <circle cx="8" cy="-7" r="2" fill="#F7931A"/>
-      <circle cx="-10" cy="5" r="2" fill="#F7931A"/>
-      <circle cx="10" cy="5" r="2" fill="#F7931A"/>
-      <circle cy="11" r="2" fill="#F7931A"/>
-    </g>
-    <!-- Bottom-left -->
-    <g transform="translate(52,460)">
-      <circle r="3.2" fill="#FFCC02"/>
-      <circle cx="-8" cy="-7" r="2" fill="#F7931A"/>
-      <circle cx="8" cy="-7" r="2" fill="#F7931A"/>
-      <circle cx="-10" cy="5" r="2" fill="#F7931A"/>
-      <circle cx="10" cy="5" r="2" fill="#F7931A"/>
-      <circle cy="11" r="2" fill="#F7931A"/>
-    </g>
-    <!-- Bottom-right -->
-    <g transform="translate(460,460)">
-      <circle r="3.2" fill="#FFCC02"/>
-      <circle cx="-8" cy="-7" r="2" fill="#F7931A"/>
-      <circle cx="8" cy="-7" r="2" fill="#F7931A"/>
-      <circle cx="-10" cy="5" r="2" fill="#F7931A"/>
-      <circle cx="10" cy="5" r="2" fill="#F7931A"/>
-      <circle cy="11" r="2" fill="#F7931A"/>
-    </g>
-  </g>
-
-  <!-- Rounded border -->
-  <rect x="1.5" y="1.5" width="509" height="509" rx="36" ry="36" fill="none" stroke="#1a2a4a" stroke-width="1.5"/>
+  <path d="M362 210 L372 176 L382 210" fill="none" stroke="#FBBF24" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
