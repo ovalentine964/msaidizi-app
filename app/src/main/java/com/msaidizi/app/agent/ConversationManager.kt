@@ -485,9 +485,6 @@ class ConversationManager(
 
     // ═══════════════ CONVERSATION ACCESS ═══════════════
 
-    /** Get conversation memory for external access */
-    fun getConversationMemory(): ConversationMemory = conversationMemory
-
     /** Clear conversation memory */
     fun clearConversationMemory() = conversationMemory.clear()
 
