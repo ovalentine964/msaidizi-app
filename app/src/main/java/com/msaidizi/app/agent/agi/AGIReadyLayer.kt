@@ -225,7 +225,7 @@ class AGIReadyLayer @Inject constructor() {
 
         // ── Check TRANSPARENCY_REQUIRED ──
         if (autonomyState.activeBoundaries.contains(SafetyBoundary.TRANSPARENCY_REQUIRED)) {
-            if (requiresExplanation(inputLower) && !hasReasoning(response.text)) {
+            if (requiresExplanation(inputLower) && hasReasoning(response.text) == null) {
                 Timber.d("TRANSPARENCY_REQUIRED: adding reasoning prompt")
                 val enhanced = addReasoningPrompt(response, language)
                 return SafetyResult(
