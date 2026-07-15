@@ -81,8 +81,8 @@ class MemoryManager @Inject constructor(
 
     // ═══ Mutual Exclusion ═══
     // Tracks which heavy model is currently loaded to enforce mutual exclusion on 2GB devices.
-    // Only ONE of {WHISPER, KOKORO} may be loaded at a time on BASIC tier.
-    enum class LoadedHeavyModel { NONE, WHISPER, KOKORO }
+    // Only ONE of {WHISPER, KOKORO, LLM} may be loaded at a time on BASIC tier.
+    enum class LoadedHeavyModel { NONE, WHISPER, KOKORO, LLM }
     @Volatile private var loadedHeavyModel: LoadedHeavyModel = LoadedHeavyModel.NONE
 
     // ═══ Memory Levels ═══
@@ -228,6 +228,7 @@ class MemoryManager @Inject constructor(
         val modelSize = when (requested) {
             LoadedHeavyModel.WHISPER -> WHISPER_MEMORY_MB
             LoadedHeavyModel.KOKORO -> KOKORO_MEMORY_MB
+            LoadedHeavyModel.LLM -> LLM_MEMORY_MB
             else -> 0L
         }
         if (!canLoadModel(modelSize)) {

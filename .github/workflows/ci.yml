@@ -264,15 +264,65 @@ jobs:
           chmod +x scripts/download-models.sh
           ./scripts/download-models.sh --verify
 
+      - name: Set NDK environment
+        run: |
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${{ env.NDK_VERSION }}" >> $GITHUB_ENV
+
+      - name: Cache sherpa-onnx JNI libs
+        id: cache-sherpa
+        uses: actions/cache@v4
+        with:
+          path: app/src/main/jniLibs
+          key: sherpa-onnx-jni-v1-arm64
+
+      - name: Setup sherpa-onnx JNI libs
+        if: steps.cache-sherpa.outputs.cache-hit != 'true'
+        run: |
+          chmod +x scripts/setup-sherpa-onnx.sh
+          ./scripts/setup-sherpa-onnx.sh
+        timeout-minutes: 15
+
+      - name: Verify sherpa-onnx JNI libs
+        run: |
+          JNI_DIR="app/src/main/jniLibs/arm64-v8a"
+          echo "🔍 Checking sherpa-onnx JNI libs in $JNI_DIR ..."
+          REQUIRED_LIBS=("libsherpa-onnx-jni.so" "libonnxruntime.so")
+          MISSING=0
+          for lib in "${REQUIRED_LIBS[@]}"; do
+            if [ -f "$JNI_DIR/$lib" ]; then
+              SIZE=$(stat -c%s "$JNI_DIR/$lib")
+              echo "  ✅ $lib ($(( SIZE / 1024 )) KB)"
+            else
+              echo "  ❌ MISSING: $lib"
+              MISSING=$((MISSING + 1))
+            fi
+          done
+          if [ "$MISSING" -gt 0 ]; then
+            echo "::error::$MISSING required sherpa-onnx JNI lib(s) missing!"
+            exit 1
+          fi
+          echo "✅ sherpa-onnx JNI verification passed"
+
       - name: Build Debug APK
         run: |
+          echo "🔧 Starting Gradle build..."
+          echo "   NDK_HOME=$ANDROID_NDK_HOME"
           set -o pipefail
           ./gradlew assembleDebug --stacktrace 2>&1 | tee build-debug.log
           EXIT_CODE=${PIPESTATUS[0]}
           if [ "$EXIT_CODE" -ne 0 ]; then
+            echo ""
             echo "::error::Gradle assembleDebug failed with exit code $EXIT_CODE"
+            echo ""
+            echo "=== Last 50 lines of build log ==="
+            tail -50 build-debug.log
+            echo ""
+            echo "=== Searching for compilation errors ==="
+            grep -i "error:" build-debug.log | head -20 || true
+            grep -i "FAILED" build-debug.log | head -10 || true
             exit "$EXIT_CODE"
           fi
+          echo "✅ Gradle build succeeded"
 
       - name: Upload build log on failure
         if: failure()
@@ -306,6 +356,7 @@ jobs:
         with:
           name: debug-apk
           path: app/build/outputs/apk/debug/*.apk
+          retention-days: 14
 
   # ──────────────────────────────────────
   # 6. Model Integrity Verification
@@ -385,6 +436,10 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: Set NDK environment
+        run: |
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${{ env.NDK_VERSION }}" >> $GITHUB_ENV
+
       - name: Cache NDK & CMake
         id: cache-ndk
         uses: actions/cache@v4
@@ -416,23 +471,38 @@ jobs:
           ./scripts/download-models.sh
         timeout-minutes: 30
 
+      - name: Verify models present
+        run: |
+          chmod +x scripts/download-models.sh
+          ./scripts/download-models.sh --verify
+
+      - name: Cache sherpa-onnx JNI libs
+        id: cache-sherpa
+        uses: actions/cache@v4
+        with:
+          path: app/src/main/jniLibs
+          key: sherpa-onnx-jni-v1-arm64
+
+      - name: Setup sherpa-onnx JNI libs
+        if: steps.cache-sherpa.outputs.cache-hit != 'true'
+        run: |
+          chmod +x scripts/setup-sherpa-onnx.sh
+          ./scripts/setup-sherpa-onnx.sh
+        timeout-minutes: 15
+
       - name: Decode keystore
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > /tmp/release.keystore
 
       - name: Build Signed Release APK
         env:
-          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          RELEASE_KEYSTORE_FILE: /tmp/release.keystore
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
           set -o pipefail
-          ./gradlew assembleRelease \
-            -Pandroid.injected.signing.store.file=/tmp/release.keystore \
-            -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
-            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
-            -Pandroid.injected.signing.key.password="$KEY_PASSWORD" \
-            --stacktrace 2>&1 | tee build-release.log
+          ./gradlew assembleRelease --stacktrace 2>&1 | tee build-release.log
           EXIT_CODE=${PIPESTATUS[0]}
           if [ "$EXIT_CODE" -ne 0 ]; then
             echo "::error::Gradle assembleRelease failed with exit code $EXIT_CODE"

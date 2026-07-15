@@ -75,7 +75,7 @@ class SequentialModelLoader @Inject constructor(
         // Model memory estimates (MB) — used for pre-flight checks
         private const val WHISPER_MEMORY_MB = 200
         private const val PIPER_MEMORY_MB = 80
-        private const val QWEN_MEMORY_MB = 900
+        private const val QWEN_MEMORY_MB = 600
 
         // Exponential smoothing factor for memory prediction (STA 244)
         private const val MEMORY_SMOOTHING_ALPHA = 0.3
