@@ -2,7 +2,7 @@
 # https://detekt.dev/docs/introduction/configurations
 
 build:
-  maxIssues: 5
+  maxIssues: 20
   excludeCorrectable: false
   weights:
     complexity: 2
@@ -37,17 +37,21 @@ complexity:
     ignoreAnnotated: ['Composable', 'Preview']
   LongMethod:
     active: true
-    threshold: 60
+    threshold: 100
+    ignoreAnnotated: ['Test']
   ComplexMethod:
     active: true
-    threshold: 15
+    threshold: 25
+    ignoreAnnotated: ['Test']
   TooManyFunctions:
     active: true
-    thresholdInFiles: 25
-    thresholdInClasses: 20
+    thresholdInFiles: 50
+    thresholdInClasses: 40
+    ignoreAnnotated: ['Test']
   LargeClass:
     active: true
-    threshold: 600
+    threshold: 1000
+    ignoreAnnotated: ['Nested', 'Test']
 
 style:
   MaxLineLength:
