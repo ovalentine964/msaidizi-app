@@ -51,7 +51,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class ProductClassifier @Inject constructor(
-    private val context: Context
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: Context
 ) {
     companion object {
         private const val MODEL_FILENAME = "mobilenetv3_kenyan_produce.onnx"
