@@ -861,14 +861,6 @@ object AppModule {
         patternTracker, learningAgent, learningHarness
     )
 
-    @Provides
-    @Singleton
-    fun providePreferenceLearner(
-        patternDao: PatternDao,
-        userCorrectionDao: UserCorrectionDao,
-        userVocabularyDao: UserVocabularyDao
-    ): PreferenceLearner = PreferenceLearner(patternDao, userCorrectionDao, userVocabularyDao)
-
     // === DECOMPOSED HANDLERS ===
 
     @Provides
@@ -1065,20 +1057,8 @@ object AppModule {
         inferenceHarness = inferenceHarness
     )
 
-    @Provides
-    @Singleton
-    fun provideLlamaCppEngine(
-        @ApplicationContext context: Context
-    ): LlamaCppEngine = LlamaCppEngine(context)
-
-    @Provides
-    @Singleton
-    fun provideLlmEngine(
-        @ApplicationContext context: Context,
-        llamaCppEngine: LlamaCppEngine,
-        languageModelRegistry: LanguageModelRegistry,
-        adaptiveAsrEngine: AdaptiveAsrEngine
-    ): LlmEngine = LlmEngine(context, llamaCppEngine, languageModelRegistry, adaptiveAsrEngine)
+    // LlamaCppEngine and LlmEngine are auto-provided by Hilt via their @Inject constructors.
+    // Duplicate @Provides methods removed to fix Dagger/DuplicateBindings errors.
 
     @Provides
     @Singleton
@@ -1151,21 +1131,8 @@ object AppModule {
 
     // === EVOLUTION / SELF-EVOLUTION ===
 
-    @Provides
-    @Singleton
-    fun provideFeedbackCollector(
-        feedbackDao: FeedbackDao,
-        httpClient: HttpClient,
-        json: Json,
-        @ApplicationContext context: Context
-    ): FeedbackCollector = FeedbackCollector(feedbackDao, httpClient, json, context)
-
-    @Provides
-    @Singleton
-    fun provideFeatureRequestTracker(
-        requestDao: FeatureRequestDao,
-        feedbackDao: FeedbackDao
-    ): FeatureRequestTracker = FeatureRequestTracker(requestDao, feedbackDao)
+    // FeedbackCollector and FeatureRequestTracker are auto-provided by Hilt via their @Inject constructors.
+    // Duplicate @Provides methods removed to fix Dagger/DuplicateBindings errors.
 
     // === GAMIFICATION & STICKINESS ===
 
@@ -1280,12 +1247,8 @@ object AppModule {
 
     // === SKILLS — Degree-to-skill bridge ===
 
-    @Provides
-    @Singleton
-    fun provideSkillBridge(
-        httpClient: HttpClient,
-        json: Json
-    ): SkillBridge = SkillBridge(httpClient, json)
+    // SkillBridge is auto-provided by Hilt via its @Inject constructor.
+    // Duplicate @Provides method removed to fix Dagger/DuplicateBindings error.
 
     // === SOCIAL LAYER — Peer comparison, leaderboard, community tips, WhatsApp ===
 
@@ -1344,11 +1307,8 @@ object AppModule {
     // InferenceHarness is auto-provided by Hilt via its @Inject constructor.
     // Duplicate @Provides method removed to fix Dagger/MissingBinding errors.
 
-    @Provides
-    @Singleton
-    fun provideVoicePipelineHarness(
-        inferenceHarness: InferenceHarness
-    ): VoicePipelineHarness = VoicePipelineHarness(inferenceHarness)
+    // VoicePipelineHarness is auto-provided by Hilt via its @Inject constructor.
+    // Duplicate @Provides method removed to fix Dagger/DuplicateBindings error.
 
     // LearningHarness and VisionHarness are auto-provided by Hilt via their @Inject constructors.
     // Duplicate @Provides methods removed to fix Dagger/MissingBinding errors.
