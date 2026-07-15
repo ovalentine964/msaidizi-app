@@ -3,7 +3,9 @@ package com.msaidizi.app.agent.loops
 import com.msaidizi.app.agent.AgentEvent
 import com.msaidizi.app.agent.AgentEventBus
 import io.mockk.*
-import io.mockk.impl.annotations.MockK
+import io.mockk.Runs
+import io.mockk.*
+import io.mockk.Runs
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -37,7 +39,7 @@ class HumanInTheLoopTest {
     @BeforeEach
     fun setUp() {
         hitl = HumanInTheLoop(agentEventBus)
-        coEvery { agentEventBus.publish(any()) } just kotlinx.coroutines.channels.ChannelResult.success(Unit)
+        coEvery { agentEventBus.publish(any()) } just Runs
     }
 
     // ── Initial State ────────────────────────────────────────────

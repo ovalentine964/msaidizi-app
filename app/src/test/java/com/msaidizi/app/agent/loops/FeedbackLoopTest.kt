@@ -523,7 +523,8 @@ class FeedbackLoopTest {
             type = "SALE",
             item = "mandazi",
             amount = 500.0,
-            quantity = 10.0
+            quantity = 10.0,
+            language = "sw"
         )
     }
 }
