@@ -60,7 +60,10 @@ android {
         // Build config fields for model paths
         buildConfigField("String", "MODEL_DIR", "\"models\"")
         buildConfigField("String", "WHISPER_MODEL", "\"ggml-tiny.en-q5_1.bin\"")
+        // Decision Council (2026-07-15): Qwen 3.5 0.8B as primary LLM
         buildConfigField("String", "LLM_MODEL", "\"qwen3.5-0.8b-q4_k_m.gguf\"")
+        // Decision Council (2026-07-15): Gemma 4 E2B as alternative/benchmark LLM
+        buildConfigField("String", "LLM_MODEL_ALT", "\"gemma-4-e2b-q4_k_m.gguf\"")
         buildConfigField("String", "TTS_MODEL", "\"piper-swahili.onnx\"")
         buildConfigField("String", "VAD_MODEL", "\"silero_vad.onnx\"")
 
@@ -355,3 +358,4 @@ tasks.withType<JacocoReport> {
 // CI trigger Wed Jul 15 02:17:37 CST 2026
 // Build trigger Wed Jul 15 03:25:46 CST 2026
 // APK build trigger
+// Model config update: Decision Council 2026-07-15

@@ -18,9 +18,15 @@ import javax.inject.Singleton
  *
  * ## Strategy
  * - APK ships with a tiny bundled model (~10MB) for immediate basic AI
- * - On first launch, downloads full Qwen 0.5B (~300MB) in background
+ * - On first launch, downloads full Qwen 3.5 0.8B (~500MB) in background
  * - App works with bundled model until full model is ready
  * - WiFi-only option respects user data costs
+ * - Optional: Gemma 4 E2B download for MID/HIGH tier devices
+ *
+ * ## Decision Council (2026-07-15)
+ * - Bundled mini-model: unchanged (ships in APK)
+ * - Full model download: Qwen 3.5 0.8B Q4_K_M (primary)
+ * - Optional download: Gemma 4 E2B Q4_K_M (benchmark, MID/HIGH only)
  *
  * ## Valentine's Mum Test
  * She downloads → installs → opens → says "Habari" → it works.
@@ -36,6 +42,7 @@ class BundledModelManager @Inject constructor(
         private const val TAG = "BundledModelManager"
         private const val PREFS_NAME = "bundled_model_prefs"
         private const val KEY_FULL_MODEL_DOWNLOADED = "full_model_downloaded"
+        private const val KEY_ALT_MODEL_DOWNLOADED = "alt_model_downloaded"
         private const val KEY_DOWNLOAD_WIFI_ONLY = "download_wifi_only"
         private const val KEY_FIRST_LAUNCH_COMPLETED = "first_launch_completed"
         private const val KEY_SELECTED_LANGUAGE = "selected_language"
@@ -43,8 +50,11 @@ class BundledModelManager @Inject constructor(
         /** The bundled mini-model ID (shipped in APK assets) */
         const val BUNDLED_MODEL_ID = "qwen-0.5b-mini"
 
-        /** The full model ID (downloaded post-install) */
-        const val FULL_MODEL_ID = "qwen-0.5b-q4km"
+        /** The full model ID (downloaded post-install) — Decision Council: Qwen 3.5 0.8B */
+        const val FULL_MODEL_ID = "qwen3.5-0.8b-q4km"
+
+        /** The alternative model ID — Decision Council: Gemma 4 E2B (MID/HIGH tiers) */
+        const val ALT_MODEL_ID = "gemma-4-e2b-q4km"
 
         /** All bundled model assets to extract on first launch */
         private val BUNDLED_ASSETS = listOf(
@@ -75,6 +85,10 @@ class BundledModelManager @Inject constructor(
     private val _fullModelProgress = MutableStateFlow(0f)
     /** Progress of full model download (0.0 to 1.0) */
     val fullModelProgress: StateFlow<Float> = _fullModelProgress
+
+    private val _altModelProgress = MutableStateFlow(0f)
+    /** Progress of alternative model download (0.0 to 1.0) */
+    val altModelProgress: StateFlow<Float> = _altModelProgress
 
     private val _downloadState = MutableStateFlow(FullModelDownloadState.NOT_STARTED)
     val downloadState: StateFlow<FullModelDownloadState> = _downloadState
@@ -129,7 +143,7 @@ class BundledModelManager @Inject constructor(
      * Prefers full model, falls back to bundled.
      */
     fun getBestModelPath(): File? {
-        // Prefer full model
+        // Prefer full model (Qwen 3.5 0.8B)
         val fullPath = modelRegistry.getModelPath(FULL_MODEL_ID)
         if (fullPath != null && fullPath.exists()) return fullPath
 
@@ -241,11 +255,19 @@ class BundledModelManager @Inject constructor(
     }
 
     /**
-     * Check if the full model has been downloaded.
+     * Check if the full model (Qwen 3.5 0.8B) has been downloaded.
      */
     fun isFullModelDownloaded(): Boolean {
         return prefs.getBoolean(KEY_FULL_MODEL_DOWNLOADED, false) ||
                modelRegistry.isModelReady(FULL_MODEL_ID)
+    }
+
+    /**
+     * Check if the alternative model (Gemma 4 E2B) has been downloaded.
+     */
+    fun isAltModelDownloaded(): Boolean {
+        return prefs.getBoolean(KEY_ALT_MODEL_DOWNLOADED, false) ||
+               modelRegistry.isModelReady(ALT_MODEL_ID)
     }
 
     /**
@@ -295,7 +317,7 @@ class BundledModelManager @Inject constructor(
     // ────────────────────── Private ──────────────────────
 
     /**
-     * Start background download of the full model.
+     * Start background download of the full model (Qwen 3.5 0.8B Q4_K_M).
      */
     private fun startFullModelDownload() {
         _downloadState.value = FullModelDownloadState.DOWNLOADING
@@ -322,7 +344,7 @@ class BundledModelManager @Inject constructor(
                     prefs.edit().putBoolean(KEY_FULL_MODEL_DOWNLOADED, true).apply()
                     _downloadState.value = FullModelDownloadState.COMPLETED
                     _fullModelProgress.value = 1f
-                    Timber.i(TAG, "Full model downloaded successfully")
+                    Timber.i(TAG, "Full model (Qwen 3.5 0.8B) downloaded successfully")
                 } else {
                     _downloadState.value = FullModelDownloadState.WAITING_FOR_WIFI
                     Timber.i(TAG, "Full model download deferred (waiting for WiFi)")
@@ -330,6 +352,47 @@ class BundledModelManager @Inject constructor(
             } catch (e: Exception) {
                 Timber.e(e, "Full model download failed")
                 _downloadState.value = FullModelDownloadState.FAILED
+            }
+        }
+    }
+
+    /**
+     * Start background download of the alternative model (Gemma 4 E2B Q4_K_M).
+     * Only available for MID/HIGH tier devices.
+     *
+     * @param deviceTier The current device tier (from ModelManager)
+     */
+    fun startAltModelDownload(deviceTier: ModelManager.DeviceTier) {
+        if (deviceTier == ModelManager.DeviceTier.LOW) {
+            Timber.w(TAG, "Alt model (Gemma 4 E2B) not available for LOW-tier devices")
+            return
+        }
+
+        scope.launch {
+            try {
+                val progressJob = launch {
+                    modelDownloader.downloadProgress.collect { progressMap ->
+                        val p = progressMap[ALT_MODEL_ID] ?: 0f
+                        _altModelProgress.value = p
+                    }
+                }
+
+                val success = modelDownloader.downloadModel(
+                    modelId = ALT_MODEL_ID,
+                    forceNetwork = !isWifiOnlyDownload()
+                )
+
+                progressJob.cancel()
+
+                if (success) {
+                    prefs.edit().putBoolean(KEY_ALT_MODEL_DOWNLOADED, true).apply()
+                    _altModelProgress.value = 1f
+                    Timber.i(TAG, "Alt model (Gemma 4 E2B) downloaded successfully")
+                } else {
+                    Timber.i(TAG, "Alt model download deferred (waiting for WiFi)")
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Alt model download failed")
             }
         }
     }

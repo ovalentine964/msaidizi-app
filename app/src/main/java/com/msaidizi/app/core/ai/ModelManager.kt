@@ -33,11 +33,17 @@ import javax.inject.Provider
  *
  * ## Device Tiers (Kenya/East Africa market reality)
  *
- * | Tier | RAM   | CPU          | Model                     | Size   |
- * |------|-------|--------------|---------------------------|--------|
- * | LOW  | ≤2GB  | Helio A22    | Qwen3.5-0.8B Q4_0        | ~500MB |
- * | MID  | 3-4GB | Helio G25    | Qwen3-1.7B Q4_K_M        | ~1.1GB |
- * | HIGH | ≥6GB  | Dimensity 700| Qwen3.5-2B Q4_K_M        | ~1.2GB |
+ * | Tier | RAM   | CPU          | Default Model              | Alt Model           |
+ * |------|-------|--------------|----------------------------|---------------------|
+ * | LOW  | ≤2GB  | Helio A22    | Qwen3.5-0.8B Q4_K_M       | — (Gemma too large) |
+ * | MID  | 3-4GB | Helio G25    | Qwen3.5-0.8B Q4_K_M       | Gemma4-E2B Q4_K_M  |
+ * | HIGH | ≥6GB  | Dimensity 700| Qwen3.5-2B Q4_K_M         | Gemma4-E2B Q4_K_M  |
+ *
+ * ## Decision Council Model Selection (2026-07-15)
+ *
+ * - **Primary:** Qwen 3.5 0.8B — best reasoning-per-byte for mobile
+ * - **Benchmark:** Gemma 4 E2B — Google's edge model, available on MID/HIGH
+ * - **Future:** Tiny Aya Earth — placeholder for when Cohere releases it
  *
  * ## Integration Points
  *
@@ -69,11 +75,23 @@ class ModelManager @Inject constructor(
         private const val LOW_MEMORY_PERCENT = 85  // Unload models when >85% RAM used
         private const val CRITICAL_MEMORY_PERCENT = 92 // Emergency unload
 
-        // Model IDs for LLM variants — supports scaling from 0.8B → 1.7B → 2B
-        // Updated: Qwen3.5-0.8B as default (mobile-optimized reasoning)
+        // ────────────────────── Model IDs ──────────────────────
+        // Decision Council approved (2026-07-15):
+        //   Primary:  Qwen 3.5 0.8B — mobile-optimized reasoning, all tiers
+        //   Benchmark: Gemma 4 E2B — Google edge model, MID/HIGH tiers
+        //   Future:   Tiny Aya Earth — placeholder for Cohere release
+
+        /** Qwen 3.5 0.8B Q4_K_M — primary model for all tiers (~500MB) */
         private const val MODEL_QWEN_08B = "qwen3.5-0.8b-q4km"
-        private const val MODEL_QWEN_1_7B = "qwen3-1.7b-q4km"
+
+        /** Qwen 3.5 2B Q4_K_M — higher-quality default for HIGH-tier devices (~1.2GB) */
         private const val MODEL_QWEN_2B = "qwen3.5-2b-q4km"
+
+        /** Gemma 4 E2B Q4_K_M — benchmark/alternative model for MID/HIGH tiers (~600MB) */
+        private const val MODEL_GEMMA_4_E2B = "gemma-4-e2b-q4km"
+
+        /** Tiny Aya Earth — future placeholder (not yet available) */
+        private const val MODEL_TINY_AYA_EARTH = "tiny-aya-earth"
 
         // Auto-unload timeout: unload model after this many minutes of inactivity
         private const val AUTO_UNLOAD_MINUTES_IDLE = 10L
@@ -213,7 +231,7 @@ class ModelManager @Inject constructor(
      * Hot-swap the current LLM model without app restart.
      * Unloads current model, loads new one, updates state atomically.
      *
-     * @param targetModelId The model to swap to (e.g., MODEL_QWEN_08B)
+     * @param targetModelId The model to swap to (e.g., MODEL_QWEN_08B or MODEL_GEMMA_4_E2B)
      * @return true if swap succeeded
      */
     suspend fun hotSwapModel(targetModelId: String): Boolean {
@@ -303,9 +321,10 @@ class ModelManager @Inject constructor(
      */
     private fun getModelSizeMb(modelId: String): Int {
         return when (modelId) {
-            MODEL_QWEN_08B -> 500   // ~500MB Q4_0 (Qwen3.5-0.8B)
-            MODEL_QWEN_1_7B -> 1100  // ~1.1GB Q4_K_M (Qwen3-1.7B)
-            MODEL_QWEN_2B -> 1200   // ~1.2GB Q4_K_M (Qwen3.5-2B)
+            MODEL_QWEN_08B -> 500      // ~500MB Q4_K_M (Qwen3.5-0.8B)
+            MODEL_QWEN_2B -> 1200      // ~1.2GB Q4_K_M (Qwen3.5-2B)
+            MODEL_GEMMA_4_E2B -> 600   // ~600MB Q4_K_M (Gemma 4 E2B)
+            MODEL_TINY_AYA_EARTH -> 400 // ~400MB estimated (Tiny Aya Earth)
             else -> 500
         }
     }
@@ -372,12 +391,34 @@ class ModelManager @Inject constructor(
     /**
      * Get the optimal model ID for this device.
      * Returns the model that balances quality and memory constraints.
+     *
+     * Decision Council (2026-07-15):
+     * - LOW:  Qwen 3.5 0.8B only (Gemma 4 E2B too large for ≤2GB devices)
+     * - MID:  Qwen 3.5 0.8B default, Gemma 4 E2B available as alternative
+     * - HIGH: Qwen 3.5 2B default, Gemma 4 E2B available as alternative
      */
     fun getOptimalModelId(): String {
         return when (deviceTier) {
-            DeviceTier.LOW -> MODEL_QWEN_08B    // Qwen3.5-0.8B — mobile-optimized reasoning
-            DeviceTier.MID -> MODEL_QWEN_1_7B   // Qwen3-1.7B — thinking mode, strong reasoning
-            DeviceTier.HIGH -> MODEL_QWEN_2B    // Qwen3.5-2B — edge-optimized, best quality
+            DeviceTier.LOW -> MODEL_QWEN_08B     // Qwen3.5-0.8B — only option for LOW tier
+            DeviceTier.MID -> MODEL_QWEN_08B     // Qwen3.5-0.8B default (Gemma 4 E2B available)
+            DeviceTier.HIGH -> MODEL_QWEN_2B     // Qwen3.5-2B — best quality (Gemma 4 E2B available)
+        }
+    }
+
+    /**
+     * Get the alternative model ID for this device (if available).
+     * Returns null if no alternative is suitable for this tier.
+     *
+     * Decision Council (2026-07-15):
+     * - LOW:  None (Gemma 4 E2B too large)
+     * - MID:  Gemma 4 E2B
+     * - HIGH: Gemma 4 E2B
+     */
+    fun getAlternativeModelId(): String? {
+        return when (deviceTier) {
+            DeviceTier.LOW -> null                 // No alternative — Gemma 4 too large
+            DeviceTier.MID -> MODEL_GEMMA_4_E2B    // Gemma 4 E2B available
+            DeviceTier.HIGH -> MODEL_GEMMA_4_E2B   // Gemma 4 E2B available
         }
     }
 
@@ -514,12 +555,17 @@ class ModelManager @Inject constructor(
      * Get the list of LLM model candidates for this device, ordered by preference.
      * First element is the preferred model; later elements are fallbacks.
      * Includes graceful degradation: tries larger models first on capable devices.
+     *
+     * Decision Council (2026-07-15):
+     * - LOW:  Qwen 3.5 0.8B ONLY (Gemma 4 E2B ~600MB too large for ≤2GB devices)
+     * - MID:  Qwen 3.5 0.8B default → Gemma 4 E2B fallback
+     * - HIGH: Qwen 3.5 2B default → Gemma 4 E2B fallback → Qwen 3.5 0.8B last resort
      */
     private fun getModelCandidates(): List<String> {
         return when (deviceTier) {
-            DeviceTier.LOW -> listOf(MODEL_QWEN_08B)  // Qwen3.5-0.8B only
-            DeviceTier.MID -> listOf(MODEL_QWEN_1_7B, MODEL_QWEN_08B)  // Try 1.7B first
-            DeviceTier.HIGH -> listOf(MODEL_QWEN_2B, MODEL_QWEN_1_7B, MODEL_QWEN_08B)  // Try 2B first
+            DeviceTier.LOW -> listOf(MODEL_QWEN_08B)                                // Qwen only
+            DeviceTier.MID -> listOf(MODEL_QWEN_08B, MODEL_GEMMA_4_E2B)             // Qwen default, Gemma fallback
+            DeviceTier.HIGH -> listOf(MODEL_QWEN_2B, MODEL_GEMMA_4_E2B, MODEL_QWEN_08B) // 2B default, Gemma, then 0.8B
         }
     }
 
