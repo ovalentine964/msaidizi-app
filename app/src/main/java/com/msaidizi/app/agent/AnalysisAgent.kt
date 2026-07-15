@@ -221,6 +221,21 @@ class AnalysisAgent(
             values.map { ((it - mean) / stdDev).pow(4) }.sum() / n - 3
         } else 0.0
 
+        // Normality assessment
+        // STA 241 §9.1 (CLT): For n ≥ 30, sampling distribution of x̄ is approximately
+        // normal regardless of population distribution. For n < 30, normality of the
+        // underlying data matters — skewness and kurtosis are diagnostic.
+        val normalityNote = when {
+            n >= 30 -> "CLT applies (n≥30): sample mean is approximately normal"
+            skewness > 1.0 || skewness < -1.0 ->
+                "WARNING: Highly skewed data (γ₁=%.2f) with small n=%d. " +
+                "Consider non-parametric methods (e.g., median, IQR)".format(skewness, n)
+            kurtosis > 2.0 || kurtosis < -2.0 ->
+                "WARNING: Heavy-tailed data (γ₂=%.2f) with small n=%d. " +
+                "Normal-based inference may be unreliable".format(kurtosis, n)
+            else -> "Small sample (n=%d): normality assumed but unverified".format(n)
+        }
+
         Timber.d("Sales stats: mean=%.0f, median=%.0f, sd=%.0f, skew=%.2f",
             mean, median, stdDev, skewness)
 
@@ -238,7 +253,8 @@ class AnalysisAgent(
             skewness = skewness,
             kurtosis = kurtosis,
             min = sorted.first(),
-            max = sorted.last()
+            max = sorted.last(),
+            normalityNote = normalityNote
         )
     }
 
@@ -625,7 +641,8 @@ data class SalesDescriptiveStats(
     val skewness: Double,
     val kurtosis: Double,
     val min: Double,
-    val max: Double
+    val max: Double,
+    val normalityNote: String = ""
 )
 
 /**

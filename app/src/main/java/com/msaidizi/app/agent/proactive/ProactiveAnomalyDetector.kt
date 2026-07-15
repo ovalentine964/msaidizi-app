@@ -541,8 +541,10 @@ class ProactiveAnomalyDetector(
     private fun calculateStats(values: List<Double>): Pair<Double, Double> {
         if (values.isEmpty()) return Pair(0.0, 0.0)
 
+        val n = values.size
         val mean = values.average()
-        val variance = values.map { (it - mean) * (it - mean) }.average()
+        // Sample variance (Bessel's correction: n-1 denominator) for unbiased estimate
+        val variance = values.map { (it - mean) * (it - mean) }.sum() / (n - 1).coerceAtLeast(1)
         val stddev = sqrt(variance)
 
         return Pair(mean, stddev)

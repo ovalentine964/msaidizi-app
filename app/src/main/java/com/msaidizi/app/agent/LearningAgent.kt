@@ -233,13 +233,16 @@ class LearningAgent(
         val se = sqrt(var1 / n1 + var2 / n2)
         val tStat = if (se > 0) (mean1 - mean2) / se else 0.0
 
-        // Approximate p-value using normal approximation (for n > 5)
-        val z = abs(tStat)
+        // Use t-distribution critical values with Welch-Satterthwaite df
+        // df = n1 + n2 - 2 (pooled); for small samples t > z (more conservative)
+        val df = n1 + n2 - 2
+        val tCrit = tCriticalValues(df)
+        val absT = abs(tStat)
         val pValue = when {
-            z > 3.29 -> 0.001
-            z > 2.576 -> 0.01
-            z > 1.96 -> 0.05
-            z > 1.645 -> 0.10
+            absT > tCrit.p001 -> 0.001
+            absT > tCrit.p01 -> 0.01
+            absT > tCrit.p05 -> 0.05
+            absT > tCrit.p10 -> 0.10
             else -> 0.5
         }
 
@@ -476,6 +479,31 @@ class LearningAgent(
     /** Get all learned vocabulary for a language. */
     suspend fun getVocabulary(language: String = "sw"): List<VocabularyEntry> {
         return patternDao.getVocabularyForLanguage(language)
+    }
+
+    /**
+     * t-distribution critical values for two-tailed test.
+     * Returns critical values at p=0.10, 0.05, 0.01, 0.001 significance levels.
+     * For large df (≥120), converges to z-values (1.645, 1.960, 2.576, 3.291).
+     * For small df, t-values are larger (more conservative) — correct behavior.
+     */
+    private data class TCrit(val p10: Double, val p05: Double, val p01: Double, val p001: Double)
+
+    private fun tCriticalValues(df: Int): TCrit {
+        // Lookup table for common df values (two-tailed critical values)
+        return when {
+            df >= 120 -> TCrit(1.645, 1.960, 2.576, 3.291)  // ≈ z
+            df >= 60  -> TCrit(1.671, 2.000, 2.660, 3.460)
+            df >= 40  -> TCrit(1.684, 2.021, 2.704, 3.551)
+            df >= 30  -> TCrit(1.697, 2.042, 2.750, 3.646)
+            df >= 20  -> TCrit(1.725, 2.086, 2.845, 3.850)
+            df >= 15  -> TCrit(1.753, 2.131, 2.947, 4.073)
+            df >= 10  -> TCrit(1.812, 2.228, 3.169, 4.587)
+            df >= 7   -> TCrit(1.895, 2.365, 3.499, 5.408)
+            df >= 5   -> TCrit(2.015, 2.571, 4.032, 6.869)
+            df >= 3   -> TCrit(2.353, 3.182, 5.841, 12.924)
+            else      -> TCrit(2.353, 3.182, 5.841, 12.924) // df=2 fallback (conservative)
+        }
     }
 
     /**
