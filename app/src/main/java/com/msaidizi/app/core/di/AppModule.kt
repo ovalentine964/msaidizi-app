@@ -1355,6 +1355,11 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideInferenceCostTracker(): com.msaidizi.app.agent.cost.InferenceCostTracker =
+        com.msaidizi.app.agent.cost.InferenceCostTracker()
+
+    @Provides
+    @Singleton
     fun provideInferenceHarness(
         costTracker: com.msaidizi.app.agent.cost.InferenceCostTracker
     ): InferenceHarness = InferenceHarness(costTracker)
