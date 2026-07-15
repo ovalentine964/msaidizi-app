@@ -27,7 +27,7 @@ import javax.inject.Singleton
  * Expected SD card structure:
  * /sdcard/Msaidizi/models/whisper-tiny-int4.onnx
  * /sdcard/Msaidizi/models/piper-swahili.onnx
- * /sdcard/Msaidizi/models/qwen-0.5b-q4_k_m.gguf
+ * /sdcard/Msaidizi/models/qwen3.5-0.8b-q4_k_m.gguf
  */
 @Singleton
 class SdCardModelLoader @Inject constructor(

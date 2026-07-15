@@ -424,7 +424,9 @@ class ModelRegistry @Inject constructor(
          * Ensures backward compatibility when renaming models.
          */
         private val MODEL_ID_ALIASES = mapOf(
-            "qwen-0.5b-q4km" to "qwen-3.5-0.8b-q4km"
+            "qwen-0.5b-q4km" to "qwen-3.5-0.8b-q4km",
+            "qwen3.5-0.8b-q4km" to "qwen-3.5-0.8b-q4km",
+            "qwen-3.5-0.8b-mini" to "qwen-3.5-0.8b-q4km"
         )
 
         /**

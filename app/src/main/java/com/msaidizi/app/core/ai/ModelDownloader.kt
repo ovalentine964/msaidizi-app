@@ -179,10 +179,10 @@ class ModelDownloader @Inject constructor(
      * @return true if download succeeded
      */
     suspend fun downloadLlmModel(): Boolean {
-        val modelId = "qwen-0.5b-q4km"
+        val modelId = "qwen-3.5-0.8b-q4km"
         if (modelRegistry.isModelReady(modelId)) return true
 
-        Timber.i(TAG, "Starting LLM model download (%d MB)", 310)
+        Timber.i(TAG, "Starting LLM model download (%d MB)", 580)
         return downloadModel(modelId)
     }
 
@@ -483,7 +483,7 @@ class ModelDownloader @Inject constructor(
             "silero-vad" -> "Voice Detector"
             "whisper-tiny-int4" -> "Speech Recognition"
             "piper-swahili" -> "Swahili Voice"
-            "qwen-0.5b-q4km" -> "AI Assistant"
+            "qwen-3.5-0.8b-q4km" -> "AI Assistant"
             else -> modelId
         }
     }

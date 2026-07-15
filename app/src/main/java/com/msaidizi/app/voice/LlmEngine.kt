@@ -32,7 +32,7 @@ import javax.inject.Singleton
  * - Load time: ~3s with mmap
  * - Inference: ~8 tokens/sec (prompt), ~5 tokens/sec (generation)
  * - Context: 1024 tokens (BASIC tier) to 4096 (ENHANCED)
- * - RAM: ~350MB when loaded (released on background)
+ * - RAM: ~500MB when loaded (released on background)
  */
 @Singleton
 class LlmEngine @Inject constructor(
@@ -154,7 +154,7 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
             return false
         }
 
-        val modelPath = File(context.filesDir, "models/qwen-0.5b-q4_k_m.gguf")
+        val modelPath = File(context.filesDir, "models/qwen3.5-0.8b-q4_k_m.gguf")
         if (!modelPath.exists()) {
             Timber.w("LLM model not found: %s", modelPath.absolutePath)
             return false
@@ -164,7 +164,7 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
     }
 
     /**
-     * Unload model to free ~350MB RAM.
+     * Unload model to free ~500MB RAM.
      * Called when app goes to background on 2GB devices.
      */
     fun unloadModel() {

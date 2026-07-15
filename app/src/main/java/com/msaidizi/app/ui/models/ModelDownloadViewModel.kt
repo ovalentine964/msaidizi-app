@@ -170,7 +170,7 @@ class ModelDownloadViewModel @Inject constructor(
         "silero-vad" -> "Sauti ya Kugundua (VAD)"
         "whisper-tiny-int4" -> "Sauti ya Maandishi (Whisper)"
         "piper-swahili" -> "Sauti ya Kiswahili (Piper)"
-        "qwen-0.5b-q4km" -> "Akili ya AI (Qwen LLM)"
+        "qwen-3.5-0.8b-q4km" -> "Akili ya AI (Qwen LLM)"
         else -> id
     }
 
@@ -178,7 +178,7 @@ class ModelDownloadViewModel @Inject constructor(
         "silero-vad" -> "Inagundua sauti — inafanya kazi mara moja"
         "whisper-tiny-int4" -> "Inabadilisha sauti kuwa maandishi"
         "piper-swahili" -> "Inazungumza Kiswahili"
-        "qwen-0.5b-q4km" -> "Jibu la maswali yoyote"
+        "qwen-3.5-0.8b-q4km" -> "Jibu la maswali yoyote"
         else -> ""
     }
 }

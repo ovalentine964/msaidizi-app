@@ -55,6 +55,7 @@ class MemoryManager @Inject constructor(
         const val WHISPER_MEMORY_MB = 40L
         const val KOKORO_MEMORY_MB = 90L
         const val PIPER_MEMORY_MB = 25L
+        const val LLM_MEMORY_MB = 600L  // Qwen 3.5 0.8B Q4_K_M loaded in RAM
 
         // Cache size limits for 2GB devices
         private const val MAX_CACHE_ENTRIES = 500

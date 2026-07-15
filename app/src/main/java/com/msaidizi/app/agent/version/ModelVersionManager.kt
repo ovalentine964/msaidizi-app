@@ -9,16 +9,16 @@ import java.io.File
  * Model Version Manager — On-device model upgrade path for Msaidizi.
  *
  * Manages the lifecycle of on-device AI models:
- * - Current: Qwen 0.5B (Q4_K_M, ~300MB, llama.cpp NDK)
- * - Next: Qwen3.5-0.8B (Q4_K_M, ~500MB, Apache 2.0)
+ * - Current: Qwen 3.5 0.8B (Q4_K_M, ~580MB, llama.cpp NDK)
+ * - Previous: Qwen 0.5B (Q4_K_M, ~300MB, deprecated)
  * - Future: Qwen3.5-2B (Q4_K_M, ~1.2GB, for 3GB+ devices)
  *
  * ## Upgrade Path (Swarm 7 Research)
  *
  * | Model          | Params | Quantized | Performance           | Min RAM |
  * |----------------|--------|-----------|-----------------------|---------|
- * | Qwen 0.5B      | 0.5B   | ~300MB    | Basic tasks           | 2GB     |
- * | Qwen3.5-0.8B   | 0.8B   | ~500MB    | Better multilingual   | 2GB     |
+ * | Qwen 0.5B      | 0.5B   | ~300MB    | Basic tasks (deprecated) | 2GB     |
+ * | Qwen3.5-0.8B   | 0.8B   | ~580MB    | Current — multilingual   | 2GB     |
  * | Qwen3.5-2B     | 2B     | ~1.2GB    | Edge reasoning        | 3GB     |
  * | Gemma 4 E2B    | 2B     | ~1.5GB    | Multimodal (vision)   | 3GB     |
  *
@@ -53,7 +53,7 @@ class ModelVersionManager(private val context: Context) {
         val capabilities: List<String>
     ) {
         QWEN_0_5B(
-            displayName = "Qwen 0.5B (Current)",
+            displayName = "Qwen 0.5B (Deprecated)",
             modelFileName = "qwen-0.5b-q4_k_m.gguf",
             parameterCount = "0.5B",
             quantizedSizeMb = 300,
@@ -62,10 +62,10 @@ class ModelVersionManager(private val context: Context) {
             capabilities = listOf("text_generation", "swahili", "simple_qa")
         ),
         QWEN3_5_0_8B(
-            displayName = "Qwen3.5 0.8B (Upgrade Target)",
+            displayName = "Qwen3.5 0.8B (Current)",
             modelFileName = "qwen3.5-0.8b-q4_k_m.gguf",
             parameterCount = "0.8B",
-            quantizedSizeMb = 500,
+            quantizedSizeMb = 580,
             minRamMb = 2048,
             license = "Apache 2.0",
             capabilities = listOf(
@@ -136,8 +136,8 @@ class ModelVersionManager(private val context: Context) {
     fun getCurrentVersion(): ModelVersion {
         val saved = prefs.getString("current_version", null)
         return if (saved != null) {
-            try { ModelVersion.valueOf(saved) } catch (_: Exception) { ModelVersion.QWEN_0_5B }
-        } else ModelVersion.QWEN_0_5B
+            try { ModelVersion.valueOf(saved) } catch (_: Exception) { ModelVersion.QWEN3_5_0_8B }
+        } else ModelVersion.QWEN3_5_0_8B
     }
 
     /**
@@ -287,7 +287,7 @@ class ModelVersionManager(private val context: Context) {
         val fallback = if (currentIndex > 0) {
             ModelVersion.entries[currentIndex - 1]
         } else {
-            ModelVersion.QWEN_0_5B
+            ModelVersion.QWEN3_5_0_8B
         }
 
         setCurrentVersion(fallback)

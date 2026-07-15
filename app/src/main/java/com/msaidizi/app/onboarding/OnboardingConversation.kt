@@ -337,7 +337,7 @@ class OnboardingConversation {
      */
     fun getModelDownloadPriority(): List<String> = listOf(
         "whisper-tiny-int4",   // ~150MB — voice input is critical
-        "qwen-0.5b-q4km",     // ~300MB — reasoning
+        "qwen-3.5-0.8b-q4km",  // ~580MB — reasoning
         "piper-swahili"        // ~50MB — voice output
     )
 

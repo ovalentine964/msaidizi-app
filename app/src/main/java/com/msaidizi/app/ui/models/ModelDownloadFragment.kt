@@ -121,7 +121,7 @@ class ModelDownloadFragment : Fragment() {
                 "piper-swahili" -> updateModelItem(
                     piperStatusIcon, piperProgress, model
                 )
-                "qwen-0.5b-q4km" -> updateModelItem(
+                "qwen-3.5-0.8b-q4km" -> updateModelItem(
                     qwenStatusIcon, qwenProgress, model
                 )
             }

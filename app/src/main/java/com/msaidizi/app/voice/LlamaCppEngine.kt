@@ -19,7 +19,7 @@ import javax.inject.Singleton
  * Memory-mapped file access for low RAM usage.
  *
  * On 2GB devices:
- * - Qwen 0.5B Q4_K_M: ~350MB RAM, ~15 tokens/sec
+ * - Qwen 3.5 0.8B Q4_K_M: ~500MB RAM, ~10 tokens/sec
  * - Phi-2 Q4_K_M: ~600MB RAM, ~8 tokens/sec
  *
  * **KV Cache Q4_0 Optimization (v2):**
@@ -263,13 +263,13 @@ class LlamaCppEngine @Inject constructor(
     fun isModelLoaded(): Boolean = isLoaded && modelHandle != 0L
 
     /**
-     * Load the default Msaidizi LLM model (Qwen 0.5B Q4_K_M).
+     * Load the default Msaidizi LLM model (Qwen 3.5 0.8B Q4_K_M).
      * Convenience method that resolves the model path from the app's files directory.
      *
      * @return true if the default model loaded successfully
      */
     suspend fun loadDefaultModel(): Boolean {
-        val modelPath = File(context.filesDir, "models/qwen-0.5b-q4_k_m.gguf")
+        val modelPath = File(context.filesDir, "models/Qwen3.5-0.8B-Q4_K_M.gguf")
         return loadModel(modelPath.absolutePath)
     }
 

@@ -2,6 +2,7 @@
 // Msaidizi Android App — build.gradle.kts
 // ============================================================
 // Uses KSP (not kapt) for annotation processing.
+// Kotlin 2.0.21, KSP 2.0.21-1.0.28, Hilt 2.52, Room 2.7.0-alpha12
 // Requires: NDK r26b, CMake 3.22.1
 // ============================================================
 
@@ -151,12 +152,12 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
         freeCompilerArgs += listOf(
             "-opt-in=kotlin.RequiresOptIn",
             "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi"
@@ -173,16 +174,15 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
             excludes += "/META-INF/versions/9/OSGI-INF/MANIFEST.MF"
         }
-        }
         jniLibs {
             useLegacyPackaging = true
         }
     }
 
     // Don't compress large model files — they need to be memory-mapped or streamed
-    // GGUF (~450MB) and ONNX (~40-30MB) models must remain uncompressed for mmap access
-    aaptOptions {
-        noCompress("gguf", "onnx", "bin", "tokens", "fst")
+    // GGUF (~580MB) and ONNX (~40-80MB) models must remain uncompressed for mmap access
+    androidResources {
+        noCompress += listOf("gguf", "onnx", "bin", "tokens", "fst")
     }
 }
 
@@ -205,29 +205,31 @@ dependencies {
     implementation("androidx.navigation:navigation-ui-ktx:2.7.6")
 
     // Room Database — KSP replaces kapt for annotation processing
-    // Updated 2.7.1: KMP support, improved paging, better KSP performance
-    implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
-    implementation("androidx.room:room-paging:2.6.1")
-    ksp("androidx.room:room-compiler:2.6.1")  // was: kapt(...)
+    // 2.7.0-alpha12: KMP support, improved paging, better KSP performance, Kotlin 2.0 compat
+    implementation("androidx.room:room-runtime:2.7.0-alpha12")
+    implementation("androidx.room:room-ktx:2.7.0-alpha12")
+    implementation("androidx.room:room-paging:2.7.0-alpha12")
+    ksp("androidx.room:room-compiler:2.7.0-alpha12")  // was: kapt(...)
 
     // SQLCipher for Room database encryption
     implementation("net.zetetic:android-database-sqlcipher:4.5.4")
     implementation("androidx.sqlite:sqlite:2.4.0")
 
     // Hilt DI — KSP replaces kapt
-    implementation("com.google.dagger:hilt-android:2.51.1")
-    ksp("com.google.dagger:hilt-android-compiler:2.51.1")  // was: kapt(...)
+    // 2.52: Kotlin 2.0 KSP support, improved incremental processing
+    implementation("com.google.dagger:hilt-android:2.52")
+    ksp("com.google.dagger:hilt-android-compiler:2.52")  // was: kapt(...)
 
-    // Kotlin reflect — MUST match Kotlin compiler 1.9.24
-    implementation("org.jetbrains.kotlin:kotlin-reflect:1.9.24")
+    // Kotlin reflect — MUST match Kotlin compiler 2.0.21
+    implementation("org.jetbrains.kotlin:kotlin-reflect:2.0.21")
 
     // Coroutines — 1.9.0: improved structured concurrency, better debugging
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
     // Kotlin Serialization (for JSON)
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    // 1.7.3: Kotlin 2.0+ support, improved performance
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
     // Retrofit + Gson
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
@@ -235,13 +237,12 @@ dependencies {
     implementation("com.google.code.gson:gson:2.10.1")
 
     // Network (Ktor client for sync)
-    // Ktor 2.3.x is the last series compatible with Kotlin 1.9.x
-    // Ktor 3.x requires Kotlin 2.0+ (transitively pulls kotlinx-serialization 1.7.x)
-    implementation("io.ktor:ktor-client-core:2.3.12")
-    implementation("io.ktor:ktor-client-okhttp:2.3.12")
-    implementation("io.ktor:ktor-client-content-negotiation:2.3.12")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.12")
-    implementation("io.ktor:ktor-client-logging:2.3.12")
+    // Ktor 3.0.3: Requires Kotlin 2.0+ (transitively pulls kotlinx-serialization 1.7.x)
+    implementation("io.ktor:ktor-client-core:3.0.3")
+    implementation("io.ktor:ktor-client-okhttp:3.0.3")
+    implementation("io.ktor:ktor-client-content-negotiation:3.0.3")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:3.0.3")
+    implementation("io.ktor:ktor-client-logging:3.0.3")
 
     // DataStore (preferences)
     implementation("androidx.datastore:datastore-preferences:1.0.0")
@@ -304,7 +305,7 @@ dependencies {
     // Testing — Android Integration
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    androidTestImplementation("androidx.room:room-testing:2.6.1")
+    androidTestImplementation("androidx.room:room-testing:2.7.0-alpha12")
     androidTestImplementation("androidx.test:runner:1.5.2")
 
     // Detekt linting
@@ -324,24 +325,14 @@ dependencies {
 // (replaces javaCompileOptions.annotationProcessorOptions for kapt)
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
-    arg("room.incremental", "false")
+    arg("room.incremental", "true")  // enabled for Kotlin 2.0 KSP
     arg("room.generateKotlin", "true")
     arg("room.verbose", "true")
 }
 
-// Force ALL Kotlin deps to match Kotlin 1.9.24 (compiler version)
-configurations.all {
-    resolutionStrategy {
-        force("org.jetbrains.kotlin:kotlin-reflect:1.9.24")
-        force("org.jetbrains.kotlin:kotlin-stdlib:1.9.24")
-        force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.24")
-        force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.24")
-        // kotlinx-serialization 1.6.3 is the last version compatible with Kotlin 1.9.x
-        // 1.7.x requires Kotlin 2.0+ — force to prevent transitive upgrades from Ktor
-        force("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
-        force("org.jetbrains.kotlinx:kotlinx-serialization-core:1.6.3")
-    }
-}
+// Kotlin 2.0.21 — all deps are now consistent, no force hacks needed.
+// Ktor 3.0.3 pulls kotlinx-serialization 1.7.x natively.
+// Room 2.7.0-alpha12, Hilt 2.52 all target Kotlin 2.0+.
 
 // JUnit 5 platform for all test tasks
 tasks.withType<Test> {
@@ -356,8 +347,6 @@ tasks.withType<JacocoReport> {
         html.required.set(true)
     }
 }
-// Trigger CI build
-// CI trigger Wed Jul 15 02:17:37 CST 2026
-// Build trigger Wed Jul 15 03:25:46 CST 2026
-// APK build trigger
+// Kotlin 2.0.21 upgrade: 2026-07-16
 // Model config update: Decision Council 2026-07-15
+// Build system modernized: removed force hacks, Java 17 target

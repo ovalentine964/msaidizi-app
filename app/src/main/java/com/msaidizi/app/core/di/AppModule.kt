@@ -75,6 +75,7 @@ import com.msaidizi.app.vision.VisionHarness
 import com.msaidizi.app.agent.harness.InferenceHarness
 import com.msaidizi.app.agent.harness.LearningHarness
 import com.msaidizi.app.voice.VoicePipelineHarness
+import com.msaidizi.app.agent.agi.AGIReadyLayer
 import com.msaidizi.app.loops.MorningBriefingLoop
 import com.msaidizi.app.loops.StreakProtectionLoop
 import com.msaidizi.app.loops.VariableRewardsLoop
@@ -1018,7 +1019,8 @@ object AppModule {
         voicePersonality: VoicePersonality,
         proactiveAlertEngine: ProactiveAlertEngine,
         socialHandler: SocialHandler,
-        inferenceHarness: com.msaidizi.app.agent.harness.InferenceHarness
+        inferenceHarness: com.msaidizi.app.agent.harness.InferenceHarness,
+        agiReadyLayer: AGIReadyLayer
     ): Orchestrator = Orchestrator(
         intentRouter = intentRouter,
         businessAgent = businessAgent,
@@ -1054,7 +1056,8 @@ object AppModule {
         voicePersonality = voicePersonality,
         proactiveAlertEngine = proactiveAlertEngine,
         socialHandler = socialHandler,
-        inferenceHarness = inferenceHarness
+        inferenceHarness = inferenceHarness,
+        agiReadyLayer = agiReadyLayer
     )
 
     // LlamaCppEngine and LlmEngine are auto-provided by Hilt via their @Inject constructors.

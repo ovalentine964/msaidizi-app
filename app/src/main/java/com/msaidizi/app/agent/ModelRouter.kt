@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicLong
  * ModelRouter — Hybrid Reasoning Model Router for Msaidizi.
  *
  * Routes inference requests between:
- * - On-device models (llama.cpp NDK, Qwen 0.5B) — offline, free, low-latency
+ * - On-device models (llama.cpp NDK, Qwen 3.5 0.8B) — offline, free, low-latency
  * - Cloud reasoning (DeepSeek V4 Flash) — cost-efficient reasoning ($0.20/1M)
  * - Cloud premium (GPT-5.4 nano, Claude Opus) — complex financial analysis
  * - Backend proxy (Angavu Intelligence) — full agent capabilities
@@ -111,7 +111,7 @@ class ModelRouter(
         // Multimodal controls
         val enableMultimodal: Boolean = true,
         // Model versioning
-        val preferredModelVersion: String = "auto"  // "auto", "qwen-0.5b", "qwen3.5-0.8b"
+        val preferredModelVersion: String = "auto"  // "auto", "qwen3.5-0.8b"
     )
 
     // ═══════════════════════════════════════════════════════════════

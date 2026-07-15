@@ -22,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap
  * | Model | Size | Purpose | Priority |
  * |-------|------|---------|----------|
  * | Whisper tiny (int4) | ~150MB | Speech recognition | 1 (critical) |
- * | Qwen 0.5B (Q4_K_M) | ~300MB | Reasoning & CFO advice | 2 |
+ * | Qwen 3.5 0.8B (Q4_K_M) | ~580MB | Reasoning & CFO advice | 2 |
  * | Piper TTS (Swahili) | ~50MB | Voice output | 3 |
  * | **Total** | **~500MB** | | |
  *
@@ -66,7 +66,7 @@ class ModelDownloadManager(
             val url: String
         )
 
-        /** Full models — NOT mini-models. Qwen 0.5B, Whisper, Piper TTS. */
+        /** Full models — NOT mini-models. Qwen 3.5 0.8B, Whisper, Piper TTS. */
         val MODELS = listOf(
             ModelDef(
                 id = "whisper-tiny-int4",
@@ -77,12 +77,12 @@ class ModelDownloadManager(
                 url = "https://huggingface.co/Xenova/whisper-tiny.en/resolve/main/onnx/encoder_model_quantized.onnx"
             ),
             ModelDef(
-                id = "qwen-0.5b-q4km",
+                id = "qwen-3.5-0.8b-q4km",
                 name = "AI Reasoning",
                 nameSwahili = "Akili ya AI",
-                sizeBytes = 300_000_000L,  // ~300MB
+                sizeBytes = 580_000_000L,  // ~580MB
                 priority = 2,
-                url = "https://huggingface.co/bartowski/Qwen_Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf"
+                url = "https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf"
             ),
             ModelDef(
                 id = "piper-swahili",

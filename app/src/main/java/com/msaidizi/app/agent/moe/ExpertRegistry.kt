@@ -4,7 +4,7 @@ package com.msaidizi.app.agent.moe
  * Expert Registry — Dynamic registration of model experts for MoE routing.
  *
  * Allows runtime registration of new expert models (e.g., when upgrading
- * from Qwen 0.5B to Qwen3.5-0.8B, or adding a new vision model).
+ * from Qwen 3.5 0.8B to Qwen3.5-2B, or adding a new vision model).
  *
  * The registry also tracks expert health (failure rates, latency)
  * for intelligent routing decisions.

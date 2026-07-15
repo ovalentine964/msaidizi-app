@@ -7,7 +7,7 @@ package com.msaidizi.app.agent.moe
  * how MoE neural networks activate only a subset of parameters per token.
  *
  * In Msaidizi's context, "experts" are different model providers:
- * - TRANSACTION_EXPERT: On-device Qwen 0.5B (fast, free, low-latency)
+ * - TRANSACTION_EXPERT: On-device Qwen 3.5 0.8B (fast, free, low-latency)
  * - REASONING_EXPERT: DeepSeek V4 Flash (cheap reasoning at $0.20/1M)
  * - MULTIMODAL_EXPERT: Gemma 4 E2B / LFM2.5-VL (vision + text on-device)
  * - COMPLEX_EXPERT: Claude Haiku (deep financial analysis)
@@ -49,7 +49,7 @@ class MoERouter {
      * Expert types — each maps to a specific model provider tier.
      */
     enum class ExpertType {
-        TRANSACTION_EXPERT,   // On-device Qwen 0.5B — fast, free
+        TRANSACTION_EXPERT,   // On-device Qwen 3.5 0.8B — fast, free
         REASONING_EXPERT,     // DeepSeek V4 Flash — cheap reasoning
         MULTIMODAL_EXPERT,    // Gemma 4 E2B — vision + text
         COMPLEX_EXPERT,       // Claude Haiku — deep analysis
@@ -90,13 +90,13 @@ class MoERouter {
         put(ExpertType.TRANSACTION_EXPERT, ExpertProfile(
             type = ExpertType.TRANSACTION_EXPERT,
             providerId = "on-device",
-            modelId = "qwen-0.5b-fl-sw",
+            modelId = "qwen-3.5-0.8b-q4km",
             costPer1kInput = 0.0,
             costPer1kOutput = 0.0,
             maxContextTokens = 4096,
             supportsVision = false,
             supportsFunctionCalling = true,
-            avgLatencyMs = 200,
+            avgLatencyMs = 300,
             capabilities = listOf(
                 "transaction_recording", "balance_inquiry", "price_lookup",
                 "simple_qa", "daily_briefing_template"

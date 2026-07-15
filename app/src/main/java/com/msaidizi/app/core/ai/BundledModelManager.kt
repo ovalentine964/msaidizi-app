@@ -48,7 +48,7 @@ class BundledModelManager @Inject constructor(
         private const val KEY_SELECTED_LANGUAGE = "selected_language"
 
         /** The bundled mini-model ID (shipped in APK assets) */
-        const val BUNDLED_MODEL_ID = "qwen-0.5b-mini"
+        const val BUNDLED_MODEL_ID = "qwen-3.5-0.8b-mini"
 
         /** The full model ID (downloaded post-install) — Decision Council: Qwen 3.5 0.8B */
         const val FULL_MODEL_ID = "qwen3.5-0.8b-q4km"
@@ -63,7 +63,7 @@ class BundledModelManager @Inject constructor(
             "whisper-tokens.json",
             "piper-swahili.onnx",
             "piper-tokens.txt",
-            "qwen-0.5b-q4_k_m.gguf"
+            "Qwen3.5-0.8B-Q4_K_M.gguf"
         )
 
         /** espeak-ng-data directory name in assets */

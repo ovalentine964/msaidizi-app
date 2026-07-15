@@ -8,14 +8,14 @@ import java.util.concurrent.atomic.AtomicLong
 /**
  * On-Device Reasoning Model Manager.
  *
- * Manages the Qwen 0.5B LLM running via llama.cpp NDK for on-device reasoning.
+ * Manages the Qwen 3.5 0.8B LLM running via llama.cpp NDK for on-device reasoning.
  * Routes tasks to the appropriate model based on complexity, tracks inference
  * costs, and falls back to cloud when on-device model is insufficient.
  *
  * Model Routing Strategy:
  *   Simple tasks  → Rule-based (no model needed, <1ms)
- *   Medium tasks  → Qwen 0.5B on-device (~200ms, 0 cost)
- *   Complex tasks → Qwen 0.5B with extended context (~2s, 0 cost)
+ *   Medium tasks  → Qwen 3.5 0.8B on-device (~300ms, 0 cost)
+ *   Complex tasks → Qwen 3.5 0.8B with extended context (~3s, 0 cost)
  *   Hard tasks    → Cloud fallback (~500ms, costs money)
  *
  * The goal: 95% of tasks handled on-device, cloud only for the hard 5%.
@@ -25,7 +25,7 @@ class ReasoningModelManager(private val context: Context) {
     companion object {
         private const val TAG = "ReasoningModel"
         private const val MAX_ON_DEVICE_TOKENS = 512
-        private const val MAX_CONTEXT_LENGTH = 2048
+        private const val MAX_CONTEXT_LENGTH = 32768
         private const val CLOUD_FALLBACK_THRESHOLD = 0.3f // confidence below this → cloud
     }
 
@@ -40,7 +40,7 @@ class ReasoningModelManager(private val context: Context) {
     /** Model type for routing. */
     enum class ModelType {
         RULE_BASED,      // Pure code, no model
-        ON_DEVICE_LLM,   // Qwen 0.5B via llama.cpp
+        ON_DEVICE_LLM,   // Qwen 3.5 0.8B via llama.cpp
         CLOUD_LLM        // Backend API
     }
 

@@ -81,7 +81,7 @@ class ModelManager @Inject constructor(
         //   Benchmark: Gemma 4 E2B — Google edge model, MID/HIGH tiers
         //   Future:   Tiny Aya Earth — placeholder for Cohere release
 
-        /** Qwen 3.5 0.8B Q4_K_M — primary model for all tiers (~500MB) */
+        /** Qwen 3.5 0.8B Q4_K_M — primary model for all tiers (~580MB) */
         private const val MODEL_QWEN_08B = "qwen3.5-0.8b-q4km"
 
         /** Qwen 3.5 2B Q4_K_M — higher-quality default for HIGH-tier devices (~1.2GB) */
@@ -321,7 +321,7 @@ class ModelManager @Inject constructor(
      */
     private fun getModelSizeMb(modelId: String): Int {
         return when (modelId) {
-            MODEL_QWEN_08B -> 500      // ~500MB Q4_K_M (Qwen3.5-0.8B)
+            MODEL_QWEN_08B -> 580      // ~580MB Q4_K_M (Qwen3.5-0.8B)
             MODEL_QWEN_2B -> 1200      // ~1.2GB Q4_K_M (Qwen3.5-2B)
             MODEL_GEMMA_4_E2B -> 600   // ~600MB Q4_K_M (Gemma 4 E2B)
             MODEL_TINY_AYA_EARTH -> 400 // ~400MB estimated (Tiny Aya Earth)

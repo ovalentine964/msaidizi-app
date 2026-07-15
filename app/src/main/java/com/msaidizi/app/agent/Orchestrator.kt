@@ -119,7 +119,9 @@ class Orchestrator(
     // ── Social Layer ──
     private val socialHandler: SocialHandler? = null,
     // ── Inference Harness — wraps all model calls with monitoring/fallback/retry ──
-    private val inferenceHarness: InferenceHarness? = null
+    private val inferenceHarness: InferenceHarness? = null,
+    // ── AGI Safety Layer ──
+    private val agiReadyLayer: com.msaidizi.app.agent.agi.AGIReadyLayer? = null
 ) {
     private val _responses = MutableSharedFlow<AgentResponse>(extraBufferCapacity = 8)
     val responses: SharedFlow<AgentResponse> = _responses
@@ -128,6 +130,9 @@ class Orchestrator(
         // Wire conversation learning pipeline to conversation manager
         // This enables vocabulary learning from corrections and confirmations
         conversationManager.conversationLearningPipeline = conversationLearningPipeline
+
+        // Sync ProgressiveAutonomy level into AGIReadyLayer
+        syncAutonomyLevel()
     }
 
     /**
@@ -209,11 +214,120 @@ class Orchestrator(
 
         conversationManager.publishTaskCompleted(trace, response)
 
-        // Step 9: Record autonomy outcome and generate cross-domain insights
+        // Step 9: AGI Safety enforcement — check all safety boundaries
+        val safeResponse = enforceSafety(personalityResponse, text, language)
+
+        // Step 10: Progressive autonomy enforcement — check if action needs approval
+        val finalResponse = enforceAutonomy(safeResponse, intentResult, language)
+
+        // Step 11: Record autonomy outcome and generate cross-domain insights
         recordAutonomyOutcome(intentResult, response)
         generateCrossDomainInsights()
 
-        return personalityResponse
+        return finalResponse
+    }
+
+    // ═══════════════ AGI SAFETY ENFORCEMENT ═══════════════
+
+    /**
+     * Enforce all AGI safety boundaries on the response.
+     * This is the defense-in-depth safety gate that runs AFTER all other processing.
+     *
+     * Checks:
+     * - NO_DECEPTION: blocks responses with false certainty or contradictions
+     * - NO_MANIPULATION: strips urgency pressure, FOMO, emotional manipulation
+     * - FINANCIAL_ADVICE_DISCLAIMER: auto-injects disclaimer on financial advice
+     * - TRANSPARENCY_REQUIRED: adds reasoning when user asks "why" or "how"
+     *
+     * @see com.msaidizi.app.agent.agi.AGIReadyLayer for boundary definitions
+     */
+    private fun enforceSafety(
+        response: AgentResponse,
+        originalInput: String,
+        language: String
+    ): AgentResponse {
+        val agi = agiReadyLayer ?: return response
+
+        val safetyResult = agi.checkResponseSafety(response, originalInput, language)
+
+        return when {
+            safetyResult.safe -> response
+            safetyResult.blocked -> {
+                Timber.w("AGI safety BLOCKED response: boundary=%s reason=%s",
+                    safetyResult.violatedBoundary, safetyResult.reason)
+                // Return a safe fallback response
+                AgentResponse(
+                    text = if (language == "sw") {
+                        "⚠️ Jibu halikukubaliki kwa sababu za usalama. Tafadhali uliza swali jipya."
+                    } else {
+                        "⚠️ Response blocked for safety reasons. Please rephrase your question."
+                    },
+                    type = ResponseType.ERROR,
+                    data = mapOf(
+                        "safety_blocked" to "true",
+                        "boundary" to (safetyResult.violatedBoundary?.name ?: "unknown"),
+                        "reason" to safetyResult.reason
+                    )
+                )
+            }
+            safetyResult.modifiedResponse != null -> {
+                Timber.d("AGI safety MODIFIED response: boundary=%s reason=%s",
+                    safetyResult.violatedBoundary, safetyResult.reason)
+                safetyResult.modifiedResponse
+            }
+            else -> response
+        }
+    }
+
+    /**
+     * Enforce progressive autonomy — check if the handler action requires
+     * human approval at the current autonomy level.
+     *
+     * At Level 0 (TOOL): every non-trivial action gets a confirmation prompt.
+     * At Level 1 (ASSISTANT): transactions and advice require confirmation.
+     * At Level 2 (COLLEAGUE): only high-value or novel actions need approval.
+     * At Level 3+ (DELEGATE/AUTONOMOUS): operates independently.
+     */
+    private fun enforceAutonomy(
+        response: AgentResponse,
+        intentResult: IntentResult,
+        language: String
+    ): AgentResponse {
+        val agi = agiReadyLayer ?: return response
+
+        // Classify the action
+        val isHighValue = intentResult.intent in setOf(
+            IntentType.SALE, IntentType.PURCHASE, IntentType.EXPENSE
+        )
+        val isIrreversible = intentResult.intent in setOf(
+            IntentType.LOAN_RECORD, IntentType.GOAL_CREATE
+        )
+        val actionType = intentResult.intent.name.lowercase().replace('_', ' ')
+
+        if (agi.requiresHumanApproval(actionType, isHighValue, isIrreversible)) {
+            val approvalMsg = agi.getApprovalMessage(actionType, language)
+            Timber.d("Autonomy level %d: wrapping response with approval request", agi.autonomyState.level)
+            return response.copy(
+                text = "$approvalMsg\n\n${response.text}",
+                data = response.data + ("requires_approval" to "true")
+            )
+        }
+
+        return response
+    }
+
+    /**
+     * Sync the ProgressiveAutonomy minimum level into AGIReadyLayer.
+     * Called at init and after autonomy changes.
+     */
+    private fun syncAutonomyLevel() {
+        val pa = progressiveAutonomy ?: return
+        val agi = agiReadyLayer ?: return
+
+        val minLevel = pa.getMinimumLevel()
+        agi.setAutonomyLevelFromProgressive(minLevel)
+        Timber.d("Synced autonomy level: %s → AGIReadyLayer level %d",
+            minLevel.name, agi.autonomyState.level)
     }
 
     // ═══════════════ VOICE PERSONALITY — warmth layer ═══════════════
@@ -420,6 +534,24 @@ class Orchestrator(
 
     // ── AGI Component Accessors ──
 
+    /** Get AGI safety layer. */
+    fun getAGIReadyLayer() = agiReadyLayer
+
+    /** Get AGI safety audit: current autonomy level, active boundaries, trust score. */
+    fun getAGISafetyAudit(): Map<String, Any> {
+        val agi = agiReadyLayer ?: return emptyMap()
+        val state = agi.autonomyState
+        return mapOf(
+            "autonomyLevel" to state.level,
+            "levelDescription" to agi.describeLevel(),
+            "trustScore" to state.trustScore,
+            "decisionsTotal" to state.decisionsMade,
+            "decisionsCorrect" to state.decisionsCorrect,
+            "activeBoundaries" to state.activeBoundaries.map { it.name },
+            "capabilities" to state.capabilities.mapKeys { it.key.name }
+        )
+    }
+
     /** Get progressive autonomy state. */
     fun getAutonomyState() = progressiveAutonomy?.overallState?.value
     fun getAutonomyDomainStates() = progressiveAutonomy?.getAllDomainStates()
@@ -491,15 +623,53 @@ class Orchestrator(
 
     /**
      * Record autonomy outcome after processing.
+     * Updates both ProgressiveAutonomy and AGIReadyLayer trust scores.
      */
     private fun recordAutonomyOutcome(intentResult: IntentResult, response: AgentResponse) {
-        val autonomy = progressiveAutonomy ?: return
-        val domain = mapIntentToDomain(intentResult.intent)
         val wasCorrect = response.type != ResponseType.ERROR
         val wasCritical = intentResult.intent in setOf(
             IntentType.SALE, IntentType.PURCHASE, IntentType.EXPENSE
         ) && !wasCorrect
-        autonomy.recordOutcome(domain, intentResult.intent.name, wasCorrect, wasCritical)
+
+        // Update ProgressiveAutonomy
+        val autonomy = progressiveAutonomy
+        if (autonomy != null) {
+            val domain = mapIntentToDomain(intentResult.intent)
+            autonomy.recordOutcome(domain, intentResult.intent.name, wasCorrect, wasCritical)
+        }
+
+        // Update AGIReadyLayer trust and capability
+        val agi = agiReadyLayer
+        if (agi != null) {
+            val capability = mapIntentToCapability(intentResult.intent)
+            if (capability != null) {
+                val newState = agi.updateCapability(agi.autonomyState, capability, wasCorrect)
+                agi.updateAutonomyState { newState }
+            }
+            // Sync autonomy level after outcome
+            syncAutonomyLevel()
+        }
+    }
+
+    /**
+     * Map an intent type to an AGIReadyLayer capability.
+     */
+    private fun mapIntentToCapability(intent: IntentType): com.msaidizi.app.agent.agi.AGIReadyLayer.Capability? {
+        return when (intent) {
+            IntentType.SALE, IntentType.PURCHASE, IntentType.EXPENSE ->
+                com.msaidizi.app.agent.agi.AGIReadyLayer.Capability.TRANSACTION_RECORDING
+            IntentType.PROFIT_QUERY, IntentType.CHECK_BALANCE, IntentType.DAILY_SUMMARY, IntentType.WEEKLY_SUMMARY ->
+                com.msaidizi.app.agent.agi.AGIReadyLayer.Capability.CASH_FLOW_PREDICTION
+            IntentType.ASK_ADVICE ->
+                com.msaidizi.app.agent.agi.AGIReadyLayer.Capability.BUSINESS_ADVICE
+            IntentType.GOAL_CREATE, IntentType.GOAL_PROGRESS, IntentType.GOAL_REPORT ->
+                com.msaidizi.app.agent.agi.AGIReadyLayer.Capability.GOAL_MANAGEMENT
+            IntentType.LOAN_RECORD, IntentType.LOAN_QUERY, IntentType.LOAN_REPORT ->
+                com.msaidizi.app.agent.agi.AGIReadyLayer.Capability.LOAN_ANALYSIS
+            IntentType.STOCK_QUERY ->
+                com.msaidizi.app.agent.agi.AGIReadyLayer.Capability.RISK_ASSESSMENT
+            else -> null
+        }
     }
 
     /**

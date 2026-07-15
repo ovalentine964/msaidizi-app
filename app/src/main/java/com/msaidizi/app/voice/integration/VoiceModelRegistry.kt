@@ -13,7 +13,7 @@ import javax.inject.Singleton
  * Supports multiple voice model types:
  * 1. **On-device ASR**: Whisper Tiny INT4, Whisper Small, etc.
  * 2. **On-device TTS**: Piper, Meta MMS, VITS
- * 3. **On-device LLM**: Qwen 0.5B, Qwen 2.5 0.5B, etc.
+ * 3. **On-device LLM**: Qwen 3.5 0.8B, Qwen3.5 2B, etc.
  * 4. **Cloud STS**: GPT-Realtime-2, ElevenLabs v3
  * 5. **Cloud ASR/TTS**: Deepgram, Google, Azure
  *
