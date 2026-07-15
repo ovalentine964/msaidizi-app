@@ -463,6 +463,13 @@ object AppModule {
                     db.execSQL("CREATE INDEX IF NOT EXISTS `index_briefing_deliveries_briefingType_deliveredAt` ON `briefing_deliveries` (`briefingType`, `deliveredAt`)")
                 }
             })
+            // Migration v9 → v10: Placeholder (no schema changes, migration chain fix)
+            .addMigrations(object : androidx.room.migration.Migration(9, 10) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    // No schema changes between v9 and v10
+                    // This migration exists to fill the gap in the migration chain
+                }
+            })
             // Migration v10 → v11: Added worker_vocabulary table for per-worker personalized vocabulary
             .addMigrations(object : androidx.room.migration.Migration(10, 11) {
                 override fun migrate(db: SupportSQLiteDatabase) {
@@ -655,12 +662,10 @@ object AppModule {
                     """.trimIndent())
                     db.execSQL("CREATE INDEX IF NOT EXISTS `index_peer_challenges_groupId` ON `peer_challenges` (`groupId`)")
                     db.execSQL("CREATE INDEX IF NOT EXISTS `index_peer_challenges_status` ON `peer_challenges` (`status`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_peer_challenges_groupId` ON `peer_challenges` (`groupId`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_peer_challenges_status` ON `peer_challenges` (`status`)")
                     db.execSQL("CREATE INDEX IF NOT EXISTS `index_peer_challenges_endsAt` ON `peer_challenges` (`endsAt`)")
-                }
-            })
-            // Migration v11 → v12: Added streak recovery tracking columns to gamification table
-            .addMigrations(object : androidx.room.migration.Migration(11, 12) {
-                override fun migrate(db: SupportSQLiteDatabase) {
+                    // Streak recovery tracking columns
                     db.execSQL("ALTER TABLE `gamification` ADD COLUMN `streakRecoveriesUsedThisMonth` INTEGER NOT NULL DEFAULT 0")
                     db.execSQL("ALTER TABLE `gamification` ADD COLUMN `streakRecoveryMonth` INTEGER NOT NULL DEFAULT 0")
                 }
