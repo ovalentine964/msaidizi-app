@@ -87,6 +87,9 @@ Desktop.ini
 .AppleDouble
 .LSOverride
 
+# Sherpa-ONNX JNI libs (too large for git, downloaded by scripts/setup-sherpa-onnx.sh)
+app/src/main/jniLibs/
+
 # AI Models (too large for git, downloaded by CI/scripts/download-models.sh)
 app/src/main/assets/models/*.onnx
 app/src/main/assets/models/*.gguf

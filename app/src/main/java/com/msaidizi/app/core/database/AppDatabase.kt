@@ -1,6 +1,7 @@
 package com.msaidizi.app.core.database
 
 import androidx.room.Database
+import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.msaidizi.app.core.model.*
@@ -33,8 +34,8 @@ import com.msaidizi.app.social.WhatsAppGroup
 import com.msaidizi.app.social.SocialDao
 import com.msaidizi.app.core.model.UserVocabularyDao
 import com.msaidizi.app.core.model.UserCorrectionDao
-import com.msaidizi.app.core.database.RichHabitsDao
-import com.msaidizi.app.core.database.VocabularyLearningDao
+import com.msaidizi.app.core.model.WorkerVocabulary
+import com.msaidizi.app.core.model.WorkerVocabularyDao
 
 /**
  * Room database for Msaidizi.

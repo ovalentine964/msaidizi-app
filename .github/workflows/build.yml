@@ -91,14 +91,87 @@ jobs:
           chmod +x scripts/download-models.sh
           ./scripts/download-models.sh --verify
 
+      # ============================================================
+      # Sherpa-ONNX JNI libs setup (ASR/TTS/VAD engine)
+      # ============================================================
+      - name: Cache sherpa-onnx JNI libs
+        id: cache-sherpa
+        uses: actions/cache@v4
+        with:
+          path: app/src/main/jniLibs
+          key: sherpa-onnx-jni-v1-arm64
+
+      - name: Setup sherpa-onnx JNI libs
+        if: steps.cache-sherpa.outputs.cache-hit != 'true'
+        run: |
+          chmod +x scripts/setup-sherpa-onnx.sh
+          ./scripts/setup-sherpa-onnx.sh
+        timeout-minutes: 15
+
+      - name: Verify sherpa-onnx JNI libs
+        run: |
+          JNI_DIR="app/src/main/jniLibs/arm64-v8a"
+          echo "🔍 Checking sherpa-onnx JNI libs in $JNI_DIR ..."
+
+          REQUIRED_LIBS=(
+            "libsherpa-onnx-jni.so"
+            "libonnxruntime.so"
+          )
+
+          MISSING=0
+          for lib in "${REQUIRED_LIBS[@]}"; do
+            if [ -f "$JNI_DIR/$lib" ]; then
+              SIZE=$(stat -c%s "$JNI_DIR/$lib")
+              echo "  ✅ $lib ($(( SIZE / 1024 )) KB)"
+            else
+              echo "  ❌ MISSING: $lib"
+              MISSING=$((MISSING + 1))
+            fi
+          done
+
+          if [ "$MISSING" -gt 0 ]; then
+            echo "::error::$MISSING required sherpa-onnx JNI lib(s) missing!"
+            echo "Contents of $JNI_DIR:"
+            ls -la "$JNI_DIR/" 2>/dev/null || echo "  (directory does not exist)"
+            exit 1
+          fi
+
+          # Also check Kotlin API source files exist
+          SHERPA_KT_DIR="app/src/main/java/com/k2fsa/sherpa/onnx"
+          if [ -d "$SHERPA_KT_DIR" ]; then
+            KT_COUNT=$(find "$SHERPA_KT_DIR" -name "*.kt" | wc -l)
+            echo "  ✅ Sherpa Kotlin API: $KT_COUNT .kt files in $SHERPA_KT_DIR"
+          else
+            echo "  ⚠️  Sherpa Kotlin API dir not found at $SHERPA_KT_DIR"
+            echo "     (setup-sherpa-onnx.sh should also install these)"
+          fi
+
+          echo "✅ sherpa-onnx JNI verification passed"
+
       - name: Build Debug APK
         run: |
+          echo "🔧 Starting Gradle build..."
+          echo "   NDK_HOME=$ANDROID_NDK_HOME"
+          echo "   JNI libs:"
+          ls -la app/src/main/jniLibs/arm64-v8a/ 2>/dev/null || echo "   (no jniLibs found)"
+          echo ""
+
+          set -o pipefail
           ./gradlew assembleDebug --stacktrace --info 2>&1 | tee build-debug.log
           EXIT_CODE=${PIPESTATUS[0]}
           if [ "$EXIT_CODE" -ne 0 ]; then
+            echo ""
             echo "::error::Gradle assembleDebug failed with exit code $EXIT_CODE"
+            echo ""
+            echo "=== Last 50 lines of build log ==="
+            tail -50 build-debug.log
+            echo ""
+            echo "=== Searching for compilation errors ==="
+            grep -i "error:" build-debug.log | head -20 || true
+            grep -i "FAILED" build-debug.log | head -10 || true
             exit "$EXIT_CODE"
           fi
+          echo "✅ Gradle build succeeded"
 
       - name: Upload build log on failure
         if: failure()
