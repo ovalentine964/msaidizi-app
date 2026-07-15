@@ -1325,31 +1325,9 @@ object AppModule {
 
     // === VISION — Product Recognition ===
 
-    @Provides
-    @Singleton
-    fun provideProductClassifier(
-        @ApplicationContext context: Context
-    ): ProductClassifier = ProductClassifier(context)
-
-    @Provides
-    @Singleton
-    fun provideVisionCorrectionTracker(
-        workerVocabularyDao: com.msaidizi.app.core.model.WorkerVocabularyDao,
-        federatedLearningClient: FederatedLearningClient
-    ): VisionCorrectionTracker = VisionCorrectionTracker(workerVocabularyDao, federatedLearningClient)
-
-    @Provides
-    @Singleton
-    fun provideProductRecognitionHandler(
-        classifier: ProductClassifier,
-        inventoryDao: InventoryDao,
-        workerVocabularyDao: com.msaidizi.app.core.model.WorkerVocabularyDao,
-        correctionTracker: VisionCorrectionTracker,
-        tts: com.msaidizi.app.voice.TextToSpeech,
-        visionHarness: VisionHarness
-    ): ProductRecognitionHandler = ProductRecognitionHandler(
-        classifier, inventoryDao, workerVocabularyDao, correctionTracker, tts, visionHarness
-    )
+    // ProductClassifier, VisionCorrectionTracker, and ProductRecognitionHandler
+    // are auto-provided by Hilt via their @Inject constructors.
+    // Duplicate @Provides methods removed to fix Dagger/MissingBinding errors.
 
     // === HARNESS LAYER ===
 
@@ -1358,11 +1336,8 @@ object AppModule {
     fun provideInferenceCostTracker(): com.msaidizi.app.agent.cost.InferenceCostTracker =
         com.msaidizi.app.agent.cost.InferenceCostTracker()
 
-    @Provides
-    @Singleton
-    fun provideInferenceHarness(
-        costTracker: com.msaidizi.app.agent.cost.InferenceCostTracker
-    ): InferenceHarness = InferenceHarness(costTracker)
+    // InferenceHarness is auto-provided by Hilt via its @Inject constructor.
+    // Duplicate @Provides method removed to fix Dagger/MissingBinding errors.
 
     @Provides
     @Singleton
@@ -1370,15 +1345,6 @@ object AppModule {
         inferenceHarness: InferenceHarness
     ): VoicePipelineHarness = VoicePipelineHarness(inferenceHarness)
 
-    @Provides
-    @Singleton
-    fun provideLearningHarness(): LearningHarness = LearningHarness()
-
-    @Provides
-    @Singleton
-    fun provideVisionHarness(
-        inferenceHarness: InferenceHarness,
-        correctionTracker: VisionCorrectionTracker,
-        receiptScanner: ReceiptScanner
-    ): VisionHarness = VisionHarness(inferenceHarness, correctionTracker, receiptScanner)
+    // LearningHarness and VisionHarness are auto-provided by Hilt via their @Inject constructors.
+    // Duplicate @Provides methods removed to fix Dagger/MissingBinding errors.
 }
