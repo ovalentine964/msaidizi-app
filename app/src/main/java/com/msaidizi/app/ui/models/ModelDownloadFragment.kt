@@ -121,9 +121,10 @@ class ModelDownloadFragment : Fragment() {
                 "piper-swahili" -> updateModelItem(
                     piperStatusIcon, piperProgress, model
                 )
-                "qwen-3.5-0.8b-q4km" -> updateModelItem(
-                    qwenStatusIcon, qwenProgress, model
+                "gemma-4-e2b-q4km", "gemma-4-e2b-q3km" -> updateModelItem(
+                    qwenStatusIcon, qwenProgress, model  // Reuse Qwen views for primary model display
                 )
+                "qwen-3.5-0.8b-q4km" -> { /* Qwen is now fallback; primary model shown above */ }
             }
         }
 

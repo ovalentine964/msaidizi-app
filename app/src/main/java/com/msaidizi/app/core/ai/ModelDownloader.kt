@@ -173,17 +173,27 @@ class ModelDownloader @Inject constructor(
     }
 
     /**
-     * Download the on-demand LLM model (Qwen).
-     * Typically called when the user first requests LLM inference.
+     * Download the on-demand LLM model.
+     * Updated (2026-07-16): Downloads Gemma 4 E2B (primary) first,
+     * falls back to Qwen 3.5 0.8B if Gemma download fails.
      *
      * @return true if download succeeded
      */
     suspend fun downloadLlmModel(): Boolean {
-        val modelId = "qwen-3.5-0.8b-q4km"
-        if (modelRegistry.isModelReady(modelId)) return true
+        // Try Gemma 4 E2B first (primary model)
+        val gemmaModelId = "gemma-4-e2b-q4km"
+        if (modelRegistry.isModelReady(gemmaModelId)) return true
 
-        Timber.i(TAG, "Starting LLM model download (%d MB)", 580)
-        return downloadModel(modelId)
+        Timber.i(TAG, "Starting primary LLM model download: Gemma 4 E2B (%d MB)", 1500)
+        val gemmaDownloaded = downloadModel(gemmaModelId)
+        if (gemmaDownloaded) return true
+
+        // Fallback: Qwen 3.5 0.8B
+        val qwenModelId = "qwen-3.5-0.8b-q4km"
+        if (modelRegistry.isModelReady(qwenModelId)) return true
+
+        Timber.i(TAG, "Gemma download failed, starting fallback: Qwen 3.5 0.8B (%d MB)", 580)
+        return downloadModel(qwenModelId)
     }
 
     /**
@@ -483,7 +493,9 @@ class ModelDownloader @Inject constructor(
             "silero-vad" -> "Voice Detector"
             "whisper-tiny-int4" -> "Speech Recognition"
             "piper-swahili" -> "Swahili Voice"
-            "qwen-3.5-0.8b-q4km" -> "AI Assistant"
+            "gemma-4-e2b-q4km" -> "AI Assistant (Gemma 4)"
+            "gemma-4-e2b-q3km" -> "AI Assistant (Gemma 4 Lite)"
+            "qwen-3.5-0.8b-q4km" -> "AI Fallback (Qwen)"
             else -> modelId
         }
     }

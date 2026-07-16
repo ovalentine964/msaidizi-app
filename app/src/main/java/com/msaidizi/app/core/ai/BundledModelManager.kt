@@ -23,10 +23,10 @@ import javax.inject.Singleton
  * - WiFi-only option respects user data costs
  * - Optional: Gemma 4 E2B download for MID/HIGH tier devices
  *
- * ## Decision Council (2026-07-15)
+ * ## Decision Council (updated 2026-07-16 — Gemma 4 E2B promoted)
  * - Bundled mini-model: unchanged (ships in APK)
- * - Full model download: Qwen 3.5 0.8B Q4_K_M (primary)
- * - Optional download: Gemma 4 E2B Q4_K_M (benchmark, MID/HIGH only)
+ * - Full model download: Gemma 4 E2B Q4_K_M (primary text LLM)
+ * - Fallback download: Qwen 3.5 0.8B Q4_K_M (for memory-constrained devices)
  *
  * ## Valentine's Mum Test
  * She downloads → installs → opens → says "Habari" → it works.
@@ -50,11 +50,11 @@ class BundledModelManager @Inject constructor(
         /** The bundled mini-model ID (shipped in APK assets) */
         const val BUNDLED_MODEL_ID = "qwen-3.5-0.8b-mini"
 
-        /** The full model ID (downloaded post-install) — Decision Council: Qwen 3.5 0.8B */
-        const val FULL_MODEL_ID = "qwen3.5-0.8b-q4km"
+        /** The full model ID (downloaded post-install) — Gemma 4 E2B primary (2026-07-16) */
+        const val FULL_MODEL_ID = "gemma-4-e2b-q4km"
 
-        /** The alternative model ID — Decision Council: Gemma 4 E2B (MID/HIGH tiers) */
-        const val ALT_MODEL_ID = "gemma-4-e2b-q4km"
+        /** The fallback model ID — Qwen 3.5 0.8B for memory-constrained devices */
+        const val ALT_MODEL_ID = "qwen-3.5-0.8b-q4km"
 
         /** All bundled model assets to extract on first launch */
         private val BUNDLED_ASSETS = listOf(

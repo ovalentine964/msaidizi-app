@@ -66,7 +66,7 @@ class ModelDownloadManager(
             val url: String
         )
 
-        /** Full models — NOT mini-models. Qwen 3.5 0.8B, Whisper, Piper TTS. */
+        /** Full models — Gemma 4 E2B primary, Qwen 3.5 0.8B fallback, Whisper, Piper TTS. */
         val MODELS = listOf(
             ModelDef(
                 id = "whisper-tiny-int4",
@@ -77,11 +77,19 @@ class ModelDownloadManager(
                 url = "https://huggingface.co/Xenova/whisper-tiny.en/resolve/main/onnx/encoder_model_quantized.onnx"
             ),
             ModelDef(
-                id = "qwen-3.5-0.8b-q4km",
-                name = "AI Reasoning",
-                nameSwahili = "Akili ya AI",
-                sizeBytes = 580_000_000L,  // ~580MB
+                id = "gemma-4-e2b-q4km",
+                name = "AI Assistant (Gemma 4)",
+                nameSwahili = "Msaidizi wa AI (Gemma 4)",
+                sizeBytes = 1_500_000_000L,  // ~1.5GB — primary text LLM
                 priority = 2,
+                url = "https://huggingface.co/bartowski/google_gemma-4-e2b-it-GGUF/resolve/main/google_gemma-4-e2b-it-Q4_K_M.gguf"
+            ),
+            ModelDef(
+                id = "qwen-3.5-0.8b-q4km",
+                name = "AI Fallback (Qwen)",
+                nameSwahili = "Msaidizi wa Akili (Qwen)",
+                sizeBytes = 580_000_000L,  // ~580MB — fallback for memory pressure
+                priority = 3,
                 url = "https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf"
             ),
             ModelDef(
@@ -89,7 +97,7 @@ class ModelDownloadManager(
                 name = "Voice Output",
                 nameSwahili = "Sauti ya Kuzungumza",
                 sizeBytes = 50_000_000L,   // ~50MB
-                priority = 3,
+                priority = 4,
                 url = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-sw_CD-lanfrica-medium.tar.bz2"
             )
         )

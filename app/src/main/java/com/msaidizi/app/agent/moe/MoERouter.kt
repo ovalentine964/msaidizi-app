@@ -7,9 +7,9 @@ package com.msaidizi.app.agent.moe
  * how MoE neural networks activate only a subset of parameters per token.
  *
  * In Msaidizi's context, "experts" are different model providers:
- * - TRANSACTION_EXPERT: On-device Qwen 3.5 0.8B (fast, free, low-latency)
+ * - TRANSACTION_EXPERT: On-device Qwen 3.5 0.8B (fast, free, low-latency) — fallback for LOW-RAM
  * - REASONING_EXPERT: DeepSeek V4 Flash (cheap reasoning at $0.20/1M)
- * - MULTIMODAL_EXPERT: Gemma 4 E2B / LFM2.5-VL (vision + text on-device)
+ * - MULTIMODAL_EXPERT: Gemma 4 E2B (primary text LLM + vision, on-device)
  * - COMPLEX_EXPERT: Claude Haiku (deep financial analysis)
  * - AGENT_EXPERT: Backend Angavu Intelligence (full agent swarm)
  *
@@ -23,9 +23,9 @@ package com.msaidizi.app.agent.moe
  * ```
  * Task Type               → Primary Expert        → Fallback
  * ─────────────────────────────────────────────────────────────
- * Transaction recording   → TRANSACTION_EXPERT     → REASONING_EXPERT
- * Balance inquiry         → TRANSACTION_EXPERT     → REASONING_EXPERT
- * Price lookup            → TRANSACTION_EXPERT     → REASONING_EXPERT
+ * Transaction recording   → MULTIMODAL_EXPERT      → TRANSACTION_EXPERT
+ * Balance inquiry         → MULTIMODAL_EXPERT      → TRANSACTION_EXPERT
+ * Price lookup            → MULTIMODAL_EXPERT      → TRANSACTION_EXPERT
  * Goods recognition       → MULTIMODAL_EXPERT      → TRANSACTION_EXPERT
  * Receipt scanning        → MULTIMODAL_EXPERT      → REASONING_EXPERT
  * Credit assessment       → REASONING_EXPERT       → COMPLEX_EXPERT
@@ -34,6 +34,13 @@ package com.msaidizi.app.agent.moe
  * Financial analysis      → REASONING_EXPERT       → COMPLEX_EXPERT
  * Full agent tasks        → AGENT_EXPERT           → COMPLEX_EXPERT
  * ```
+ *
+ * ## Gemma 4 E2B Promotion (2026-07-16)
+ * Gemma 4 E2B is promoted from vision-only to primary text LLM.
+ * - On ≥3GB devices: Gemma 4 E2B handles both text and vision
+ * - On 2GB devices: Gemma 4 E2B (Q3_K_M) for text, falls back to Qwen under memory pressure
+ * - Context window: 2048 tokens (up from 1024)
+ * - Qwen 3.5 0.8B retained as fallback for memory-constrained scenarios
  *
  * ## Cost Efficiency
  * - 80% of requests → TRANSACTION_EXPERT ($0.00/request)
@@ -47,11 +54,14 @@ class MoERouter {
 
     /**
      * Expert types — each maps to a specific model provider tier.
+     * Post-promotion: MULTIMODAL_EXPERT (Gemma 4 E2B) is the primary on-device expert
+     * for both text and vision. TRANSACTION_EXPERT (Qwen 3.5 0.8B) is the fallback
+     * for memory-constrained scenarios.
      */
     enum class ExpertType {
-        TRANSACTION_EXPERT,   // On-device Qwen 3.5 0.8B — fast, free
+        TRANSACTION_EXPERT,   // On-device Qwen 3.5 0.8B — fallback for LOW-RAM
         REASONING_EXPERT,     // DeepSeek V4 Flash — cheap reasoning
-        MULTIMODAL_EXPERT,    // Gemma 4 E2B — vision + text
+        MULTIMODAL_EXPERT,    // Gemma 4 E2B — primary text + vision on-device
         COMPLEX_EXPERT,       // Claude Haiku — deep analysis
         AGENT_EXPERT          // Backend Angavu — full agent swarm
     }
@@ -121,16 +131,20 @@ class MoERouter {
 
         put(ExpertType.MULTIMODAL_EXPERT, ExpertProfile(
             type = ExpertType.MULTIMODAL_EXPERT,
-            providerId = "on-device-vision",
-            modelId = "gemma-4-e2b",  // Or LFM2.5-VL-1.6B
+            providerId = "on-device",
+            modelId = "gemma-4-e2b",  // Primary text + vision LLM (promoted 2026-07-16)
             costPer1kInput = 0.0,
             costPer1kOutput = 0.0,
-            maxContextTokens = 4096,
+            maxContextTokens = 2048,
             supportsVision = true,
             supportsAudio = true,
             supportsFunctionCalling = true,
-            avgLatencyMs = 500,
+            avgLatencyMs = 400,
             capabilities = listOf(
+                // Text capabilities (promoted from vision-only)
+                "transaction_recording", "balance_inquiry", "price_lookup",
+                "simple_qa", "daily_briefing_template",
+                // Vision capabilities (original)
                 "goods_recognition", "receipt_scanning", "inventory_scan",
                 "price_comparison", "image_classification", "ocr"
             )
@@ -172,13 +186,13 @@ class MoERouter {
     // ── Task-to-Expert Routing Table ───────────────────────────────
 
     private val routingTable: Map<String, Pair<ExpertType, ExpertType?>> = mapOf(
-        // Simple transactions — on-device expert
-        "TRANSACTION_RECORDING" to (ExpertType.TRANSACTION_EXPERT to ExpertType.REASONING_EXPERT),
-        "BALANCE_INQUIRY" to (ExpertType.TRANSACTION_EXPERT to ExpertType.REASONING_EXPERT),
-        "PRICE_LOOKUP" to (ExpertType.TRANSACTION_EXPERT to ExpertType.REASONING_EXPERT),
+        // Simple transactions — Gemma 4 E2B primary (promoted from TRANSACTION_EXPERT)
+        "TRANSACTION_RECORDING" to (ExpertType.MULTIMODAL_EXPERT to ExpertType.TRANSACTION_EXPERT),
+        "BALANCE_INQUIRY" to (ExpertType.MULTIMODAL_EXPERT to ExpertType.TRANSACTION_EXPERT),
+        "PRICE_LOOKUP" to (ExpertType.MULTIMODAL_EXPERT to ExpertType.TRANSACTION_EXPERT),
 
-        // Multimodal tasks — vision expert
-        "GOODS_RECOGNITION" to (ExpertType.MULTIMODAL_EXPERT to ExpertType.REASONING_EXPERT),
+        // Multimodal tasks — Gemma 4 E2B (vision + text)
+        "GOODS_RECOGNITION" to (ExpertType.MULTIMODAL_EXPERT to ExpertType.TRANSACTION_EXPERT),
         "RECEIPT_SCANNING" to (ExpertType.MULTIMODAL_EXPERT to ExpertType.REASONING_EXPERT),
         "INVENTORY_SCAN" to (ExpertType.MULTIMODAL_EXPERT to ExpertType.TRANSACTION_EXPERT),
         "PRICE_COMPARISON" to (ExpertType.MULTIMODAL_EXPERT to ExpertType.REASONING_EXPERT),
@@ -187,15 +201,15 @@ class MoERouter {
         "CREDIT_ASSESSMENT" to (ExpertType.REASONING_EXPERT to ExpertType.COMPLEX_EXPERT),
         "MARKET_FORECASTING" to (ExpertType.REASONING_EXPERT to ExpertType.COMPLEX_EXPERT),
         "RISK_ASSESSMENT" to (ExpertType.REASONING_EXPERT to ExpertType.COMPLEX_EXPERT),
-        "CASH_FLOW_ALERT" to (ExpertType.TRANSACTION_EXPERT to ExpertType.REASONING_EXPERT),
+        "CASH_FLOW_ALERT" to (ExpertType.MULTIMODAL_EXPERT to ExpertType.TRANSACTION_EXPERT),
         "FINANCIAL_ANALYSIS" to (ExpertType.REASONING_EXPERT to ExpertType.COMPLEX_EXPERT),
 
         // Complex tasks — complex expert
         "GROWTH_PLANNING" to (ExpertType.COMPLEX_EXPERT to ExpertType.AGENT_EXPERT),
 
-        // Agent tasks — backend expert
-        "GENERAL" to (ExpertType.TRANSACTION_EXPERT to ExpertType.REASONING_EXPERT),
-        "DAILY_BRIEFING" to (ExpertType.TRANSACTION_EXPERT to ExpertType.REASONING_EXPERT)
+        // General & briefing — Gemma 4 E2B primary (promoted from TRANSACTION_EXPERT)
+        "GENERAL" to (ExpertType.MULTIMODAL_EXPERT to ExpertType.TRANSACTION_EXPERT),
+        "DAILY_BRIEFING" to (ExpertType.MULTIMODAL_EXPERT to ExpertType.TRANSACTION_EXPERT)
     )
 
     /**
@@ -213,60 +227,61 @@ class MoERouter {
         hasImageInput: Boolean = false,
         isOnline: Boolean = true,
         isOverBudget: Boolean = false,
-        isLowRamDevice: Boolean = false
+        isLowRamDevice: Boolean = false,
+        isMemoryConstrained: Boolean = false
     ): RoutingDecision {
         // Multimodal override: if input has images, prefer multimodal expert
         if (hasImageInput) {
-            val multimodalExpert = experts[ExpertType.MULTIMODAL_EXPERT]!!
             return RoutingDecision(
                 primaryExpert = ExpertType.MULTIMODAL_EXPERT,
                 fallbackExpert = if (isOnline) ExpertType.REASONING_EXPERT else null,
                 confidence = 0.95,
-                reasoning = "Image input detected → routing to multimodal expert",
+                reasoning = "Image input detected → routing to Gemma 4 E2B (multimodal)",
                 estimatedCostMicros = 0  // On-device = free
             )
         }
 
-        // Offline override: only on-device expert available
+        // Offline override: Gemma 4 E2B primary (text capable), Qwen fallback
         if (!isOnline) {
+            val primary = if (isLowRamDevice) ExpertType.TRANSACTION_EXPERT else ExpertType.MULTIMODAL_EXPERT
             return RoutingDecision(
-                primaryExpert = ExpertType.TRANSACTION_EXPERT,
-                fallbackExpert = null,
+                primaryExpert = primary,
+                fallbackExpert = ExpertType.TRANSACTION_EXPERT,
                 confidence = 0.90,
-                reasoning = "Offline mode → on-device expert only",
+                reasoning = "Offline mode → on-device ${primary.name}",
                 estimatedCostMicros = 0
             )
         }
 
-        // Budget override: prefer cheaper experts
+        // Budget override: prefer cheaper experts (both on-device are free)
         if (isOverBudget) {
             return RoutingDecision(
-                primaryExpert = ExpertType.TRANSACTION_EXPERT,
-                fallbackExpert = ExpertType.REASONING_EXPERT,
+                primaryExpert = ExpertType.MULTIMODAL_EXPERT,
+                fallbackExpert = ExpertType.TRANSACTION_EXPERT,
                 confidence = 0.85,
-                reasoning = "Over budget → forced on-device routing",
+                reasoning = "Over budget → forced on-device routing (Gemma 4 primary)",
                 estimatedCostMicros = 0
             )
         }
 
-        // Low RAM override: avoid heavy models
-        if (isLowRamDevice) {
-            // Skip multimodal expert on low RAM devices
+        // Memory pressure override: fall back to lighter Qwen model
+        if (isMemoryConstrained || isLowRamDevice) {
             val (primary, fallback) = routingTable[taskType]
                 ?: routingTable["GENERAL"]!!
+            // Under memory pressure, fall back to lighter TRANSACTION_EXPERT
             val adjustedPrimary = if (primary == ExpertType.MULTIMODAL_EXPERT) {
                 ExpertType.TRANSACTION_EXPERT
             } else primary
             return RoutingDecision(
                 primaryExpert = adjustedPrimary,
-                fallbackExpert = fallback,
+                fallbackExpert = ExpertType.MULTIMODAL_EXPERT,
                 confidence = 0.80,
-                reasoning = "Low RAM device → avoiding heavy models",
+                reasoning = "Memory pressure → falling back to Qwen 3.5 0.8B (lighter model)",
                 estimatedCostMicros = estimateCost(adjustedPrimary, 500, 200)
             )
         }
 
-        // Standard routing via table
+        // Standard routing via table — Gemma 4 E2B is primary for most tasks
         val (primary, fallback) = routingTable[taskType]
             ?: routingTable["GENERAL"]!!
 
@@ -276,7 +291,7 @@ class MoERouter {
             primaryExpert = primary,
             fallbackExpert = fallback,
             confidence = 0.90,
-            reasoning = "MoE routing: $taskType → ${primary.name}",
+            reasoning = "MoE routing: $taskType → ${primary.name} (Gemma 4 E2B primary)",
             estimatedCostMicros = costEstimate
         )
     }

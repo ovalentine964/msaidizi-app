@@ -336,8 +336,9 @@ class OnboardingConversation {
      * Whisper first (voice input critical), then Qwen, then TTS.
      */
     fun getModelDownloadPriority(): List<String> = listOf(
-        "whisper-tiny-int4",   // ~150MB — voice input is critical
-        "qwen-3.5-0.8b-q4km",  // ~580MB — reasoning
+        "whisper-tiny-int4",    // ~150MB — voice input is critical
+        "gemma-4-e2b-q4km",    // ~1.5GB — primary text LLM (Gemma 4 E2B)
+        "qwen-3.5-0.8b-q4km", // ~580MB — fallback for memory pressure
         "piper-swahili"        // ~50MB — voice output
     )
 

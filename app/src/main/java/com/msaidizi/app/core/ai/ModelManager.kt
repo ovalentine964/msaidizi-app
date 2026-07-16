@@ -39,11 +39,17 @@ import javax.inject.Provider
  * | MID  | 3-4GB | Helio G25    | Qwen3.5-0.8B Q4_K_M       | Gemma4-E2B Q4_K_M  |
  * | HIGH | ≥6GB  | Dimensity 700| Qwen3.5-2B Q4_K_M         | Gemma4-E2B Q4_K_M  |
  *
- * ## Decision Council Model Selection (2026-07-15)
+ * ## Decision Council Model Selection (updated 2026-07-16)
  *
- * - **Primary:** Qwen 3.5 0.8B — best reasoning-per-byte for mobile
- * - **Benchmark:** Gemma 4 E2B — Google's edge model, available on MID/HIGH
+ * - **Primary:** Gemma 4 E2B — promoted to primary text LLM (was vision-only)
+ * - **Fallback:** Qwen 3.5 0.8B — lightweight fallback for memory-constrained devices
  * - **Future:** Tiny Aya Earth — placeholder for when Cohere releases it
+ *
+ * ## Gemma 4 E2B Promotion (2026-07-16)
+ * Gemma 4 E2B promoted from multimodal-only to primary text LLM.
+ * - MID/HIGH: Gemma 4 E2B is default for text + vision
+ * - LOW: Gemma 4 E2B Q3_K_M as primary, Qwen fallback under memory pressure
+ * - Memory pressure: auto-fallback to Qwen when available RAM < 500MB
  *
  * ## Integration Points
  *
@@ -76,19 +82,22 @@ class ModelManager @Inject constructor(
         private const val CRITICAL_MEMORY_PERCENT = 92 // Emergency unload
 
         // ────────────────────── Model IDs ──────────────────────
-        // Decision Council approved (2026-07-15):
-        //   Primary:  Qwen 3.5 0.8B — mobile-optimized reasoning, all tiers
-        //   Benchmark: Gemma 4 E2B — Google edge model, MID/HIGH tiers
+        // Decision Council updated (2026-07-16):
+        //   Primary:  Gemma 4 E2B — promoted to primary text LLM for all tiers
+        //   Fallback: Qwen 3.5 0.8B — lightweight fallback for memory pressure
         //   Future:   Tiny Aya Earth — placeholder for Cohere release
 
-        /** Qwen 3.5 0.8B Q4_K_M — primary model for all tiers (~580MB) */
+        /** Gemma 4 E2B Q4_K_M — primary text+vision model for MID/HIGH tiers (~1.5GB) */
+        private const val MODEL_GEMMA_4_E2B = "gemma-4-e2b-q4km"
+
+        /** Gemma 4 E2B Q3_K_M — primary model for LOW-tier 2GB devices (~1.0GB) */
+        private const val MODEL_GEMMA_4_E2B_SMALL = "gemma-4-e2b-q3km"
+
+        /** Qwen 3.5 0.8B Q4_K_M — fallback model for memory-constrained scenarios (~580MB) */
         private const val MODEL_QWEN_08B = "qwen3.5-0.8b-q4km"
 
-        /** Qwen 3.5 2B Q4_K_M — higher-quality default for HIGH-tier devices (~1.2GB) */
+        /** Qwen 3.5 2B Q4_K_M — higher-quality fallback for HIGH-tier devices (~1.2GB) */
         private const val MODEL_QWEN_2B = "qwen3.5-2b-q4km"
-
-        /** Gemma 4 E2B Q4_K_M — benchmark/alternative model for MID/HIGH tiers (~600MB) */
-        private const val MODEL_GEMMA_4_E2B = "gemma-4-e2b-q4km"
 
         /** Tiny Aya Earth — future placeholder (not yet available) */
         private const val MODEL_TINY_AYA_EARTH = "tiny-aya-earth"
@@ -321,10 +330,11 @@ class ModelManager @Inject constructor(
      */
     private fun getModelSizeMb(modelId: String): Int {
         return when (modelId) {
-            MODEL_QWEN_08B -> 580      // ~580MB Q4_K_M (Qwen3.5-0.8B)
-            MODEL_QWEN_2B -> 1200      // ~1.2GB Q4_K_M (Qwen3.5-2B)
-            MODEL_GEMMA_4_E2B -> 600   // ~600MB Q4_K_M (Gemma 4 E2B)
-            MODEL_TINY_AYA_EARTH -> 400 // ~400MB estimated (Tiny Aya Earth)
+            MODEL_GEMMA_4_E2B -> 1500       // ~1.5GB Q4_K_M (Gemma 4 E2B)
+            MODEL_GEMMA_4_E2B_SMALL -> 1000 // ~1.0GB Q3_K_M (Gemma 4 E2B, LOW tier)
+            MODEL_QWEN_08B -> 580           // ~580MB Q4_K_M (Qwen3.5-0.8B)
+            MODEL_QWEN_2B -> 1200           // ~1.2GB Q4_K_M (Qwen3.5-2B)
+            MODEL_TINY_AYA_EARTH -> 400     // ~400MB estimated (Tiny Aya Earth)
             else -> 500
         }
     }
@@ -392,43 +402,46 @@ class ModelManager @Inject constructor(
      * Get the optimal model ID for this device.
      * Returns the model that balances quality and memory constraints.
      *
-     * Decision Council (2026-07-15):
-     * - LOW:  Qwen 3.5 0.8B only (Gemma 4 E2B too large for ≤2GB devices)
-     * - MID:  Qwen 3.5 0.8B default, Gemma 4 E2B available as alternative
-     * - HIGH: Qwen 3.5 2B default, Gemma 4 E2B available as alternative
+     * Decision Council (2026-07-16): Gemma 4 E2B promoted to primary.
+     * - LOW:  Gemma 4 E2B Q3_K_M primary (~1GB), Qwen 3.5 0.8B fallback
+     * - MID:  Gemma 4 E2B Q4_K_M primary (~1.5GB), Qwen 3.5 0.8B fallback
+     * - HIGH: Gemma 4 E2B Q4_K_M primary, Qwen 3.5 2B fallback
      */
     fun getOptimalModelId(): String {
         return when (deviceTier) {
-            DeviceTier.LOW -> MODEL_QWEN_08B     // Qwen3.5-0.8B — only option for LOW tier
-            DeviceTier.MID -> MODEL_QWEN_08B     // Qwen3.5-0.8B default (Gemma 4 E2B available)
-            DeviceTier.HIGH -> MODEL_QWEN_2B     // Qwen3.5-2B — best quality (Gemma 4 E2B available)
+            DeviceTier.LOW -> MODEL_GEMMA_4_E2B_SMALL  // Gemma 4 E2B Q3_K_M (~1GB) for 2GB devices
+            DeviceTier.MID -> MODEL_GEMMA_4_E2B        // Gemma 4 E2B Q4_K_M (~1.5GB) primary
+            DeviceTier.HIGH -> MODEL_GEMMA_4_E2B       // Gemma 4 E2B Q4_K_M primary
         }
     }
 
     /**
-     * Get the alternative model ID for this device (if available).
-     * Returns null if no alternative is suitable for this tier.
+     * Get the alternative/fallback model ID for this device.
      *
-     * Decision Council (2026-07-15):
-     * - LOW:  None (Gemma 4 E2B too large)
-     * - MID:  Gemma 4 E2B
-     * - HIGH: Gemma 4 E2B
+     * Decision Council (2026-07-16): Qwen is now the fallback.
+     * - LOW:  Qwen 3.5 0.8B (memory pressure fallback)
+     * - MID:  Qwen 3.5 0.8B (memory pressure fallback)
+     * - HIGH: Qwen 3.5 2B (higher quality fallback)
      */
     fun getAlternativeModelId(): String? {
         return when (deviceTier) {
-            DeviceTier.LOW -> null                 // No alternative — Gemma 4 too large
-            DeviceTier.MID -> MODEL_GEMMA_4_E2B    // Gemma 4 E2B available
-            DeviceTier.HIGH -> MODEL_GEMMA_4_E2B   // Gemma 4 E2B available
+            DeviceTier.LOW -> MODEL_QWEN_08B      // Qwen fallback for 2GB devices
+            DeviceTier.MID -> MODEL_QWEN_08B       // Qwen fallback for MID tier
+            DeviceTier.HIGH -> MODEL_QWEN_2B       // Qwen 2B fallback for HIGH tier
         }
     }
 
     /**
      * Get the recommended context length for this device.
+     * Updated (2026-07-16): expanded for Gemma 4 E2B promotion.
+     * - LOW:  2048 tokens (expanded from 1024)
+     * - MID:  4096 tokens (expanded from 2048)
+     * - HIGH: 4096 tokens
      */
     fun getRecommendedContextLength(): Int {
         return when (deviceTier) {
-            DeviceTier.LOW -> 1024
-            DeviceTier.MID -> 2048
+            DeviceTier.LOW -> 2048
+            DeviceTier.MID -> 4096
             DeviceTier.HIGH -> 4096
         }
     }
@@ -436,9 +449,10 @@ class ModelManager @Inject constructor(
     /**
      * Check if on-device LLM inference is feasible on this device.
      * Returns false for very low-end devices where cloud-only is better.
+     * Updated (2026-07-16): Gemma 4 E2B Q3_K_M (~1GB) enables on-device on LOW tier.
      */
     fun isOnDeviceLlmFeasible(): Boolean {
-        return deviceTier != DeviceTier.LOW || getTotalRamMb() >= 1536
+        return getTotalRamMb() >= 1536  // Gemma 4 E2B Q3_K_M needs ~1.5GB total
     }
 
     /**
@@ -563,9 +577,9 @@ class ModelManager @Inject constructor(
      */
     private fun getModelCandidates(): List<String> {
         return when (deviceTier) {
-            DeviceTier.LOW -> listOf(MODEL_QWEN_08B)                                // Qwen only
-            DeviceTier.MID -> listOf(MODEL_QWEN_08B, MODEL_GEMMA_4_E2B)             // Qwen default, Gemma fallback
-            DeviceTier.HIGH -> listOf(MODEL_QWEN_2B, MODEL_GEMMA_4_E2B, MODEL_QWEN_08B) // 2B default, Gemma, then 0.8B
+            DeviceTier.LOW -> listOf(MODEL_GEMMA_4_E2B_SMALL, MODEL_QWEN_08B)               // Gemma Q3 primary, Qwen fallback
+            DeviceTier.MID -> listOf(MODEL_GEMMA_4_E2B, MODEL_QWEN_08B)                     // Gemma primary, Qwen fallback
+            DeviceTier.HIGH -> listOf(MODEL_GEMMA_4_E2B, MODEL_QWEN_2B, MODEL_QWEN_08B)     // Gemma primary, Qwen 2B, then 0.8B
         }
     }
 
@@ -577,7 +591,12 @@ class ModelManager @Inject constructor(
             "silero-vad",
             "whisper-tiny-int4",
             "piper-swahili"
-        ) + if (isOnDeviceLlmFeasible()) listOf(MODEL_QWEN_08B) else emptyList()
+        ) + if (isOnDeviceLlmFeasible()) {
+            when (deviceTier) {
+                DeviceTier.LOW -> listOf(MODEL_GEMMA_4_E2B_SMALL, MODEL_QWEN_08B)
+                else -> listOf(MODEL_GEMMA_4_E2B, MODEL_QWEN_08B)
+            }
+        } else emptyList()
     }
 
     // ────────────────────── Private: Model Loading ──────────────────────

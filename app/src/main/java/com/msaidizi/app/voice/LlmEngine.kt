@@ -26,13 +26,17 @@ import javax.inject.Singleton
  * [LlamaCppEngine]. Those stubs have been removed; all native calls
  * now route through the single [LlamaCppEngine] instance.
  *
- * Model: Qwen3.5-0.8B Q4_K_M (~450MB GGUF)
+ * Model: Gemma 4 E2B Q4_K_M (~1.5GB) — primary text LLM (promoted 2026-07-16)
+ * Fallback: Qwen3.5-0.8B Q4_K_M (~580MB) — for memory-constrained scenarios
  *
  * Performance on Helio G25 (2GB):
  * - Load time: ~3s with mmap
  * - Inference: ~8 tokens/sec (prompt), ~5 tokens/sec (generation)
- * - Context: 1024 tokens (BASIC tier) to 4096 (ENHANCED)
- * - RAM: ~500MB when loaded (released on background)
+ * - Context: 2048 tokens (BASIC tier) to 4096 (ENHANCED)
+ * - RAM: ~1.5GB when loaded (released on background)
+ *
+ * Fallback behavior: If Gemma 4 E2B cannot load (OOM on 2GB device),
+ * automatically falls back to Qwen 3.5 0.8B.
  */
 @Singleton
 class LlmEngine @Inject constructor(
@@ -42,9 +46,9 @@ class LlmEngine @Inject constructor(
     private val adaptiveAsrEngine: AdaptiveAsrEngine? = null
 ) {
     companion object {
-        // Default context lengths by device tier
-        private const val CTX_BASIC = 1024
-        private const val CTX_STANDARD = 2048
+        // Default context lengths by device tier (expanded 2026-07-16)
+        private const val CTX_BASIC = 2048     // Expanded from 1024 for Gemma 4 E2B
+        private const val CTX_STANDARD = 4096  // Expanded from 2048
         private const val CTX_ENHANCED = 4096
 
         // Default generation parameters
@@ -144,6 +148,8 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
      * Load the LLM model with memory-mapped file access.
      * Delegates to [LlamaCppEngine.loadModel].
      *
+     * Updated (2026-07-16): Prefers Gemma 4 E2B, falls back to Qwen 3.5 0.8B.
+     *
      * @return true if model loaded successfully
      */
     suspend fun loadModel(): Boolean {
@@ -154,13 +160,49 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
             return false
         }
 
-        val modelPath = File(context.filesDir, "models/qwen3.5-0.8b-q4_k_m.gguf")
-        if (!modelPath.exists()) {
-            Timber.w("LLM model not found: %s", modelPath.absolutePath)
-            return false
+        // Try Gemma 4 E2B first (primary model, promoted 2026-07-16)
+        val gemmaPath = resolveGemmaModelPath()
+        if (gemmaPath != null && gemmaPath.exists()) {
+            val loaded = llamaCppEngine.loadModel(gemmaPath.absolutePath)
+            if (loaded) {
+                Timber.i("Loaded primary model: Gemma 4 E2B")
+                return true
+            }
+            Timber.w("Gemma 4 E2B failed to load (likely OOM), falling back to Qwen")
         }
 
-        return llamaCppEngine.loadModel(modelPath.absolutePath)
+        // Fallback: Qwen 3.5 0.8B (lighter model for memory-constrained devices)
+        val qwenPath = File(context.filesDir, "models/qwen3.5-0.8b-q4_k_m.gguf")
+        if (qwenPath.exists()) {
+            val loaded = llamaCppEngine.loadModel(qwenPath.absolutePath)
+            if (loaded) {
+                Timber.i("Loaded fallback model: Qwen 3.5 0.8B")
+                return true
+            }
+        }
+
+        Timber.w("No LLM model could be loaded")
+        return false
+    }
+
+    /**
+     * Resolve the Gemma 4 E2B model path based on available memory.
+     * Returns Q4_K_M for ≥3GB devices, Q3_K_M for 2GB devices.
+     */
+    private fun resolveGemmaModelPath(): File? {
+        val maxMemoryMB = Runtime.getRuntime().maxMemory() / (1024 * 1024)
+        val modelsDir = File(context.filesDir, "models")
+
+        // For devices with ≥3GB RAM, use Q4_K_M (~1.5GB)
+        val q4Path = File(modelsDir, "gemma-4-e2b-q4_k_m.gguf")
+        if (maxMemoryMB >= 3072 && q4Path.exists()) return q4Path
+
+        // For devices with ≥2GB RAM, try Q3_K_M (~1.0GB)
+        val q3Path = File(modelsDir, "gemma-4-e2b-q3_k_m.gguf")
+        if (maxMemoryMB >= 2048 && q3Path.exists()) return q3Path
+
+        // Fall through: no Gemma model available
+        return null
     }
 
     /**

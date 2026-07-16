@@ -38,7 +38,8 @@ import javax.inject.Singleton
  * │ kokoro-swahili (primary TTS) │ ~82MB     │ Best quality, Apache 2.0 │
  * │ piper-swahili (fallback TTS) │ ~26MB     │ Robotic but small        │
  * │ silero-vad                   │ ~2.5MB    │ Voice activity detection │
- * │ qwen-3.5-0.8b-q4km (LLM)   │ ~580MB    │ On-device reasoning      │
+ * │ gemma-4-e2b-q4km (Primary)  │ ~1500MB   │ Primary text + vision    │
+ * │ qwen-3.5-0.8b-q4km (Fallback)│ ~580MB    │ Fallback for low memory  │
  * │ mms-tts-* (per language)     │ ~65MB ea  │ 10 African languages     │
  * └──────────────────────────────┴───────────┴──────────────────────────┘
  *
@@ -269,6 +270,33 @@ class ModelRegistry @Inject constructor(
             // FIXED: Model ID and filename now match the actual downloaded file.
             // Previously: id="qwen-0.5b-q4km" downloaded "Qwen3.5-0.8B-Q4_K_M.gguf"
             // This caused model loading to fail because the filename didn't match.
+            // ── Gemma 4 E2B Q4_K_M — Primary LLM (promoted 2026-07-16) ─────
+            "gemma-4-e2b-q4km" to ModelDef(
+                id = "gemma-4-e2b-q4km",
+                filename = "gemma-4-e2b-Q4_K_M.gguf",
+                url = "https://huggingface.co/bartowski/google_gemma-4-e2b-it-GGUF/resolve/main/google_gemma-4-e2b-it-Q4_K_M.gguf",
+                sha256 = "PENDING",
+                sizeBytes = 1_500_000_000L,
+                priority = ModelPriority.HIGH,
+                requiredFor = listOf(Feature.LLM_INFERENCE),
+                tier = ModelTier.ESSENTIAL,
+                version = "1.0.0"
+            ),
+
+            // ── Gemma 4 E2B Q3_K_M — Primary LLM for LOW-tier 2GB devices ─
+            "gemma-4-e2b-q3km" to ModelDef(
+                id = "gemma-4-e2b-q3km",
+                filename = "gemma-4-e2b-Q3_K_M.gguf",
+                url = "https://huggingface.co/bartowski/google_gemma-4-e2b-it-GGUF/resolve/main/google_gemma-4-e2b-it-Q3_K_M.gguf",
+                sha256 = "PENDING",
+                sizeBytes = 1_000_000_000L,
+                priority = ModelPriority.HIGH,
+                requiredFor = listOf(Feature.LLM_INFERENCE),
+                tier = ModelTier.ESSENTIAL,
+                version = "1.0.0"
+            ),
+
+            // ── Qwen 3.5 0.8B Q4_K_M — Fallback LLM ────────────────────
             "qwen-3.5-0.8b-q4km" to ModelDef(
                 id = "qwen-3.5-0.8b-q4km",
                 filename = "Qwen3.5-0.8B-Q4_K_M.gguf",

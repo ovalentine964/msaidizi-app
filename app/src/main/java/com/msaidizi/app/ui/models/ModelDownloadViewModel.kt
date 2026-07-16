@@ -170,7 +170,9 @@ class ModelDownloadViewModel @Inject constructor(
         "silero-vad" -> "Sauti ya Kugundua (VAD)"
         "whisper-tiny-int4" -> "Sauti ya Maandishi (Whisper)"
         "piper-swahili" -> "Sauti ya Kiswahili (Piper)"
-        "qwen-3.5-0.8b-q4km" -> "Akili ya AI (Qwen LLM)"
+        "gemma-4-e2b-q4km" -> "Msaidizi wa AI (Gemma 4)"
+        "gemma-4-e2b-q3km" -> "Msaidizi wa AI (Gemma 4 Lite)"
+        "qwen-3.5-0.8b-q4km" -> "Msaidizi wa Akili (Qwen — Msaada)"
         else -> id
     }
 
@@ -178,7 +180,9 @@ class ModelDownloadViewModel @Inject constructor(
         "silero-vad" -> "Inagundua sauti — inafanya kazi mara moja"
         "whisper-tiny-int4" -> "Inabadilisha sauti kuwa maandishi"
         "piper-swahili" -> "Inazungumza Kiswahili"
-        "qwen-3.5-0.8b-q4km" -> "Jibu la maswali yoyote"
+        "gemma-4-e2b-q4km" -> "Msaidizi mkuu — jibu la maswali yoyote"
+        "gemma-4-e2b-q3km" -> "Msaidizi wa simu ndogo — jibu la maswali"
+        "qwen-3.5-0.8b-q4km" -> "Msaidizi wa dharura — ikiwa Gemma haifanyi kazi"
         else -> ""
     }
 }

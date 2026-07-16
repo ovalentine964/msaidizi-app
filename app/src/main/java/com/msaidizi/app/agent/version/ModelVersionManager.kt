@@ -13,14 +13,15 @@ import java.io.File
  * - Previous: Qwen 0.5B (Q4_K_M, ~300MB, deprecated)
  * - Future: Qwen3.5-2B (Q4_K_M, ~1.2GB, for 3GB+ devices)
  *
- * ## Upgrade Path (Swarm 7 Research)
+ * ## Upgrade Path (updated 2026-07-16 — Gemma 4 E2B promoted to primary)
  *
- * | Model          | Params | Quantized | Performance           | Min RAM |
- * |----------------|--------|-----------|-----------------------|---------|
- * | Qwen 0.5B      | 0.5B   | ~300MB    | Basic tasks (deprecated) | 2GB     |
- * | Qwen3.5-0.8B   | 0.8B   | ~580MB    | Current — multilingual   | 2GB     |
- * | Qwen3.5-2B     | 2B     | ~1.2GB    | Edge reasoning        | 3GB     |
- * | Gemma 4 E2B    | 2B     | ~1.5GB    | Multimodal (vision)   | 3GB     |
+ * | Model             | Params | Quantized | Performance              | Min RAM |
+ * |-------------------|--------|-----------|--------------------------|--------|
+ * | Qwen 0.5B         | 0.5B   | ~300MB    | Basic tasks (deprecated) | 2GB    |
+ * | Qwen3.5-0.8B      | 0.8B   | ~580MB    | Fallback — multilingual  | 2GB    |
+ * | Qwen3.5-2B        | 2B     | ~1.2GB    | Edge reasoning           | 3GB    |
+ * | Gemma 4 E2B Q3_K  | 2B     | ~1.0GB    | Primary text LLM (LOW)   | 2GB    |
+ * | Gemma 4 E2B Q4_K  | 2B     | ~1.5GB    | Primary text+vision      | 3GB    |
  *
  * ## Version-Aware Management
  * - Tracks which model version is installed
@@ -62,7 +63,7 @@ class ModelVersionManager(private val context: Context) {
             capabilities = listOf("text_generation", "swahili", "simple_qa")
         ),
         QWEN3_5_0_8B(
-            displayName = "Qwen3.5 0.8B (Current)",
+            displayName = "Qwen3.5 0.8B (Fallback)",
             modelFileName = "qwen3.5-0.8b-q4_k_m.gguf",
             parameterCount = "0.8B",
             quantizedSizeMb = 580,
@@ -86,7 +87,7 @@ class ModelVersionManager(private val context: Context) {
             )
         ),
         GEMMA4_E2B(
-            displayName = "Gemma 4 E2B (Multimodal)",
+            displayName = "Gemma 4 E2B (Primary)",
             modelFileName = "gemma-4-e2b-q4_k_m.gguf",
             parameterCount = "2B",
             quantizedSizeMb = 1500,
@@ -94,7 +95,19 @@ class ModelVersionManager(private val context: Context) {
             license = "Apache 2.0",
             capabilities = listOf(
                 "text_generation", "vision", "audio", "function_calling",
-                "multimodal", "goods_recognition"
+                "multimodal", "goods_recognition", "primary_text_llm"
+            )
+        ),
+        GEMMA4_E2B_SMALL(
+            displayName = "Gemma 4 E2B Q3_K_M (Primary, Low-RAM)",
+            modelFileName = "gemma-4-e2b-q3_k_m.gguf",
+            parameterCount = "2B",
+            quantizedSizeMb = 1000,
+            minRamMb = 2048,
+            license = "Apache 2.0",
+            capabilities = listOf(
+                "text_generation", "vision", "function_calling",
+                "primary_text_llm", "low_ram_optimized"
             )
         )
     }
@@ -132,12 +145,13 @@ class ModelVersionManager(private val context: Context) {
 
     /**
      * Get the currently active model version.
+     * Updated (2026-07-16): default is now Gemma 4 E2B.
      */
     fun getCurrentVersion(): ModelVersion {
         val saved = prefs.getString("current_version", null)
         return if (saved != null) {
-            try { ModelVersion.valueOf(saved) } catch (_: Exception) { ModelVersion.QWEN3_5_0_8B }
-        } else ModelVersion.QWEN3_5_0_8B
+            try { ModelVersion.valueOf(saved) } catch (_: Exception) { ModelVersion.GEMMA4_E2B }
+        } else ModelVersion.GEMMA4_E2B
     }
 
     /**
@@ -187,11 +201,11 @@ class ModelVersionManager(private val context: Context) {
     /**
      * Determine the best model version for this device.
      *
-     * Selection logic:
+     * Selection logic (updated 2026-07-16):
      * 1. Check available RAM
      * 2. Filter to versions that fit in RAM
-     * 3. Prefer the most capable version
-     * 4. Fall back to current version if nothing better is available
+     * 3. Prefer Gemma 4 E2B variants over Qwen
+     * 4. Fall back to Qwen if Gemma can't fit
      */
     fun getRecommendedVersion(): ModelVersion {
         val runtime = Runtime.getRuntime()
@@ -200,10 +214,13 @@ class ModelVersionManager(private val context: Context) {
 
         val current = getCurrentVersion()
 
-        // Find the most capable version that fits
+        // Prefer Gemma 4 E2B variants; fall back to Qwen
         val candidates = ModelVersion.entries
             .filter { it.minRamMb <= availableMb }
-            .sortedByDescending { it.quantizedSizeMb }  // Bigger = more capable
+            .sortedWith(compareByDescending<ModelVersion> {
+                // Prefer Gemma 4 E2B over Qwen
+                it.name.startsWith("GEMMA4")
+            }.thenByDescending { it.quantizedSizeMb })
 
         val recommended = candidates.firstOrNull() ?: current
 

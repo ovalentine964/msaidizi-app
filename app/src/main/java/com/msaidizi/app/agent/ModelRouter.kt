@@ -88,7 +88,7 @@ class ModelRouter(
 
     data class RouterConfig(
         val cacheSize: Int = 100,
-        val maxPromptTokens: Int = 2048,
+        val maxPromptTokens: Int = 4096,  // Expanded from 2048 for Gemma 4 E2B (2026-07-16)
         val compressionThreshold: Int = 1500,
         val cloudTimeoutMs: Long = 15_000,
         val onDeviceTimeoutMs: Long = 10_000,
@@ -466,16 +466,33 @@ class ModelRouter(
     // ═══════════════════════════════════════════════════════════════
 
     private val providers = ConcurrentHashMap<String, Provider>().apply {
-        // Layer 1: On-Device (free, instant, private)
+        // Layer 1: On-Device Gemma 4 E2B — PRIMARY text + vision (promoted 2026-07-16)
         put("on-device", Provider(
             id = "on-device",
             type = ProviderType.ON_DEVICE,
-            displayName = "On-Device Qwen3.5-0.8B (llama.cpp)",
-            models = listOf("qwen3.5-0.8b", "qwen3-1.7b", "phi-2"),
+            displayName = "On-Device Gemma 4 E2B (Primary Text + Vision)",
+            models = listOf("gemma-4-e2b", "qwen3.5-0.8b"),
             costPer1kInput = 0.0,
             costPer1kOutput = 0.0,
-            maxContextTokens = 4096,
+            maxContextTokens = 2048,
             priority = 10,
+            capabilities = listOf(
+                "transaction_recording", "balance_inquiry", "price_lookup",
+                "cash_flow_alert", "daily_briefing_template", "simple_qa",
+                "goods_recognition", "receipt_scanning", "inventory_scan",
+                "price_comparison", "ocr", "image_classification"
+            )
+        ))
+        // Layer 1 fallback: On-Device Qwen 3.5 0.8B — lightweight fallback for memory pressure
+        put("on-device-qwen", Provider(
+            id = "on-device-qwen",
+            type = ProviderType.ON_DEVICE,
+            displayName = "On-Device Qwen3.5-0.8B (Fallback)",
+            models = listOf("qwen3.5-0.8b"),
+            costPer1kInput = 0.0,
+            costPer1kOutput = 0.0,
+            maxContextTokens = 2048,
+            priority = 15,
             capabilities = listOf(
                 "transaction_recording", "balance_inquiry", "price_lookup",
                 "cash_flow_alert", "daily_briefing_template", "simple_qa"
@@ -540,7 +557,7 @@ class ModelRouter(
                 "full_agent", "multi_step", "domain_expert", "report_generation"
             )
         ))
-        // On-Device Vision: Gemma 4 E2B (multimodal, free)
+        // On-Device Vision (legacy alias — Gemma 4 E2B now unified under "on-device")
         put("on-device-vision", Provider(
             id = "on-device-vision",
             type = ProviderType.ON_DEVICE,
@@ -548,7 +565,7 @@ class ModelRouter(
             models = listOf("gemma-4-e2b", "lfm2.5-vl-1.6b"),
             costPer1kInput = 0.0,
             costPer1kOutput = 0.0,
-            maxContextTokens = 4096,
+            maxContextTokens = 2048,
             priority = 12,
             capabilities = listOf(
                 "goods_recognition", "receipt_scanning", "inventory_scan",
@@ -562,23 +579,25 @@ class ModelRouter(
     // Based on Swarm 2 research: 80% on-device, 15% cloud reasoning, 5% premium
     // ═══════════════════════════════════════════════════════════════
 
+    // Routing table updated (2026-07-16): Gemma 4 E2B is primary on-device for all tasks.
+    // "on-device" = Gemma 4 E2B (primary), "on-device-qwen" = Qwen 3.5 0.8B (fallback)
     private val taskRoutingTable: Map<TaskType, List<String>> = mapOf(
-        TaskType.TRANSACTION_RECORDING to listOf("on-device"),
-        TaskType.BALANCE_INQUIRY to listOf("on-device"),
-        TaskType.PRICE_LOOKUP to listOf("on-device"),
-        TaskType.CASH_FLOW_ALERT to listOf("on-device", "deepseek-flash"),
-        TaskType.DAILY_BRIEFING to listOf("on-device", "deepseek-flash"),
+        TaskType.TRANSACTION_RECORDING to listOf("on-device", "on-device-qwen"),
+        TaskType.BALANCE_INQUIRY to listOf("on-device", "on-device-qwen"),
+        TaskType.PRICE_LOOKUP to listOf("on-device", "on-device-qwen"),
+        TaskType.CASH_FLOW_ALERT to listOf("on-device", "on-device-qwen", "deepseek-flash"),
+        TaskType.DAILY_BRIEFING to listOf("on-device", "on-device-qwen", "deepseek-flash"),
         TaskType.CREDIT_ASSESSMENT to listOf("deepseek-flash", "gpt-nano", "claude-haiku"),
         TaskType.MARKET_FORECASTING to listOf("deepseek-flash", "gpt-nano", "claude-haiku"),
         TaskType.RISK_ASSESSMENT to listOf("deepseek-flash", "gpt-nano", "claude-haiku"),
         TaskType.FINANCIAL_ANALYSIS to listOf("deepseek-flash", "gpt-nano"),
         TaskType.GROWTH_PLANNING to listOf("claude-haiku", "deepseek-flash", "gpt-nano"),
-        // Multimodal routing (Swarm 7)
-        TaskType.GOODS_RECOGNITION to listOf("on-device-vision", "deepseek-flash", "on-device"),
-        TaskType.RECEIPT_SCANNING to listOf("on-device-vision", "deepseek-flash", "on-device"),
-        TaskType.INVENTORY_SCAN to listOf("on-device-vision", "on-device", "deepseek-flash"),
-        TaskType.PRICE_COMPARISON to listOf("on-device-vision", "deepseek-flash", "gpt-nano"),
-        TaskType.GENERAL to listOf("on-device", "deepseek-flash", "gpt-nano", "backend")
+        // Multimodal routing — Gemma 4 E2B handles both text and vision
+        TaskType.GOODS_RECOGNITION to listOf("on-device", "on-device-qwen", "deepseek-flash"),
+        TaskType.RECEIPT_SCANNING to listOf("on-device", "deepseek-flash", "on-device-qwen"),
+        TaskType.INVENTORY_SCAN to listOf("on-device", "on-device-qwen", "deepseek-flash"),
+        TaskType.PRICE_COMPARISON to listOf("on-device", "deepseek-flash", "gpt-nano"),
+        TaskType.GENERAL to listOf("on-device", "on-device-qwen", "deepseek-flash", "gpt-nano", "backend")
     )
 
     // ═══════════════════════════════════════════════════════════════
@@ -685,12 +704,15 @@ class ModelRouter(
 
         // 5. MoE routing — select best expert for this task type (Swarm 7)
         val moeDecision = if (config.enableMoERouting) {
+            val tier = DeviceCapability.getTier(context)
+            val isMemoryConstrained = DeviceCapability.isLowMemory(context)
             moeRouter.route(
                 taskType = effectiveTaskType.name,
                 hasImageInput = request.messages.any { it["content"]?.startsWith("[IMAGE]") == true },
                 isOnline = isNetworkAvailable(),
                 isOverBudget = budgetStatus.isOverBudget,
-                isLowRamDevice = DeviceCapability.getTier(context) == DeviceCapability.PerformanceTier.LOW
+                isLowRamDevice = tier == DeviceCapability.PerformanceTier.LOW,
+                isMemoryConstrained = isMemoryConstrained
             )
         } else null
 

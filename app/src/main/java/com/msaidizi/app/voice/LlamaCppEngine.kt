@@ -39,9 +39,9 @@ class LlamaCppEngine @Inject constructor(
     companion object {
         private const val TAG = "LlamaCppEngine"
 
-        // Default context lengths by device tier
-        private const val CTX_BASIC = 1024
-        private const val CTX_STANDARD = 2048
+        // Default context lengths by device tier (expanded 2026-07-16)
+        private const val CTX_BASIC = 2048     // Expanded from 1024 for Gemma 4 E2B
+        private const val CTX_STANDARD = 4096  // Expanded from 2048
         private const val CTX_ENHANCED = 4096
 
         // Default generation parameters
@@ -263,14 +263,30 @@ class LlamaCppEngine @Inject constructor(
     fun isModelLoaded(): Boolean = isLoaded && modelHandle != 0L
 
     /**
-     * Load the default Msaidizi LLM model (Qwen 3.5 0.8B Q4_K_M).
-     * Convenience method that resolves the model path from the app's files directory.
+     * Load the default Msaidizi LLM model.
+     * Updated (2026-07-16): Prefers Gemma 4 E2B, falls back to Qwen 3.5 0.8B.
      *
      * @return true if the default model loaded successfully
      */
     suspend fun loadDefaultModel(): Boolean {
-        val modelPath = File(context.filesDir, "models/Qwen3.5-0.8B-Q4_K_M.gguf")
-        return loadModel(modelPath.absolutePath)
+        val maxMemoryMB = Runtime.getRuntime().maxMemory() / (1024 * 1024)
+        val modelsDir = File(context.filesDir, "models")
+
+        // Try Gemma 4 E2B first (primary model)
+        val gemmaPath = if (maxMemoryMB >= 3072) {
+            File(modelsDir, "gemma-4-e2b-q4_k_m.gguf")
+        } else {
+            File(modelsDir, "gemma-4-e2b-q3_k_m.gguf")
+        }
+        if (gemmaPath.exists()) {
+            val loaded = loadModel(gemmaPath.absolutePath)
+            if (loaded) return true
+            Timber.w("Gemma 4 E2B failed to load, falling back to Qwen")
+        }
+
+        // Fallback: Qwen 3.5 0.8B
+        val qwenPath = File(modelsDir, "Qwen3.5-0.8B-Q4_K_M.gguf")
+        return loadModel(qwenPath.absolutePath)
     }
 
     // ────────────── Helpers ──────────────
