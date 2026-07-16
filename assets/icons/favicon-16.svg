@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 108 108">
+  <!-- Msaidizi favicon 16px — Africa Shield simplified -->
+  <rect width="108" height="108" fill="#0F172A"/>
+  <!-- Africa continent -->
+  <path d="M54,19 L59,19.3 L64,20.5 L68,22.5 L70,25.5 L71,29 L70.5,33 L69,36.5 L66.5,39 L63.5,42 L61.5,45 L62.5,49 L64,52.5 L66,56 L67,60 L65.5,64 L62,67 L58.5,70 L55,73.5 L52,76 L50,77 L48,76 L45.5,73.5 L42.5,70 L40,67 L38,63.5 L36.5,60 L35.5,56 L34.5,52.5 L35,49 L36,45 L37.5,42 L39.5,39 L41.5,36.5 L43,33 L43.5,29 L44,25.5 L46,22.5 L48.5,20.5 L51,19.3 Z" fill="#22C55E"/>
+  <!-- Shield border -->
+  <path d="M54,16 C54,16 60,14 66,15.5 C71,17 76,20 78,24 C80,27 80,32 79,37 C78,43 76,50 73,56 C70,62 66,68 62,73 C58,78 54,82 51,84 C48,82 44,78 40,73 C36,68 32,62 29,56 C26,50 24,43 23,37 C22,32 22,27 24,24 C26,20 31,17 36,15.5 C42,14 48,16 54,16 Z" fill="none" stroke="#FBBF24" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

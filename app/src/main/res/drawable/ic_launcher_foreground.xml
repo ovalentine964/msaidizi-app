@@ -4,25 +4,153 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Shield -->
+
+    <!-- ============================================================ -->
+    <!-- Africa Shield Icon — Msaidizi                                -->
+    <!-- 108×108 viewport, safe zone 66×66 centered at (44,44) to (78,78) -->
+    <!-- ============================================================ -->
+
+    <!-- 1. AFRICA CONTINENT — Simplified polygon silhouette with green gradient -->
+    <group>
+        <path
+            android:name="africa_continent"
+            android:fillColor="#22C55E"
+            android:pathData="
+                M47,19
+                L55,19.5
+                L62,21
+                L66,22.5
+                L68,25
+                L69.5,29
+                L70,33
+                L69,37
+                L66,39
+                L63,41
+                L60,43
+                L61,47
+                L63,51
+                L65,54
+                L66,58
+                L64,62
+                L60,65
+                L57,68
+                L54,72
+                L50,76
+                L47,78
+                L44,76
+                L42,72
+                L40,68
+                L38,63
+                L36,58
+                L34,53
+                L33,49
+                L34,45
+                L35,41
+                L36,37
+                L37,33
+                L38,29
+                L40,25
+                L42,22
+                L45,20
+                Z" />
+    </group>
+
+    <!-- 2. SHIELD BORDER — Thick gold stroke wrapping around Africa shape -->
     <path
-        android:fillColor="#22C55E"
-        android:pathData="M54,16 C54,16 74,24 78,26 C80,27 81,29 81,31 L81,52 C81,66 74,82 54,90 C34,82 27,66 27,52 L27,31 C27,29 28,27 30,26 C34,24 54,16 54,16Z"/>
-    <!-- Speech bubble -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:fillAlpha="0.18"
-        android:pathData="M42,34 C42,31 45,28 49,28 L59,28 C63,28 66,31 66,34 L66,44 C66,47 63,50 59,50 L55,50 L51,55 L52,50 L49,50 C45,50 42,47 42,44Z"/>
-    <!-- Chart line -->
-    <path
-        android:strokeColor="#F59E0B"
-        android:strokeWidth="3"
+        android:name="shield_border"
+        android:strokeColor="#FBBF24"
+        android:strokeWidth="4.0"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
         android:fillColor="#00000000"
-        android:pathData="M32,70 L42,60 L50,64 L58,54 L66,48 L74,40"/>
-    <!-- Chart endpoint dot -->
+        android:pathData="
+            M47,16
+            C47,16 54,14 60,15
+            C65,16 70,19 73,23
+            C75,26 76,30 76,35
+            C76,42 74,50 72,56
+            C70,62 66,68 62,73
+            C58,78 53,82 50,84
+            C47,82 42,78 38,73
+            C34,68 30,62 28,56
+            C26,50 24,42 24,35
+            C24,30 25,26 27,23
+            C30,19 35,16 40,15
+            C44,14 47,16 47,16 Z" />
+
+    <!-- 3. SPEECH BLOBBLE — White at 100% opacity, upper-right, with 3 dark dots -->
     <path
+        android:name="speech_bubble"
+        android:fillColor="#FFFFFF"
+        android:pathData="
+            M59,23
+            C59,20.8 60.8,19 63,19
+            L73,19
+            C75.2,19 77,20.8 77,23
+            L77,32
+            C77,34.2 75.2,36 73,36
+            L69,36
+            L65,40
+            L66,36
+            L63,36
+            C60.8,36 59,34.2 59,32
+            Z" />
+    <!-- Speech bubble dot 1 -->
+    <path
+        android:name="dot1"
+        android:fillColor="#1E293B"
+        android:pathData="M64,26 m-1.3,0 a1.3,1.3 0,1 1,2.6 0 a1.3,1.3 0,1 1,-2.6 0" />
+    <!-- Speech bubble dot 2 -->
+    <path
+        android:name="dot2"
+        android:fillColor="#1E293B"
+        android:pathData="M68.5,26 m-1.3,0 a1.3,1.3 0,1 1,2.6 0 a1.3,1.3 0,1 1,-2.6 0" />
+    <!-- Speech bubble dot 3 -->
+    <path
+        android:name="dot3"
+        android:fillColor="#1E293B"
+        android:pathData="M73,26 m-1.3,0 a1.3,1.3 0,1 1,2.6 0 a1.3,1.3 0,1 1,-2.6 0" />
+
+    <!-- 4. CHART LINE — Bold gold line with 4 data points + upward arrow endpoint -->
+
+    <!-- Chart data point 1 (leftmost, lowest) -->
+    <path
+        android:name="chart_point1"
+        android:fillColor="#F59E0B"
+        android:pathData="M30,72 m-2,0 a2,2 0,1 1,4 0 a2,2 0,1 1,-4 0" />
+
+    <!-- Chart data point 2 -->
+    <path
+        android:name="chart_point2"
+        android:fillColor="#F59E0B"
+        android:pathData="M40,64 m-2,0 a2,2 0,1 1,4 0 a2,2 0,1 1,-4 0" />
+
+    <!-- Chart data point 3 -->
+    <path
+        android:name="chart_point3"
+        android:fillColor="#F59E0B"
+        android:pathData="M50,60 m-2,0 a2,2 0,1 1,4 0 a2,2 0,1 1,-4 0" />
+
+    <!-- Chart data point 4 (rightmost, highest) -->
+    <path
+        android:name="chart_point4"
+        android:fillColor="#F59E0B"
+        android:pathData="M60,54 m-2,0 a2,2 0,1 1,4 0 a2,2 0,1 1,-4 0" />
+
+    <!-- Chart connecting line between points -->
+    <path
+        android:name="chart_line"
+        android:strokeColor="#FBBF24"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"
+        android:pathData="M30,72 L40,64 L50,60 L60,54" />
+
+    <!-- Upward arrow endpoint showing growth -->
+    <path
+        android:name="chart_arrow"
         android:fillColor="#FBBF24"
-        android:pathData="M74,40 m-3,0 a3,3 0,1 1,6 0 a3,3 0,1 1,-6 0"/>
+        android:pathData="M60,54 L56,59 L60,57 L64,59 Z" />
+
 </vector>
