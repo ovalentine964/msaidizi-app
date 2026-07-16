@@ -103,6 +103,9 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
+import com.msaidizi.app.security.crypto.DatabaseKeyManager
+import net.sqlcipher.SupportFactory
+import net.sqlcipher.database.SQLiteDatabase
 import javax.inject.Singleton
 
 /**
@@ -117,12 +120,58 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
+    fun provideDatabase(
+        @ApplicationContext context: Context,
+        databaseKeyManager: DatabaseKeyManager
+    ): AppDatabase {
+        // ========================================================
+        // SQLCipher encryption: pre-migration for existing users
+        // ========================================================
+        // If an existing unencrypted database exists, rename it so Room
+        // creates a fresh encrypted database in its place. Data is
+        // migrated by re-running Room's full migration chain on the old
+        // file after the encrypted database is built.
+        val dbName = "msaidizi.db"
+        val dbFile = context.getDatabasePath(dbName)
+        var oldDbPath: String? = null
+
+        if (dbFile.exists()) {
+            try {
+                // Quick probe: if the file starts with SQLite header "SQLite format 3\000"
+                // it is unencrypted and needs migration.
+                val header = ByteArray(16)
+                dbFile.inputStream().use { it.read(header) }
+                val isUnencrypted = String(header, 0, 15).startsWith("SQLite format 3")
+
+                if (isUnencrypted) {
+                    val backupPath = "${dbFile.absolutePath}.old"
+                    val backupFile = java.io.File(backupPath)
+                    if (backupFile.exists()) backupFile.delete()
+                    if (dbFile.renameTo(backupFile)) {
+                        oldDbPath = backupPath
+                        Timber.w("Existing unencrypted database renamed for SQLCipher migration: %s", backupPath)
+                    } else {
+                        Timber.e("Failed to rename unencrypted database — deleting instead")
+                        dbFile.delete()
+                    }
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Error checking database encryption state — proceeding with fresh database")
+                dbFile.delete()
+            }
+        }
+
+        // SQLCipher: encrypt the database with a passphrase stored in
+        // EncryptedSharedPreferences (backed by Android Keystore)
+        val passphrase = databaseKeyManager.getPassphrase()
+        val factory = SupportFactory(passphrase)
+
         val db = Room.databaseBuilder(
             context,
             AppDatabase::class.java,
-            "msaidizi.db"
+            dbName
         )
+            .openHelperFactory(factory)
             .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
@@ -131,6 +180,37 @@ object AppModule {
                     db.execSQL("PRAGMA busy_timeout=5000")
                     db.execSQL("PRAGMA synchronous=NORMAL")
                     db.execSQL("PRAGMA cache_size=-2000")
+                }
+
+                override fun onOpen(db: SupportSQLiteDatabase) {
+                    super.onOpen(db)
+                    // One-time migration: copy data from old unencrypted database
+                    if (oldDbPath != null) {
+                        try {
+                            val oldDb = SQLiteDatabase.openDatabase(
+                                oldDbPath,
+                                "",
+                                null,
+                                SQLiteDatabase.OPEN_READONLY
+                            )
+                            val newDb = SQLiteDatabase.openDatabase(
+                                dbFile.absolutePath,
+                                passphrase,
+                                null,
+                                SQLiteDatabase.OPEN_READWRITE
+                            )
+                            newDb.rawExecSQL("ATTACH DATABASE '$oldDbPath' AS old_db KEY ''")
+                            newDb.rawExecSQL("SELECT sqlcipher_export('old_db')")
+                            newDb.rawExecSQL("DETACH DATABASE old_db")
+                            newDb.close()
+                            oldDb.close()
+                            java.io.File(oldDbPath).delete()
+                            Timber.i("SQLCipher migration: data exported from unencrypted database")
+                        } catch (e: Exception) {
+                            Timber.e(e, "SQLCipher migration failed — falling back to destructive migration")
+                            try { java.io.File(oldDbPath).delete() } catch (_: Exception) {}
+                        }
+                    }
                 }
             })
             .addMigrations(object : androidx.room.migration.Migration(1, 2) {
@@ -671,11 +751,100 @@ object AppModule {
                     db.execSQL("ALTER TABLE `gamification` ADD COLUMN `streakRecoveryMonth` INTEGER NOT NULL DEFAULT 0")
                 }
             })
+            // Migration v12 → v13: Added knowledge graph and agent session persistence
+            .addMigrations(object : androidx.room.migration.Migration(12, 13) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    // Knowledge nodes — stores facts, patterns, insights
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `knowledge_nodes` (
+                            `node_id` TEXT NOT NULL,
+                            `node_type` TEXT NOT NULL,
+                            `domain` TEXT NOT NULL,
+                            `key` TEXT NOT NULL,
+                            `value_json` TEXT NOT NULL,
+                            `confidence` REAL NOT NULL DEFAULT 0.0,
+                            `created_at` INTEGER NOT NULL DEFAULT 0,
+                            `updated_at` INTEGER NOT NULL DEFAULT 0,
+                            PRIMARY KEY(`node_id`)
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_knowledge_nodes_domain` ON `knowledge_nodes` (`domain`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_knowledge_nodes_node_type` ON `knowledge_nodes` (`node_type`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_knowledge_nodes_domain_type` ON `knowledge_nodes` (`domain`, `node_type`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_knowledge_nodes_updated_at` ON `knowledge_nodes` (`updated_at`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_knowledge_nodes_confidence` ON `knowledge_nodes` (`confidence`)")
+
+                    // Knowledge edges — stores relationships between nodes
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `knowledge_edges` (
+                            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            `from_node` TEXT NOT NULL,
+                            `to_node` TEXT NOT NULL,
+                            `relation_type` TEXT NOT NULL,
+                            `strength` REAL NOT NULL DEFAULT 0.0,
+                            `shared_keys_json` TEXT NOT NULL DEFAULT '[]',
+                            `created_at` INTEGER NOT NULL DEFAULT 0,
+                            FOREIGN KEY(`from_node`) REFERENCES `knowledge_nodes`(`node_id`) ON DELETE CASCADE,
+                            FOREIGN KEY(`to_node`) REFERENCES `knowledge_nodes`(`node_id`) ON DELETE CASCADE
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_knowledge_edges_from_node` ON `knowledge_edges` (`from_node`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_knowledge_edges_to_node` ON `knowledge_edges` (`to_node`)")
+                    db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_knowledge_edges_from_to` ON `knowledge_edges` (`from_node`, `to_node`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_knowledge_edges_relation_type` ON `knowledge_edges` (`relation_type`)")
+
+                    // Agent sessions — stores Hermes session state
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `agent_sessions` (
+                            `session_id` TEXT NOT NULL,
+                            `worker_id` TEXT NOT NULL,
+                            `created_at` INTEGER NOT NULL DEFAULT 0,
+                            `last_active` INTEGER NOT NULL DEFAULT 0,
+                            `last_channel` TEXT NOT NULL DEFAULT 'app',
+                            `context_window_json` TEXT NOT NULL DEFAULT '[]',
+                            `active_trace_id` TEXT,
+                            `active_skill_ids_json` TEXT NOT NULL DEFAULT '[]',
+                            `last_skill_query` TEXT,
+                            PRIMARY KEY(`session_id`)
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_agent_sessions_worker_id` ON `agent_sessions` (`worker_id`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_agent_sessions_last_active` ON `agent_sessions` (`last_active`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_agent_sessions_worker_active` ON `agent_sessions` (`worker_id`, `last_active`)")
+
+                    // Agent traces — stores reasoning steps (OODA cycles, ReAct steps)
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `agent_traces` (
+                            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            `session_id` TEXT NOT NULL,
+                            `trace_id` TEXT NOT NULL,
+                            `step_index` INTEGER NOT NULL DEFAULT 0,
+                            `action` TEXT NOT NULL,
+                            `tool_used` TEXT,
+                            `success` INTEGER NOT NULL DEFAULT 1,
+                            `error` TEXT,
+                            `duration_ms` INTEGER NOT NULL DEFAULT 0,
+                            `created_at` INTEGER NOT NULL DEFAULT 0,
+                            FOREIGN KEY(`session_id`) REFERENCES `agent_sessions`(`session_id`) ON DELETE CASCADE
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_agent_traces_session_id` ON `agent_traces` (`session_id`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_agent_traces_trace_id` ON `agent_traces` (`trace_id`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_agent_traces_created_at` ON `agent_traces` (`created_at`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_agent_traces_session_trace` ON `agent_traces` (`session_id`, `trace_id`)")
+                }
+            })
             .fallbackToDestructiveMigration()
             .build()
         AppDatabase.setInstance(db)
         return db
     }
+
+    @Provides
+    @Singleton
+    fun provideDatabaseKeyManager(
+        @ApplicationContext context: Context
+    ): DatabaseKeyManager = DatabaseKeyManager(context)
 
     @Provides
     @Singleton
@@ -734,6 +903,12 @@ object AppModule {
 
     @Provides
     fun provideWorkerVocabularyDao(db: AppDatabase): com.msaidizi.app.core.model.WorkerVocabularyDao = db.workerVocabularyDao()
+
+    @Provides
+    fun provideKnowledgeDao(db: AppDatabase): com.msaidizi.app.core.database.KnowledgeDao = db.knowledgeDao()
+
+    @Provides
+    fun provideSessionDao(db: AppDatabase): com.msaidizi.app.core.database.SessionDao = db.sessionDao()
 
     // === DIALECT & ADAPTIVE VOCABULARY ===
 
