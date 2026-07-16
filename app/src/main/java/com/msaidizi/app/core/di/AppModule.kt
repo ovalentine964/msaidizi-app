@@ -834,6 +834,54 @@ object AppModule {
                     db.execSQL("CREATE INDEX IF NOT EXISTS `index_agent_traces_session_trace` ON `agent_traces` (`session_id`, `trace_id`)")
                 }
             })
+            // Migration v13 → v14: Added agent task checkpoints and recovery traces
+            .addMigrations(object : androidx.room.migration.Migration(13, 14) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    // Agent task checkpoints — crash recovery for in-flight tasks
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `agent_task_checkpoints` (
+                            `taskId` TEXT NOT NULL,
+                            `taskType` TEXT NOT NULL,
+                            `state` TEXT NOT NULL,
+                            `lastPhase` TEXT NOT NULL,
+                            `inputJson` TEXT NOT NULL,
+                            `observationsJson` TEXT NOT NULL DEFAULT '{}',
+                            `orientationJson` TEXT NOT NULL DEFAULT '{}',
+                            `decisionJson` TEXT,
+                            `contextJson` TEXT NOT NULL DEFAULT '{}',
+                            `currentStepId` TEXT,
+                            `completedStepsJson` TEXT NOT NULL DEFAULT '[]',
+                            `retryCount` INTEGER NOT NULL DEFAULT 0,
+                            `createdAt` INTEGER NOT NULL DEFAULT 0,
+                            `updatedAt` INTEGER NOT NULL DEFAULT 0,
+                            `lastError` TEXT,
+                            `language` TEXT NOT NULL DEFAULT 'sw',
+                            PRIMARY KEY(`taskId`)
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_agent_task_checkpoints_state` ON `agent_task_checkpoints` (`state`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_agent_task_checkpoints_createdAt` ON `agent_task_checkpoints` (`createdAt`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_agent_task_checkpoints_updatedAt` ON `agent_task_checkpoints` (`updatedAt`)")
+
+                    // Agent recovery traces — persisted OODA/ReAct traces for debugging
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS `agent_recovery_traces` (
+                            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            `taskId` TEXT NOT NULL,
+                            `traceType` TEXT NOT NULL,
+                            `traceJson` TEXT NOT NULL,
+                            `success` INTEGER NOT NULL DEFAULT 0,
+                            `durationMs` INTEGER NOT NULL DEFAULT 0,
+                            `timestamp` INTEGER NOT NULL DEFAULT 0,
+                            `summary` TEXT NOT NULL DEFAULT ''
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_agent_recovery_traces_taskId` ON `agent_recovery_traces` (`taskId`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_agent_recovery_traces_traceType` ON `agent_recovery_traces` (`traceType`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_agent_recovery_traces_timestamp` ON `agent_recovery_traces` (`timestamp`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_agent_recovery_traces_success` ON `agent_recovery_traces` (`success`)")
+                }
+            })
             .fallbackToDestructiveMigration()
             .build()
         AppDatabase.setInstance(db)
@@ -909,6 +957,45 @@ object AppModule {
 
     @Provides
     fun provideSessionDao(db: AppDatabase): com.msaidizi.app.core.database.SessionDao = db.sessionDao()
+
+    @Provides
+    fun provideTaskCheckpointDao(db: AppDatabase): com.msaidizi.app.agent.recovery.TaskCheckpointDao = db.taskCheckpointDao()
+
+    @Provides
+    fun provideAgentRecoveryTraceDao(db: AppDatabase): com.msaidizi.app.agent.recovery.AgentTraceDao = db.agentRecoveryTraceDao()
+
+    @Provides
+    @Singleton
+    fun provideTaskCheckpointManager(
+        checkpointDao: com.msaidizi.app.agent.recovery.TaskCheckpointDao,
+        traceDao: com.msaidizi.app.agent.recovery.AgentTraceDao
+    ): com.msaidizi.app.agent.recovery.TaskCheckpointManager =
+        com.msaidizi.app.agent.recovery.TaskCheckpointManager(checkpointDao, traceDao)
+
+    @Provides
+    @Singleton
+    fun provideCrossDomainKnowledgeGraph(
+        patternDao: PatternDao,
+        patternTracker: BusinessPatternTracker,
+        knowledgeDao: com.msaidizi.app.core.database.KnowledgeDao,
+        eventBus: AgentEventBus
+    ): com.msaidizi.app.agent.knowledge.CrossDomainKnowledgeGraph =
+        com.msaidizi.app.agent.knowledge.CrossDomainKnowledgeGraph(
+            patternDao, patternTracker, knowledgeDao, eventBus
+        )
+
+    @Provides
+    @Singleton
+    fun provideHermesSessionManager(
+        eventBus: AgentEventBus,
+        adaptiveLearning: AdaptiveLearningEngine,
+        sessionDao: com.msaidizi.app.core.database.SessionDao
+    ): com.msaidizi.app.agent.hermes.HermesSessionManager =
+        com.msaidizi.app.agent.hermes.HermesSessionManager(
+            eventBus = eventBus,
+            adaptiveLearning = adaptiveLearning,
+            sessionDao = sessionDao
+        )
 
     // === DIALECT & ADAPTIVE VOCABULARY ===
 
@@ -1111,14 +1198,16 @@ object AppModule {
         selfEvolution: SelfEvolutionManager,
         preferenceLearner: PreferenceLearner,
         llmEngine: LlmEngine,
-        inferenceHarness: com.msaidizi.app.agent.harness.InferenceHarness
+        inferenceHarness: com.msaidizi.app.agent.harness.InferenceHarness,
+        hermesSessionManager: com.msaidizi.app.agent.hermes.HermesSessionManager
     ): ConversationManager = ConversationManager(
         llmEngine = llmEngine,
         selfEvolution = selfEvolution,
         adaptiveLearning = adaptiveLearning,
         learningAgent = learningAgent,
         preferenceLearner = preferenceLearner,
-        inferenceHarness = inferenceHarness
+        inferenceHarness = inferenceHarness,
+        hermesSession = hermesSessionManager
     )
 
     // === ON-DEVICE AI PREDICTORS ===
@@ -1195,7 +1284,9 @@ object AppModule {
         proactiveAlertEngine: ProactiveAlertEngine,
         socialHandler: SocialHandler,
         inferenceHarness: com.msaidizi.app.agent.harness.InferenceHarness,
-        agiReadyLayer: AGIReadyLayer
+        agiReadyLayer: AGIReadyLayer,
+        knowledgeGraph: com.msaidizi.app.agent.knowledge.CrossDomainKnowledgeGraph,
+        taskCheckpointManager: com.msaidizi.app.agent.recovery.TaskCheckpointManager
     ): Orchestrator = Orchestrator(
         intentRouter = intentRouter,
         businessAgent = businessAgent,
@@ -1232,7 +1323,9 @@ object AppModule {
         proactiveAlertEngine = proactiveAlertEngine,
         socialHandler = socialHandler,
         inferenceHarness = inferenceHarness,
-        agiReadyLayer = agiReadyLayer
+        agiReadyLayer = agiReadyLayer,
+        knowledgeGraph = knowledgeGraph,
+        taskCheckpointManager = taskCheckpointManager
     )
 
     // LlamaCppEngine and LlmEngine are auto-provided by Hilt via their @Inject constructors.

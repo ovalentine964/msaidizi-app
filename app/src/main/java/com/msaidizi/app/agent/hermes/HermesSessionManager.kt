@@ -1,6 +1,9 @@
 package com.msaidizi.app.agent.hermes
 
 import com.msaidizi.app.agent.*
+import com.msaidizi.app.core.database.AgentSessionEntity
+import com.msaidizi.app.core.database.AgentTraceEntity
+import com.msaidizi.app.core.database.SessionDao
 import kotlinx.coroutines.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -52,7 +55,8 @@ import java.util.concurrent.ConcurrentHashMap
 class HermesSessionManager(
     private val eventBus: AgentEventBus = AgentEventBus.getInstance(),
     private val adaptiveLearning: AdaptiveLearningEngine? = null,
-    private val conversationMemory: ConversationMemory = ConversationMemory()
+    private val conversationMemory: ConversationMemory = ConversationMemory(),
+    private val sessionDao: SessionDao? = null
 ) {
     // ═══════════════ STATE ═══════════════
 
@@ -85,6 +89,9 @@ class HermesSessionManager(
 
         /** Skill confidence decay rate per unused day */
         private const val SKILL_CONFIDENCE_DECAY = 0.01
+
+        /** TTL for stale sessions: 7 days */
+        private const val SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000L
     }
 
     // ═══════════════ SESSION MANAGEMENT ═══════════════
@@ -108,6 +115,9 @@ class HermesSessionManager(
             existing.lastChannel = channel
             existing.lastActive = System.currentTimeMillis()
 
+            // Persist updated session to Room
+            scope.launch { persistSessionToDisk(existing) }
+
             eventBus.publish(
                 AgentEvent.AgentTaskCompleted(
                     eventId = UUID.randomUUID().toString(),
@@ -124,6 +134,19 @@ class HermesSessionManager(
             return existing
         }
 
+        // Try to restore from Room (lazy loading — only this worker's session)
+        val restored = restoreSessionFromDisk(workerId)
+        if (restored != null) {
+            restored.lastChannel = channel
+            restored.lastActive = System.currentTimeMillis()
+            sessions[workerId] = restored
+
+            scope.launch { persistSessionToDisk(restored) }
+
+            Timber.i("Restored Hermes session from Room for worker %s", workerId)
+            return restored
+        }
+
         // Create new session
         val session = HermesSessionState(
             sessionId = UUID.randomUUID().toString(),
@@ -133,6 +156,9 @@ class HermesSessionManager(
             lastChannel = channel
         )
         sessions[workerId] = session
+
+        // Persist new session to Room
+        scope.launch { persistSessionToDisk(session) }
 
         // Load or create worker profile
         loadWorkerProfile(workerId)
@@ -262,14 +288,30 @@ class HermesSessionManager(
         val session = sessions[workerId] ?: return
         if (session.activeTraceId != traceId) return
 
-        session.traceSteps.add(
-            TraceStep(
-                action = action,
-                toolUsed = toolUsed,
-                success = success,
-                error = error
-            )
+        val step = TraceStep(
+            action = action,
+            toolUsed = toolUsed,
+            success = success,
+            error = error
         )
+        session.traceSteps.add(step)
+
+        // Persist trace step to Room
+        scope.launch {
+            try {
+                sessionDao?.insertTrace(AgentTraceEntity(
+                    sessionId = session.sessionId,
+                    traceId = traceId,
+                    stepIndex = session.traceSteps.size - 1,
+                    action = action,
+                    toolUsed = toolUsed,
+                    success = success,
+                    error = error
+                ))
+            } catch (e: Exception) {
+                Timber.w(e, "Failed to persist trace step")
+            }
+        }
     }
 
     /**
@@ -326,6 +368,9 @@ class HermesSessionManager(
 
         // Update profile
         updateWorkerProfile(workerId, outcome)
+
+        // Persist updated session
+        scope.launch { persistSessionToDisk(session) }
 
         // Check consolidation
         if (session.contextWindow.size >= CONSOLIDATION_THRESHOLD) {
@@ -467,6 +512,21 @@ class HermesSessionManager(
     )
 
     /**
+     * Cleanup expired sessions from Room.
+     * Call periodically (e.g., on app startup).
+     */
+    suspend fun cleanupExpiredSessions() = withContext(Dispatchers.IO) {
+        try {
+            val deleted = sessionDao?.cleanupExpired(SESSION_TTL_MS) ?: 0
+            if (deleted > 0) {
+                Timber.i("Cleaned up %d expired Hermes sessions", deleted)
+            }
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to cleanup expired sessions")
+        }
+    }
+
+    /**
      * Shutdown the session manager.
      */
     fun shutdown() {
@@ -597,6 +657,86 @@ class HermesSessionManager(
             }
         }
         return wordFreq.entries.sortedByDescending { it.value }.take(10).map { it.key }
+    }
+
+    // ═══════════════ DISK PERSISTENCE ═══════════════
+
+    /**
+     * Persist a session to Room. Runs in background.
+     */
+    private suspend fun persistSessionToDisk(session: HermesSessionState) = withContext(Dispatchers.IO) {
+        try {
+            sessionDao?.upsertSession(AgentSessionEntity(
+                sessionId = session.sessionId,
+                workerId = session.workerId,
+                createdAt = session.createdAt,
+                lastActive = session.lastActive,
+                lastChannel = session.lastChannel,
+                contextWindowJson = json.encodeToString(session.contextWindow),
+                activeTraceId = session.activeTraceId,
+                activeSkillIdsJson = json.encodeToString(session.activeSkillIds),
+                lastSkillQuery = session.lastSkillQuery
+            ))
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to persist session %s", session.sessionId)
+        }
+    }
+
+    /**
+     * Restore a session from Room. Returns null if not found.
+     * Only loads the latest session for the given worker (lazy loading).
+     */
+    private fun restoreSessionFromDisk(workerId: String): HermesSessionState? {
+        val dao = sessionDao ?: return null
+        return try {
+            val entity = kotlinx.coroutines.runBlocking(Dispatchers.IO) {
+                dao.getSessionByWorker(workerId)
+            } ?: return null
+
+            val contextWindow: MutableList<ContextEntry> = try {
+                json.decodeFromString(entity.contextWindowJson)
+            } catch (_: Exception) { mutableListOf() }
+
+            val activeSkillIds: List<String> = try {
+                json.decodeFromString(entity.activeSkillIdsJson)
+            } catch (_: Exception) { emptyList() }
+
+            // Restore trace steps if there was an active trace
+            val traceSteps = if (entity.activeTraceId != null) {
+                try {
+                    val traces = kotlinx.coroutines.runBlocking(Dispatchers.IO) {
+                        dao.getTracesForInteraction(entity.sessionId, entity.activeTraceId!!)
+                    }
+                    traces.map { t ->
+                        TraceStep(
+                            action = t.action,
+                            toolUsed = t.toolUsed,
+                            success = t.success,
+                            error = t.error,
+                            durationMs = t.durationMs
+                        )
+                    }.toMutableList()
+                } catch (_: Exception) { mutableListOf() }
+            } else {
+                mutableListOf()
+            }
+
+            HermesSessionState(
+                sessionId = entity.sessionId,
+                workerId = entity.workerId,
+                createdAt = entity.createdAt,
+                lastActive = entity.lastActive,
+                lastChannel = entity.lastChannel,
+                activeTraceId = entity.activeTraceId,
+                activeSkillIds = activeSkillIds,
+                lastSkillQuery = entity.lastSkillQuery,
+                contextWindow = contextWindow,
+                traceSteps = traceSteps
+            )
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to restore session for worker %s", workerId)
+            null
+        }
     }
 }
 

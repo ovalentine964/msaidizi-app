@@ -121,7 +121,9 @@ class Orchestrator(
     // ── Inference Harness — wraps all model calls with monitoring/fallback/retry ──
     private val inferenceHarness: InferenceHarness? = null,
     // ── AGI Safety Layer ──
-    private val agiReadyLayer: com.msaidizi.app.agent.agi.AGIReadyLayer? = null
+    private val agiReadyLayer: com.msaidizi.app.agent.agi.AGIReadyLayer? = null,
+    // ── Crash Recovery — checkpoint in-flight tasks for resume after app kill ──
+    private val taskCheckpointManager: com.msaidizi.app.agent.recovery.TaskCheckpointManager? = null
 ) {
     private val _responses = MutableSharedFlow<AgentResponse>(extraBufferCapacity = 8)
     val responses: SharedFlow<AgentResponse> = _responses
@@ -144,6 +146,13 @@ class Orchestrator(
         Timber.d("Processing input: '%s' (lang=%s)", text, language)
         reActLoop.think(trace, "Received input: \"${text.take(50)}\" in language=$language")
 
+        // ── Crash Recovery: checkpoint this task ──
+        val checkpointId = taskCheckpointManager?.createCheckpoint(
+            taskType = "process_input",
+            input = mapOf("text" to text, "language" to language),
+            language = language
+        )
+
         // Self-evolution signals
         conversationManager.recordEvolutionSignals(language)
         conversationManager.publishTaskStarted()
@@ -153,6 +162,7 @@ class Orchestrator(
             conversationManager.enhanceText(text)
         ) ?: conversationManager.enhanceText(text)
         reActLoop.observe(trace, "Applied vocabulary enhancement: \"${enhancedText.take(50)}\"")
+        checkpointId?.let { taskCheckpointManager?.updateCheckpoint(it, "OBSERVE") }
 
         // Step 0: Check for corrections
         val correctionResponse = conversationManager.checkForCorrection(
@@ -169,6 +179,10 @@ class Orchestrator(
         var intentResult = intentRouter.classify(enhancedText)
         reActLoop.think(trace, "Intent classified: ${intentResult.intent} (confidence=${String.format("%.2f", intentResult.confidence)}, needsLLM=${intentResult.needsLLM})", intentResult.confidence)
         conversationManager.publishIntentEvent(intentResult, language, enhancedText)
+        checkpointId?.let { taskCheckpointManager?.updateCheckpoint(
+            it, "ORIENT",
+            observations = mapOf("intent" to intentResult.intent.name, "confidence" to intentResult.confidence)
+        ) }
 
         // Step 2: Conversation context resolution
         val memory = conversationManager.conversationMemory
@@ -183,6 +197,10 @@ class Orchestrator(
 
         // Step 4: Confidence-based routing
         val confidenceLevel = conversationManager.classifyConfidence(intentResult)
+        checkpointId?.let { taskCheckpointManager?.updateCheckpoint(
+            it, "DECIDE",
+            decision = mapOf("confidenceLevel" to confidenceLevel.name, "intent" to intentResult.intent.name)
+        ) }
         val response = when {
             intentResult.needsLLM && llmEngine != null -> {
                 reActLoop.act(trace, "llm_escalation", "Escalating to on-device LLM")
@@ -206,11 +224,22 @@ class Orchestrator(
         // Steps 5-8: Post-processing + output sanitization (defense-in-depth)
         val sanitizedResponse = sanitizeOutput(response, language)
         val critiqueScore = conversationManager.postProcess(enhancedText, intentResult, sanitizedResponse, language, trace)
+        checkpointId?.let { taskCheckpointManager?.updateCheckpoint(it, "ACT") }
 
         // Step 8b: Apply voice personality — warmth, proverbs, cultural flavor
         val personalityResponse = applyPersonality(sanitizedResponse, language)
         _responses.emit(personalityResponse)
         reActLoop.complete(trace, sanitizedResponse.type != ResponseType.ERROR, sanitizedResponse.text)
+
+        // ── Crash Recovery: persist trace and mark task complete ──
+        checkpointId?.let { id ->
+            if (sanitizedResponse.type != ResponseType.ERROR) {
+                taskCheckpointManager?.markCompleted(id)
+            } else {
+                taskCheckpointManager?.markFailed(id, sanitizedResponse.text.take(200))
+            }
+            taskCheckpointManager?.persistReActTrace(id, trace)
+        }
 
         conversationManager.publishTaskCompleted(trace, response)
 
@@ -519,6 +548,18 @@ class Orchestrator(
     fun getReflexionCritiques(n: Int = 10): List<Map<String, Any>> = reflexionLoop.getCritiqueHistory(n)
     fun getReflexionAverageScore(): Double = reflexionLoop.getAverageScore()
     fun getPlanHistory(n: Int = 10): List<Map<String, Any>> = planExecuteLoop.getPlanHistory(n)
+
+    // ── Crash Recovery ──
+    /** Check for incomplete tasks on startup and return those that need recovery. */
+    suspend fun recoverIncompleteTasks() = taskCheckpointManager?.recoverIncompleteTasks() ?: emptyList()
+    /** Get recovery system health stats. */
+    suspend fun getRecoveryStats() = taskCheckpointManager?.getStats()
+    /** Get persisted traces for a task. */
+    suspend fun getRecoveryTraces(taskId: String) = taskCheckpointManager?.getTracesForTask(taskId) ?: emptyList()
+    /** Get recent persisted traces. */
+    suspend fun getRecentRecoveryTraces(limit: Int = 50) = taskCheckpointManager?.getRecentTraces(limit) ?: emptyList()
+    /** Clean up old recovery data. */
+    suspend fun cleanupRecoveryData() = taskCheckpointManager?.cleanup()
 
     // ── Inference Harness metrics ──
     /** Get aggregate inference harness stats (latency, success rate, circuit breakers). */

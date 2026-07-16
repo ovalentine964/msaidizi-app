@@ -207,7 +207,7 @@ class ConversationManager(
                     providers = listOf(
                         com.msaidizi.app.agent.harness.ProviderCandidate(
                             providerId = "on-device-llm",
-                            modelId = "qwen3.5-0.8b",
+                            modelId = "gemma-4-e2b",  // Primary model (promoted 2026-07-16)
                             provider = {
                                 engine.generateResponse(
                                     userInput = text, context = context, language = language

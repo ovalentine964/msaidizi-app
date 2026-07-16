@@ -88,9 +88,15 @@ import com.msaidizi.app.core.model.WorkerVocabularyDao
         LeaderboardEntry::class,
         CommunityTip::class,
         BriefingDeliveryEntity::class,
-        WorkerVocabulary::class
+        WorkerVocabulary::class,
+        KnowledgeNodeEntity::class,
+        KnowledgeEdgeEntity::class,
+        AgentSessionEntity::class,
+        AgentTraceEntity::class,
+        com.msaidizi.app.agent.recovery.AgentTaskCheckpoint::class,
+        com.msaidizi.app.agent.recovery.AgentRecoveryTrace::class
     ],
-    version = 12,
+    version = 14,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -112,6 +118,10 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun briefingDeliveryDao(): BriefingDeliveryDao
     abstract fun socialDao(): SocialDao
     abstract fun workerVocabularyDao(): WorkerVocabularyDao
+    abstract fun knowledgeDao(): KnowledgeDao
+    abstract fun sessionDao(): SessionDao
+    abstract fun taskCheckpointDao(): com.msaidizi.app.agent.recovery.TaskCheckpointDao
+    abstract fun agentRecoveryTraceDao(): com.msaidizi.app.agent.recovery.AgentTraceDao
 
     companion object {
         @Volatile

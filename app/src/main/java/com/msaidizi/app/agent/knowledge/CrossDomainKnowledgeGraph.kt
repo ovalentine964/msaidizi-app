@@ -4,6 +4,9 @@ import com.msaidizi.app.agent.AgentEvent
 import com.msaidizi.app.agent.AgentEventBus
 import com.msaidizi.app.agent.BusinessPatternTracker
 import com.msaidizi.app.core.model.Trend
+import com.msaidizi.app.core.database.KnowledgeDao
+import com.msaidizi.app.core.database.KnowledgeEdgeEntity
+import com.msaidizi.app.core.database.KnowledgeNodeEntity
 import com.msaidizi.app.core.database.PatternDao
 import com.msaidizi.app.core.model.PatternType
 import kotlinx.coroutines.CoroutineScope
@@ -53,13 +56,15 @@ import java.util.concurrent.ConcurrentHashMap
  * 3. **Relations** — Cross-domain links (e.g., "rain → umbrella sales ↑")
  * 4. **Insights** — Derived conclusions (e.g., "restock umbrellas before rain")
  *
- * @param patternDao Persistence layer
+ * @param patternDao Legacy persistence (business patterns)
  * @param patternTracker Business pattern analysis
+ * @param knowledgeDao Room DAO for graph node/edge persistence
  * @param eventBus Event bus for knowledge propagation
  */
 class CrossDomainKnowledgeGraph(
     private val patternDao: PatternDao,
     private val patternTracker: BusinessPatternTracker,
+    private val knowledgeDao: KnowledgeDao,
     private val eventBus: AgentEventBus = AgentEventBus.getInstance()
 ) {
     private val json = Json { ignoreUnknownKeys = true }
@@ -85,7 +90,14 @@ class CrossDomainKnowledgeGraph(
     /** Generated insights */
     private val insights = ArrayDeque<CrossDomainInsight>(100)
 
+    /** Whether the graph has been hydrated from Room */
+    @Volatile
+    private var hydrated = false
+
     init {
+        // Lazy-hydrate from Room in background
+        scope.launch { hydrateFromDisk() }
+
         // Subscribe to events to capture knowledge
         scope.launch {
             eventBus.events.collect { event ->
@@ -95,6 +107,64 @@ class CrossDomainKnowledgeGraph(
                     Timber.w(e, "Failed to ingest event into knowledge graph")
                 }
             }
+        }
+    }
+
+    // ═══════════════ LAZY HYDRATION ═══════════════
+
+    /**
+     * Load the knowledge graph from Room into the in-memory cache.
+     * Runs once at startup; subsequent reads hit the ConcurrentHashMap.
+     */
+    private suspend fun hydrateFromDisk() = withContext(Dispatchers.IO) {
+        if (hydrated) return@withContext
+        try {
+            val (nodeEntities, edgeEntities) = knowledgeDao.loadFullGraph()
+
+            for (entity in nodeEntities) {
+                val valueMap: Map<String, String> = try {
+                    json.decodeFromString(entity.valueJson)
+                } catch (_: Exception) { emptyMap() }
+
+                val node = KnowledgeNode(
+                    nodeId = entity.nodeId,
+                    type = KnowledgeNodeType.valueOf(entity.nodeType),
+                    domain = entity.domain,
+                    key = entity.key,
+                    value = valueMap,
+                    confidence = entity.confidence,
+                    createdAt = entity.createdAt,
+                    updatedAt = entity.updatedAt
+                )
+                nodes[entity.nodeId] = node
+                domainIndex.getOrPut(DomainKey(entity.domain)) { mutableListOf() }.let { list ->
+                    synchronized(list) { if (entity.nodeId !in list) list.add(entity.nodeId) }
+                }
+            }
+
+            for (edge in edgeEntities) {
+                val sharedKeys: List<String> = try {
+                    json.decodeFromString(edge.sharedKeysJson)
+                } catch (_: Exception) { emptyList() }
+
+                val relation = KnowledgeRelation(
+                    relationId = "${edge.fromNode}→${edge.toNode}",
+                    fromNode = edge.fromNode,
+                    toNode = edge.toNode,
+                    relationType = RelationType.valueOf(edge.relationType),
+                    strength = edge.strength,
+                    sharedKeys = sharedKeys
+                )
+                relations.getOrPut(edge.fromNode) { mutableListOf() }.let { list ->
+                    synchronized(list) { list.add(relation) }
+                }
+            }
+
+            hydrated = true
+            Timber.i("Hydrated knowledge graph from Room: %d nodes, %d edges",
+                nodeEntities.size, edgeEntities.size)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to hydrate knowledge graph from Room")
         }
     }
 
@@ -166,6 +236,9 @@ class CrossDomainKnowledgeGraph(
             }
         }
 
+        // Persist to Room
+        scope.launch { persistNodeToDisk(node) }
+
         // Check for cross-domain relations
         discoverRelations(node)
 
@@ -201,6 +274,9 @@ class CrossDomainKnowledgeGraph(
             }
         }
 
+        // Persist to Room
+        scope.launch { persistNodeToDisk(node) }
+
         discoverRelations(node)
     }
 
@@ -226,6 +302,9 @@ class CrossDomainKnowledgeGraph(
         )
 
         nodes[nodeId] = node
+
+        // Persist to Room
+        scope.launch { persistNodeToDisk(node) }
     }
 
     // ═══════════════ CROSS-DOMAIN INSIGHT GENERATION ═══════════════
@@ -414,6 +493,8 @@ class CrossDomainKnowledgeGraph(
                     synchronized(list) {
                         if (list.none { it.toNode == otherNode.nodeId }) {
                             list.add(relation)
+                            // Persist new edge to Room
+                            scope.launch { persistEdgeToDisk(relation) }
                         }
                     }
                 }
@@ -496,6 +577,41 @@ class CrossDomainKnowledgeGraph(
         return context.toString().take(maxChars)
     }
 
+    // ═══════════════ DISK PERSISTENCE ═══════════════
+
+    /** Persist a single node to Room */
+    private suspend fun persistNodeToDisk(node: KnowledgeNode) = withContext(Dispatchers.IO) {
+        try {
+            knowledgeDao.upsertNode(KnowledgeNodeEntity(
+                nodeId = node.nodeId,
+                nodeType = node.type.name,
+                domain = node.domain,
+                key = node.key,
+                valueJson = json.encodeToString(node.value),
+                confidence = node.confidence,
+                createdAt = node.createdAt,
+                updatedAt = node.updatedAt
+            ))
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to persist node %s", node.nodeId)
+        }
+    }
+
+    /** Persist a relation edge to Room */
+    private suspend fun persistEdgeToDisk(relation: KnowledgeRelation) = withContext(Dispatchers.IO) {
+        try {
+            knowledgeDao.upsertEdge(KnowledgeEdgeEntity(
+                fromNode = relation.fromNode,
+                toNode = relation.toNode,
+                relationType = relation.relationType.name,
+                strength = relation.strength,
+                sharedKeysJson = json.encodeToString(relation.sharedKeys)
+            ))
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to persist edge %s→%s", relation.fromNode, relation.toNode)
+        }
+    }
+
     // ═══════════════ MAINTENANCE ═══════════════
 
     /**
@@ -516,6 +632,16 @@ class CrossDomainKnowledgeGraph(
                 synchronized(list) { list.remove(node.nodeId) }
             }
             relations.remove(node.nodeId)
+        }
+
+        // Also prune from Room
+        scope.launch {
+            try {
+                knowledgeDao.deleteNodes(toRemove.map { it.nodeId })
+                knowledgeDao.deleteEdgesForNodes(toRemove.map { it.nodeId })
+            } catch (e: Exception) {
+                Timber.w(e, "Failed to prune nodes from Room")
+            }
         }
 
         Timber.d("Pruned %d knowledge nodes (graph size: %d)", toRemove.size, nodes.size)
