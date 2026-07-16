@@ -63,7 +63,7 @@ class LlmEngine @Inject constructor(
         /** Extra tokens allocated for thinking mode chain-of-thought */
         const val THINKING_TOKEN_BUDGET = 512
 
-        /** Prefix instruction to activate Qwen 3.5 native thinking mode */
+        /** Prefix instruction to activate native thinking mode (Qwen only; NOT supported by Gemma 4 E2B) */
         private const val THINKING_MODE_INSTRUCTION = """Use <think> tags to show your step-by-step reasoning before giving your final answer. Wrap your reasoning like this:
 <think>
 [your step-by-step thinking here]
@@ -172,7 +172,8 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
         }
 
         // Fallback: Qwen 3.5 0.8B (lighter model for memory-constrained devices)
-        val qwenPath = File(context.filesDir, "models/qwen3.5-0.8b-q4_k_m.gguf")
+        // NOTE: Filename case must match ModelRegistry exactly (ext4/f2fs are case-sensitive)
+        val qwenPath = File(context.filesDir, "models/Qwen3.5-0.8B-Q4_K_M.gguf")
         if (qwenPath.exists()) {
             val loaded = llamaCppEngine.loadModel(qwenPath.absolutePath)
             if (loaded) {
@@ -187,19 +188,26 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
 
     /**
      * Resolve the Gemma 4 E2B model path based on available memory.
-     * Returns Q4_K_M for ≥3GB devices, Q3_K_M for 2GB devices.
+     * Returns Q4_K_M for >=3GB devices, Q3_K_M for 2GB devices.
+     *
+     * NOTE: Filename case must match ModelRegistry exactly (ext4/f2fs are case-sensitive).
+     * llama.cpp convention: uppercase Q4_K_M, Q3_K_M.
+     *
+     * Bug fix (2026-07-16): 2GB devices now correctly get Q3_K_M (~1.0GB)
+     * instead of Q4_K_M (~1.5GB), leaving ~1GB headroom for OS and app.
      */
     private fun resolveGemmaModelPath(): File? {
         val maxMemoryMB = Runtime.getRuntime().maxMemory() / (1024 * 1024)
         val modelsDir = File(context.filesDir, "models")
 
-        // For devices with ≥3GB RAM, use Q4_K_M (~1.5GB)
-        val q4Path = File(modelsDir, "gemma-4-e2b-q4_k_m.gguf")
+        // For devices with >=3GB RAM, use Q4_K_M (~1.5GB) -- best quality
+        val q4Path = File(modelsDir, "gemma-4-e2b-Q4_K_M.gguf")
         if (maxMemoryMB >= 3072 && q4Path.exists()) return q4Path
 
-        // For devices with ≥2GB RAM, try Q3_K_M (~1.0GB)
-        val q3Path = File(modelsDir, "gemma-4-e2b-q3_k_m.gguf")
-        if (maxMemoryMB >= 2048 && q3Path.exists()) return q3Path
+        // For devices with 2-3GB RAM, use Q3_K_M (~1.0GB) -- ~1GB headroom for OS
+        // Covers 2GB devices (typically ~2048-2560MB reported by Runtime)
+        val q3Path = File(modelsDir, "gemma-4-e2b-Q3_K_M.gguf")
+        if (q3Path.exists()) return q3Path
 
         // Fall through: no Gemma model available
         return null
@@ -226,8 +234,10 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
      * @param maxTokens Maximum tokens to generate (default 256 for speed)
      * @param temperature Sampling temperature (0.1 for factual, 0.7 for creative)
      * @param onToken Callback for streaming token output (unused — llama.cpp returns full text)
-     * @param thinkingEnabled If true, activates Qwen 3.5 native thinking mode with
+     * @param thinkingEnabled If true, activates native thinking mode with chain-of-thought
      *        <think>...</think> tags. Extra token budget is allocated for the reasoning chain.
+     *        Note: Only supported on Qwen models. Gemma 4 E2B does not support this format;
+     *        thinking mode is automatically disabled when Gemma is loaded.
      * @return Complete generated text (includes raw thinking tags if thinkingEnabled; 
      *         use [generateWithThinking] to get separated thinking/response)
      */
@@ -252,12 +262,17 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
         try {
             val startTime = System.currentTimeMillis()
 
-            // When thinking is enabled, prepend thinking instructions and add extra token budget
-            val effectivePrompt = if (thinkingEnabled) {
+            // When thinking is enabled, prepend thinking instructions and add extra token budget.
+            // NOTE: Thinking mode uses Qwen-specific format -- NOT supported by Gemma 4 E2B.
+            // If the primary model is Gemma, thinking is silently disabled.
+            val isGemmaPrimary = resolveGemmaModelPath()?.name?.contains("gemma") == true
+            val effectiveThinking = thinkingEnabled && !isGemmaPrimary
+
+            val effectivePrompt = if (effectiveThinking) {
                 prependThinkingInstructions(prompt)
             } else prompt
 
-            val effectiveMaxTokens = if (thinkingEnabled) {
+            val effectiveMaxTokens = if (effectiveThinking) {
                 maxTokens + THINKING_TOKEN_BUDGET
             } else maxTokens
 
@@ -277,10 +292,10 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
 
             val elapsed = System.currentTimeMillis() - startTime
             Timber.d(
-                "LLM generated %d chars in %dms (%.1f tok/s) [thinking=%b]",
+                "LLM generated %d chars in %dms (%.1f tok/s) [thinking=%b, requested=%b]",
                 result.length, elapsed,
                 if (elapsed > 0) result.length * 4.0 / elapsed * 1000 else 0.0,
-                thinkingEnabled
+                effectiveThinking, thinkingEnabled
             )
             return result
         } catch (e: Exception) {
@@ -565,6 +580,10 @@ JSON:"""
      *<think>...</think> tags. This method activates that mode and parses
      * the output into separate components.
      *
+     * NOTE: Gemma 4 E2B does NOT support this format. When Gemma is the
+     * active model, thinking mode is silently disabled and the full output
+     * is returned as responseContent with hasThinking=false.
+     *
      * @param prompt The full prompt (system + user)
      * @param maxTokens Maximum tokens for the final answer (thinking budget added on top)
      * @param temperature Sampling temperature
@@ -621,7 +640,11 @@ JSON:"""
 
     /**
      * Prepend thinking mode instructions to a prompt.
-     * Tells the Qwen 3.5 model to use</think> blocks.
+     * Tells the Qwen model to use chain-of-thought blocks.
+     *
+     * WARNING: This format is Qwen-specific. Gemma 4 E2B does NOT support
+     * this format. The generate() method handles this automatically
+     * by detecting the loaded model.
      */
     private fun prependThinkingInstructions(prompt: String): String {
         return "$THINKING_MODE_INSTRUCTION\n\n$prompt"
@@ -738,7 +761,7 @@ data class Correction(
 /**
  * Result from a thinking-mode generation.
  *
- * When the Qwen 3.5 model uses native thinking mode (<think>...</think> tags),
+ * When a Qwen model uses native thinking mode (<think>...</think> tags),
  * the output is parsed into separate thinking and response components.
  *
  * @property thinkingContent The chain-of-thought reasoning extracted from</think> tags
