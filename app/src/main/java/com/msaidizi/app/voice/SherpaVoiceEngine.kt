@@ -106,6 +106,12 @@ class SherpaVoiceEngine @Inject constructor(
     suspend fun loadAsr(language: String = "sw"): Boolean = withContext(Dispatchers.IO) {
         if (isAsrLoaded) return@withContext true
 
+        // Early exit if Sherpa-ONNX native library is not available
+        if (!com.k2fsa.sherpa.onnx.SherpaOnnxLoader.isAvailable) {
+            Timber.w("SherpaVoiceEngine: Sherpa-ONNX JNI not available — ASR disabled")
+            return@withContext false
+        }
+
         // Locate model files via ModelRegistry
         val encoderPath = modelRegistry.getModelFilePath("whisper-tiny-int4", "encoder")
         val decoderPath = modelRegistry.getModelFilePath("whisper-tiny-int4", "decoder")
@@ -593,6 +599,12 @@ class SherpaVoiceEngine @Inject constructor(
     suspend fun loadTts(): Boolean = withContext(Dispatchers.IO) {
         if (isTtsLoaded) return@withContext true
 
+        // Early exit if Sherpa-ONNX native library is not available
+        if (!com.k2fsa.sherpa.onnx.SherpaOnnxLoader.isAvailable) {
+            Timber.w("SherpaVoiceEngine: Sherpa-ONNX JNI not available — TTS disabled")
+            return@withContext false
+        }
+
         val modelFile = modelRegistry.getModelPath("piper-swahili")
         if (modelFile == null) {
             Timber.w("SherpaVoiceEngine: Piper TTS model not found")
@@ -762,6 +774,12 @@ class SherpaVoiceEngine @Inject constructor(
      */
     suspend fun loadVad(): Boolean = withContext(Dispatchers.IO) {
         if (isVadLoaded) return@withContext true
+
+        // Early exit if Sherpa-ONNX native library is not available
+        if (!com.k2fsa.sherpa.onnx.SherpaOnnxLoader.isAvailable) {
+            Timber.w("SherpaVoiceEngine: Sherpa-ONNX JNI not available — VAD disabled")
+            return@withContext false
+        }
 
         val modelFile = modelRegistry.getModelPath("silero-vad")
         if (modelFile == null) {

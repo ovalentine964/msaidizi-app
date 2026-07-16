@@ -11,20 +11,35 @@ package com.k2fsa.sherpa.onnx
  * - libsherpa-onnx-jni.so (~4MB) — sherpa-onnx JNI bindings
  */
 object SherpaOnnxLoader {
+    /** Whether the native library loaded successfully. */
+    @Volatile
+    var isAvailable: Boolean = false
+        private set
+
     init {
         try {
             System.loadLibrary("sherpa-onnx-jni")
+            isAvailable = true
         } catch (e: UnsatisfiedLinkError) {
-            throw RuntimeException(
-                "Failed to load sherpa-onnx JNI libraries. " +
-                "Run scripts/setup-sherpa-onnx.sh to download them.",
-                e
-            )
+            isAvailable = false
+            // Graceful degradation: voice features will be disabled,
+            // app continues in text-only mode instead of crashing.
+            android.util.Log.e("SherpaOnnxLoader",
+                "Failed to load sherpa-onnx JNI — voice features disabled", e)
+        } catch (e: OutOfMemoryError) {
+            isAvailable = false
+            android.util.Log.e("SherpaOnnxLoader",
+                "OOM loading sherpa-onnx JNI — voice features disabled", e)
+            System.gc()
         }
     }
 
-    fun checkLoaded() {
-        // Triggers the init block — call early to fail fast
+    /**
+     * Check if the native library is loaded.
+     * @return true if sherpa-onnx JNI is available
+     */
+    fun checkLoaded(): Boolean {
+        return isAvailable
     }
 }
 

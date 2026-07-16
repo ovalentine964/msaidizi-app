@@ -26,17 +26,19 @@ import javax.inject.Singleton
  * [LlamaCppEngine]. Those stubs have been removed; all native calls
  * now route through the single [LlamaCppEngine] instance.
  *
- * Model: Gemma 4 E2B Q4_K_M (~1.5GB) — primary text LLM (promoted 2026-07-16)
- * Fallback: Qwen3.5-0.8B Q4_K_M (~580MB) — for memory-constrained scenarios
+ * Model selection by device tier:
+ * - LOW (2GB): Qwen 3.5 0.8B Q4_K_M (~580MB) — primary (Gemma skipped, too large)
+ * - MEDIUM (3GB): Gemma 4 E2B Q3_K_M (~1.0GB) — primary, Qwen fallback
+ * - HIGH (4GB+): Gemma 4 E2B Q4_K_M (~1.5GB) — primary, Qwen fallback
  *
- * Performance on Helio G25 (2GB):
- * - Load time: ~3s with mmap
- * - Inference: ~8 tokens/sec (prompt), ~5 tokens/sec (generation)
+ * Performance on Helio G25 (2GB) with Qwen 3.5 0.8B:
+ * - Load time: ~2s with mmap
+ * - Inference: ~10 tokens/sec (prompt), ~6 tokens/sec (generation)
  * - Context: 2048 tokens (BASIC tier) to 4096 (ENHANCED)
- * - RAM: ~1.5GB when loaded (released on background)
+ * - RAM: ~600MB when loaded (released on background)
  *
- * Fallback behavior: If Gemma 4 E2B cannot load (OOM on 2GB device),
- * automatically falls back to Qwen 3.5 0.8B.
+ * OOM safety: All generation and model loading paths catch OutOfMemoryError,
+ * release the model, trigger GC, and fall back to text-only mode.
  */
 @Singleton
 class LlmEngine @Inject constructor(
@@ -160,18 +162,33 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
             return false
         }
 
-        // Try Gemma 4 E2B first (primary model, promoted 2026-07-16)
-        val gemmaPath = resolveGemmaModelPath()
-        if (gemmaPath != null && gemmaPath.exists()) {
-            val loaded = llamaCppEngine.loadModel(gemmaPath.absolutePath)
-            if (loaded) {
-                Timber.i("Loaded primary model: Gemma 4 E2B")
-                return true
+        // For LOW-tier (2GB) devices, skip Gemma 4 E2B entirely — it's too large.
+        // Use Qwen 3.5 0.8B as primary for LOW-tier; Gemma only for MEDIUM (3GB+) and HIGH (4GB+).
+        val maxMemoryMB = Runtime.getRuntime().maxMemory() / (1024 * 1024)
+        val isLowTier = maxMemoryMB < 3072
+
+        if (!isLowTier) {
+            // Try Gemma 4 E2B first on MEDIUM/HIGH tier devices (promoted 2026-07-16)
+            val gemmaPath = resolveGemmaModelPath()
+            if (gemmaPath != null && gemmaPath.exists()) {
+                try {
+                    val loaded = llamaCppEngine.loadModel(gemmaPath.absolutePath)
+                    if (loaded) {
+                        Timber.i("Loaded primary model: Gemma 4 E2B")
+                        return true
+                    }
+                } catch (e: OutOfMemoryError) {
+                    Timber.e(e, "OOM loading Gemma 4 E2B — releasing and falling back to Qwen")
+                    llamaCppEngine.unload()
+                    System.gc()
+                }
+                Timber.w("Gemma 4 E2B failed to load, falling back to Qwen")
             }
-            Timber.w("Gemma 4 E2B failed to load (likely OOM), falling back to Qwen")
+        } else {
+            Timber.i("LOW-tier device (%dMB RAM) — skipping Gemma 4 E2B, using Qwen 3.5 0.8B as primary", maxMemoryMB)
         }
 
-        // Fallback: Qwen 3.5 0.8B (lighter model for memory-constrained devices)
+        // Primary for LOW-tier / Fallback for MEDIUM/HIGH: Qwen 3.5 0.8B (lighter model)
         // NOTE: Filename case must match ModelRegistry exactly (ext4/f2fs are case-sensitive)
         val qwenPath = File(context.filesDir, "models/Qwen3.5-0.8B-Q4_K_M.gguf")
         if (qwenPath.exists()) {
@@ -188,24 +205,27 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
 
     /**
      * Resolve the Gemma 4 E2B model path based on available memory.
-     * Returns Q4_K_M for >=3GB devices, Q3_K_M for 2GB devices.
+     * Returns Q4_K_M for >=4GB devices, Q3_K_M for 3GB devices, null for 2GB.
      *
      * NOTE: Filename case must match ModelRegistry exactly (ext4/f2fs are case-sensitive).
      * llama.cpp convention: uppercase Q4_K_M, Q3_K_M.
      *
-     * Bug fix (2026-07-16): 2GB devices now correctly get Q3_K_M (~1.0GB)
-     * instead of Q4_K_M (~1.5GB), leaving ~1GB headroom for OS and app.
+     * Fix (2026-07-16): 2GB (LOW-tier) devices skip Gemma entirely — use Qwen 3.5 0.8B.
+     * Gemma 4 E2B Q3_K_M (~1.0GB) still leaves too little headroom on 2GB devices.
      */
     private fun resolveGemmaModelPath(): File? {
         val maxMemoryMB = Runtime.getRuntime().maxMemory() / (1024 * 1024)
+
+        // LOW-tier (2GB): skip Gemma entirely — Qwen 3.5 0.8B is primary
+        if (maxMemoryMB < 3072) return null
+
         val modelsDir = File(context.filesDir, "models")
 
-        // For devices with >=3GB RAM, use Q4_K_M (~1.5GB) -- best quality
+        // For devices with >=4GB RAM, use Q4_K_M (~1.5GB) -- best quality
         val q4Path = File(modelsDir, "gemma-4-e2b-Q4_K_M.gguf")
-        if (maxMemoryMB >= 3072 && q4Path.exists()) return q4Path
+        if (maxMemoryMB >= 4096 && q4Path.exists()) return q4Path
 
-        // For devices with 2-3GB RAM, use Q3_K_M (~1.0GB) -- ~1GB headroom for OS
-        // Covers 2GB devices (typically ~2048-2560MB reported by Runtime)
+        // For devices with 3-4GB RAM, use Q3_K_M (~1.0GB) -- balanced
         val q3Path = File(modelsDir, "gemma-4-e2b-Q3_K_M.gguf")
         if (q3Path.exists()) return q3Path
 
@@ -298,6 +318,11 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
                 effectiveThinking, thinkingEnabled
             )
             return result
+        } catch (e: OutOfMemoryError) {
+            Timber.e(e, "LLM OOM during generation — releasing model, falling back to text-only")
+            unloadModel()
+            System.gc()
+            return ""
         } catch (e: Exception) {
             Timber.e(e, "LLM generation error")
             return ""

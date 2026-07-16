@@ -12,7 +12,9 @@ class OfflineTts(config: TtsConfig) : AutoCloseable {
     private var ptr: Long
 
     init {
-        SherpaOnnxLoader.checkLoaded()
+        if (!SherpaOnnxLoader.checkLoaded()) {
+            throw UnsatisfiedLinkError("sherpa-onnx JNI not available")
+        }
         ptr = newNative(
             config.model.vits.model,
             config.model.vits.tokens,

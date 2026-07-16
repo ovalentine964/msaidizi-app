@@ -16,7 +16,9 @@ class VoiceActivityDetector(
     private var ptr: Long
 
     init {
-        SherpaOnnxLoader.checkLoaded()
+        if (!SherpaOnnxLoader.checkLoaded()) {
+            throw UnsatisfiedLinkError("sherpa-onnx JNI not available")
+        }
         ptr = newNative(
             config.sileroVad.model,
             config.sileroVad.threshold,

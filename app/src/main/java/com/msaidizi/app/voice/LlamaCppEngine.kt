@@ -195,6 +195,11 @@ class LlamaCppEngine @Inject constructor(
                 elapsed, modelHandle, if (useKvCacheQ4) "Q4_0" else "F16"
             )
             true
+        } catch (e: OutOfMemoryError) {
+            Timber.e(e, "OOM loading model — unloading and freeing memory")
+            unload()
+            System.gc()
+            false
         } catch (e: UnsatisfiedLinkError) {
             Timber.e(e, "Native library not available")
             false
@@ -224,6 +229,14 @@ class LlamaCppEngine @Inject constructor(
         }
 
         try {
+            // Memory safety check: ensure enough free memory before inference
+            val runtime = Runtime.getRuntime()
+            val freeHeapMB = (runtime.maxMemory() - runtime.totalMemory() + runtime.freeMemory()) / (1024 * 1024)
+            if (freeHeapMB < 50) {
+                Timber.w(TAG, "Skipping LLM inference — only %dMB free heap (need ≥50MB)", freeHeapMB)
+                return@withContext ""
+            }
+
             val startTime = System.currentTimeMillis()
 
             val result = nativeGenerate(modelHandle, prompt, maxTokens, temperature)
@@ -234,6 +247,11 @@ class LlamaCppEngine @Inject constructor(
                 result.length, elapsed
             )
             result.trim()
+        } catch (e: OutOfMemoryError) {
+            Timber.e(e, "OOM during LLM generation — unloading model")
+            unload()
+            System.gc()
+            ""
         } catch (e: Exception) {
             Timber.e(e, "Generation error")
             ""
@@ -271,20 +289,27 @@ class LlamaCppEngine @Inject constructor(
     suspend fun loadDefaultModel(): Boolean {
         val maxMemoryMB = Runtime.getRuntime().maxMemory() / (1024 * 1024)
         val modelsDir = File(context.filesDir, "models")
+        val isLowTier = maxMemoryMB < 3072
 
-        // Try Gemma 4 E2B first (primary model)
-        val gemmaPath = if (maxMemoryMB >= 3072) {
-            File(modelsDir, "gemma-4-e2b-q4_k_m.gguf")
+        // For LOW-tier (2GB) devices, skip Gemma 4 E2B — too large (~1.2GB).
+        // Qwen 3.5 0.8B (~500MB) is primary for LOW-tier.
+        if (!isLowTier) {
+            // Try Gemma 4 E2B first on MEDIUM/HIGH tier devices
+            val gemmaPath = if (maxMemoryMB >= 4096) {
+                File(modelsDir, "gemma-4-e2b-q4_k_m.gguf")
+            } else {
+                File(modelsDir, "gemma-4-e2b-q3_k_m.gguf")
+            }
+            if (gemmaPath.exists()) {
+                val loaded = loadModel(gemmaPath.absolutePath)
+                if (loaded) return true
+                Timber.w(TAG, "Gemma 4 E2B failed to load, falling back to Qwen")
+            }
         } else {
-            File(modelsDir, "gemma-4-e2b-q3_k_m.gguf")
-        }
-        if (gemmaPath.exists()) {
-            val loaded = loadModel(gemmaPath.absolutePath)
-            if (loaded) return true
-            Timber.w("Gemma 4 E2B failed to load, falling back to Qwen")
+            Timber.i(TAG, "LOW-tier device (%dMB RAM) — using Qwen 3.5 0.8B as primary", maxMemoryMB)
         }
 
-        // Fallback: Qwen 3.5 0.8B
+        // Primary for LOW-tier / Fallback for MEDIUM/HIGH: Qwen 3.5 0.8B
         val qwenPath = File(modelsDir, "Qwen3.5-0.8B-Q4_K_M.gguf")
         return loadModel(qwenPath.absolutePath)
     }

@@ -13,7 +13,9 @@ class OnlineRecognizer(config: OnlineRecognizerConfig) : AutoCloseable {
     private var ptr: Long
 
     init {
-        SherpaOnnxLoader.checkLoaded()
+        if (!SherpaOnnxLoader.checkLoaded()) {
+            throw UnsatisfiedLinkError("sherpa-onnx JNI not available")
+        }
         ptr = newNative(
             config.featConfig.sampleRate,
             config.featConfig.featureDim,
@@ -116,7 +118,9 @@ class OnlineRecognizer(config: OnlineRecognizerConfig) : AutoCloseable {
  */
 class OnlineStream(internal val ptr: Long) : AutoCloseable {
     init {
-        SherpaOnnxLoader.checkLoaded()
+        if (!SherpaOnnxLoader.checkLoaded()) {
+            throw UnsatisfiedLinkError("sherpa-onnx JNI not available")
+        }
     }
 
     /**
