@@ -65,18 +65,38 @@ def draw_radial_glow(size, cx, cy, radius, color, max_alpha=20):
 
 
 def draw_africa_silhouette(size, cx, cy, scale, color, opacity=0.5):
-    """Draw simplified Africa continent as polygon overlay."""
-    # Normalized Africa outline points
+    """Draw recognizable Africa continent as polygon overlay.
+
+    Key geographic features:
+    - Flat Mediterranean north coast
+    - Horn of Africa (eastern protrusion at Somalia)
+    - Gulf of Guinea indentation
+    - West Africa bulge (Senegal/Mauritania)
+    - Cape of Good Hope (southern tip)
+    """
+    # Normalized Africa outline points — recognizable silhouette
+    # (x, y) where x=0 is center, positive=right/east, y=0 is center, positive=south
     africa_pts = [
-        (-0.10, -1.00), (0.05, -1.02), (0.15, -0.98), (0.25, -0.90),
-        (0.35, -0.78), (0.42, -0.65), (0.48, -0.52), (0.52, -0.38),
-        (0.55, -0.22), (0.58, -0.08), (0.60, 0.08), (0.58, 0.22),
-        (0.55, 0.35), (0.50, 0.48), (0.44, 0.58), (0.38, 0.68),
-        (0.30, 0.78), (0.22, 0.85), (0.12, 0.90), (0.02, 0.95),
-        (-0.08, 0.92), (-0.18, 0.85), (-0.28, 0.72), (-0.38, 0.58),
-        (-0.48, 0.42), (-0.55, 0.28), (-0.60, 0.12), (-0.62, -0.05),
-        (-0.60, -0.22), (-0.55, -0.38), (-0.48, -0.52), (-0.38, -0.68),
-        (-0.28, -0.80), (-0.18, -0.90), (-0.10, -0.98),
+        # North coast (flat Mediterranean) — going left to right
+        (-0.62, -0.88), (-0.22, -0.96), (0.12, -0.96), (0.42, -0.88),
+        # Egypt / Sinai
+        (0.50, -0.72), (0.47, -0.56),
+        # Horn of Africa — sharp eastern protrusion!
+        (0.56, -0.40), (0.80, -0.24), (0.80, -0.12),
+        # East coast going south
+        (0.64, 0.00), (0.48, 0.16), (0.36, 0.36),
+        # Mozambique / SE coast
+        (0.24, 0.56), (0.08, 0.76),
+        # Cape of Good Hope — southern tip
+        (-0.08, 0.92), (-0.16, 0.96),
+        # West coast going north
+        (-0.32, 0.76), (-0.44, 0.52),
+        # Gulf of Guinea — indentation (coast goes east here)
+        (-0.48, 0.32), (-0.40, 0.20),
+        # West Africa bulge — westernmost point!
+        (-0.60, 0.04), (-0.68, -0.12), (-0.68, -0.28),
+        # Back to NW
+        (-0.60, -0.56), (-0.56, -0.72),
     ]
     r = 140 * scale
     pts = [(cx + x * r, cy + y * r) for x, y in africa_pts]
@@ -89,12 +109,12 @@ def draw_africa_silhouette(size, cx, cy, scale, color, opacity=0.5):
 
 
 def draw_east_africa(size, cx, cy, scale, color, opacity=0.35):
-    """Draw East Africa highlight overlay."""
+    """Draw East Africa / Horn of Africa highlight overlay."""
     ea_pts = [
-        (0.48, -0.42), (0.52, -0.32), (0.55, -0.18), (0.58, -0.02),
-        (0.58, 0.12), (0.55, 0.28), (0.50, 0.42), (0.44, 0.52),
-        (0.48, 0.42), (0.54, 0.28), (0.58, 0.12), (0.58, -0.02),
-        (0.55, -0.18), (0.50, -0.32), (0.48, -0.42),
+        (0.56, -0.40), (0.80, -0.24), (0.80, -0.12),
+        (0.64, 0.00), (0.48, 0.16), (0.36, 0.36),
+        (0.44, 0.24), (0.56, 0.08), (0.68, -0.04),
+        (0.68, -0.16), (0.56, -0.40),
     ]
     r = 140 * scale
     pts = [(cx + x * r, cy + y * r) for x, y in ea_pts]
@@ -107,8 +127,8 @@ def draw_east_africa(size, cx, cy, scale, color, opacity=0.35):
 
 def draw_madagascar(size, cx, cy, scale):
     """Draw Madagascar hint."""
-    mcx = cx + int(82 * scale * 1.15)
-    mcy = cy + int(38 * scale * 1.15)
+    mcx = cx + int(58 * scale * 1.15)
+    mcy = cy + int(52 * scale * 1.15)
     mrx = max(1, int(6 * scale * 1.15))
     mry = max(2, int(14 * scale * 1.15))
 

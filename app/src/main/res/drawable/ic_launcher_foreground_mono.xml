@@ -10,50 +10,44 @@
     <!-- All elements use #FFFFFF white for system tinting             -->
     <!-- ============================================================ -->
 
-    <!-- Africa continent silhouette -->
+    <!-- Africa continent silhouette
+         Key features: Horn of Africa (74,41), West Africa bulge (27,28),
+         Gulf of Guinea (38,46), Cape of Good Hope (50,78) -->
     <path
         android:fillColor="#FFFFFF"
         android:pathData="
-            M54,19
-            L59,19.3
-            L64,20.5
-            L68,22.5
-            L70,25.5
-            L71,29
-            L70.5,33
-            L69,36.5
-            L66.5,39
-            L63.5,42
-            L61.5,45
-            L62.5,49
-            L64,52.5
-            L66,56
-            L67,60
-            L65.5,64
-            L62,67
-            L58.5,70
-            L55,73.5
-            L52,76
-            L50,77
-            L48,76
-            L45.5,73.5
-            L42.5,70
-            L40,67
-            L38,63.5
-            L36.5,60
-            L35.5,56
-            L34.5,52.5
-            L35,49
-            L36,45
-            L37.5,42
-            L39.5,39
-            L41.5,36.5
-            L43,33
-            L43.5,29
-            L44,25.5
-            L46,22.5
-            L48.5,20.5
-            L51,19.3
+            M34,20
+            L48,17
+            L60,17
+            L68,22
+            L67,30
+            L66,36
+            L74,41
+            L70,46
+            L66,52
+            L62,60
+            L56,70
+            L50,78
+            L44,70
+            L40,62
+            L38,55
+            L37,50
+            L38,46
+            L34,42
+            L30,36
+            L27,28
+            L30,22
+            Z" />
+    <!-- Madagascar island -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="
+            M69,58
+            L71,60
+            L72,66
+            L70,70
+            L68,68
+            L67,62
             Z" />
 
     <!-- Shield border outline -->
@@ -64,19 +58,15 @@
         android:strokeLineJoin="round"
         android:fillColor="#00000000"
         android:pathData="
-            M54,16
-            C54,16 60,14 66,15.5
-            C71,17 76,20 78,24
-            C80,27 80,32 79,37
-            C78,43 76,50 73,56
-            C70,62 66,68 62,73
-            C58,78 54,82 51,84
-            C48,82 44,78 40,73
-            C36,68 32,62 29,56
-            C26,50 24,43 23,37
-            C22,32 22,27 24,24
-            C26,20 31,17 36,15.5
-            C42,14 48,16 54,16 Z" />
+            M28,12
+            C38,8 60,8 72,14
+            C80,20 86,30 86,42
+            C86,54 78,66 68,76
+            C60,84 54,88 50,88
+            C46,88 40,84 32,76
+            C22,66 14,54 14,42
+            C14,30 20,20 28,12
+            Z" />
 
     <!-- Speech bubble outline (monochrome) -->
     <path

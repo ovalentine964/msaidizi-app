@@ -7,51 +7,56 @@
 
     <!-- ============================================================ -->
     <!-- Africa Shield Icon — Msaidizi                                -->
-    <!-- 108×108 viewport, safe zone 66×66 centered at (44,44) to (78,78) -->
+    <!-- 108×108 viewport, safe zone 66×66 centered at (54,54)        -->
     <!-- ============================================================ -->
 
-    <!-- 1. AFRICA CONTINENT — Simplified polygon silhouette with green gradient -->
+    <!-- 1. AFRICA CONTINENT — Recognizable silhouette with key geographic features:
+         - Flat Mediterranean north coast (y≈17)
+         - Horn of Africa at (74,41) — sharp eastern protrusion
+         - Gulf of Guinea indentation at (38,46)
+         - West Africa bulge / Senegal at (27,28) — westernmost point
+         - Cape of Good Hope at (50,78) — southernmost point
+         - Madagascar island off SE coast
+    -->
     <group>
+        <!-- Main continent -->
         <path
             android:name="africa_continent"
             android:fillColor="#22C55E"
             android:pathData="
-                M47,19
-                L55,19.5
-                L62,21
-                L66,22.5
-                L68,25
-                L69.5,29
-                L70,33
-                L69,37
-                L66,39
-                L63,41
-                L60,43
-                L61,47
-                L63,51
-                L65,54
-                L66,58
-                L64,62
-                L60,65
-                L57,68
-                L54,72
-                L50,76
-                L47,78
-                L44,76
-                L42,72
-                L40,68
-                L38,63
-                L36,58
-                L34,53
-                L33,49
-                L34,45
-                L35,41
-                L36,37
-                L37,33
-                L38,29
-                L40,25
-                L42,22
-                L45,20
+                M34,20
+                L48,17
+                L60,17
+                L68,22
+                L67,30
+                L66,36
+                L74,41
+                L70,46
+                L66,52
+                L62,60
+                L56,70
+                L50,78
+                L44,70
+                L40,62
+                L38,55
+                L37,50
+                L38,46
+                L34,42
+                L30,36
+                L27,28
+                L30,22
+                Z" />
+        <!-- Madagascar island -->
+        <path
+            android:name="madagascar"
+            android:fillColor="#22C55E"
+            android:pathData="
+                M69,58
+                L71,60
+                L72,66
+                L70,70
+                L68,68
+                L67,62
                 Z" />
     </group>
 
@@ -64,21 +69,17 @@
         android:strokeLineJoin="round"
         android:fillColor="#00000000"
         android:pathData="
-            M47,16
-            C47,16 54,14 60,15
-            C65,16 70,19 73,23
-            C75,26 76,30 76,35
-            C76,42 74,50 72,56
-            C70,62 66,68 62,73
-            C58,78 53,82 50,84
-            C47,82 42,78 38,73
-            C34,68 30,62 28,56
-            C26,50 24,42 24,35
-            C24,30 25,26 27,23
-            C30,19 35,16 40,15
-            C44,14 47,16 47,16 Z" />
+            M28,12
+            C38,8 60,8 72,14
+            C80,20 86,30 86,42
+            C86,54 78,66 68,76
+            C60,84 54,88 50,88
+            C46,88 40,84 32,76
+            C22,66 14,54 14,42
+            C14,30 20,20 28,12
+            Z" />
 
-    <!-- 3. SPEECH BLOBBLE — White at 100% opacity, upper-right, with 3 dark dots -->
+    <!-- 3. SPEECH BUBBLE — White at 100% opacity, upper-right, with 3 dark dots -->
     <path
         android:name="speech_bubble"
         android:fillColor="#FFFFFF"

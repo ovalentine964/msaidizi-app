@@ -55,5 +55,18 @@ Fresh redesign of the Msaidizi app icon to match the ICON_REDESIGN.md specificat
 | Cultural Sensitivity | 9/10 |
 | Spec Compliance | 9/10 |
 
+## Africa Continent Silhouette Fix (2026-07-16)
+
+The original Africa continent path was an abstract symmetric blob with no recognizable geographic features. Replaced with a proper simplified outline that includes:
+
+- **Flat Mediterranean north coast** (y≈17, spanning x=34 to x=60)
+- **Horn of Africa** at (74,41) — sharp eastern protrusion (Somalia/Djibouti)
+- **Gulf of Guinea indentation** at (38,46) — coast curves east then back west
+- **West Africa bulge** at (27,28) — Senegal/Mauritania, westernmost point
+- **Cape of Good Hope** at (50,78) — southernmost point
+- **Madagascar island** off the SE coast (polygon at 67-72, 58-70)
+
+The path uses 21 control points (within the 15-25 range) for a simplified but instantly recognizable Africa silhouette. Updated in all 3 XML drawables and both PNG generation scripts.
+
 ## Note on Green Gradient
 The ICON_REDESIGN.md specifies a "green gradient" for the Africa continent. Android VectorDrawable `<path>` elements don't support gradient fills directly — only flat colors. The current implementation uses flat green (#22C55E). To achieve a gradient effect, a layered approach with multiple semi-transparent paths could be used in a future iteration. For now, the flat green provides clean, consistent rendering across all screen densities.
