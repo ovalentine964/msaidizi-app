@@ -126,7 +126,7 @@ android {
                     props.load(propsFile.inputStream())
                 }
                 storeFile = file(props.getProperty("storeFile",
-                    "${rootProject.projectDir}/release.keystore"))
+                    "${project.projectDir}/msaidizi-release.keystore"))
                 storePassword = props.getProperty("storePassword", "")
                 keyAlias = props.getProperty("keyAlias", "msaidizi-release")
                 keyPassword = props.getProperty("keyPassword", "")

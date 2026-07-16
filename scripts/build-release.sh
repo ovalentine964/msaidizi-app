@@ -35,13 +35,13 @@ if [ "$MODE" = "ci" ]; then
     fi
     echo "✅ Using keystore from env: $RELEASE_KEYSTORE_FILE"
 else
-    if [ ! -f "keystore.properties" ]; then
-        echo "❌ keystore.properties not found."
+    if [ ! -f "keystore.properties" ] && [ ! -f "app/msaidizi-release.keystore" ]; then
+        echo "❌ No signing config found."
         echo "   Run: ./scripts/generate-keystore.sh"
         echo "   Then create keystore.properties from keystore.properties.template"
         exit 1
     fi
-    echo "✅ Using keystore.properties"
+    echo "✅ Using keystore.properties / msaidizi-release.keystore"
 fi
 
 echo ""

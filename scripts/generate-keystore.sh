@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-KEYSTORE_PATH="${1:-release.keystore}"
+KEYSTORE_PATH="${1:-app/msaidizi-release.keystore}"
 KEY_ALIAS="${RELEASE_KEY_ALIAS:-msaidizi-release}"
 VALIDITY_DAYS=10000  # ~27 years
 
