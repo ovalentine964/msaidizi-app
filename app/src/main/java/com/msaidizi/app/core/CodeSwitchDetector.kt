@@ -342,7 +342,7 @@ object CodeSwitchDetector {
         val result = mutableListOf<WordLanguage>()
         for (i in baseDetections.indices) {
             val base = baseDetections[i]
-            val clean = base.word.trim('\\'', '"', '.', ',', '!', '?').lowercase()
+            val clean = base.word.trim('\'', '"', '.', ',', '!', '?').lowercase()
 
             // Check for Sheng hybrid construction
             val shengConstruction = detectShengConstruction(clean)
@@ -491,7 +491,7 @@ object CodeSwitchDetector {
 
         for (i in start until end) {
             if (i != currentIndex) {
-                context.add(wordLangs[i].word.trim('\\'', '"', '.', ',', '!', '?').lowercase())
+                context.add(wordLangs[i].word.trim('\'', '"', '.', ',', '!', '?').lowercase())
             }
         }
         return context
