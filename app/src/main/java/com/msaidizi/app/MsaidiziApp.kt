@@ -57,6 +57,9 @@ class MsaidiziApp : Application(), Configuration.Provider {
     @Inject
     lateinit var memoryManager: com.msaidizi.app.core.MemoryManager
 
+    @Inject
+    lateinit var orchestrator: com.msaidizi.app.agent.Orchestrator
+
     override fun onCreate() {
         super.onCreate()
 
@@ -125,6 +128,44 @@ class MsaidiziApp : Application(), Configuration.Provider {
 
         // Schedule daily briefing notifications (7 AM morning, 7 PM evening)
         scheduleBriefingNotifications()
+
+        // ── Crash Recovery: check for incomplete agent tasks ──
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            try {
+                val recoveryTasks = orchestrator.recoverIncompleteTasks()
+                if (recoveryTasks.isNotEmpty()) {
+                    Timber.i("Crash recovery: found %d incomplete tasks", recoveryTasks.size)
+                    for (rt in recoveryTasks) {
+                        kotlinx.coroutines.delay(rt.delayMs)
+                        Timber.i("Recovering task %s (action=%s, phase=%s)",
+                            rt.checkpoint.taskId, rt.action, rt.checkpoint.lastPhase)
+                        // Re-process the input from the checkpoint
+                        // This re-runs the full OODA cycle from scratch,
+                        // which is safe because transaction handlers are idempotent
+                        try {
+                            val inputJson = rt.checkpoint.inputJson
+                            val input = com.google.gson.Gson().fromJson(
+                                inputJson, Map::class.java
+                            ) as? Map<*, *>
+                            val text = input?.get("text") as? String
+                            val language = input?.get("language") as? String ?: "sw"
+                            if (text != null) {
+                                orchestrator.processInput(text, language)
+                                Timber.i("Recovered task %s successfully", rt.checkpoint.taskId)
+                            } else {
+                                Timber.w("Cannot recover task %s: input text is null", rt.checkpoint.taskId)
+                            }
+                        } catch (e: Exception) {
+                            Timber.e(e, "Failed to recover task %s", rt.checkpoint.taskId)
+                        }
+                    }
+                }
+                // Cleanup old recovery data
+                orchestrator.cleanupRecoveryData()
+            } catch (e: Exception) {
+                Timber.e(e, "Crash recovery check failed")
+            }
+        }
 
         // Register memory trim callback
         registerComponentCallbacks(object : android.content.ComponentCallbacks2 {

@@ -7,6 +7,8 @@ import com.msaidizi.app.core.model.CorrectionType
 import com.msaidizi.app.core.model.PatternType
 import com.msaidizi.app.core.model.TransactionType
 import com.msaidizi.app.onboarding.WorkingHours
+import com.msaidizi.app.agent.recovery.TaskState
+import com.msaidizi.app.agent.recovery.TraceType
 
 /**
  * Room TypeConverters for custom types.
@@ -56,4 +58,18 @@ class Converters {
             WorkingHours()
         }
     }
+
+    // ── Agent Recovery Types ──
+
+    @TypeConverter
+    fun fromTaskState(value: TaskState): String = value.name
+
+    @TypeConverter
+    fun toTaskState(value: String): TaskState = TaskState.valueOf(value)
+
+    @TypeConverter
+    fun fromTraceType(value: TraceType): String = value.name
+
+    @TypeConverter
+    fun toTraceType(value: String): TraceType = TraceType.valueOf(value)
 }
