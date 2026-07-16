@@ -444,7 +444,7 @@ class SherpaVoiceEngine @Inject constructor(
                 }
 
                 // Run offline ASR
-                launch(Dispatchers.Default) {
+                scope.launch(Dispatchers.Default) {
                     try {
                         val text = transcribe(windowAudio)
                         if (!text.isNullOrBlank() && text != lastPartialText) {

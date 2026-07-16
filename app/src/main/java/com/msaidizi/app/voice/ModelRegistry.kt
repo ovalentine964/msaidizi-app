@@ -279,7 +279,7 @@ class ModelRegistry @Inject constructor(
                 sizeBytes = 1_500_000_000L,
                 priority = ModelPriority.HIGH,
                 requiredFor = listOf(Feature.LLM_INFERENCE),
-                tier = ModelTier.ESSENTIAL,
+                tier = ModelTier.ON_DEMAND,
                 version = "1.0.0"
             ),
 
@@ -292,7 +292,7 @@ class ModelRegistry @Inject constructor(
                 sizeBytes = 1_000_000_000L,
                 priority = ModelPriority.HIGH,
                 requiredFor = listOf(Feature.LLM_INFERENCE),
-                tier = ModelTier.ESSENTIAL,
+                tier = ModelTier.ON_DEMAND,
                 version = "1.0.0"
             ),
 

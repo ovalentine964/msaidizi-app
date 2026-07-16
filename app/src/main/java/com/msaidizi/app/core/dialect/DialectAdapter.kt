@@ -55,7 +55,7 @@ open class DialectAdapter(private val config: DialectConfig) : IDialectAdapter {
      */
         override fun detectCodeSwitching(text: String): CodeSwitchResult {
         val words = text.lowercase()
-            .split(Regex("[^\p{L}']+"))
+            .split(Regex("[^\\p{L}']+"))
             .filter { it.length > 1 }
 
         if (words.isEmpty()) {

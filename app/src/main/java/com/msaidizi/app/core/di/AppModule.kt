@@ -50,6 +50,7 @@ import com.msaidizi.app.security.privacy.ConsentManager
 import com.msaidizi.app.core.network.PinnedHttpClient
 import com.msaidizi.app.sync.SyncManager
 import com.google.gson.Gson
+import timber.log.Timber
 import com.msaidizi.app.sync.SyncQueue
 import com.msaidizi.app.sync.NetworkMonitor
 import com.msaidizi.app.agent.ModelRouter
@@ -104,7 +105,7 @@ import io.ktor.client.plugins.logging.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 import com.msaidizi.app.security.crypto.DatabaseKeyManager
-import net.sqlcipher.SupportFactory
+import net.sqlcipher.database.SupportFactory
 import net.sqlcipher.database.SQLiteDatabase
 import javax.inject.Singleton
 

@@ -19,6 +19,10 @@ import com.msaidizi.app.loops.BriefingNotificationWorker
 import dagger.hilt.android.HiltAndroidApp
 import io.sentry.android.core.SentryAndroid
 import org.bouncycastle.jce.provider.BouncyCastleProvider
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.security.Security
 import javax.inject.Inject
@@ -130,13 +134,13 @@ class MsaidiziApp : Application(), Configuration.Provider {
         scheduleBriefingNotifications()
 
         // ── Crash Recovery: check for incomplete agent tasks ──
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             try {
                 val recoveryTasks = orchestrator.recoverIncompleteTasks()
                 if (recoveryTasks.isNotEmpty()) {
                     Timber.i("Crash recovery: found %d incomplete tasks", recoveryTasks.size)
                     for (rt in recoveryTasks) {
-                        kotlinx.coroutines.delay(rt.delayMs)
+                        delay(rt.delayMs)
                         Timber.i("Recovering task %s (action=%s, phase=%s)",
                             rt.checkpoint.taskId, rt.action, rt.checkpoint.lastPhase)
                         // Re-process the input from the checkpoint
