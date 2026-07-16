@@ -147,6 +147,97 @@ object ShengDialectData {
             "mat" to "matatu", "nduthi" to "pikipiki",
             "choma" to "nyama_choma", "jabaa" to "bure",
             "kuchapa" to "kufanya_kazi"
+        ),
+
+        // ────────────── Code-Switching Construction Patterns ──────────────
+
+        /**
+         * Sheng code-switching constructions: English verb stems with Swahili prefixes.
+         * These are the hallmark of Sheng — speakers conjugate English verbs
+         * using Swahili grammar: ku-deposit, nime-buy, na-think.
+         * Map of Sheng construction → standard Swahili translation.
+         */
+        codeSwitchConstructions = mapOf(
+            // ku- (infinitive) + English verb
+            "kudeposit" to "kudepositi", "kuwithdraw" to "kutoa",
+            "kutransfer" to "kutuma", "kucheck" to "kuangalia",
+            "kusend" to "kutuma", "kureceive" to "kupokea",
+            "kubuy" to "kununua", "kusell" to "kuuza",
+            "kupay" to "kulipa", "kucancel" to "kufuta",
+            "kuconfirm" to "kuthibitisha", "kudelete" to "kufuta",
+            "kuregister" to "kujiandikisha", "kulogin" to "kuingia",
+            "kuupdate" to "kusasisha", "kudownload" to "kupakua",
+            "kuupload" to "kupakia", "kushare" to "kushiriki",
+            "kuprint" to "kuchapisha", "kucall" to "kupiga_simu",
+            "kumessage" to "kutuma_ujumbe", "kupost" to "kuchapisha",
+            "kureport" to "kuripoti", "kubook" to "kupanga",
+            "kuload" to "kupakia", "kubalance" to "kusawazisha",
+            "kuprofit" to "kupata_faida",
+            // nime- (perfective) + English verb
+            "nimedo" to "nimemaliza", "nimesee" to "nimeona",
+            "nimebuy" to "nimenunua", "nimesell" to "nimeuza",
+            "nimepay" to "nimelipa", "nimesend" to "nimetuma",
+            "nimecheck" to "nimeangalia", "nimefinish" to "nimemaliza",
+            "nimeconfirm" to "nimethibitisha", "nimecancel" to "nimefuta",
+            "nimebook" to "nimepanga", "nimeload" to "nimepakia",
+            // na- (present) + English verb
+            "nathink" to "nafikiri", "nado" to "nafanya",
+            "nasee" to "naona", "nabuy" to "nanunua",
+            "nasell" to "nauza", "napay" to "nalipa",
+            "nacheck" to "naangalia", "nasend" to "natuma",
+            // ame- (3rd person perfective) + English verb
+            "amebuy" to "amenunua", "amesell" to "ameuza",
+            "amepay" to "amelipa", "amesend" to "ametuma",
+            "amecheck" to "ameangalia", "amefinish" to "amemaliza",
+            "ameconfirm" to "amethibitisha",
+            // tuta- (future) + English verb
+            "tutabuy" to "tutanunua", "tutasell" to "tutauza",
+            "tutasend" to "tutatuma", "tutacheck" to "tutaangalia",
+            "tutapay" to "tutalipa"
+        ),
+
+        /**
+         * English nouns commonly used with Swahili possessive suffixes in Sheng.
+         * e.g., "account yangu", "receipt zangu"
+         * Map of English noun → its Swahili class (for agreement)
+         */
+        englishNounSwahiliClass = mapOf(
+            "account" to "n-class",     // account yangu → n-class
+            "receipt" to "n-class",     // receipt yangu
+            "balance" to "n-class",     // balance yangu
+            "profit" to "n-class",      // profit yangu
+            "stock" to "n-class",       // stock yangu
+            "order" to "n-class",       // order yangu
+            "payment" to "n-class",     // payment yangu
+            "phone" to "ki-class",      // phone changu
+            "number" to "n-class",       // number yangu
+            "message" to "n-class",     // message yangu
+            "photo" to "n-class",       // photo yangu
+            "video" to "n-class",       // video yangu
+            "error" to "n-class",       // error yangu
+            "problem" to "n-class"      // problem yangu
+        ),
+
+        /**
+         * Common Sheng sentence frames that indicate code-switching.
+         * When these patterns appear, the following English words are
+         * part of the Sheng code-switch, not standard English.
+         */
+        codeSwitchFrames = listOf(
+            // Subject + na- + English verb
+            Regex("\\b(na|nina|tuna|wana)\\s+[a-z]+(?:ing|ed|t)\\b"),
+            // nime + English verb
+            Regex("\\bnime[a-z]{3,}\\b"),
+            // ku + English verb
+            Regex("\\bku[a-z]{4,}\\b"),
+            // English noun + possessive
+            Regex("\\b(account|receipt|balance|stock|order|payment)\\s+(ya|za|yangu|zangu|yake|zake)\\b"),
+            // Swahili frame + English word + Swahili continuation
+            Regex("\\b(nime|na|tuta|ame)\\s+[a-z]+\\s+(pesa|mboga|soko|duka)\\b"),
+            // "ni" + English adjective
+            Regex("\\bni\\s+(soft|hard|cool|fire|heavy|sharp|smooth)\\b"),
+            // "iko" + English adjective
+            Regex("\\b(iko|iko)\\s+(poa|fiti|soft|cool|sharp)\\b")
         )
     )
 }

@@ -53,9 +53,9 @@ open class DialectAdapter(private val config: DialectConfig) : IDialectAdapter {
      * Returns a [CodeSwitchResult] indicating whether code-switching was detected,
      * the primary language, and confidence scores.
      */
-    override fun detectCodeSwitching(text: String): CodeSwitchResult {
+        override fun detectCodeSwitching(text: String): CodeSwitchResult {
         val words = text.lowercase()
-            .split(Regex("[^\\p{L}']+"))
+            .split(Regex("[^\p{L}']+"))
             .filter { it.length > 1 }
 
         if (words.isEmpty()) {
@@ -74,22 +74,38 @@ open class DialectAdapter(private val config: DialectConfig) : IDialectAdapter {
         for (word in words) {
             val clean = word.trim('\'', '"', '.', ',', '!', '?')
             when {
+                // Check code-switching constructions first (hybrid words like "kudeposit")
+                config.codeSwitchConstructions.containsKey(clean) -> dialectFound.add(clean)
+                // Then check dialect markers
                 config.dialectMarkerWords.contains(clean) -> dialectFound.add(clean)
+                // Then check Swahili
                 DialectUtils.isSwahiliWord(clean) -> swahiliFound.add(clean)
                 isBusinessTerm(clean) -> swahiliFound.add(clean)
             }
         }
 
+        // Check for code-switching frames (sentence-level patterns)
+        val hasFrameMatch = config.codeSwitchFrames.any {
+            it.containsMatchIn(text.lowercase())
+        }
+
         val totalWords = words.size.coerceAtLeast(1)
         val dialectRatio = dialectFound.size.toFloat() / totalWords
-        val hasCodeSwitching = dialectFound.size >= 1 && swahiliFound.size >= 1
+        val hasCodeSwitching = (dialectFound.size >= 1 && swahiliFound.size >= 1) ||
+                (hasFrameMatch && dialectFound.isNotEmpty())
+
+        // Higher confidence when code-switching frames match
+        val baseConfidence = if (hasCodeSwitching) 0.8f else 0.6f
+        val confidence = if (hasFrameMatch && hasCodeSwitching) {
+            (baseConfidence + 0.1f).coerceAtMost(1.0f)
+        } else baseConfidence
 
         return CodeSwitchResult(
             hasCodeSwitching = hasCodeSwitching,
-            primaryLanguage = if (dialectRatio > 0.4f) config.languageCode else "sw",
+            primaryLanguage = if (dialectRatio > 0.3f) config.languageCode else "sw",
             dialectWords = dialectFound,
             swahiliWords = swahiliFound,
-            confidence = if (hasCodeSwitching) 0.8f else 0.6f
+            confidence = confidence
         )
     }
 
@@ -122,6 +138,8 @@ open class DialectAdapter(private val config: DialectConfig) : IDialectAdapter {
     override fun translateToStandard(term: String): String? {
         val lower = term.lowercase().trim()
 
+        // Check code-switching constructions first (hybrid words)
+        config.codeSwitchConstructions[lower]?.let { return it }
         config.businessTerms[lower]?.let { return it }
         config.pronunciationVariations[lower]?.let { return it }
         config.dialectToSwahili[lower]?.let { return it }

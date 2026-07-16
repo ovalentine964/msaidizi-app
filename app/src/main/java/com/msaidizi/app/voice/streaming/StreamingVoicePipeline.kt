@@ -12,6 +12,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import timber.log.Timber
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -46,6 +47,7 @@ class StreamingVoicePipeline @Inject constructor(
     private val audioRecorder: AudioRecorder,
     private val vad: VoiceActivityDetector,
     private val speechRecognizer: SpeechRecognizer,
+    private val sherpaVoiceEngine: SherpaVoiceEngine,
     private val kokoroTts: KokoroTtsEngine,
     private val piperTts: TextToSpeech,
     private val mmsTtsEngine: MMSTextToSpeech,
@@ -58,6 +60,18 @@ class StreamingVoicePipeline @Inject constructor(
     companion object {
         private const val TAG = "StreamingPipeline"
         private const val PREAMBLE_DELAY_MS = 50L
+
+        /** Maximum time to wait for streaming ASR before forcing end */
+        private const val STREAMING_TIMEOUT_MS = 30_000L
+
+        /** Silence duration that triggers end-of-speech */
+        private const val SILENCE_END_OF_SPEECH_MS = 1_500L
+
+        /** Minimum speech duration to process (ignore noise) */
+        private const val MIN_SPEECH_DURATION_MS = 250L
+
+        /** How often to check for silence timeout */
+        private const val SILENCE_CHECK_INTERVAL_MS = 100L
     }
 
     // ────────────── Pipeline State ──────────────
@@ -134,7 +148,14 @@ class StreamingVoicePipeline @Inject constructor(
 
     /**
      * Start listening with REAL streaming ASR.
-     * Uses SpeechRecognizer.startStreaming() for partial transcripts in 500ms hops.
+     * Uses SherpaVoiceEngine streaming when available (native OnlineRecognizer),
+     * falls back to SpeechRecognizer simulated streaming.
+     *
+     * Key improvements:
+     * - Partial results emitted as user speaks (no waiting for complete utterances)
+     * - VAD-based endpoint detection (silence timeout)
+     * - Streaming timeout protection (30s max)
+     * - Graceful noise/silence handling
      */
     suspend fun startListening(scope: CoroutineScope) {
         if (_pipelineState.value == StreamingPipelineState.LISTENING) {
@@ -149,48 +170,151 @@ class StreamingVoicePipeline @Inject constructor(
 
         audioRecorder.startRecording(scope)
 
-        // Start real streaming ASR
-        speechRecognizer.startStreaming(
-            audioChunks = audioRecorder.audioChunks,
-            onPartial = { text, confidence ->
-                scope.launch {
-                    _partialTranscript.emit(StreamingTranscript(
-                        text = text,
-                        rawText = text,
-                        confidence = confidence,
-                        dialect = "",
-                        emotion = VoiceEmotion.NEUTRAL,
-                        latencyMs = 0,
-                        isPartial = true
-                    ))
-                }
-            },
-            onFinal = { text ->
-                // Final result handled in processEndOfSpeech
-            },
-            scope = scope
-        )
+        // Track timing for timeout and silence detection
+        val listeningStartTime = AtomicLong(System.currentTimeMillis())
+        val lastSpeechTime = AtomicLong(System.currentTimeMillis())
+        var speechDetected = false
 
-        // Monitor VAD for end-of-speech
-        scope.launch {
-            audioRecorder.audioChunks.collect { chunk ->
-                val speechProb = vad.processChunk(chunk)
-                if (speechProb > 0.5f) {
-                    // Also extract emotion features (async, non-blocking)
-                    processingScope?.launch(Dispatchers.Default) {
-                        val features = featureExtractor.extractEmotionFeatures(chunk)
-                        val emotionResult = emotionDetector.detect(features)
-                        _emotion.emit(emotionResult.primaryEmotion)
+        // Choose streaming backend: SherpaVoiceEngine (preferred) or SpeechRecognizer (fallback)
+        val useSherpa = sherpaVoiceEngine.isStreamingAsrReady()
+
+        if (useSherpa) {
+            // ═══ Native Sherpa-ONNX streaming ═══
+            // Uses OnlineRecognizer with built-in endpoint detection + our VAD overlay
+            sherpaVoiceEngine.startStreamingRecognition(
+                audioChunks = audioRecorder.audioChunks,
+                onPartial = { text, confidence ->
+                    scope.launch {
+                        _partialTranscript.emit(StreamingTranscript(
+                            text = text,
+                            rawText = text,
+                            confidence = confidence,
+                            dialect = "",
+                            emotion = VoiceEmotion.NEUTRAL,
+                            latencyMs = System.currentTimeMillis() - listeningStartTime.get(),
+                            isPartial = true
+                        ))
                     }
+                },
+                onFinal = { text ->
+                    // Final result from Sherpa streaming — trigger full processing
+                    scope.launch {
+                        if (text.isNotBlank()) {
+                            processStreamingResult(text, listeningStartTime.get())
+                        } else {
+                            processEndOfSpeech()
+                        }
+                    }
+                },
+                scope = scope
+            )
+        } else {
+            // ═══ Simulated streaming via SpeechRecognizer ═══
+            speechRecognizer.startStreaming(
+                audioChunks = audioRecorder.audioChunks,
+                onPartial = { text, confidence ->
+                    scope.launch {
+                        _partialTranscript.emit(StreamingTranscript(
+                            text = text,
+                            rawText = text,
+                            confidence = confidence,
+                            dialect = "",
+                            emotion = VoiceEmotion.NEUTRAL,
+                            latencyMs = System.currentTimeMillis() - listeningStartTime.get(),
+                            isPartial = true
+                        ))
+                    }
+                },
+                onFinal = { text -> },
+                scope = scope
+            )
+        }
+
+        // ═══ VAD-based endpoint detection (works with both backends) ═══
+        // Monitors audio for speech/silence transitions and triggers end-of-speech
+        scope.launch {
+            var silenceStartMs = 0L
+            var speechStartMs = 0L
+
+            audioRecorder.audioChunks.collect { chunk ->
+                if (_pipelineState.value != StreamingPipelineState.LISTENING) return@collect
+
+                val now = System.currentTimeMillis()
+                val speechProb = vad.processChunk(chunk)
+                val hasSpeech = speechProb > 0.5f
+
+                if (hasSpeech) {
+                    if (!speechDetected) {
+                        speechDetected = true
+                        speechStartMs = now
+                        Timber.tag(TAG).d("VAD: Speech started (prob=%.2f)", speechProb)
+                    }
+                    lastSpeechTime.set(now)
+                    silenceStartMs = 0L
+
+                    // Extract emotion features during speech (async, non-blocking)
+                    processingScope?.launch(Dispatchers.Default) {
+                        try {
+                            val features = featureExtractor.extractEmotionFeatures(chunk)
+                            val emotionResult = emotionDetector.detect(features)
+                            _emotion.emit(emotionResult.primaryEmotion)
+                        } catch (e: Exception) {
+                            // Non-fatal
+                        }
+                    }
+                } else if (speechDetected) {
+                    // Silence after speech — track duration
+                    if (silenceStartMs == 0L) silenceStartMs = now
+                    val silenceDuration = now - silenceStartMs
+                    val speechDuration = now - speechStartMs
+
+                    when {
+                        // Silence long enough and speech was long enough → end of speech
+                        silenceDuration >= SILENCE_END_OF_SPEECH_MS && speechDuration >= MIN_SPEECH_DURATION_MS -> {
+                            Timber.tag(TAG).d("VAD: End of speech (silence=%dms, speech=%dms)", silenceDuration, speechDuration)
+                            if (!useSherpa) {
+                                // For simulated streaming, trigger final processing
+                                speechRecognizer.stopStreaming()
+                                processEndOfSpeech()
+                            }
+                            // For Sherpa streaming, the OnlineRecognizer handles endpoint detection
+                            // But we can force-stop if VAD detects silence before the recognizer does
+                            return@collect
+                        }
+                        // Very short speech burst → noise, reset
+                        silenceDuration >= SILENCE_END_OF_SPEECH_MS && speechDuration < MIN_SPEECH_DURATION_MS -> {
+                            Timber.tag(TAG).d("VAD: Short noise burst discarded (%dms)", speechDuration)
+                            speechDetected = false
+                            silenceStartMs = 0L
+                        }
+                    }
+                }
+
+                // Check overall timeout
+                val elapsed = now - listeningStartTime.get()
+                if (elapsed > STREAMING_TIMEOUT_MS) {
+                    Timber.tag(TAG).w("Streaming timeout reached (%dms)", elapsed)
+                    if (useSherpa) {
+                        sherpaVoiceEngine.stopStreamingRecognition()
+                    } else {
+                        speechRecognizer.stopStreaming()
+                    }
+                    processEndOfSpeech()
+                    return@collect
                 }
             }
         }
 
-        // Monitor for end of speech
+        // Monitor recording state for errors
         scope.launch {
             audioRecorder.recordingState.collect { state ->
                 when (state) {
                     RecordingState.STOPPED, RecordingState.MAX_DURATION -> {
+                        if (useSherpa) {
+                            sherpaVoiceEngine.stopStreamingRecognition()
+                        } else {
+                            speechRecognizer.stopStreaming()
+                        }
                         processEndOfSpeech()
                     }
                     RecordingState.ERROR_NO_PERMISSION,
@@ -208,9 +332,62 @@ class StreamingVoicePipeline @Inject constructor(
      * Stop listening and process final audio.
      */
     suspend fun stopListening() {
+        // Stop whichever streaming backend is active
+        if (sherpaVoiceEngine.isStreamingRecognitionActive()) {
+            sherpaVoiceEngine.stopStreamingRecognition()
+        }
         speechRecognizer.stopStreaming()
         audioRecorder.stopRecording()
         processEndOfSpeech()
+    }
+
+    // ────────────────────── Internal Processing ──────────────────────
+
+    /**
+     * Process a streaming result that arrived during listening.
+     * Runs the full dialect/emotion/normalization pipeline on the text.
+     *
+     * @param text Final text from streaming ASR
+     * @param startTimeMs When listening started (for latency calculation)
+     */
+    private suspend fun processStreamingResult(text: String, startTimeMs: Long) {
+        if (text.isBlank()) return
+
+        _pipelineState.value = StreamingPipelineState.PROCESSING
+
+        try {
+            // Emotion from detector (if we have features)
+            val detectedEmotion = VoiceEmotion.NEUTRAL // Will be updated by VAD emotion loop
+
+            // Dialect detection
+            val dialectResult = dialectEngine.detect(text)
+            _dialect.emit(dialectResult.dialectId)
+
+            // Normalize
+            val normalizedText = dialectEngine.normalize(text, dialectResult.dialectId)
+
+            // Emit final transcript
+            val elapsed = System.currentTimeMillis() - startTimeMs
+            _finalTranscript.emit(StreamingTranscript(
+                text = normalizedText,
+                rawText = text,
+                confidence = dialectResult.confidence,
+                dialect = dialectResult.dialectId,
+                emotion = detectedEmotion,
+                latencyMs = elapsed,
+                isPartial = false
+            ))
+
+            Timber.tag(TAG).d(
+                "Streaming result processed in %dms: '%s' (dialect: %s)",
+                elapsed, normalizedText, dialectResult.dialectId
+            )
+
+            _pipelineState.value = StreamingPipelineState.IDLE
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "Error processing streaming result")
+            _pipelineState.value = StreamingPipelineState.ERROR
+        }
     }
 
     // ────────────────────── Internal Processing ──────────────────────
@@ -383,6 +560,7 @@ class StreamingVoicePipeline @Inject constructor(
     }
 
     fun release() {
+        sherpaVoiceEngine.stopStreamingRecognition()
         speechRecognizer.stopStreaming()
         audioRecorder.release()
         speechRecognizer.unloadModel()
@@ -399,6 +577,9 @@ class StreamingVoicePipeline @Inject constructor(
         "asrModel" to speechRecognizer.getActiveModelId(),
         "asrLoaded" to speechRecognizer.isModelReady(),
         "asrStreaming" to speechRecognizer.isStreamingActive(),
+        "sherpaStreamingReady" to sherpaVoiceEngine.isStreamingAsrReady(),
+        "sherpaStreamingActive" to sherpaVoiceEngine.isStreamingRecognitionActive(),
+        "sherpaNativeStreaming" to (sherpaVoiceEngine.getStatus()["nativeStreamingAvailable"] ?: false),
         "kokoroReady" to kokoroTts.isModelReady(),
         "piperReady" to piperTts.isModelReady(),
         "deviceTier" to DeviceTier.current.name

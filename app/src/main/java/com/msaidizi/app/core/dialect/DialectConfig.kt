@@ -57,5 +57,25 @@ data class DialectConfig(
      * Dialect-to-standard Swahili translation mapping.
      * Map of dialect term → Swahili equivalent.
      */
-    val dialectToSwahili: Map<String, String>
+    val dialectToSwahili: Map<String, String>,
+
+    /**
+     * Code-switching constructions (hybrid words).
+     * Map of hybrid construction → standard Swahili translation.
+     * e.g., "kudeposit" → "kudepositi", "nimesee" → "nimeona"
+     */
+    val codeSwitchConstructions: Map<String, String> = emptyMap(),
+
+    /**
+     * English nouns with their Swahili noun class agreement.
+     * Used for detecting English noun + Swahili possessive patterns.
+     * e.g., "account" → "n-class" (account yangu, not account changu)
+     */
+    val englishNounSwahiliClass: Map<String, String> = emptyMap(),
+
+    /**
+     * Regex patterns that indicate code-switching frames.
+     * When these match, surrounding words are likely code-switched.
+     */
+    val codeSwitchFrames: List<Regex> = emptyList()
 )
