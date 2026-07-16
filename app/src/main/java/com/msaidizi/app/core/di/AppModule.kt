@@ -166,6 +166,33 @@ object AppModule {
         val passphrase = databaseKeyManager.getPassphrase()
         val factory = SupportFactory(passphrase)
 
+        // Pre-migration: if an old unencrypted database was detected, export its
+        // data into a new encrypted database BEFORE Room opens it. This avoids
+        // the double-openDatabase conflict with Room's connection pool.
+        if (oldDbPath != null) {
+            try {
+                val newEncryptedPath = dbFile.absolutePath
+                // Open old unencrypted DB as the source, attach the new encrypted
+                // path as the target, then export FROM old (current) INTO new.
+                val srcDb = SQLiteDatabase.openDatabase(
+                    oldDbPath,
+                    "",
+                    null,
+                    SQLiteDatabase.OPEN_READONLY
+                )
+                srcDb.rawExecSQL("ATTACH DATABASE '$newEncryptedPath' AS encrypted KEY " +
+                    "x'" + passphrase.joinToString("") { "%02x".format(it) } + "'")
+                srcDb.rawExecSQL("SELECT sqlcipher_export('encrypted')")
+                srcDb.rawExecSQL("DETACH DATABASE encrypted")
+                srcDb.close()
+                java.io.File(oldDbPath).delete()
+                Timber.i("SQLCipher migration: data exported from unencrypted database into encrypted database")
+            } catch (e: Exception) {
+                Timber.e(e, "SQLCipher migration failed — falling back to destructive migration")
+                try { java.io.File(oldDbPath).delete() } catch (_: Exception) {}
+            }
+        }
+
         val db = Room.databaseBuilder(
             context,
             AppDatabase::class.java,
@@ -180,37 +207,6 @@ object AppModule {
                     db.execSQL("PRAGMA busy_timeout=5000")
                     db.execSQL("PRAGMA synchronous=NORMAL")
                     db.execSQL("PRAGMA cache_size=-2000")
-                }
-
-                override fun onOpen(db: SupportSQLiteDatabase) {
-                    super.onOpen(db)
-                    // One-time migration: copy data from old unencrypted database
-                    if (oldDbPath != null) {
-                        try {
-                            val oldDb = SQLiteDatabase.openDatabase(
-                                oldDbPath,
-                                "",
-                                null,
-                                SQLiteDatabase.OPEN_READONLY
-                            )
-                            val newDb = SQLiteDatabase.openDatabase(
-                                dbFile.absolutePath,
-                                passphrase,
-                                null,
-                                SQLiteDatabase.OPEN_READWRITE
-                            )
-                            newDb.rawExecSQL("ATTACH DATABASE '$oldDbPath' AS old_db KEY ''")
-                            newDb.rawExecSQL("SELECT sqlcipher_export('old_db')")
-                            newDb.rawExecSQL("DETACH DATABASE old_db")
-                            newDb.close()
-                            oldDb.close()
-                            java.io.File(oldDbPath).delete()
-                            Timber.i("SQLCipher migration: data exported from unencrypted database")
-                        } catch (e: Exception) {
-                            Timber.e(e, "SQLCipher migration failed — falling back to destructive migration")
-                            try { java.io.File(oldDbPath).delete() } catch (_: Exception) {}
-                        }
-                    }
                 }
             })
             .addMigrations(object : androidx.room.migration.Migration(1, 2) {
