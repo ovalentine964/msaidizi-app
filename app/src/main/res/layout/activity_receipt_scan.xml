@@ -70,7 +70,7 @@
         android:visibility="gone"
         tools:text="Nasoma risiti..."
         tools:visibility="visible"
-        app:layout_constraintBottom_toTopOf="@id/capture_button"
+        app:layout_constraintBottom_toTopOf="@id/controls_container"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
@@ -81,7 +81,7 @@
         android:layout_height="wrap_content"
         android:visibility="gone"
         tools:visibility="visible"
-        app:layout_constraintBottom_toTopOf="@id/capture_button"
+        app:layout_constraintBottom_toTopOf="@id/controls_container"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
