@@ -33,7 +33,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 @DisplayName("VariableRewardsLoop")
 class VariableRewardsLoopTest {
 
-    @MockK
+    @MockK(relaxUnitFun = true)
     private lateinit var gamificationEngine: GamificationEngine
 
     @MockK
@@ -49,6 +49,7 @@ class VariableRewardsLoopTest {
 
     @BeforeEach
     fun setUp() {
+        MockKAnnotations.init(this, relaxUnitFun = true)
         loop = VariableRewardsLoop(gamificationEngine, gamificationDao, transactionDao, patternDao)
     }
 
