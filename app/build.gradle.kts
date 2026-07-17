@@ -126,11 +126,11 @@ android {
             val envKeyAlias = System.getenv("RELEASE_KEY_ALIAS")
             val envKeyPassword = System.getenv("RELEASE_KEY_PASSWORD")
 
-            val debugKeystore = file("${System.getProperty("user.home")}/.android/debug.keystore")
-
             if (!envStoreFile.isNullOrBlank() && !envStorePassword.isNullOrBlank()) {
                 // CI path: read from environment variables
-                storeFile = file(envStoreFile)
+                // Resolve relative paths against rootProject (keystore files live at repo root)
+                val ksFile = File(envStoreFile)
+                storeFile = if (ksFile.isAbsolute) ksFile else file("${rootProject.projectDir}/$envStoreFile")
                 storePassword = envStorePassword
                 keyAlias = envKeyAlias ?: "msaidizi-release"
                 keyPassword = envKeyPassword ?: envStorePassword
@@ -150,9 +150,12 @@ android {
                     keyPassword = props.getProperty("keyPassword", "")
                 } else {
                     // No custom release keystore — fall back to debug keystore
-                    // This ensures release APKs are signed with a certificate
-                    // that Play Protect already trusts.
-                    storeFile = debugKeystore
+                    // Check project-local debug.keystore first (CI generates this),
+                    // then ~/.android/debug.keystore (local Android SDK default)
+                    val projectDebugKs = file("${rootProject.projectDir}/debug.keystore")
+                    val homeDebugKs = file("${System.getProperty("user.home")}/.android/debug.keystore")
+                    val fallbackKs = if (projectDebugKs.exists()) projectDebugKs else homeDebugKs
+                    storeFile = fallbackKs
                     storePassword = "android"
                     keyAlias = "androiddebugkey"
                     keyPassword = "android"
