@@ -538,6 +538,13 @@ jobs:
           cp app/build/outputs/apk/debug/*.apk release-apk/msaidizi-release.apk
           ls -lh release-apk/
 
+      - name: Upload signed APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-release-apk
+          path: release-apk/msaidizi-release.apk
+          retention-days: 30
+
       - name: Attach to Release
         uses: softprops/action-gh-release@v2
         with:
