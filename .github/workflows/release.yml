@@ -148,6 +148,11 @@ jobs:
           echo "✅ Release keystore decoded"
 
       - name: Build Release AAB
+        env:
+          RELEASE_KEYSTORE_FILE: release.keystore
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
           echo "🔧 Starting Gradle bundleRelease..."
           echo "   NDK_HOME=$ANDROID_NDK_HOME"
@@ -173,6 +178,11 @@ jobs:
           echo "✅ Gradle bundleRelease succeeded"
 
       - name: Build Release APK
+        env:
+          RELEASE_KEYSTORE_FILE: release.keystore
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
           echo "🔧 Starting Gradle assembleRelease..."
           set -o pipefail

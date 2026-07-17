@@ -96,3 +96,6 @@ app/src/main/assets/models/*.gguf
 app/src/main/assets/models/*.json
 app/src/main/assets/models/*.txt
 app/src/main/assets/models/espeak-ng-data/
+release.keystore
+release-keystore-base64.txt
+test-results.zip
