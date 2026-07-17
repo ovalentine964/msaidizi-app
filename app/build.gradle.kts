@@ -106,11 +106,6 @@ android {
             keyPassword = "android"
         }
         create("release") {
-            // Enable all signing schemes for maximum Play Protect compatibility
-            v1SigningEnabled = true   // backward compat (Android < 7.0)
-            v2SigningEnabled = true   // Android 7.0+ (full-file APK signing)
-            v3SigningEnabled = true   // Android 9.0+ (key rotation support)
-
             // Priority: environment variables (CI) > keystore.properties file (local) > debug keystore fallback
             //
             // Play Protect fix: when no custom release keystore is configured,
