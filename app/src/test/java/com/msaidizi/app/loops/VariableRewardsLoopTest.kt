@@ -7,7 +7,6 @@ import com.msaidizi.app.core.model.GamificationEntity
 import com.msaidizi.app.gamification.GamificationEngine
 import io.mockk.*
 import io.mockk.impl.annotations.MockK
-import io.mockk.impl.annotations.MockKAnnotations
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
