@@ -219,7 +219,7 @@ class PlanExecuteLoopTest {
             )
 
             assertTrue(result.success)
-            assertEquals(2, result.plan.replanCount) // replan #1
+            assertEquals(1, result.plan.replanCount) // replan #1
         }
 
         @Test

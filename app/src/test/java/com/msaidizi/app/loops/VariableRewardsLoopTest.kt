@@ -72,6 +72,7 @@ class VariableRewardsLoopTest {
             coEvery { gamificationDao.getGamification() } returns createEntity()
             coEvery { gamificationDao.addPoints(any()) } just Runs
             coEvery { gamificationDao.updateLevelAndBadges(any(), any()) } just Runs
+            coEvery { transactionDao.getDailySalesTotals(any()) } returns emptyList()
 
             // Run many times — at least one should succeed (probabilistic)
             var anyReward = false
@@ -96,6 +97,7 @@ class VariableRewardsLoopTest {
             coEvery { gamificationDao.getGamification() } returns createEntity()
             coEvery { gamificationDao.addPoints(any()) } just Runs
             coEvery { gamificationDao.updateLevelAndBadges(any(), any()) } just Runs
+            coEvery { transactionDao.getDailySalesTotals(any()) } returns emptyList()
 
             // Try multiple times to get a bonus points reward
             repeat(200) {
@@ -111,6 +113,7 @@ class VariableRewardsLoopTest {
             coEvery { gamificationDao.getGamification() } returns createEntity()
             coEvery { gamificationDao.addPoints(any()) } just Runs
             coEvery { gamificationDao.updateLevelAndBadges(any(), any()) } just Runs
+            coEvery { transactionDao.getDailySalesTotals(any()) } returns emptyList()
 
             for (action in RewardAction.entries) {
                 // Should not throw
@@ -130,6 +133,7 @@ class VariableRewardsLoopTest {
             coEvery { gamificationDao.getGamification() } returns createEntity()
             coEvery { gamificationDao.addPoints(any()) } just Runs
             coEvery { gamificationDao.updateLevelAndBadges(any(), any()) } just Runs
+            coEvery { transactionDao.getDailySalesTotals(any()) } returns emptyList()
 
             // Run until we get a bonus points reward
             var bonusReward: VariableReward? = null
@@ -160,6 +164,7 @@ class VariableRewardsLoopTest {
             coEvery { gamificationDao.getGamification() } returns createEntity()
             coEvery { gamificationDao.addPoints(any()) } just Runs
             coEvery { gamificationDao.updateLevelAndBadges(any(), any()) } just Runs
+            coEvery { transactionDao.getDailySalesTotals(any()) } returns emptyList()
 
             var praiseReward: VariableReward? = null
             repeat(500) {
@@ -181,6 +186,7 @@ class VariableRewardsLoopTest {
             coEvery { gamificationDao.getGamification() } returns createEntity()
             coEvery { gamificationDao.addPoints(any()) } just Runs
             coEvery { gamificationDao.updateLevelAndBadges(any(), any()) } just Runs
+            coEvery { transactionDao.getDailySalesTotals(any()) } returns emptyList()
 
             // Both languages should not throw
             repeat(50) { loop.evaluateReward(RewardAction.SALE, "sw") }
@@ -284,6 +290,7 @@ class VariableRewardsLoopTest {
             )
             coEvery { gamificationDao.addPoints(any()) } just Runs
             coEvery { gamificationDao.updateLevelAndBadges(any(), any()) } just Runs
+            coEvery { transactionDao.getDailySalesTotals(any()) } returns emptyList()
 
             var badgeReward: VariableReward? = null
             repeat(500) {
@@ -309,6 +316,7 @@ class VariableRewardsLoopTest {
             )
             coEvery { gamificationDao.addPoints(any()) } just Runs
             coEvery { gamificationDao.updateLevelAndBadges(any(), any()) } just Runs
+            coEvery { transactionDao.getDailySalesTotals(any()) } returns emptyList()
 
             var badgeReward: VariableReward? = null
             repeat(500) {
@@ -336,6 +344,7 @@ class VariableRewardsLoopTest {
             coEvery { gamificationDao.getGamification() } returns createEntity(streak = 1)
             coEvery { gamificationDao.addPoints(any()) } just Runs
             coEvery { gamificationDao.updateLevelAndBadges(any(), any()) } just Runs
+            coEvery { transactionDao.getDailySalesTotals(any()) } returns emptyList()
 
             var surpriseFound = false
             repeat(200) {
@@ -356,6 +365,7 @@ class VariableRewardsLoopTest {
                 coEvery { gamificationDao.getGamification() } returns createEntity(streak = milestone)
                 coEvery { gamificationDao.addPoints(any()) } just Runs
                 coEvery { gamificationDao.updateLevelAndBadges(any(), any()) } just Runs
+                coEvery { transactionDao.getDailySalesTotals(any()) } returns emptyList()
 
                 var surpriseFound = false
                 repeat(200) {
@@ -373,6 +383,7 @@ class VariableRewardsLoopTest {
             coEvery { gamificationDao.getGamification() } returns createEntity(streak = 10)
             coEvery { gamificationDao.addPoints(any()) } just Runs
             coEvery { gamificationDao.updateLevelAndBadges(any(), any()) } just Runs
+            coEvery { transactionDao.getDailySalesTotals(any()) } returns emptyList()
 
             var surpriseReward: VariableReward? = null
             repeat(500) {
@@ -401,6 +412,7 @@ class VariableRewardsLoopTest {
             coEvery { gamificationDao.getGamification() } returns createEntity()
             coEvery { gamificationDao.addPoints(any()) } just Runs
             coEvery { gamificationDao.updateLevelAndBadges(any(), any()) } just Runs
+            coEvery { transactionDao.getDailySalesTotals(any()) } returns emptyList()
 
             // The cooldown is internal — we verify the API doesn't throw
             // and that the loop functions correctly over multiple calls
@@ -430,6 +442,7 @@ class VariableRewardsLoopTest {
             coEvery { gamificationDao.getGamification() } returns createEntity()
             coEvery { gamificationDao.addPoints(any()) } just Runs
             coEvery { gamificationDao.updateLevelAndBadges(any(), any()) } just Runs
+            coEvery { transactionDao.getDailySalesTotals(any()) } returns emptyList()
 
             // Probabilistic — try many times
             var foundMessage = false

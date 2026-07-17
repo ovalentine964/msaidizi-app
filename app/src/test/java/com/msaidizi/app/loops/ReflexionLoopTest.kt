@@ -409,13 +409,24 @@ class ReflexionLoopTest {
         }
 
         @Test
-        fun `getAverageScore computes correct average`() {
-            loop.critiqueResponse("Good response with enough length for threshold")
-            loop.critiqueResponse("Another good response with enough text")
+        fun `getAverageScore computes correct average`() = runTest {
+            loop.execute(
+                task = "Task 1",
+                qualityThreshold = 0.5,
+                maxRetries = 0,
+                critiqueFn = { Critique(score = 0.8) },
+                executeFn = { "Result 1" }
+            )
+            loop.execute(
+                task = "Task 2",
+                qualityThreshold = 0.5,
+                maxRetries = 0,
+                critiqueFn = { Critique(score = 0.6) },
+                executeFn = { "Result 2" }
+            )
 
             val avg = loop.getAverageScore()
-            assertTrue(avg > 0.0)
-            assertTrue(avg <= 1.0)
+            assertEquals(0.7, avg, 0.001)
         }
 
         @Test
