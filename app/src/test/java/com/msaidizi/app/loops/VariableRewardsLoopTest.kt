@@ -7,6 +7,7 @@ import com.msaidizi.app.core.model.GamificationEntity
 import com.msaidizi.app.gamification.GamificationEngine
 import io.mockk.*
 import io.mockk.impl.annotations.MockK
+import io.mockk.impl.annotations.MockKAnnotations
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -29,11 +30,11 @@ import org.junit.jupiter.api.extension.ExtendWith
  * - Cooldown mechanism
  * - Edge cases (no entity, minimum data requirements)
  */
-@ExtendWith(io.mockk.junit5.MockKExtension::class)
+// @ExtendWith(io.mockk.junit5.MockKExtension::class)  // Using explicit init instead
 @DisplayName("VariableRewardsLoop")
 class VariableRewardsLoopTest {
 
-    @MockK(relaxUnitFun = true)
+    @MockK
     private lateinit var gamificationEngine: GamificationEngine
 
     @MockK
