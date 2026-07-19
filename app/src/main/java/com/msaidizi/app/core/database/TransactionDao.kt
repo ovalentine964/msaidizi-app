@@ -258,6 +258,19 @@ interface TransactionDao {
     suspend fun getTransactionsInRangePaginated(
         startDate: Long, endDate: Long, pageSize: Int = 20, offset: Int = 0
     ): List<Transaction>
+
+    /**
+     * Get transactions filtered by type within a date range.
+     * Used by BudgetAnalyzerAgent and other financial analysis.
+     */
+    @Query("""
+        SELECT * FROM transactions
+        WHERE type = :type AND createdAt >= :startEpoch AND createdAt < :endEpoch
+        ORDER BY createdAt DESC
+    """)
+    suspend fun getTransactionsByTypeAndDateRange(
+        type: String, startEpoch: Long, endEpoch: Long
+    ): List<Transaction>
 }
 
 // Tuple classes moved to QueryTuples.kt for KSP compatibility

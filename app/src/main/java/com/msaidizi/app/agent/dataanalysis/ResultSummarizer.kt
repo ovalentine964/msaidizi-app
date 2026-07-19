@@ -1,5 +1,6 @@
 package com.msaidizi.app.data.natsql
 
+import com.msaidizi.app.core.model.TransactionType
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton

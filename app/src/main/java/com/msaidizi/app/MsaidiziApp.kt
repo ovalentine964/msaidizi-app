@@ -59,6 +59,9 @@ class MsaidiziApp : Application(), Configuration.Provider {
     lateinit var briefingDelivery: BriefingDelivery
 
     @Inject
+    lateinit var audioBriefingDelivery: com.msaidizi.app.voice.briefing.AudioBriefingDelivery
+
+    @Inject
     lateinit var memoryManager: com.msaidizi.app.core.MemoryManager
 
     @Inject
