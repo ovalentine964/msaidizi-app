@@ -56,13 +56,26 @@ class BundledModelManager @Inject constructor(
         /** The fallback model ID — Qwen 3.5 0.8B for memory-constrained devices */
         const val ALT_MODEL_ID = "qwen-3.5-0.8b-q4km"
 
-        /** All bundled model assets to extract on first launch */
+        /**
+         * All bundled model assets to extract on first launch.
+         *
+         * IMPORTANT: These filenames MUST match what scripts/download-models.sh
+         * downloads into app/src/main/assets/models/. If you change a filename
+         * here, update the download script too.
+         *
+         * Model sources:
+         * - Whisper ONNX: Xenova/whisper-tiny on HuggingFace
+         * - Silero VAD: k2-fsa/sherpa-onnx GitHub releases
+         * - Piper TTS: k2-fsa/sherpa-onnx GitHub releases (tar.bz2 extraction)
+         * - Qwen LLM: bartowski/Qwen_Qwen3.5-0.8B-GGUF on HuggingFace
+         */
         private val BUNDLED_ASSETS = listOf(
             "whisper-encoder-int8.onnx",
             "whisper-decoder-int8.onnx",
             "whisper-tokens.json",
+            "silero_vad.onnx",
             "piper-swahili.onnx",
-            "piper-tokens.txt",
+            "tokens.txt",
             "Qwen3.5-0.8B-Q4_K_M.gguf"
         )
 
@@ -201,11 +214,14 @@ class BundledModelManager @Inject constructor(
                 Timber.i(TAG, "Extracted %s (%d MB)", assetName, outputFile.length() / (1024 * 1024))
             }
 
-            // Extract espeak-ng-data directory
+            // Extract espeak-ng-data directory (for Piper TTS phoneme mapping)
+            // Extracted from sherpa-onnx Piper tar.bz2 by download-models.sh
             val espeakDir = File(outputDir, ESPEAK_ASSET_DIR)
             if (!espeakDir.exists() || espeakDir.listFiles()?.isEmpty() != false) {
                 Timber.i(TAG, "Extracting espeak-ng-data from assets...")
                 extractAssetDirectory(ESPEAK_ASSET_DIR, outputDir)
+            } else {
+                Timber.d(TAG, "espeak-ng-data already extracted")
             }
 
             Timber.i(TAG, "All bundled models extracted: %d MB total", totalExtracted / (1024 * 1024))

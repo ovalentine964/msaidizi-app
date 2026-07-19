@@ -2,8 +2,13 @@
 # ============================================================
 # Download AI Models for Msaidizi APK Build
 # ============================================================
-# Downloads Whisper, Piper TTS, and Qwen models into assets/models/
+# Downloads Whisper (ONNX), Piper TTS (sherpa-onnx), Silero VAD,
+# and Qwen 3.5 0.8B (GGUF) into assets/models/
+#
 # Called during CI/CD build or manual build before Gradle assemble.
+# All models are bundled in the APK for offline-first operation.
+#
+# IMPORTANT: Model filenames MUST match BundledModelManager.kt BUNDLED_ASSETS list.
 #
 # Usage:
 #   ./scripts/download-models.sh          # Download all models
@@ -23,7 +28,7 @@ NC='\033[0m'
 
 VERIFY_ONLY=false
 if [ "$1" = "--verify" ]; then
-    VERIFY_ONLY=true; export INCLUDE_LLM=false
+    VERIFY_ONLY=true
 fi
 
 echo -e "${GREEN}🧠 Msaidizi Model Downloader${NC}"
@@ -73,59 +78,131 @@ download() {
 VERIFY_FAILED=0
 DOWNLOAD_FAILED=0
 
-# ── 1. Whisper tiny.en (Q5_1 quantized, whisper.cpp format) ──
-echo "📋 Whisper Speech Recognition (ggml Q5_1):"
+# ══════════════════════════════════════════════════════════════
+# 1. Whisper Tiny — ONNX format (for sherpa-onnx ASR engine)
+# ══════════════════════════════════════════════════════════════
+# Source: Xenova/whisper-tiny ONNX export on HuggingFace
+# Files: encoder (10MB) + decoder (30MB) + tokenizer (2.5MB)
+# These filenames MUST match BundledModelManager.kt BUNDLED_ASSETS
+echo "📋 Whisper Speech Recognition (ONNX, sherpa-onnx format):"
 download \
-    "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en-q5_1.bin" \
-    "$MODELS_DIR/ggml-tiny.en-q5_1.bin" \
-    "Whisper tiny.en (Q5_1)" \
-    25000000
+    "https://huggingface.co/Xenova/whisper-tiny/resolve/main/onnx/encoder_model_quantized.onnx" \
+    "$MODELS_DIR/whisper-encoder-int8.onnx" \
+    "Whisper encoder (ONNX INT8)" \
+    5000000
 
-# ── 2. Piper Swahili TTS (ONNX) ──
+download \
+    "https://huggingface.co/Xenova/whisper-tiny/resolve/main/onnx/decoder_model_merged_quantized.onnx" \
+    "$MODELS_DIR/whisper-decoder-int8.onnx" \
+    "Whisper decoder (ONNX INT8)" \
+    20000000
+
+download \
+    "https://huggingface.co/Xenova/whisper-tiny/resolve/main/tokenizer.json" \
+    "$MODELS_DIR/whisper-tokens.json" \
+    "Whisper tokenizer" \
+    1000000
+
+# ══════════════════════════════════════════════════════════════
+# 2. Silero VAD — Voice Activity Detection (for sherpa-onnx)
+# ══════════════════════════════════════════════════════════════
 echo ""
-echo "📋 Piper Swahili TTS:"
+echo "📋 Silero VAD (Voice Activity Detection):"
 download \
-    "https://huggingface.co/rhasspy/piper-voices/resolve/main/sw/sw_CD/lanfrica/medium/sw_CD-lanfrica-medium.onnx" \
-    "$MODELS_DIR/piper-swahili.onnx" \
-    "Piper Swahili TTS (ONNX)" \
-    50000000
+    "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx" \
+    "$MODELS_DIR/silero_vad.onnx" \
+    "Silero VAD (ONNX)" \
+    500000
 
-# Also download the Piper config JSON
-download \
-    "https://huggingface.co/rhasspy/piper-voices/resolve/main/sw/sw_CD/lanfrica/medium/sw_CD-lanfrica-medium.onnx.json" \
-    "$MODELS_DIR/piper-swahili.onnx.json" \
-    "Piper Swahili config" \
-    1000
+# ══════════════════════════════════════════════════════════════
+# 3. Piper Swahili TTS — from sherpa-onnx release (includes espeak-ng-data)
+# ══════════════════════════════════════════════════════════════
+# Source: k2-fsa/sherpa-onnx GitHub releases (matches ModelRegistry.kt URL)
+# The tar.bz2 contains: model.onnx, tokens.txt, espeak-ng-data/
+echo ""
+echo "📋 Piper Swahili TTS (sherpa-onnx release):"
+PIPER_ARCHIVE="$MODELS_DIR/piper-swahili.tar.bz2"
+PIPER_MODEL="$MODELS_DIR/piper-swahili.onnx"
+PIPER_TOKENS="$MODELS_DIR/tokens.txt"
 
-# ── 3. Qwen3.5-0.8B Q4_K_M (GGUF) ──
-# SKIPPED during CI build — downloaded on first launch by ModelDownloadWorker
-# This keeps the APK at ~100MB instead of ~623MB
-# The app's BundledModelManager handles background download of the full model
-if [ "${INCLUDE_LLM:-false}" = "true" ]; then
-    echo ""
-    echo "📋 Qwen 3.5 0.8B LLM:"
-    download \
-        "https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf" \
-        "$MODELS_DIR/qwen3.5-0.8b-q4_k_m.gguf" \
-        "Qwen LLM (Q4_K_M)" \
-        500000000
-
-    # Fallback: try alternative GGUF source if primary fails
-    if [ ! -f "$MODELS_DIR/qwen3.5-0.8b-q4_k_m.gguf" ] || [ "$(stat -c%s "$MODELS_DIR/qwen3.5-0.8b-q4_k_m.gguf" 2>/dev/null || echo 0)" -lt 100000 ]; then
-        echo -e "  ${YELLOW}↻${NC} Trying unsloth Qwen3-0.6B as fallback..."
-        download \
-            "https://huggingface.co/unsloth/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q4_K_M.gguf" \
-            "$MODELS_DIR/qwen3.5-0.8b-q4_k_m.gguf" \
-            "Qwen LLM (Q4_K_M, fallback)" \
-            400000000
-    fi
+if [ -f "$PIPER_MODEL" ] && [ "$(stat -c%s "$PIPER_MODEL" 2>/dev/null || stat -f%z "$PIPER_MODEL" 2>/dev/null)" -gt 1000 ]; then
+    echo -e "  ${GREEN}✓${NC} Piper Swahili TTS already exists ($(du -h "$PIPER_MODEL" | cut -f1))"
 else
-    echo ""
-    echo "📋 Qwen 3.5 0.8B LLM: ⏭️  Skipped (INCLUDE_LLM=false)"
-    echo "   Will be downloaded on first app launch by ModelDownloadWorker"
+    if [ "$VERIFY_ONLY" = true ]; then
+        echo -e "  ${RED}✗${NC} Piper Swahili TTS MISSING"
+        VERIFY_FAILED=1
+    else
+        echo -e "  ${YELLOW}↓${NC} Downloading Piper Swahili TTS (tar.bz2 archive)..."
+        for attempt in 1 2 3; do
+            if curl -L --progress-bar --fail -o "$PIPER_ARCHIVE" \
+                "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-sw_CD-lanfrica-medium.tar.bz2"; then
+                # Extract: archive contains a directory with model.onnx, tokens.txt, espeak-ng-data/
+                echo -e "  ${YELLOW}↓${NC} Extracting Piper archive..."
+                tar xjf "$PIPER_ARCHIVE" -C "$MODELS_DIR" 2>/dev/null
+
+                # Find and rename extracted files to match expected names
+                EXTRACTED_DIR=$(find "$MODELS_DIR" -maxdepth 2 -name "model.onnx" -path "*/sw_CD*" -exec dirname {} \; | head -1)
+                if [ -z "$EXTRACTED_DIR" ]; then
+                    # Try broader search
+                    EXTRACTED_DIR=$(find "$MODELS_DIR" -maxdepth 3 -name "model.onnx" -exec dirname {} \; | head -1)
+                fi
+
+                if [ -n "$EXTRACTED_DIR" ]; then
+                    # Rename model.onnx → piper-swahili.onnx
+                    if [ -f "$EXTRACTED_DIR/model.onnx" ]; then
+                        mv "$EXTRACTED_DIR/model.onnx" "$MODELS_DIR/piper-swahili.onnx"
+                    fi
+                    # Copy tokens.txt (keep original name, also accessible as piper-tokens.txt)
+                    if [ -f "$EXTRACTED_DIR/tokens.txt" ]; then
+                        cp "$EXTRACTED_DIR/tokens.txt" "$MODELS_DIR/tokens.txt"
+                    fi
+                    # Move espeak-ng-data to models root
+                    if [ -d "$EXTRACTED_DIR/espeak-ng-data" ]; then
+                        rm -rf "$MODELS_DIR/espeak-ng-data" 2>/dev/null
+                        mv "$EXTRACTED_DIR/espeak-ng-data" "$MODELS_DIR/espeak-ng-data"
+                    fi
+                    # Clean up extracted directory
+                    rm -rf "$EXTRACTED_DIR"
+                fi
+
+                # Clean up archive
+                rm -f "$PIPER_ARCHIVE"
+
+                if [ -f "$MODELS_DIR/piper-swahili.onnx" ]; then
+                    SIZE=$(stat -c%s "$MODELS_DIR/piper-swahili.onnx" 2>/dev/null || stat -f%z "$MODELS_DIR/piper-swahili.onnx" 2>/dev/null)
+                    echo -e "  ${GREEN}✓${NC} Piper Swahili TTS extracted ($(echo "scale=0; $SIZE/1048576" | bc)MB)"
+                    break
+                fi
+            fi
+            echo -e "  ${YELLOW}↻${NC} Retry $attempt/3..."
+            sleep 2
+        done
+
+        if [ ! -f "$MODELS_DIR/piper-swahili.onnx" ]; then
+            echo -e "  ${RED}✗${NC} Failed to download/extract Piper Swahili TTS"
+            DOWNLOAD_FAILED=1
+        fi
+    fi
 fi
 
-# ── Summary ──
+# ══════════════════════════════════════════════════════════════
+# 4. Qwen 3.5 0.8B Q4_K_M (GGUF) — BUNDLED IN APK
+# ══════════════════════════════════════════════════════════════
+# Decision Council (2026-07-15): Qwen 3.5 0.8B as bundled LLM
+# This is REQUIRED — the app must work offline at first launch.
+# Source: bartowski/Qwen_Qwen3.5-0.8B-GGUF on HuggingFace
+# Filename MUST match BundledModelManager.kt BUNDLED_ASSETS
+echo ""
+echo "📋 Qwen 3.5 0.8B LLM (bundled in APK):"
+download \
+    "https://huggingface.co/bartowski/Qwen_Qwen3.5-0.8B-GGUF/resolve/main/Qwen_Qwen3.5-0.8B-Q4_K_M.gguf" \
+    "$MODELS_DIR/Qwen3.5-0.8B-Q4_K_M.gguf" \
+    "Qwen 3.5 0.8B (Q4_K_M GGUF)" \
+    500000000
+
+# ══════════════════════════════════════════════════════════════
+# Summary
+# ══════════════════════════════════════════════════════════════
 echo ""
 echo "================================"
 TOTAL=$(du -sh "$MODELS_DIR" 2>/dev/null | cut -f1)
@@ -134,18 +211,22 @@ echo ""
 
 # List all model files
 echo "Model files:"
-ls -lh "$MODELS_DIR"/*.onnx "$MODELS_DIR"/*.gguf "$MODELS_DIR"/*.bin "$MODELS_DIR"/*.json 2>/dev/null | awk '{print "  "$NF" ("$5")"}'
+ls -lh "$MODELS_DIR"/*.onnx "$MODELS_DIR"/*.gguf "$MODELS_DIR"/*.json 2>/dev/null | awk '{print "  "$NF" ("$5")"}'
 
 echo ""
-echo "Expected APK size (LLM downloaded on first launch):"
-echo "  Whisper tiny.en (Q5_1 bin):     ~30MB"
-echo "  Piper Swahili TTS (ONNX):       ~60MB"
-echo "  App code + resources:            ~10MB"
+echo "Expected APK contents (all bundled for offline-first):"
+echo "  Whisper encoder (ONNX INT8):     ~10MB"
+echo "  Whisper decoder (ONNX INT8):     ~30MB"
+echo "  Whisper tokenizer (JSON):         ~2.5MB"
+echo "  Silero VAD (ONNX):               ~0.6MB"
+echo "  Piper Swahili TTS (ONNX):        ~60MB"
+echo "  Qwen 3.5 0.8B (GGUF Q4_K_M):   ~580MB"
+echo "  App code + resources + native:    ~15MB"
 echo "  ─────────────────────────────────"
-echo "  Estimated total APK:             ~100MB"
+echo "  Estimated total APK:             ~700MB (stored uncompressed for mmap)"
 echo ""
-echo "Note: LLM model (Qwen 500MB) downloaded on first app launch"
-echo "      Models are stored uncompressed (noCompress) for mmap access."
+echo "Note: Models stored uncompressed (noCompress) for memory-mapped access."
+echo "      APK size reflects raw model sizes. Download once, use forever."
 echo ""
 
 if [ "$VERIFY_ONLY" = true ]; then
@@ -159,5 +240,5 @@ elif [ "$DOWNLOAD_FAILED" -eq 1 ]; then
     echo -e "${RED}❌ Some models failed to download${NC}"
     exit 1
 else
-    echo -e "${GREEN}✅ Models ready for APK build${NC}"
+    echo -e "${GREEN}✅ All models ready for APK build${NC}"
 fi
