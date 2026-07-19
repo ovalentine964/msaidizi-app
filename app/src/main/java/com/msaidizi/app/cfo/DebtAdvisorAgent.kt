@@ -2,7 +2,7 @@ package com.msaidizi.app.agent.coach
 
 import com.msaidizi.app.core.database.LoanDao
 import com.msaidizi.app.core.database.TransactionDao
-import com.msaidizi.app.core.model.Loan
+import com.msaidizi.app.core.model.LoanRecord
 import com.msaidizi.app.core.model.TransactionType
 import timber.log.Timber
 import java.time.LocalDate
@@ -96,9 +96,9 @@ class DebtAdvisorAgent(
      * @return Debt status report
      */
     suspend fun getDebtStatus(language: String = "sw"): DebtStatus {
-        val activeLoans = loanDao.getActiveLoans()
-        val totalDebt = activeLoans.sumOf { it.remainingAmount }
-        val monthlyPayments = activeLoans.sumOf { it.monthlyPayment }
+        val activeLoans = loanDao.getActive()
+        val totalDebt = activeLoans.sumOf { it.totalDue - it.totalRepaid }
+        val monthlyPayments = activeLoans.sumOf { estimateMonthlyPayment(it) }
 
         // Get income context
         val incomePattern = budgetAnalyzer.detectIncomePattern(30)
@@ -125,7 +125,8 @@ class DebtAdvisorAgent(
                 appendLine("📋 Mikopo ${activeLoans.size}:")
                 for (loan in activeLoans) {
                     val interestInfo = LOAN_TYPES[loan.lender?.lowercase()]
-                    appendLine("  • ${loan.lender ?: "Mkopo"}: KSh ${formatAmount(loan.remainingAmount)}")
+                    val remaining = loan.totalDue - loan.totalRepaid
+                    appendLine("  • ${loan.lender ?: "Mkopo"}: KSh ${formatAmount(remaining)}")
                     if (interestInfo != null) {
                         appendLine("    Riba: ${"%.1f".format(interestInfo.rate * 100)}%/${interestInfo.period}")
                     }
@@ -153,7 +154,8 @@ class DebtAdvisorAgent(
 
                 appendLine("📋 ${activeLoans.size} active loans:")
                 for (loan in activeLoans) {
-                    appendLine("  • ${loan.lender ?: "Loan"}: KSh ${formatAmount(loan.remainingAmount)}")
+                    val remaining = loan.totalDue - loan.totalRepaid
+                    appendLine("  • ${loan.lender ?: "Loan"}: KSh ${formatAmount(remaining)}")
                 }
 
                 appendLine()
@@ -191,7 +193,7 @@ class DebtAdvisorAgent(
      * @return Repayment strategy
      */
     suspend fun getRepaymentStrategy(language: String = "sw"): RepaymentStrategy {
-        val activeLoans = loanDao.getActiveLoans()
+        val activeLoans = loanDao.getActive()
         if (activeLoans.isEmpty()) {
             return RepaymentStrategy(
                 strategyType = RepaymentStrategyType.NONE,
@@ -218,10 +220,12 @@ class DebtAdvisorAgent(
         var remainingBudget = availableForDebt
         for (loan in sortedByRate) {
             val rate = LOAN_TYPES[loan.lender?.lowercase()]?.rate ?: 0.10
-            val payment = min(loan.monthlyPayment, remainingBudget)
-            val monthsToPayoff = if (payment > 0 && loan.remainingAmount > 0) {
+            val monthlyPmt = estimateMonthlyPayment(loan)
+            val payment = min(monthlyPmt, remainingBudget)
+            val remaining = loan.totalDue - loan.totalRepaid
+            val monthsToPayoff = if (payment > 0 && remaining > 0) {
                 // Simple calculation: remaining / monthly payment
-                (loan.remainingAmount / payment).toInt().coerceAtLeast(1)
+                (remaining / payment).toInt().coerceAtLeast(1)
             } else 0
 
             allocations.add(
@@ -428,6 +432,22 @@ class DebtAdvisorAgent(
     // UTILITY
     // ═══════════════════════════════════════════════════════════════
 
+    /**
+     * Estimate monthly payment for a loan.
+     * Uses totalDue / remaining months, or falls back to a simple calculation.
+     */
+    private fun estimateMonthlyPayment(loan: LoanRecord): Double {
+        val remaining = loan.totalDue - loan.totalRepaid
+        if (remaining <= 0) return 0.0
+        val now = System.currentTimeMillis() / 1000
+        val monthsLeft = if (loan.endDate > now) {
+            ((loan.endDate - now) / (30.0 * 24 * 60 * 60)).coerceAtLeast(1.0)
+        } else {
+            12.0 // Default to 12 months if no end date
+        }
+        return remaining / monthsLeft
+    }
+
     private fun formatAmount(amount: Double): String {
         return if (amount >= 1_000_000) {
             String.format("%.1fM", amount / 1_000_000.0)
@@ -444,7 +464,7 @@ class DebtAdvisorAgent(
 // ═══════════════════════════════════════════════════════════════
 
 data class DebtStatus(
-    val activeLoans: List<Loan>,
+    val activeLoans: List<LoanRecord>,
     val totalDebt: Double,
     val monthlyPayments: Double,
     val debtToIncomeRatio: Double,
@@ -474,7 +494,7 @@ enum class RepaymentStrategyType {
 }
 
 data class DebtAllocation(
-    val loan: Loan,
+    val loan: LoanRecord,
     val recommendedPayment: Double,
     val interestRate: Double,
     val monthsToPayoff: Int,
