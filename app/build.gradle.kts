@@ -55,7 +55,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         ndk {
-            abiFilters += listOf("arm64-v8a")
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
         }
 
         // Build config fields for model paths
@@ -121,7 +121,7 @@ android {
                 keyAlias = envKeyAlias ?: "msaidizi-release"
                 keyPassword = envKeyPassword ?: envStorePassword
                 // Auto-detect store type from file extension
-                val storeType = if (storeFile?.name?.endsWith(".p12", true) == true) "pkcs12" else "jks"
+                storeType = if (storeFile?.name?.endsWith(".p12", true) == true) "pkcs12" else "jks"
             } else {
                 val props = Properties()
                 val propsFile = file("${rootProject.projectDir}/keystore.properties")
