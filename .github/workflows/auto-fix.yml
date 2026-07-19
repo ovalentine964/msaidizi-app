@@ -148,7 +148,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: app/src/main/assets/models
-          key: models-v3-whisper-piper-qwen35-08b
+          key: models-v4-whisper-piper-only
 
       - name: Download AI Models
         if: steps.cache-models.outputs.cache-hit != 'true'
