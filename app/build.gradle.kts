@@ -55,7 +55,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+            abiFilters += listOf("arm64-v8a")
         }
 
         // Build config fields for model paths
@@ -135,6 +135,8 @@ android {
                     storePassword = props.getProperty("storePassword", "")
                     keyAlias = props.getProperty("keyAlias", "msaidizi-release")
                     keyPassword = props.getProperty("keyPassword", "")
+                    // Auto-detect store type from file extension (PKCS12 vs JKS)
+                    storeType = if (storeFile?.name?.endsWith(".p12", true) == true) "pkcs12" else "jks"
                 } else {
                     // No custom release keystore — fall back to debug keystore
                     // Check project-local debug.keystore first (CI generates this),
