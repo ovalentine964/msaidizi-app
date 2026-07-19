@@ -256,7 +256,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: app/src/main/assets/models
-          key: models-v5-full-bundle
+          key: models-v6-piper-fixed
 
       - name: Download AI Models
         if: steps.cache-models.outputs.cache-hit != 'true'
@@ -470,7 +470,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: app/src/main/assets/models
-          key: models-v5-full-bundle
+          key: models-v6-piper-fixed
 
       - name: Download AI Models
         if: steps.cache-models.outputs.cache-hit != 'true'
