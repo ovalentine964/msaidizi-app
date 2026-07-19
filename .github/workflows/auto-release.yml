@@ -86,17 +86,21 @@ jobs:
           chmod +x scripts/download-models.sh
           ./scripts/download-models.sh --verify
 
-      - name: Build Debug APK
+      - name: Build Release APK
+        env:
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD || 'android' }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS || 'androiddebugkey' }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD || 'android' }}
         run: |
           set -o pipefail
-          ./gradlew assembleDebug --stacktrace --info 2>&1 | tee build-debug.log
+          ./gradlew assembleRelease --stacktrace --info 2>&1 | tee build-release.log
           EXIT_CODE=${PIPESTATUS[0]}
           if [ "$EXIT_CODE" -ne 0 ]; then
-            echo "::error::Gradle assembleDebug failed with exit code $EXIT_CODE"
-            tail -50 build-debug.log
+            echo "::error::Gradle assembleRelease failed with exit code $EXIT_CODE"
+            tail -50 build-release.log
             exit "$EXIT_CODE"
           fi
-          echo "✅ Gradle build succeeded"
+          echo "✅ Gradle release build succeeded"
 
       - name: Upload build log on failure
         if: failure()
@@ -107,7 +111,7 @@ jobs:
 
       - name: Check APK size
         run: |
-          APK_PATH=$(find app/build/outputs/apk/debug -name "*.apk" | head -1)
+          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
           if [ -n "$APK_PATH" ]; then
             SIZE=$(stat -c%s "$APK_PATH")
             SIZE_MB=$((SIZE / 1048576))
@@ -120,14 +124,14 @@ jobs:
 
       - name: Rename APK
         run: |
-          APK_PATH=$(find app/build/outputs/apk/debug -name "*.apk" | head -1)
+          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
           if [ -z "$APK_PATH" ]; then
-            echo "❌ No APK found!"
+            echo "❌ No release APK found!"
             exit 1
           fi
-          cp "$APK_PATH" msaidizi.apk
-          echo "✅ APK renamed to msaidizi.apk"
-          ls -lh msaidizi.apk
+          cp "$APK_PATH" msaidizi-release.apk
+          echo "✅ APK renamed to msaidizi-release.apk"
+          ls -lh msaidizi-release.apk
 
       - name: Create auto-release
         uses: softprops/action-gh-release@v2
@@ -155,7 +159,7 @@ jobs:
             - **Storage:** ~700MB free
             - **Android:** 8.0+ (API 26)
             - **Architecture:** ARM64 (arm64-v8a)
-          files: msaidizi.apk
+          files: msaidizi-release.apk
           make_latest: true
           generate_release_notes: false
         env:
