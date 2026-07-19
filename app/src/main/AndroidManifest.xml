@@ -10,7 +10,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- RECEIVE_BOOT_COMPLETED removed — triggers Play Protect block on sideloaded APKs.
+         WorkManager handles task persistence across reboots without this permission. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- SMS permissions requested at runtime when user enables M-Pesa auto-capture.
@@ -73,14 +74,11 @@
             android:foregroundServiceType="microphone"
             android:exported="false" />
 
-        <!-- Boot receiver for resuming sync -->
-        <receiver
-            android:name=".sync.BootReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-            </intent-filter>
-        </receiver>
+        <!-- Boot receiver removed — triggers Play Protect block on sideloaded APKs.
+             WorkManager handles task persistence across reboots automatically. -->
+
+        <!-- SMS receiver removed — triggers Play Protect block on sideloaded APKs.
+             M-Pesa integration uses statement import instead of SMS capture. -->
 
         <!-- WorkManager initializer -->
         <provider
@@ -118,18 +116,8 @@
             android:screenOrientation="portrait"
             android:theme="@style/Theme.Msaidizi" />
 
-        <!-- M-Pesa SMS auto-capture — disabled by default, enabled at runtime
-             when user grants SMS permission. Removed from manifest to avoid
-             Play Protect block on sideloaded APKs. -->
-        <receiver
-            android:name=".mpesa.MpesaSmsReceiver"
-            android:exported="true"
-            android:enabled="false"
-            android:permission="android.permission.BROADCAST_SMS">
-            <intent-filter>
-                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
-            </intent-filter>
-        </receiver>
+        <!-- SMS receiver fully removed — even disabled receivers trigger Play Protect.
+             M-Pesa integration uses statement import instead of SMS capture. -->
 
     </application>
 </manifest>
