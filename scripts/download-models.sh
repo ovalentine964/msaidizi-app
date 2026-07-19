@@ -23,7 +23,7 @@ NC='\033[0m'
 
 VERIFY_ONLY=false
 if [ "$1" = "--verify" ]; then
-    VERIFY_ONLY=true
+    VERIFY_ONLY=true; export INCLUDE_LLM=false
 fi
 
 echo -e "${GREEN}🧠 Msaidizi Model Downloader${NC}"
@@ -98,23 +98,31 @@ download \
     1000
 
 # ── 3. Qwen3.5-0.8B Q4_K_M (GGUF) ──
-# Primary: unsloth GGUF (confirmed working)
-echo ""
-echo "📋 Qwen 3.5 0.8B LLM:"
-download \
-    "https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf" \
-    "$MODELS_DIR/qwen3.5-0.8b-q4_k_m.gguf" \
-    "Qwen LLM (Q4_K_M)" \
-    500000000
-
-# Fallback: try alternative GGUF source if primary fails
-if [ ! -f "$MODELS_DIR/qwen3.5-0.8b-q4_k_m.gguf" ] || [ "$(stat -c%s "$MODELS_DIR/qwen3.5-0.8b-q4_k_m.gguf" 2>/dev/null || echo 0)" -lt 100000 ]; then
-    echo -e "  ${YELLOW}↻${NC} Trying unsloth Qwen3-0.6B as fallback..."
+# SKIPPED during CI build — downloaded on first launch by ModelDownloadWorker
+# This keeps the APK at ~100MB instead of ~623MB
+# The app's BundledModelManager handles background download of the full model
+if [ "${INCLUDE_LLM:-false}" = "true" ]; then
+    echo ""
+    echo "📋 Qwen 3.5 0.8B LLM:"
     download \
-        "https://huggingface.co/unsloth/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q4_K_M.gguf" \
+        "https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf" \
         "$MODELS_DIR/qwen3.5-0.8b-q4_k_m.gguf" \
-        "Qwen LLM (Q4_K_M, fallback)" \
-        400000000
+        "Qwen LLM (Q4_K_M)" \
+        500000000
+
+    # Fallback: try alternative GGUF source if primary fails
+    if [ ! -f "$MODELS_DIR/qwen3.5-0.8b-q4_k_m.gguf" ] || [ "$(stat -c%s "$MODELS_DIR/qwen3.5-0.8b-q4_k_m.gguf" 2>/dev/null || echo 0)" -lt 100000 ]; then
+        echo -e "  ${YELLOW}↻${NC} Trying unsloth Qwen3-0.6B as fallback..."
+        download \
+            "https://huggingface.co/unsloth/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q4_K_M.gguf" \
+            "$MODELS_DIR/qwen3.5-0.8b-q4_k_m.gguf" \
+            "Qwen LLM (Q4_K_M, fallback)" \
+            400000000
+    fi
+else
+    echo ""
+    echo "📋 Qwen 3.5 0.8B LLM: ⏭️  Skipped (INCLUDE_LLM=false)"
+    echo "   Will be downloaded on first app launch by ModelDownloadWorker"
 fi
 
 # ── Summary ──
@@ -129,17 +137,15 @@ echo "Model files:"
 ls -lh "$MODELS_DIR"/*.onnx "$MODELS_DIR"/*.gguf "$MODELS_DIR"/*.bin "$MODELS_DIR"/*.json 2>/dev/null | awk '{print "  "$NF" ("$5")"}'
 
 echo ""
-echo "Expected APK size breakdown:"
+echo "Expected APK size (LLM downloaded on first launch):"
 echo "  Whisper tiny.en (Q5_1 bin):     ~30MB"
 echo "  Piper Swahili TTS (ONNX):       ~60MB"
-echo "  Qwen 3.5 0.8B (Q4_K_M GGUF):   ~508MB"
 echo "  App code + resources:            ~10MB"
 echo "  ─────────────────────────────────"
-echo "  Estimated total APK:             ~610MB"
+echo "  Estimated total APK:             ~100MB"
 echo ""
-echo "Note: Models are stored uncompressed (noCompress) in assets/"
-echo "      for mmap access at runtime. APK will be large but runtime"
-echo "      memory usage is efficient via memory-mapped file I/O."
+echo "Note: LLM model (Qwen 500MB) downloaded on first app launch"
+echo "      Models are stored uncompressed (noCompress) for mmap access."
 echo ""
 
 if [ "$VERIFY_ONLY" = true ]; then
