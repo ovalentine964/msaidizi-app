@@ -62,6 +62,9 @@ class MsaidiziApp : Application(), Configuration.Provider {
     lateinit var audioBriefingDelivery: com.msaidizi.app.voice.briefing.AudioBriefingDelivery
 
     @Inject
+    lateinit var bundledModelManager: com.msaidizi.app.core.ai.BundledModelManager
+
+    @Inject
     lateinit var memoryManager: com.msaidizi.app.core.MemoryManager
 
     @Inject
@@ -129,6 +132,12 @@ class MsaidiziApp : Application(), Configuration.Provider {
 
         // Schedule tiered model downloads
         scheduleModelDownloads()
+
+        // Extract bundled models from APK assets (offline-first)
+        CoroutineScope(Dispatchers.IO).launch {
+            bundledModelManager.initialize()
+            Timber.i("Bundled models initialized")
+        }
 
         // Schedule background update checks (silent, 24h interval)
         UpdateCheckWorker.schedule(this)

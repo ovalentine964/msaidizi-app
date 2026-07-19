@@ -887,12 +887,6 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideDatabaseKeyManager(
-        @ApplicationContext context: Context
-    ): DatabaseKeyManager = DatabaseKeyManager(context)
-
-    @Provides
-    @Singleton
     fun provideMsaidiziApi(): MsaidiziApi {
         val retrofit = Retrofit.Builder()
             .baseUrl("https://api.angavu.io/")
