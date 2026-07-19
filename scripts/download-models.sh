@@ -62,7 +62,7 @@ download() {
             local size
             size=$(stat -c%s "$dest" 2>/dev/null || stat -f%z "$dest" 2>/dev/null)
             if [ "$size" -gt 1000 ]; then
-                echo -e "  ${GREEN}✓${NC} $name downloaded ($(echo "scale=0; $size/1048576" | bc)MB)"
+                echo -e "  ${GREEN}✓${NC} $name downloaded ($((size / 1048576))MB)"
                 return 0
             fi
         fi
@@ -170,7 +170,7 @@ else
 
                 if [ -f "$MODELS_DIR/piper-swahili.onnx" ]; then
                     SIZE=$(stat -c%s "$MODELS_DIR/piper-swahili.onnx" 2>/dev/null || stat -f%z "$MODELS_DIR/piper-swahili.onnx" 2>/dev/null)
-                    echo -e "  ${GREEN}✓${NC} Piper Swahili TTS extracted ($(echo "scale=0; $SIZE/1048576" | bc)MB)"
+                    echo -e "  ${GREEN}✓${NC} Piper Swahili TTS extracted ($((SIZE / 1048576))MB)"
                     break
                 fi
             fi
