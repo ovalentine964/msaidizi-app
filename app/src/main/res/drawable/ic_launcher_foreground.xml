@@ -6,152 +6,95 @@
     android:viewportHeight="108">
 
     <!-- ============================================================ -->
-    <!-- Africa Shield Icon — Msaidizi                                -->
+    <!-- Eye of Africa — Msaidizi / Angavu Intelligence               -->
     <!-- 108×108 viewport, safe zone 66×66 centered at (54,54)        -->
+    <!--                                                              -->
+    <!-- Design: Africa continent as the sclera of an eye,            -->
+    <!-- framed by an almond eye outline, with a golden iris/pupil.   -->
+    <!-- Recognizable at 48dp — the eye symbol carries brand.         -->
     <!-- ============================================================ -->
 
-    <!-- 1. AFRICA CONTINENT — Recognizable silhouette with key geographic features:
-         - Flat Mediterranean north coast (y≈17)
-         - Horn of Africa at (74,41) — sharp eastern protrusion
-         - Gulf of Guinea indentation at (38,46)
-         - West Africa bulge / Senegal at (27,28) — westernmost point
-         - Cape of Good Hope at (50,78) — southernmost point
-         - Madagascar island off SE coast
-    -->
-    <group>
+    <!-- 1. EYE SHAPE — Almond outline in gold, frames the continent -->
+    <path
+        android:name="eye_shape"
+        android:fillColor="#E8A838"
+        android:pathData="
+            M16,48
+            Q16,24 54,24
+            Q92,24 92,48
+            Q92,72 54,72
+            Q16,72 16,48
+            Z" />
+
+    <!-- 2. AFRICA CONTINENT — fills the eye as the sclera -->
+    <group
+        android:name="africa_group"
+        android:translateX="8"
+        android:translateY="0">
         <!-- Main continent -->
         <path
             android:name="africa_continent"
-            android:fillColor="#22C55E"
+            android:fillColor="#D09030"
             android:pathData="
-                M34,20
-                L48,17
-                L60,17
-                L68,22
-                L67,30
-                L66,36
-                L74,41
-                L70,46
-                L66,52
-                L62,60
-                L56,70
-                L50,78
-                L44,70
-                L40,62
-                L38,55
-                L37,50
+                M38,28
+                L50,26
+                L62,26
+                L70,30
+                L69,38
+                L68,43
+                L76,47
+                L72,51
+                L68,56
+                L64,62
+                L58,66
+                L54,68
+                L48,66
+                L44,60
+                L42,55
+                L41,52
+                L42,50
                 L38,46
                 L34,42
-                L30,36
-                L27,28
-                L30,22
+                L31,36
+                L34,30
                 Z" />
         <!-- Madagascar island -->
         <path
             android:name="madagascar"
-            android:fillColor="#22C55E"
+            android:fillColor="#D09030"
             android:pathData="
-                M69,58
-                L71,60
-                L72,66
-                L70,70
-                L68,68
-                L67,62
+                M74,56
+                L76,58
+                L77,63
+                L75,66
+                L73,64
+                L72,59
                 Z" />
     </group>
 
-    <!-- 2. SHIELD BORDER — Thick gold stroke wrapping around Africa shape -->
+    <!-- 3. IRIS — Bright gold circle with deep gold outer ring -->
+    <!-- Outer ring (deep gold shadow) -->
     <path
-        android:name="shield_border"
-        android:strokeColor="#FBBF24"
-        android:strokeWidth="4.0"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:fillColor="#00000000"
-        android:pathData="
-            M28,12
-            C38,8 60,8 72,14
-            C80,20 86,30 86,42
-            C86,54 78,66 68,76
-            C60,84 54,88 50,88
-            C46,88 40,84 32,76
-            C22,66 14,54 14,42
-            C14,30 20,20 28,12
-            Z" />
+        android:name="iris_outer"
+        android:fillColor="#D09030"
+        android:pathData="M58,46 m-13,0 a13,13 0,1 1,26 0 a13,13 0,1 1,-26 0" />
+    <!-- Inner iris (bright gold glow) -->
+    <path
+        android:name="iris_inner"
+        android:fillColor="#F5C842"
+        android:pathData="M58,46 m-10,0 a10,10 0,1 1,20 0 a10,10 0,1 1,-20 0" />
 
-    <!-- 3. SPEECH BUBBLE — White at 100% opacity, upper-right, with 3 dark dots -->
+    <!-- 4. PUPIL — Dark, small, centered in iris -->
     <path
-        android:name="speech_bubble"
+        android:name="pupil"
+        android:fillColor="#1B4965"
+        android:pathData="M58,46 m-4.5,0 a4.5,4.5 0,1 1,9 0 a4.5,4.5 0,1 1,-9 0" />
+
+    <!-- 5. EYE HIGHLIGHT — Small bright dot for life/realism -->
+    <path
+        android:name="highlight"
         android:fillColor="#FFFFFF"
-        android:pathData="
-            M59,23
-            C59,20.8 60.8,19 63,19
-            L73,19
-            C75.2,19 77,20.8 77,23
-            L77,32
-            C77,34.2 75.2,36 73,36
-            L69,36
-            L65,40
-            L66,36
-            L63,36
-            C60.8,36 59,34.2 59,32
-            Z" />
-    <!-- Speech bubble dot 1 -->
-    <path
-        android:name="dot1"
-        android:fillColor="#1E293B"
-        android:pathData="M64,26 m-1.3,0 a1.3,1.3 0,1 1,2.6 0 a1.3,1.3 0,1 1,-2.6 0" />
-    <!-- Speech bubble dot 2 -->
-    <path
-        android:name="dot2"
-        android:fillColor="#1E293B"
-        android:pathData="M68.5,26 m-1.3,0 a1.3,1.3 0,1 1,2.6 0 a1.3,1.3 0,1 1,-2.6 0" />
-    <!-- Speech bubble dot 3 -->
-    <path
-        android:name="dot3"
-        android:fillColor="#1E293B"
-        android:pathData="M73,26 m-1.3,0 a1.3,1.3 0,1 1,2.6 0 a1.3,1.3 0,1 1,-2.6 0" />
-
-    <!-- 4. CHART LINE — Bold gold line with 4 data points + upward arrow endpoint -->
-
-    <!-- Chart data point 1 (leftmost, lowest) -->
-    <path
-        android:name="chart_point1"
-        android:fillColor="#F59E0B"
-        android:pathData="M30,72 m-2,0 a2,2 0,1 1,4 0 a2,2 0,1 1,-4 0" />
-
-    <!-- Chart data point 2 -->
-    <path
-        android:name="chart_point2"
-        android:fillColor="#F59E0B"
-        android:pathData="M40,64 m-2,0 a2,2 0,1 1,4 0 a2,2 0,1 1,-4 0" />
-
-    <!-- Chart data point 3 -->
-    <path
-        android:name="chart_point3"
-        android:fillColor="#F59E0B"
-        android:pathData="M50,60 m-2,0 a2,2 0,1 1,4 0 a2,2 0,1 1,-4 0" />
-
-    <!-- Chart data point 4 (rightmost, highest) -->
-    <path
-        android:name="chart_point4"
-        android:fillColor="#F59E0B"
-        android:pathData="M60,54 m-2,0 a2,2 0,1 1,4 0 a2,2 0,1 1,-4 0" />
-
-    <!-- Chart connecting line between points -->
-    <path
-        android:name="chart_line"
-        android:strokeColor="#FBBF24"
-        android:strokeWidth="2.5"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:fillColor="#00000000"
-        android:pathData="M30,72 L40,64 L50,60 L60,54" />
-
-    <!-- Upward arrow endpoint showing growth -->
-    <path
-        android:name="chart_arrow"
-        android:fillColor="#FBBF24"
-        android:pathData="M60,54 L56,59 L60,57 L64,59 Z" />
+        android:fillAlpha="0.7"
+        android:pathData="M62,42 m-2,0 a2,2 0,1 1,4 0 a2,2 0,1 1,-4 0" />
 
 </vector>
