@@ -234,7 +234,7 @@ class ResultSummarizer @Inject constructor() {
             val top = result.topItems[0]
             sb.append(when (lang) {
                 "sheng" -> " Kitu bora ni ${top.item}."
-                "en" else -> " Best item is ${top.item}."
+                "en" -> " Best item is ${top.item}."
                 else -> " Kitu bora ni ${top.item}."
             })
         }
