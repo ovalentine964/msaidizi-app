@@ -106,31 +106,23 @@ android {
             keyPassword = "android"
         }
         create("release") {
-            // Priority: environment variables (CI) > keystore.properties file (local) > debug keystore fallback
-            //
-            // Play Protect fix: when no custom release keystore is configured,
-            // fall back to the DEFAULT Android debug keystore (~/.android/debug.keystore).
-            // This is the same keystore used by millions of developers — Play Protect
-            // already trusts it, so the "unrecognized developer" warning disappears.
-            //
-            // To use a custom release keystore instead:
-            //   - Set RELEASE_KEYSTORE_FILE env var (CI), OR
-            //   - Create keystore.properties with storeFile entry (local)
+            // PKCS12 (.p12) or JKS keystore — auto-detected from file extension
+            // CI: set RELEASE_KEYSTORE_BASE64 secret (base64-encoded .p12 file)
+            // Local: create keystore.properties with storeFile entry
             val envStoreFile = System.getenv("RELEASE_KEYSTORE_FILE")
             val envStorePassword = System.getenv("RELEASE_STORE_PASSWORD")
             val envKeyAlias = System.getenv("RELEASE_KEY_ALIAS")
             val envKeyPassword = System.getenv("RELEASE_KEY_PASSWORD")
 
             if (!envStoreFile.isNullOrBlank() && !envStorePassword.isNullOrBlank()) {
-                // CI path: read from environment variables
-                // Resolve relative paths against rootProject (keystore files live at repo root)
                 val ksFile = File(envStoreFile)
                 storeFile = if (ksFile.isAbsolute) ksFile else file("${rootProject.projectDir}/$envStoreFile")
                 storePassword = envStorePassword
                 keyAlias = envKeyAlias ?: "msaidizi-release"
                 keyPassword = envKeyPassword ?: envStorePassword
+                // Auto-detect store type from file extension
+                val storeType = if (storeFile?.name?.endsWith(".p12", true) == true) "pkcs12" else "jks"
             } else {
-                // Local path: read from keystore.properties
                 val props = Properties()
                 val propsFile = file("${rootProject.projectDir}/keystore.properties")
                 if (propsFile.exists()) {

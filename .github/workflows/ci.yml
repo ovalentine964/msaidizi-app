@@ -498,39 +498,27 @@ jobs:
           ./scripts/setup-sherpa-onnx.sh
         timeout-minutes: 15
 
-      - name: Decode keystore (or fall back to debug keystore)
+      - name: Decode release keystore
         env:
           RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
           if [ -n "$RELEASE_KEYSTORE_BASE64" ]; then
-            echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > /tmp/release.keystore
-            echo "✅ Release keystore decoded from secret"
-            echo "RELEASE_KEYSTORE_FILE=/tmp/release.keystore" >> $GITHUB_ENV
+            echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > /tmp/release.keystore.p12
+            echo "✅ PKCS12 keystore decoded from secret"
+            echo "RELEASE_KEYSTORE_FILE=/tmp/release.keystore.p12" >> $GITHUB_ENV
+            echo "RELEASE_STORE_PASSWORD=$RELEASE_STORE_PASSWORD" >> $GITHUB_ENV
+            echo "RELEASE_KEY_ALIAS=$RELEASE_KEY_ALIAS" >> $GITHUB_ENV
+            echo "RELEASE_KEY_PASSWORD=$RELEASE_KEY_PASSWORD" >> $GITHUB_ENV
           else
-            echo "⚠️  No RELEASE_KEYSTORE_BASE64 secret — falling back to debug keystore"
-            echo "   (Play Protect will recognize the debug certificate)"
-            keytool -genkeypair -v \
-              -keystore /tmp/release.keystore \
-              -alias androiddebugkey \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -storepass android \
-              -keypass android \
-              -dname "CN=Android Debug,O=Android,C=US"
-            echo "✅ Generated debug-compatible keystore for release signing"
-            echo "RELEASE_KEYSTORE_FILE=/tmp/release.keystore" >> $GITHUB_ENV
-            echo "RELEASE_STORE_PASSWORD=android" >> $GITHUB_ENV
-            echo "RELEASE_KEY_ALIAS=androiddebugkey" >> $GITHUB_ENV
-            echo "RELEASE_KEY_PASSWORD=android" >> $GITHUB_ENV
+            echo "⚠️  No release keystore secret — using debug keystore fallback"
           fi
 
       - name: Build Signed Release APK
         env:
-          RELEASE_KEYSTORE_FILE: /tmp/release.keystore
-          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD || 'android' }}
-          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS || 'androiddebugkey' }}
-          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD || 'android' }}
+          RELEASE_KEYSTORE_FILE: /tmp/release.keystore.p12
         run: |
           set -o pipefail
           ./gradlew assembleRelease --stacktrace 2>&1 | tee build-release.log
@@ -590,4 +578,4 @@ jobs:
 
       - name: Cleanup keystore
         if: always()
-        run: rm -f /tmp/release.keystore
+        run: rm -f /tmp/release.keystore.p12

@@ -258,39 +258,25 @@ jobs:
         run: |
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${{ env.NDK_VERSION }}" >> $GITHUB_ENV
 
-      - name: Decode release keystore (or fall back to debug keystore)
+      - name: Decode release keystore
         env:
           RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
           if [ -n "$RELEASE_KEYSTORE_BASE64" ]; then
-            echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > release.keystore
-            echo "✅ Release keystore decoded from secret"
-            # Set env vars for Gradle signing config
-            echo "RELEASE_KEYSTORE_FILE=$GITHUB_WORKSPACE/release.keystore" >> $GITHUB_ENV
+            echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > release.keystore.p12
+            echo "✅ PKCS12 keystore decoded from secret"
+            echo "RELEASE_KEYSTORE_FILE=$GITHUB_WORKSPACE/release.keystore.p12" >> $GITHUB_ENV
+            echo "RELEASE_STORE_PASSWORD=$RELEASE_STORE_PASSWORD" >> $GITHUB_ENV
+            echo "RELEASE_KEY_ALIAS=$RELEASE_KEY_ALIAS" >> $GITHUB_ENV
+            echo "RELEASE_KEY_PASSWORD=$RELEASE_KEY_PASSWORD" >> $GITHUB_ENV
           else
-            echo "⚠️  No RELEASE_KEYSTORE_BASE64 secret — falling back to debug keystore"
-            echo "   (Play Protect will recognize the debug certificate)"
-            # Use the committed debug.keystore if present, otherwise generate one
+            echo "⚠️  No RELEASE_KEYSTORE_BASE64 secret — using debug keystore fallback"
             if [ -f "$GITHUB_WORKSPACE/debug.keystore" ]; then
-              cp "$GITHUB_WORKSPACE/debug.keystore" "$GITHUB_WORKSPACE/release.keystore"
-              echo "✅ Using committed debug.keystore for release signing"
-            else
-              echo "⚠️  No committed debug.keystore — generating for release signing"
-              keytool -genkeypair -v \
-                -keystore "$GITHUB_WORKSPACE/release.keystore" \
-                -alias androiddebugkey \
-                -keyalg RSA \
-                -keysize 2048 \
-                -validity 10000 \
-                -storepass android \
-                -keypass android \
-                -dname "CN=Android Debug,O=Msaidizi,C=KE"
-              echo "✅ Generated keystore for release signing"
+              echo "✅ Using committed debug.keystore"
             fi
-            echo "RELEASE_KEYSTORE_FILE=$GITHUB_WORKSPACE/release.keystore" >> $GITHUB_ENV
-            echo "RELEASE_STORE_PASSWORD=android" >> $GITHUB_ENV
-            echo "RELEASE_KEY_ALIAS=androiddebugkey" >> $GITHUB_ENV
-            echo "RELEASE_KEY_PASSWORD=android" >> $GITHUB_ENV
           fi
 
       - name: Cache AI models
@@ -361,10 +347,6 @@ jobs:
           echo "✅ sherpa-onnx JNI verification passed"
 
       - name: Build Release APK
-        env:
-          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD || 'android' }}
-          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS || 'androiddebugkey' }}
-          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD || 'android' }}
         run: |
           echo "🔧 Starting Gradle release build..."
           echo "   NDK_HOME=$ANDROID_NDK_HOME"
@@ -432,5 +414,5 @@ jobs:
       - name: Cleanup keystore
         if: always()
         run: |
-          rm -f release.keystore
+          rm -f release.keystore.p12
           echo "🧹 Keystore cleaned up"

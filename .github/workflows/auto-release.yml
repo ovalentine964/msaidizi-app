@@ -49,22 +49,22 @@ jobs:
           echo "✅ NDK r26b and CMake 3.22.1 installed"
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
 
-      - name: Ensure debug keystore exists
+      - name: Decode release keystore
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
-          if [ -f debug.keystore ]; then
-            echo "✅ Using committed debug.keystore"
+          if [ -n "$RELEASE_KEYSTORE_BASE64" ]; then
+            echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > release.keystore.p12
+            echo "✅ PKCS12 keystore decoded"
+            echo "RELEASE_KEYSTORE_FILE=$GITHUB_WORKSPACE/release.keystore.p12" >> $GITHUB_ENV
+            echo "RELEASE_STORE_PASSWORD=$RELEASE_STORE_PASSWORD" >> $GITHUB_ENV
+            echo "RELEASE_KEY_ALIAS=$RELEASE_KEY_ALIAS" >> $GITHUB_ENV
+            echo "RELEASE_KEY_PASSWORD=$RELEASE_KEY_PASSWORD" >> $GITHUB_ENV
           else
-            echo "⚠️  No committed debug.keystore — generating one"
-            keytool -genkeypair -v \
-              -keystore debug.keystore \
-              -alias androiddebugkey \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -storepass android \
-              -keypass android \
-              -dname "CN=Android Debug,O=Msaidizi,C=KE"
-            echo "✅ Debug keystore generated"
+            echo "⚠️  No release keystore secret — using debug keystore fallback"
           fi
 
       - name: Cache AI models
@@ -87,10 +87,6 @@ jobs:
           ./scripts/download-models.sh --verify
 
       - name: Build Release APK
-        env:
-          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD || 'android' }}
-          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS || 'androiddebugkey' }}
-          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD || 'android' }}
         run: |
           set -o pipefail
           ./gradlew assembleRelease --stacktrace --info 2>&1 | tee build-release.log
