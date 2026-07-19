@@ -141,18 +141,19 @@ else
                 tar xjf "$PIPER_ARCHIVE" -C "$MODELS_DIR" 2>/dev/null
 
                 # Find and rename extracted files to match expected names
-                EXTRACTED_DIR=$(find "$MODELS_DIR" -maxdepth 2 -name "model.onnx" -path "*/sw_CD*" -exec dirname {} \; | head -1)
+                # Archive structure: vits-piper-sw_CD-lanfrica-medium/sw_CD-lanfrica-medium.onnx
+                EXTRACTED_DIR=$(find "$MODELS_DIR" -maxdepth 2 -name "sw_CD-lanfrica-medium.onnx" -exec dirname {} \; | head -1)
                 if [ -z "$EXTRACTED_DIR" ]; then
-                    # Try broader search
-                    EXTRACTED_DIR=$(find "$MODELS_DIR" -maxdepth 3 -name "model.onnx" -exec dirname {} \; | head -1)
+                    # Try broader search for any .onnx file in extracted dir
+                    EXTRACTED_DIR=$(find "$MODELS_DIR" -maxdepth 3 -name "*.onnx" -not -name "whisper-*" -not -name "silero_*" -exec dirname {} \; | head -1)
                 fi
 
                 if [ -n "$EXTRACTED_DIR" ]; then
-                    # Rename model.onnx → piper-swahili.onnx
-                    if [ -f "$EXTRACTED_DIR/model.onnx" ]; then
-                        mv "$EXTRACTED_DIR/model.onnx" "$MODELS_DIR/piper-swahili.onnx"
+                    # Rename sw_CD-lanfrica-medium.onnx → piper-swahili.onnx
+                    if [ -f "$EXTRACTED_DIR/sw_CD-lanfrica-medium.onnx" ]; then
+                        mv "$EXTRACTED_DIR/sw_CD-lanfrica-medium.onnx" "$MODELS_DIR/piper-swahili.onnx"
                     fi
-                    # Copy tokens.txt (keep original name, also accessible as piper-tokens.txt)
+                    # Copy tokens.txt
                     if [ -f "$EXTRACTED_DIR/tokens.txt" ]; then
                         cp "$EXTRACTED_DIR/tokens.txt" "$MODELS_DIR/tokens.txt"
                     fi
