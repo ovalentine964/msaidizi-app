@@ -233,17 +233,23 @@ jobs:
             "cmake;${{ env.CMAKE_VERSION }}"
           echo "✅ NDK r26b and CMake 3.22.1 installed"
 
-      - name: Generate debug keystore
+      - name: Ensure debug keystore exists
         run: |
-          keytool -genkeypair -v \
-            -keystore debug.keystore \
-            -alias androiddebugkey \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -storepass android \
-            -keypass android \
-            -dname "CN=Android Debug,O=Msaidizi,C=KE"
+          if [ -f debug.keystore ]; then
+            echo "✅ Using committed debug.keystore"
+          else
+            echo "⚠️  No committed debug.keystore — generating one"
+            keytool -genkeypair -v \
+              -keystore debug.keystore \
+              -alias androiddebugkey \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass android \
+              -keypass android \
+              -dname "CN=Android Debug,O=Msaidizi,C=KE"
+            echo "✅ Debug keystore generated"
+          fi
 
       - name: Cache AI models
         id: cache-models

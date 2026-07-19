@@ -49,18 +49,23 @@ jobs:
           echo "✅ NDK r26b and CMake 3.22.1 installed"
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
 
-      - name: Generate debug keystore
+      - name: Ensure debug keystore exists
         run: |
-          keytool -genkeypair -v \
-            -keystore debug.keystore \
-            -alias androiddebugkey \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -storepass android \
-            -keypass android \
-            -dname "CN=Android Debug,O=Msaidizi,C=KE"
-          echo "✅ Debug keystore generated"
+          if [ -f debug.keystore ]; then
+            echo "✅ Using committed debug.keystore"
+          else
+            echo "⚠️  No committed debug.keystore — generating one"
+            keytool -genkeypair -v \
+              -keystore debug.keystore \
+              -alias androiddebugkey \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass android \
+              -keypass android \
+              -dname "CN=Android Debug,O=Msaidizi,C=KE"
+            echo "✅ Debug keystore generated"
+          fi
 
       - name: Cache AI models
         id: cache-models
@@ -85,7 +90,13 @@ jobs:
         run: |
           set -o pipefail
           ./gradlew assembleDebug --stacktrace --info 2>&1 | tee build-debug.log
-          echo "Gradle exit code: $?"
+          EXIT_CODE=${PIPESTATUS[0]}
+          if [ "$EXIT_CODE" -ne 0 ]; then
+            echo "::error::Gradle assembleDebug failed with exit code $EXIT_CODE"
+            tail -50 build-debug.log
+            exit "$EXIT_CODE"
+          fi
+          echo "✅ Gradle build succeeded"
 
       - name: Upload build log on failure
         if: failure()

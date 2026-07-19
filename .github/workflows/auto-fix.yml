@@ -125,17 +125,23 @@ jobs:
             "ndk;${{ env.NDK_VERSION }}" \
             "cmake;${{ env.CMAKE_VERSION }}"
 
-      - name: Generate debug keystore
+      - name: Ensure debug keystore exists
         run: |
-          keytool -genkeypair -v \
-            -keystore debug.keystore \
-            -alias androiddebugkey \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -storepass android \
-            -keypass android \
-            -dname "CN=Android Debug,O=Msaidizi,C=KE"
+          if [ -f debug.keystore ]; then
+            echo "✅ Using committed debug.keystore"
+          else
+            echo "⚠️  Generating debug.keystore"
+            keytool -genkeypair -v \
+              -keystore debug.keystore \
+              -alias androiddebugkey \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass android \
+              -keypass android \
+              -dname "CN=Android Debug,O=Msaidizi,C=KE"
+            echo "✅ Debug keystore generated"
+          fi
 
       - name: Cache AI models
         id: cache-models
