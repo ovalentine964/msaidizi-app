@@ -13,12 +13,9 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- M-Pesa SMS auto-capture -->
-    <uses-permission android:name="android.permission.RECEIVE_SMS" />
-    <uses-permission android:name="android.permission.READ_SMS" />
-
-    <!-- SMS verification sending -->
-    <uses-permission android:name="android.permission.SEND_SMS" />
+    <!-- SMS permissions requested at runtime when user enables M-Pesa auto-capture.
+         NOT declared in manifest to avoid Google Play Protect fraud protection block
+         on sideloaded APKs. See: https://developers.google.com/android/play-protect/warning-dev-guidance -->
 
     <!-- Bluetooth for peer model transfer -->
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
@@ -121,10 +118,13 @@
             android:screenOrientation="portrait"
             android:theme="@style/Theme.Msaidizi" />
 
-        <!-- M-Pesa SMS auto-capture -->
+        <!-- M-Pesa SMS auto-capture — disabled by default, enabled at runtime
+             when user grants SMS permission. Removed from manifest to avoid
+             Play Protect block on sideloaded APKs. -->
         <receiver
             android:name=".mpesa.MpesaSmsReceiver"
             android:exported="true"
+            android:enabled="false"
             android:permission="android.permission.BROADCAST_SMS">
             <intent-filter>
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
