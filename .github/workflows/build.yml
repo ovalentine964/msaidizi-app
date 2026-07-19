@@ -59,18 +59,25 @@ jobs:
         run: |
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${{ env.NDK_VERSION }}" >> $GITHUB_ENV
 
-      - name: Generate debug keystore
+      # Debug keystore: use committed one if present, otherwise generate a persistent one
+      # This prevents signature mismatches that cause "App not installed: package appears to be invalid"
+      - name: Ensure debug keystore exists
         run: |
-          keytool -genkeypair -v \
-            -keystore debug.keystore \
-            -alias androiddebugkey \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -storepass android \
-            -keypass android \
-            -dname "CN=Android Debug,O=Msaidizi,C=KE"
-          echo "✅ Debug keystore generated"
+          if [ ! -f debug.keystore ]; then
+            echo "⚠️  No committed debug.keystore — generating one (commit it to persist across CI runs)"
+            keytool -genkeypair -v \
+              -keystore debug.keystore \
+              -alias androiddebugkey \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass android \
+              -keypass android \
+              -dname "CN=Android Debug,O=Msaidizi,C=KE"
+            echo "✅ Debug keystore generated"
+          else
+            echo "✅ Using committed debug.keystore"
+          fi
 
       - name: Cache AI models
         id: cache-models
@@ -263,16 +270,23 @@ jobs:
           else
             echo "⚠️  No RELEASE_KEYSTORE_BASE64 secret — falling back to debug keystore"
             echo "   (Play Protect will recognize the debug certificate)"
-            keytool -genkeypair -v \
-              -keystore "$GITHUB_WORKSPACE/release.keystore" \
-              -alias androiddebugkey \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -storepass android \
-              -keypass android \
-              -dname "CN=Android Debug,O=Android,C=US"
-            echo "✅ Generated debug-compatible keystore for release signing"
+            # Use the committed debug.keystore if present, otherwise generate one
+            if [ -f "$GITHUB_WORKSPACE/debug.keystore" ]; then
+              cp "$GITHUB_WORKSPACE/debug.keystore" "$GITHUB_WORKSPACE/release.keystore"
+              echo "✅ Using committed debug.keystore for release signing"
+            else
+              echo "⚠️  No committed debug.keystore — generating for release signing"
+              keytool -genkeypair -v \
+                -keystore "$GITHUB_WORKSPACE/release.keystore" \
+                -alias androiddebugkey \
+                -keyalg RSA \
+                -keysize 2048 \
+                -validity 10000 \
+                -storepass android \
+                -keypass android \
+                -dname "CN=Android Debug,O=Msaidizi,C=KE"
+              echo "✅ Generated keystore for release signing"
+            fi
             echo "RELEASE_KEYSTORE_FILE=$GITHUB_WORKSPACE/release.keystore" >> $GITHUB_ENV
             echo "RELEASE_STORE_PASSWORD=android" >> $GITHUB_ENV
             echo "RELEASE_KEY_ALIAS=androiddebugkey" >> $GITHUB_ENV

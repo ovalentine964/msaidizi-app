@@ -54,6 +54,9 @@ obj/
 *.keystore
 keystore.properties
 debug.keystore
+# EXCEPTION: commit persistent debug.keystore for CI signing consistency
+# Without this, CI generates a new keypair each run → "App not installed: package appears to be invalid"
+!debug.keystore
 
 # Log files
 *.log
