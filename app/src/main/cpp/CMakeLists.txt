@@ -2,6 +2,16 @@ cmake_minimum_required(VERSION 3.22)
 
 project(llama_jni C CXX)
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Skip native build for 32-bit ARM — llama.cpp requires ARMv8 NEON FP16
+# 32-bit devices use cloud LLM fallback (see DeviceCapability.is32BitDevice())
+# ─────────────────────────────────────────────────────────────────────────────
+if(${ANDROID_ABI} STREQUAL "armeabi-v7a")
+    # Create a minimal stub library so the build doesn't fail
+    add_library(llama_jni SHARED llama_jni_stub.cpp)
+    return()
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
