@@ -73,15 +73,15 @@ class MsaidiziApp : Application(), Configuration.Provider {
     lateinit var orchestratorProvider: javax.inject.Provider<com.msaidizi.app.agent.Orchestrator>
 
     // Lazy accessors — deferred construction until first access
-    private val modelRegistry by lazy { modelRegistryProvider.get() }
-    private val networkMonitor by lazy { networkMonitorProvider.get() }
-    private val federatedLearningClient by lazy { federatedLearningClientProvider.get() }
-    private val syncManager by lazy { syncManagerProvider.get() }
-    private val briefingDelivery by lazy { briefingDeliveryProvider.get() }
-    private val audioBriefingDelivery by lazy { audioBriefingDeliveryProvider.get() }
-    private val bundledModelManager by lazy { bundledModelManagerProvider.get() }
-    private val memoryManager by lazy { memoryManagerProvider.get() }
-    private val orchestrator by lazy { orchestratorProvider.get() }
+    internal val modelRegistry by lazy { modelRegistryProvider.get() }
+    internal val networkMonitor by lazy { networkMonitorProvider.get() }
+    internal val federatedLearningClient by lazy { federatedLearningClientProvider.get() }
+    internal val syncManager by lazy { syncManagerProvider.get() }
+    internal val briefingDelivery by lazy { briefingDeliveryProvider.get() }
+    internal val audioBriefingDelivery by lazy { audioBriefingDeliveryProvider.get() }
+    internal val bundledModelManager by lazy { bundledModelManagerProvider.get() }
+    internal val memoryManager by lazy { memoryManagerProvider.get() }
+    internal val orchestrator by lazy { orchestratorProvider.get() }
 
     override fun onCreate() {
         super.onCreate()
