@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- ============================================================ -->
+    <!-- Eye of Africa — Monochrome (Android 13+ themed icon)         -->
+    <!-- All elements use #FFFFFF white for system tinting             -->
+    <!-- ============================================================ -->
+
+    <!-- Eye shape — almond outline -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="
+            M16,48
+            Q16,24 54,24
+            Q92,24 92,48
+            Q92,72 54,72
+            Q16,72 16,48
+            Z" />
+
+    <!-- Africa continent silhouette (as sclera — outline only) -->
+    <group
+        android:translateX="8"
+        android:translateY="0">
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="1.5"
+            android:pathData="
+                M38,28
+                L50,26
+                L62,26
+                L70,30
+                L69,38
+                L68,43
+                L76,47
+                L72,51
+                L68,56
+                L64,62
+                L58,66
+                L54,68
+                L48,66
+                L44,60
+                L42,55
+                L41,52
+                L42,50
+                L38,46
+                L34,42
+                L31,36
+                L34,30
+                Z" />
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="1.5"
+            android:pathData="
+                M74,56
+                L76,58
+                L77,63
+                L75,66
+                L73,64
+                L72,59
+                Z" />
+    </group>
+
+    <!-- Iris outer ring -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.0"
+        android:pathData="M58,46 m-13,0 a13,13 0,1 1,26 0 a13,13 0,1 1,-26 0" />
+
+    <!-- Iris inner fill -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M58,46 m-10,0 a10,10 0,1 1,20 0 a10,10 0,1 1,-20 0" />
+
+    <!-- Pupil (transparent cutout — shows background through) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.0"
+        android:pathData="M58,46 m-4.5,0 a4.5,4.5 0,1 1,9 0 a4.5,4.5 0,1 1,-9 0" />
+
+</vector>

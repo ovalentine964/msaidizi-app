@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- ============================================================ -->
+    <!-- Eye of Africa — Msaidizi / Angavu Intelligence               -->
+    <!-- 108×108 viewport, safe zone 66×66 centered at (54,54)        -->
+    <!--                                                              -->
+    <!-- Design: Africa continent as the sclera of an eye,            -->
+    <!-- framed by an almond eye outline, with a golden iris/pupil.   -->
+    <!-- Recognizable at 48dp — the eye symbol carries brand.         -->
+    <!-- ============================================================ -->
+
+    <!-- 1. EYE SHAPE — Almond outline in gold, frames the continent -->
+    <path
+        android:name="eye_shape"
+        android:fillColor="#E8A838"
+        android:pathData="
+            M16,48
+            Q16,24 54,24
+            Q92,24 92,48
+            Q92,72 54,72
+            Q16,72 16,48
+            Z" />
+
+    <!-- 2. AFRICA CONTINENT — fills the eye as the sclera -->
+    <group
+        android:name="africa_group"
+        android:translateX="8"
+        android:translateY="0">
+        <!-- Main continent -->
+        <path
+            android:name="africa_continent"
+            android:fillColor="#D09030"
+            android:pathData="
+                M38,28
+                L50,26
+                L62,26
+                L70,30
+                L69,38
+                L68,43
+                L76,47
+                L72,51
+                L68,56
+                L64,62
+                L58,66
+                L54,68
+                L48,66
+                L44,60
+                L42,55
+                L41,52
+                L42,50
+                L38,46
+                L34,42
+                L31,36
+                L34,30
+                Z" />
+        <!-- Madagascar island -->
+        <path
+            android:name="madagascar"
+            android:fillColor="#D09030"
+            android:pathData="
+                M74,56
+                L76,58
+                L77,63
+                L75,66
+                L73,64
+                L72,59
+                Z" />
+    </group>
+
+    <!-- 3. IRIS — Bright gold circle with deep gold outer ring -->
+    <!-- Outer ring (deep gold shadow) -->
+    <path
+        android:name="iris_outer"
+        android:fillColor="#D09030"
+        android:pathData="M58,46 m-13,0 a13,13 0,1 1,26 0 a13,13 0,1 1,-26 0" />
+    <!-- Inner iris (bright gold glow) -->
+    <path
+        android:name="iris_inner"
+        android:fillColor="#F5C842"
+        android:pathData="M58,46 m-10,0 a10,10 0,1 1,20 0 a10,10 0,1 1,-20 0" />
+
+    <!-- 4. PUPIL — Dark, small, centered in iris -->
+    <path
+        android:name="pupil"
+        android:fillColor="#1B4965"
+        android:pathData="M58,46 m-4.5,0 a4.5,4.5 0,1 1,9 0 a4.5,4.5 0,1 1,-9 0" />
+
+    <!-- 5. EYE HIGHLIGHT — Small bright dot for life/realism -->
+    <path
+        android:name="highlight"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.7"
+        android:pathData="M62,42 m-2,0 a2,2 0,1 1,4 0 a2,2 0,1 1,-4 0" />
+
+</vector>

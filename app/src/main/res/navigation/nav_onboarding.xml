@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_onboarding"
+    app:startDestination="@id/introductionFragment">
+
+    <!-- Step 1: Karibu! — Warm Welcome -->
+    <fragment
+        android:id="@+id/introductionFragment"
+        android:name="com.msaidizi.app.onboarding.IntroductionFragment"
+        android:label="Karibu">
+        <action
+            android:id="@+id/action_introduction_to_naming"
+            app:destination="@id/agentNamingFragment" />
+    </fragment>
+
+    <!-- Step 2: Agent Naming — Worker names their Msaidizi -->
+    <fragment
+        android:id="@+id/agentNamingFragment"
+        android:name="com.msaidizi.app.onboarding.AgentNamingFragment"
+        android:label="Name Your Helper">
+        <action
+            android:id="@+id/action_naming_to_business_discovery"
+            app:destination="@id/businessDiscoveryFragment" />
+    </fragment>
+
+    <!-- Step 3: Business Discovery — Voice conversation to understand the business -->
+    <fragment
+        android:id="@+id/businessDiscoveryFragment"
+        android:name="com.msaidizi.app.onboarding.BusinessDiscoveryFragment"
+        android:label="Getting to Know You">
+        <action
+            android:id="@+id/action_business_discovery_to_phone_verification"
+            app:destination="@id/phoneVerificationFragment" />
+        <action
+            android:id="@+id/action_business_discovery_to_main"
+            app:destination="@id/mainActivity"
+            app:popUpTo="@id/nav_onboarding"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <!-- Step 3.5: Phone Verification — SMS or WhatsApp -->
+    <fragment
+        android:id="@+id/phoneVerificationFragment"
+        android:name="com.msaidizi.app.onboarding.PhoneVerificationFragment"
+        android:label="Hakikisha Namba">
+        <action
+            android:id="@+id/action_phone_verification_to_personality"
+            app:destination="@id/personalityFragment" />
+    </fragment>
+
+    <!-- Personality / Preferences -->
+    <fragment
+        android:id="@+id/personalityFragment"
+        android:name="com.msaidizi.app.onboarding.PersonalityFragment"
+        android:label="Mapendeleo">
+        <action
+            android:id="@+id/action_personality_to_model_setup"
+            app:destination="@id/modelSetupFragment" />
+    </fragment>
+
+    <!-- Step 4: Model Setup — Downloads happening in background -->
+    <fragment
+        android:id="@+id/modelSetupFragment"
+        android:name="com.msaidizi.app.onboarding.ModelSetupFragment"
+        android:label="Preparing AI">
+        <action
+            android:id="@+id/action_model_download_to_first_use"
+            app:destination="@id/firstUseFragment" />
+    </fragment>
+
+    <!-- Step 5: Ready! — First value delivered -->
+    <fragment
+        android:id="@+id/firstUseFragment"
+        android:name="com.msaidizi.app.onboarding.FirstUseFragment"
+        android:label="Ready!">
+        <action
+            android:id="@+id/action_first_use_to_main"
+            app:destination="@id/mainActivity"
+            app:popUpTo="@id/nav_onboarding"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <!-- Main Activity (destination after onboarding) -->
+    <activity
+        android:id="@+id/mainActivity"
+        android:name="com.msaidizi.app.MainActivity"
+        android:label="Msaidizi" />
+
+</navigation>

@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Header: Icon + Title -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:id="@+id/feedback_icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🤔"
+            android:textSize="28sp"
+            android:layout_marginEnd="12dp" />
+
+        <TextView
+            android:id="@+id/feedback_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary" />
+    </LinearLayout>
+
+    <!-- Feedback message -->
+    <TextView
+        android:id="@+id/feedback_message"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="14sp"
+        android:textColor="@color/text_secondary"
+        android:layout_marginBottom="12dp" />
+
+    <!-- What was heard -->
+    <TextView
+        android:id="@+id/heard_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="@color/primary"
+        android:gravity="center"
+        android:padding="12dp"
+        android:background="@color/surface"
+        android:layout_marginBottom="8dp"
+        android:visibility="gone" />
+
+    <!-- Expected label -->
+    <TextView
+        android:id="@+id/expected_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="13sp"
+        android:textColor="@color/text_secondary"
+        android:gravity="center"
+        android:visibility="gone" />
+
+    <!-- Expected text -->
+    <TextView
+        android:id="@+id/expected_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="@color/info"
+        android:gravity="center"
+        android:padding="8dp"
+        android:layout_marginBottom="12dp"
+        android:visibility="gone" />
+
+    <!-- Alternative buttons container -->
+    <LinearLayout
+        android:id="@+id/alternative_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginBottom="12dp"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/pronunciation_alternatives_label"
+            android:textSize="13sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="6dp" />
+
+        <Button
+            android:id="@+id/btn_alt_1"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginBottom="4dp"
+            android:textSize="15sp"
+            android:textAllCaps="false"
+            android:backgroundTint="@color/surface_variant"
+            android:textColor="@color/text_primary"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/btn_alt_2"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginBottom="4dp"
+            android:textSize="15sp"
+            android:textAllCaps="false"
+            android:backgroundTint="@color/surface_variant"
+            android:textColor="@color/text_primary"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/btn_alt_3"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:textSize="15sp"
+            android:textAllCaps="false"
+            android:backgroundTint="@color/surface_variant"
+            android:textColor="@color/text_primary"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- Correction input -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        app:boxBackgroundMode="outline"
+        app:boxCornerRadiusTopStart="8dp"
+        app:boxCornerRadiusTopEnd="8dp"
+        app:boxCornerRadiusBottomStart="8dp"
+        app:boxCornerRadiusBottomEnd="8dp">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/correction_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="text"
+            android:textSize="16sp"
+            android:padding="12dp"
+            android:visibility="gone" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Action buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end">
+
+        <Button
+            android:id="@+id/btn_reject"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:textSize="14sp"
+            android:textAllCaps="false"
+            android:backgroundTint="@color/surface_variant"
+            android:textColor="@color/text_primary"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/btn_confirm"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:textSize="14sp"
+            android:textAllCaps="false"
+            android:backgroundTint="@color/primary"
+            android:textColor="@color/white"
+            android:visibility="gone" />
+    </LinearLayout>
+
+</LinearLayout>
