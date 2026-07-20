@@ -80,30 +80,72 @@ object DatabaseModule {
             try { io.sentry.Sentry.captureException(e) } catch (_: Exception) {}
             ByteArray(32).apply { java.security.SecureRandom().nextBytes(this) }
         }
-        val factory = SupportFactory(passphrase)
 
-        if (oldDbPath != null) {
+        // Build the encrypted database, falling back to unencrypted if anything fails.
+        // On budget devices (Tecno, Infinix, Itel), EncryptedSharedPreferences / SQLCipher
+        // can fail due to Keystore corruption, partial DB files, or memory pressure.
+        // A working unencrypted database is always better than a crash.
+        val db: AppDatabase = try {
+            val factory = SupportFactory(passphrase)
+
+            // Migrate old unencrypted DB into encrypted format if needed
+            if (oldDbPath != null) {
+                try {
+                    val newEncryptedPath = dbFile.absolutePath
+                    val srcDb = SQLiteDatabase.openDatabase(
+                        oldDbPath, "", null, SQLiteDatabase.OPEN_READONLY
+                    )
+                    srcDb.rawExecSQL("ATTACH DATABASE '$newEncryptedPath' AS encrypted KEY " +
+                        "x'" + passphrase.joinToString("") { "%02x".format(it) } + "'")
+                    srcDb.rawExecSQL("SELECT sqlcipher_export('encrypted')")
+                    srcDb.rawExecSQL("DETACH DATABASE encrypted")
+                    srcDb.close()
+                    java.io.File(oldDbPath).delete()
+                    Timber.i("SQLCipher migration: data exported from unencrypted database into encrypted database")
+                } catch (e: Exception) {
+                    Timber.e(e, "SQLCipher migration failed — falling back to destructive migration")
+                    try { java.io.File(oldDbPath).delete() } catch (_: Exception) {}
+                }
+            }
+
+            Timber.i("Building encrypted database '%s'", dbName)
+            commonDbBuilder(context, dbName)
+                .openHelperFactory(factory)
+                .build()
+        } catch (e: Exception) {
+            Timber.e(e, "Encrypted database build failed — falling back to UNENCRYPTED database")
+            try { io.sentry.Sentry.captureException(e) } catch (_: Exception) {}
             try {
-                val newEncryptedPath = dbFile.absolutePath
-                val srcDb = SQLiteDatabase.openDatabase(
-                    oldDbPath, "", null, SQLiteDatabase.OPEN_READONLY
-                )
-                srcDb.rawExecSQL("ATTACH DATABASE '$newEncryptedPath' AS encrypted KEY " +
-                    "x'" + passphrase.joinToString("") { "%02x".format(it) } + "'")
-                srcDb.rawExecSQL("SELECT sqlcipher_export('encrypted')")
-                srcDb.rawExecSQL("DETACH DATABASE encrypted")
-                srcDb.close()
-                java.io.File(oldDbPath).delete()
-                Timber.i("SQLCipher migration: data exported from unencrypted database into encrypted database")
-            } catch (e: Exception) {
-                Timber.e(e, "SQLCipher migration failed — falling back to destructive migration")
+                context.deleteDatabase(dbName)
+                Timber.i("Deleted corrupt encrypted database '%s'", dbName)
+            } catch (delEx: Exception) {
+                Timber.e(delEx, "Failed to delete corrupt database")
+            }
+            // Clean up old DB migration file if it exists
+            if (oldDbPath != null) {
                 try { java.io.File(oldDbPath).delete() } catch (_: Exception) {}
             }
+            Timber.w("Building UNENCRYPTED database '%s' as fallback — encryption disabled", dbName)
+            commonDbBuilder(context, dbName)
+                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigrationOnDowngrade()
+                .build()
         }
 
-        var db: AppDatabase = try {
-        Room.databaseBuilder(context, AppDatabase::class.java, dbName)
-            .openHelperFactory(factory)
+        Timber.i("Database initialized successfully for '%s'", dbName)
+        AppDatabase.setInstance(db)
+        return db
+    }
+
+    /**
+     * Common Room database builder with all migrations and WAL callback.
+     * Encryption (openHelperFactory) is applied by the caller.
+     */
+    private fun commonDbBuilder(
+        context: Context,
+        dbName: String
+    ): RoomDatabase.Builder<AppDatabase> {
+        return Room.databaseBuilder(context, AppDatabase::class.java, dbName)
             .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
@@ -723,39 +765,6 @@ object DatabaseModule {
                     db.execSQL("CREATE INDEX IF NOT EXISTS `index_agent_recovery_traces_success` ON `agent_recovery_traces` (`success`)")
                 }
             })
-            .fallbackToDestructiveMigration()
-            .fallbackToDestructiveMigrationOnDowngrade()
-            .build()
-        } catch (e: Exception) {
-            Timber.e(e, "Database build failed — deleting corrupt DB and retrying fresh")
-            try { io.sentry.Sentry.captureException(e) } catch (_: Exception) {}
-            try {
-                context.deleteDatabase(dbName)
-                Timber.i("Deleted corrupt database '%s' — retrying with fresh DB", dbName)
-            } catch (delEx: Exception) {
-                Timber.e(delEx, "Failed to delete corrupt database")
-            }
-            val freshPassphrase = ByteArray(32).apply { java.security.SecureRandom().nextBytes(this) }
-            val freshFactory = SupportFactory(freshPassphrase)
-            Room.databaseBuilder(context, AppDatabase::class.java, dbName)
-                .openHelperFactory(freshFactory)
-                .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
-                .addCallback(object : RoomDatabase.Callback() {
-                    override fun onCreate(db: SupportSQLiteDatabase) {
-                        super.onCreate(db)
-                        db.execSQL("PRAGMA journal_mode=WAL")
-                        db.execSQL("PRAGMA busy_timeout=5000")
-                        db.execSQL("PRAGMA synchronous=NORMAL")
-                        db.execSQL("PRAGMA cache_size=-2000")
-                    }
-                })
-                .fallbackToDestructiveMigration()
-                .fallbackToDestructiveMigrationOnDowngrade()
-                .build()
-        }
-
-        AppDatabase.setInstance(db)
-        return db
     }
 
     // ── DAOs ──

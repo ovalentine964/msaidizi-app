@@ -4,6 +4,8 @@ import android.app.Application
 import android.app.ActivityManager
 import android.content.Context
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import com.msaidizi.app.core.model.ModelTier
 import com.msaidizi.app.sync.NetworkMonitor
 import com.msaidizi.app.update.UpdateCheckWorker
@@ -73,7 +75,46 @@ class MsaidiziApp : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
 
-        // Initialize Sentry crash reporting (must be before other init)
+        // Initialize logging first (before any other init)
+        try {
+            if (BuildConfig.DEBUG) {
+                Timber.plant(Timber.DebugTree())
+            }
+        } catch (_: Throwable) {}
+
+        // Wrap entire initialization in Throwable catch so OOM, StackOverflow,
+        // and other Error subclasses don't crash the app before UI renders.
+        // App starts in degraded mode if init fails.
+        try {
+            initializeApp()
+        } catch (e: Throwable) {
+            Timber.e(e, "initializeApp() FAILED — app running in degraded mode")
+            try {
+                io.sentry.Sentry.captureException(e)
+            } catch (_: Throwable) {}
+        }
+
+        // Register memory trim callback (safe even in degraded mode)
+        registerComponentCallbacks(object : android.content.ComponentCallbacks2 {
+            override fun onTrimMemory(level: Int) {
+                handleMemoryPressure(level)
+            }
+
+            override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {}
+            override fun onLowMemory() {
+                handleMemoryPressure(android.content.ComponentCallbacks2.TRIM_MEMORY_COMPLETE)
+            }
+        })
+    }
+
+    /**
+     * Full application initialization. Wrapped by onCreate() so that any failure
+     * (including OOM, StackOverflow — Throwable subclasses) degrades gracefully
+     * instead of crashing the app.
+     */
+    private fun initializeApp() {
+        // Step 1: Initialize Sentry crash reporting (must be before other init)
+        Timber.d("Init step: Sentry crash reporting")
         try {
             val sentryDsn = BuildConfig.SENTRY_DSN
             if (sentryDsn.isNotBlank()) {
@@ -96,17 +137,13 @@ class MsaidiziApp : Application(), Configuration.Provider {
             } else {
                 Timber.d("Sentry DSN not configured, skipping crash reporting")
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             // Sentry init failure must not crash the app
-            Timber.e(e, "Sentry init failed — crash reporting disabled")
+            Timber.e(e, "Init step FAILED: Sentry crash reporting")
         }
 
-        // Initialize logging
-        if (BuildConfig.DEBUG) {
-            Timber.plant(Timber.DebugTree())
-        }
-
-        // Register Bouncy Castle provider for Post-Quantum Cryptography
+        // Step 2: Register Bouncy Castle provider for Post-Quantum Cryptography
+        Timber.d("Init step: BouncyCastle provider")
         try {
             if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
                 Security.insertProviderAt(BouncyCastleProvider(), 1)
@@ -117,118 +154,40 @@ class MsaidiziApp : Application(), Configuration.Provider {
                 Security.insertProviderAt(BouncyCastleProvider(), 1)
                 Timber.i("Bouncy Castle provider replaced with PQC-capable version")
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             // BouncyCastle failure must not crash the app
-            Timber.e(e, "BouncyCastle provider registration failed")
+            Timber.e(e, "Init step FAILED: BouncyCastle provider")
         }
 
-        // Detect device tier
+        // Step 3: Detect device tier
+        Timber.d("Init step: DeviceTier detection")
         try {
             DeviceTier.initialize(this)
             Timber.d("MsaidiziApp: Device tier = ${DeviceTier.current}")
-        } catch (e: Exception) {
-            Timber.e(e, "DeviceTier initialization failed")
+        } catch (e: Throwable) {
+            Timber.e(e, "Init step FAILED: DeviceTier detection")
         }
-        Timber.d("MsaidiziApp: Total RAM = ${getTotalRamMB()}MB")
-        Timber.d("MsaidiziApp: Available cores = ${Runtime.getRuntime().availableProcessors()}")
+        try {
+            Timber.d("MsaidiziApp: Total RAM = ${getTotalRamMB()}MB")
+            Timber.d("MsaidiziApp: Available cores = ${Runtime.getRuntime().availableProcessors()}")
+        } catch (e: Throwable) {
+            Timber.e(e, "Init step FAILED: Device info logging")
+        }
 
-        // Start network monitoring
+        // Step 4: Start network monitoring
+        Timber.d("Init step: Network monitoring")
         try {
             networkMonitor.startMonitoring()
-        } catch (e: Exception) {
-            Timber.e(e, "Network monitoring start failed")
+        } catch (e: Throwable) {
+            Timber.e(e, "Init step FAILED: Network monitoring")
         }
 
-        // Initialize federated learning with hashed device ID
-        try {
-            val deviceId = android.provider.Settings.Secure.getString(
-                contentResolver, android.provider.Settings.Secure.ANDROID_ID
-            ) ?: "unknown"
-            federatedLearningClient.initialize(deviceId)
-        } catch (e: Exception) {
-            Timber.e(e, "Federated learning init failed")
-        }
-
-        // Schedule tiered model downloads
-        try {
-            scheduleModelDownloads()
-        } catch (e: Exception) {
-            Timber.e(e, "Model download scheduling failed")
-        }
-
-        // Extract bundled models from APK assets (offline-first)
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                bundledModelManager.initialize()
-                Timber.i("Bundled models initialized")
-            } catch (e: Exception) {
-                Timber.e(e, "Bundled model initialization failed")
-                try {
-                    io.sentry.Sentry.captureException(e)
-                } catch (_: Exception) {}
-            }
-        }
-
-        // Schedule background update checks (silent, 24h interval)
-        try {
-            UpdateCheckWorker.schedule(this)
-        } catch (e: Exception) {
-            Timber.e(e, "Update check scheduling failed")
-        }
-
-        // Schedule daily briefing notifications (7 AM morning, 7 PM evening)
-        try {
-            scheduleBriefingNotifications()
-        } catch (e: Exception) {
-            Timber.e(e, "Briefing notification scheduling failed")
-        }
-
-        // ── Crash Recovery: check for incomplete agent tasks ──
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val recoveryTasks = orchestrator.recoverIncompleteTasks()
-                if (recoveryTasks.isNotEmpty()) {
-                    Timber.i("Crash recovery: found %d incomplete tasks", recoveryTasks.size)
-                    for (rt in recoveryTasks) {
-                        delay(rt.delayMs)
-                        Timber.i("Recovering task %s (action=%s, phase=%s)",
-                            rt.checkpoint.taskId, rt.action, rt.checkpoint.lastPhase)
-                        try {
-                            val inputJson = rt.checkpoint.inputJson
-                            val input = com.google.gson.Gson().fromJson(
-                                inputJson, Map::class.java
-                            ) as? Map<*, *>
-                            val text = input?.get("text") as? String
-                            val language = input?.get("language") as? String ?: "sw"
-                            if (text != null) {
-                                orchestrator.processInput(text, language)
-                                Timber.i("Recovered task %s successfully", rt.checkpoint.taskId)
-                            } else {
-                                Timber.w("Cannot recover task %s: input text is null", rt.checkpoint.taskId)
-                            }
-                        } catch (e: Exception) {
-                            Timber.e(e, "Failed to recover task %s", rt.checkpoint.taskId)
-                        }
-                    }
-                }
-                // Cleanup old recovery data
-                orchestrator.cleanupRecoveryData()
-            } catch (e: Exception) {
-                Timber.e(e, "Crash recovery check failed")
-            }
-        }
-
-        // Register memory trim callback
-        registerComponentCallbacks(object : android.content.ComponentCallbacks2 {
-            override fun onTrimMemory(level: Int) {
-                handleMemoryPressure(level)
-            }
-
-            override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {}
-            override fun onLowMemory() {
-                handleMemoryPressure(android.content.ComponentCallbacks2.TRIM_MEMORY_COMPLETE)
-            }
-        })
+        // ── Deferred initialization ──────────────────────────────────────
+        // Schedule non-critical work after a delay so the UI can render first
+        // and WorkManager (custom Configuration.Provider) is fully ready.
+        Handler(Looper.getMainLooper()).postDelayed({
+            initializeDeferred()
+        }, DEFERRED_INIT_DELAY_MS)
     }
 
     override val workManagerConfiguration: Configuration
@@ -305,10 +264,111 @@ class MsaidiziApp : Application(), Configuration.Provider {
         }
     }
 
+    /**
+     * Deferred initialization — runs ~10s after onCreate.
+     * These tasks are non-critical and must not block the UI.
+     * Wrapped in Throwable catch for the same resilience as initializeApp().
+     */
+    private fun initializeDeferred() {
+        Timber.d("Deferred init: starting")
+
+        // Step 5: Initialize federated learning with hashed device ID
+        Timber.d("Init step: Federated learning")
+        try {
+            val deviceId = android.provider.Settings.Secure.getString(
+                contentResolver, android.provider.Settings.Secure.ANDROID_ID
+            ) ?: "unknown"
+            federatedLearningClient.initialize(deviceId)
+        } catch (e: Throwable) {
+            Timber.e(e, "Init step FAILED: Federated learning")
+        }
+
+        // Step 6: Schedule tiered model downloads (uses WorkManager)
+        Timber.d("Init step: Model download scheduling")
+        try {
+            scheduleModelDownloads()
+        } catch (e: Throwable) {
+            Timber.e(e, "Init step FAILED: Model download scheduling")
+        }
+
+        // Step 7: Extract bundled models from APK assets (offline-first)
+        Timber.d("Init step: Bundled model initialization")
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                bundledModelManager.initialize()
+                Timber.i("Bundled models initialized")
+            } catch (e: Throwable) {
+                Timber.e(e, "Init step FAILED: Bundled model initialization")
+                try {
+                    io.sentry.Sentry.captureException(e)
+                } catch (_: Throwable) {}
+            }
+        }
+
+        // Step 8: Schedule background update checks (silent, 24h interval)
+        Timber.d("Init step: Update check scheduling")
+        try {
+            UpdateCheckWorker.schedule(this)
+        } catch (e: Throwable) {
+            Timber.e(e, "Init step FAILED: Update check scheduling")
+        }
+
+        // Step 9: Schedule daily briefing notifications (7 AM morning, 7 PM evening)
+        Timber.d("Init step: Briefing notification scheduling")
+        try {
+            scheduleBriefingNotifications()
+        } catch (e: Throwable) {
+            Timber.e(e, "Init step FAILED: Briefing notification scheduling")
+        }
+
+        // Step 10: Crash Recovery — check for incomplete agent tasks
+        Timber.d("Init step: Crash recovery")
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val recoveryTasks = orchestrator.recoverIncompleteTasks()
+                if (recoveryTasks.isNotEmpty()) {
+                    Timber.i("Crash recovery: found %d incomplete tasks", recoveryTasks.size)
+                    for (rt in recoveryTasks) {
+                        delay(rt.delayMs)
+                        Timber.i("Recovering task %s (action=%s, phase=%s)",
+                            rt.checkpoint.taskId, rt.action, rt.checkpoint.lastPhase)
+                        try {
+                            val inputJson = rt.checkpoint.inputJson
+                            val input = com.google.gson.Gson().fromJson(
+                                inputJson, Map::class.java
+                            ) as? Map<*, *>
+                            val text = input?.get("text") as? String
+                            val language = input?.get("language") as? String ?: "sw"
+                            if (text != null) {
+                                orchestrator.processInput(text, language)
+                                Timber.i("Recovered task %s successfully", rt.checkpoint.taskId)
+                            } else {
+                                Timber.w("Cannot recover task %s: input text is null", rt.checkpoint.taskId)
+                            }
+                        } catch (e: Throwable) {
+                            Timber.e(e, "Failed to recover task %s", rt.checkpoint.taskId)
+                        }
+                    }
+                }
+                // Cleanup old recovery data
+                orchestrator.cleanupRecoveryData()
+            } catch (e: Throwable) {
+                Timber.e(e, "Init step FAILED: Crash recovery")
+            }
+        }
+
+        Timber.d("Deferred init: complete")
+    }
+
     private fun getTotalRamMB(): Long {
         val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         val memInfo = ActivityManager.MemoryInfo()
         activityManager.getMemoryInfo(memInfo)
         return memInfo.totalMem / (1024 * 1024)
+    }
+
+    companion object {
+        /** Delay before deferred init runs (ms). */
+        private const val DEFERRED_INIT_DELAY_MS = 10_000L
     }
 }

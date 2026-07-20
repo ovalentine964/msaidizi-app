@@ -48,6 +48,11 @@ import com.msaidizi.app.cfo.CFOEngine
 import com.msaidizi.app.loops.MorningBriefingLoop
 import com.msaidizi.app.loops.StreakProtectionLoop
 import com.msaidizi.app.loops.VariableRewardsLoop
+import com.msaidizi.app.loops.ReActLoop
+import com.msaidizi.app.loops.ReflexionLoop
+import com.msaidizi.app.loops.PlanExecuteLoop
+import com.msaidizi.app.agent.autonomy.ProgressiveAutonomy
+import com.msaidizi.app.agent.a2a.A2AProtocol
 import com.msaidizi.app.evolution.SelfEvolutionManager
 import com.msaidizi.app.core.database.GamificationDao
 import com.msaidizi.app.core.database.RichHabitsDao
@@ -301,6 +306,32 @@ object AIModule {
 
     @Provides
     @Singleton
+    fun provideReActLoop(): ReActLoop = ReActLoop()
+
+    @Provides
+    @Singleton
+    fun provideReflexionLoop(): ReflexionLoop = ReflexionLoop()
+
+    @Provides
+    @Singleton
+    fun providePlanExecuteLoop(): PlanExecuteLoop = PlanExecuteLoop()
+
+    @Provides
+    @Singleton
+    fun provideProgressiveAutonomy(
+        patternDao: PatternDao,
+        eventBus: AgentEventBus
+    ): ProgressiveAutonomy = ProgressiveAutonomy(patternDao, eventBus)
+
+    @Provides
+    @Singleton
+    fun provideA2AProtocol(
+        eventBus: AgentEventBus
+    ): A2AProtocol = A2AProtocol(eventBus)
+
+    @Provides
+    @Singleton
+    @JvmSuppressWildcards
     fun provideOrchestrator(
         intentRouter: IntentRouter,
         businessAgent: BusinessAgent,
@@ -314,32 +345,38 @@ object AIModule {
         gamificationHandler: GamificationHandler,
         domainRouter: DomainRouter,
         conversationManager: ConversationManager,
-        gamificationEngine: GamificationEngine,
-        ahaMomentFlow: AhaMomentFlow,
-        richHabitsScore: RichHabitsScore,
-        mindsetAcademy: MindsetAcademy,
-        titheTracker: TitheTracker,
-        goalPlanner: GoalPlanner,
-        loanManager: LoanManager,
-        titheDao: TitheDao,
-        goalDao: GoalDao,
-        loanDao: LoanDao,
-        briefingDelivery: BriefingDelivery,
-        morningBriefingLoop: MorningBriefingLoop,
-        streakProtectionLoop: StreakProtectionLoop,
-        variableRewardsLoop: VariableRewardsLoop,
-        selfEvolution: SelfEvolutionManager,
-        preferenceLearner: PreferenceLearner,
-        adaptiveVocabulary: AdaptiveVocabulary,
-        conversationLearningPipeline: ConversationLearningPipeline,
+        reActLoop: ReActLoop,
+        reflexionLoop: ReflexionLoop,
+        planExecuteLoop: PlanExecuteLoop,
         llmEngine: LlmEngine,
-        voicePersonality: VoicePersonality,
-        proactiveAlertEngine: ProactiveAlertEngine,
-        socialHandler: SocialHandler,
-        inferenceHarness: InferenceHarness,
         agiReadyLayer: AGIReadyLayer,
-        knowledgeGraph: com.msaidizi.app.agent.knowledge.CrossDomainKnowledgeGraph,
-        taskCheckpointManager: com.msaidizi.app.agent.recovery.TaskCheckpointManager
+        taskCheckpointManager: com.msaidizi.app.agent.recovery.TaskCheckpointManager,
+        gamificationEngine: dagger.Lazy<GamificationEngine>,
+        ahaMomentFlow: dagger.Lazy<AhaMomentFlow>,
+        richHabitsScore: dagger.Lazy<RichHabitsScore>,
+        mindsetAcademy: dagger.Lazy<MindsetAcademy>,
+        titheTracker: dagger.Lazy<TitheTracker>,
+        goalPlanner: dagger.Lazy<GoalPlanner>,
+        loanManager: dagger.Lazy<LoanManager>,
+        titheDao: dagger.Lazy<TitheDao>,
+        goalDao: dagger.Lazy<GoalDao>,
+        loanDao: dagger.Lazy<LoanDao>,
+        briefingDelivery: dagger.Lazy<BriefingDelivery>,
+        morningBriefingLoop: dagger.Lazy<MorningBriefingLoop>,
+        streakProtectionLoop: dagger.Lazy<StreakProtectionLoop>,
+        variableRewardsLoop: dagger.Lazy<VariableRewardsLoop>,
+        selfEvolution: dagger.Lazy<SelfEvolutionManager>,
+        preferenceLearner: dagger.Lazy<PreferenceLearner>,
+        adaptiveVocabulary: dagger.Lazy<AdaptiveVocabulary>,
+        conversationLearningPipeline: dagger.Lazy<ConversationLearningPipeline>,
+        eventBus: dagger.Lazy<AgentEventBus>,
+        voicePersonality: dagger.Lazy<VoicePersonality>,
+        progressiveAutonomy: dagger.Lazy<ProgressiveAutonomy>,
+        proactiveAlertEngine: dagger.Lazy<ProactiveAlertEngine>,
+        a2aProtocol: dagger.Lazy<A2AProtocol>,
+        knowledgeGraph: dagger.Lazy<com.msaidizi.app.agent.knowledge.CrossDomainKnowledgeGraph>,
+        socialHandler: dagger.Lazy<SocialHandler>,
+        inferenceHarness: dagger.Lazy<InferenceHarness>
     ): Orchestrator = Orchestrator(
         intentRouter = intentRouter,
         businessAgent = businessAgent,
@@ -353,6 +390,12 @@ object AIModule {
         gamificationHandler = gamificationHandler,
         domainRouter = domainRouter,
         conversationManager = conversationManager,
+        reActLoop = reActLoop,
+        reflexionLoop = reflexionLoop,
+        planExecuteLoop = planExecuteLoop,
+        llmEngine = llmEngine,
+        agiReadyLayer = agiReadyLayer,
+        taskCheckpointManager = taskCheckpointManager,
         gamificationEngine = gamificationEngine,
         ahaMomentFlow = ahaMomentFlow,
         richHabitsScore = richHabitsScore,
@@ -371,14 +414,14 @@ object AIModule {
         preferenceLearner = preferenceLearner,
         adaptiveVocabulary = adaptiveVocabulary,
         conversationLearningPipeline = conversationLearningPipeline,
-        llmEngine = llmEngine,
+        eventBus = eventBus,
         voicePersonality = voicePersonality,
+        progressiveAutonomy = progressiveAutonomy,
         proactiveAlertEngine = proactiveAlertEngine,
-        socialHandler = socialHandler,
-        inferenceHarness = inferenceHarness,
-        agiReadyLayer = agiReadyLayer,
+        a2aProtocol = a2aProtocol,
         knowledgeGraph = knowledgeGraph,
-        taskCheckpointManager = taskCheckpointManager
+        socialHandler = socialHandler,
+        inferenceHarness = inferenceHarness
     )
 
     // ── Dialect & Adaptive Vocabulary ──

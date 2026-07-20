@@ -33,6 +33,7 @@ import com.msaidizi.app.agent.a2a.AgentProfile
 import com.msaidizi.app.agent.knowledge.CrossDomainKnowledgeGraph
 import com.msaidizi.app.social.SocialHandler
 import com.msaidizi.app.agent.harness.InferenceHarness
+import dagger.Lazy
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import timber.log.Timber
@@ -53,16 +54,16 @@ import java.util.UUID
  * Flow: Voice Input → AdaptiveLearning → IntentRouter → Handler → Response
  * 90% of requests handled by code alone (no LLM).
  *
+ * ## Constructor Complexity Reduction
+ *
+ * Non-critical dependencies use [dagger.Lazy] to decouple initialization:
+ * - Critical deps (agents, handlers, router, conversation manager) remain eager
+ * - Non-critical deps (gamification loops, briefing, evolution, voice, AGI extras)
+ *   are wrapped in `Lazy<T>` — initialized on first access, not at construction
+ * - This prevents cascade failures: if a non-critical dep fails to init,
+ *   the core routing pipeline still works
+ *
  * ## Mathematical & Economic Foundations
- *
- * ### ECO 104 §1.2 — Optimization
- * The orchestrator solves a routing optimization: given the intent,
- * which handler maximizes response value subject to computation budget
- * and latency constraints.
- *
- * ### STA 443 §1.2 — Probability Spaces
- * Each user interaction is a point in (Ω, F, P). We maximize
- * E[Quality | Intent, Context] through confidence-based escalation.
  *
  * @see IntentRouter for intent classification
  * @see TransactionHandler for transaction processing
@@ -72,6 +73,7 @@ import java.util.UUID
  * @see ConversationManager for memory and LLM escalation
  */
 class Orchestrator(
+    // ── Critical: Core routing pipeline (eager) ──
     private val intentRouter: IntentRouter,
     private val businessAgent: BusinessAgent,
     private val analysisAgent: AnalysisAgent,
@@ -85,45 +87,48 @@ class Orchestrator(
     private val gamificationHandler: GamificationHandler,
     private val domainRouter: DomainRouter,
     private val conversationManager: ConversationManager,
-    // Legacy dependencies (kept for initialization lifecycle)
-    private val gamificationEngine: GamificationEngine? = null,
-    private val ahaMomentFlow: AhaMomentFlow? = null,
-    private val richHabitsScore: RichHabitsScore? = null,
-    private val mindsetAcademy: MindsetAcademy? = null,
-    private val titheTracker: TitheTracker? = null,
-    private val goalPlanner: GoalPlanner? = null,
-    private val loanManager: LoanManager? = null,
-    private val titheDao: TitheDao? = null,
-    private val goalDao: GoalDao? = null,
-    private val loanDao: LoanDao? = null,
-    private val briefingDelivery: BriefingDelivery? = null,
-    private val morningBriefingLoop: MorningBriefingLoop? = null,
-    private val streakProtectionLoop: StreakProtectionLoop? = null,
-    private val variableRewardsLoop: VariableRewardsLoop? = null,
-    private val selfEvolution: SelfEvolutionManager? = null,
-    private val preferenceLearner: PreferenceLearner? = null,
-    private val adaptiveVocabulary: AdaptiveVocabulary? = null,
-    private val conversationLearningPipeline: ConversationLearningPipeline? = null,
-    private val reActLoop: ReActLoop = ReActLoop(),
-    private val reflexionLoop: ReflexionLoop = ReflexionLoop(),
-    private val planExecuteLoop: PlanExecuteLoop = PlanExecuteLoop(),
-    private val eventBus: AgentEventBus = AgentEventBus.getInstance(),
-    private val llmEngine: LlmEngine? = null,
+    // Core reasoning loops (lightweight)
+    private val reActLoop: ReActLoop,
+    private val reflexionLoop: ReflexionLoop,
+    private val planExecuteLoop: PlanExecuteLoop,
+    // Core LLM engine — needed for escalation path
+    private val llmEngine: LlmEngine,
+    // AGI safety — enforced on every response
+    private val agiReadyLayer: com.msaidizi.app.agent.agi.AGIReadyLayer,
+    // Crash recovery — checkpoint every request
+    private val taskCheckpointManager: com.msaidizi.app.agent.recovery.TaskCheckpointManager,
+    // ── Lazy: Non-critical lifecycle & feature deps ──
+    // Hilt wraps these in dagger.Lazy automatically — initialized on first .get() call
+    private val gamificationEngine: Lazy<GamificationEngine>,
+    private val ahaMomentFlow: Lazy<AhaMomentFlow>,
+    private val richHabitsScore: Lazy<RichHabitsScore>,
+    private val mindsetAcademy: Lazy<MindsetAcademy>,
+    private val titheTracker: Lazy<TitheTracker>,
+    private val goalPlanner: Lazy<GoalPlanner>,
+    private val loanManager: Lazy<LoanManager>,
+    private val titheDao: Lazy<TitheDao>,
+    private val goalDao: Lazy<GoalDao>,
+    private val loanDao: Lazy<LoanDao>,
+    private val briefingDelivery: Lazy<BriefingDelivery>,
+    private val morningBriefingLoop: Lazy<MorningBriefingLoop>,
+    private val streakProtectionLoop: Lazy<StreakProtectionLoop>,
+    private val variableRewardsLoop: Lazy<VariableRewardsLoop>,
+    private val selfEvolution: Lazy<SelfEvolutionManager>,
+    private val preferenceLearner: Lazy<PreferenceLearner>,
+    private val adaptiveVocabulary: Lazy<AdaptiveVocabulary>,
+    private val conversationLearningPipeline: Lazy<ConversationLearningPipeline>,
+    private val eventBus: Lazy<AgentEventBus>,
     // ── Voice Personality ──
-    private val voicePersonality: VoicePersonality? = null,
-    // ── AGI Components ──
-    private val progressiveAutonomy: ProgressiveAutonomy? = null,
-    private val proactiveAlertEngine: ProactiveAlertEngine? = null,
-    private val a2aProtocol: A2AProtocol? = null,
-    private val knowledgeGraph: CrossDomainKnowledgeGraph? = null,
+    private val voicePersonality: Lazy<VoicePersonality>,
+    // ── AGI Components (non-critical, accessed on-demand) ──
+    private val progressiveAutonomy: Lazy<ProgressiveAutonomy>,
+    private val proactiveAlertEngine: Lazy<ProactiveAlertEngine>,
+    private val a2aProtocol: Lazy<A2AProtocol>,
+    private val knowledgeGraph: Lazy<CrossDomainKnowledgeGraph>,
     // ── Social Layer ──
-    private val socialHandler: SocialHandler? = null,
+    private val socialHandler: Lazy<SocialHandler>,
     // ── Inference Harness — wraps all model calls with monitoring/fallback/retry ──
-    private val inferenceHarness: InferenceHarness? = null,
-    // ── AGI Safety Layer ──
-    private val agiReadyLayer: com.msaidizi.app.agent.agi.AGIReadyLayer? = null,
-    // ── Crash Recovery — checkpoint in-flight tasks for resume after app kill ──
-    private val taskCheckpointManager: com.msaidizi.app.agent.recovery.TaskCheckpointManager? = null
+    private val inferenceHarness: Lazy<InferenceHarness>
 ) {
     private val _responses = MutableSharedFlow<AgentResponse>(extraBufferCapacity = 8)
     val responses: SharedFlow<AgentResponse> = _responses
@@ -131,7 +136,7 @@ class Orchestrator(
     init {
         // Wire conversation learning pipeline to conversation manager
         // This enables vocabulary learning from corrections and confirmations
-        conversationManager.conversationLearningPipeline = conversationLearningPipeline
+        conversationManager.conversationLearningPipeline = conversationLearningPipeline.get()
 
         // Sync ProgressiveAutonomy level into AGIReadyLayer
         syncAutonomyLevel()
@@ -147,7 +152,7 @@ class Orchestrator(
         reActLoop.think(trace, "Received input: \"${text.take(50)}\" in language=$language")
 
         // ── Crash Recovery: checkpoint this task ──
-        val checkpointId = taskCheckpointManager?.createCheckpoint(
+        val checkpointId = taskCheckpointManager.createCheckpoint(
             taskType = "process_input",
             input = mapOf("text" to text, "language" to language),
             language = language
@@ -158,11 +163,11 @@ class Orchestrator(
         conversationManager.publishTaskStarted()
 
         // Text enhancement
-        val enhancedText = adaptiveVocabulary?.applyToTranscription(
+        val enhancedText = adaptiveVocabulary.get()?.applyToTranscription(
             conversationManager.enhanceText(text)
         ) ?: conversationManager.enhanceText(text)
         reActLoop.observe(trace, "Applied vocabulary enhancement: \"${enhancedText.take(50)}\"")
-        checkpointId?.let { taskCheckpointManager?.updateCheckpoint(it, "OBSERVE") }
+        checkpointId?.let { taskCheckpointManager.updateCheckpoint(it, "OBSERVE") }
 
         // Step 0: Check for corrections
         val correctionResponse = conversationManager.checkForCorrection(
@@ -179,7 +184,7 @@ class Orchestrator(
         var intentResult = intentRouter.classify(enhancedText)
         reActLoop.think(trace, "Intent classified: ${intentResult.intent} (confidence=${String.format("%.2f", intentResult.confidence)}, needsLLM=${intentResult.needsLLM})", intentResult.confidence)
         conversationManager.publishIntentEvent(intentResult, language, enhancedText)
-        checkpointId?.let { taskCheckpointManager?.updateCheckpoint(
+        checkpointId?.let { taskCheckpointManager.updateCheckpoint(
             it, "ORIENT",
             observations = mapOf("intent" to intentResult.intent.name, "confidence" to intentResult.confidence)
         ) }
@@ -197,12 +202,12 @@ class Orchestrator(
 
         // Step 4: Confidence-based routing
         val confidenceLevel = conversationManager.classifyConfidence(intentResult)
-        checkpointId?.let { taskCheckpointManager?.updateCheckpoint(
+        checkpointId?.let { taskCheckpointManager.updateCheckpoint(
             it, "DECIDE",
             decision = mapOf("confidenceLevel" to confidenceLevel.name, "intent" to intentResult.intent.name)
         ) }
         val response = when {
-            intentResult.needsLLM && llmEngine != null -> {
+            intentResult.needsLLM -> {
                 reActLoop.act(trace, "llm_escalation", "Escalating to on-device LLM")
                 conversationManager.handleLlmEscalation(intentResult, enhancedText, language)
                     ?: routeToHandler(intentResult, text, language)
@@ -224,7 +229,7 @@ class Orchestrator(
         // Steps 5-8: Post-processing + output sanitization (defense-in-depth)
         val sanitizedResponse = sanitizeOutput(response, language)
         val critiqueScore = conversationManager.postProcess(enhancedText, intentResult, sanitizedResponse, language, trace)
-        checkpointId?.let { taskCheckpointManager?.updateCheckpoint(it, "ACT") }
+        checkpointId?.let { taskCheckpointManager.updateCheckpoint(it, "ACT") }
 
         // Step 8b: Apply voice personality — warmth, proverbs, cultural flavor
         val personalityResponse = applyPersonality(sanitizedResponse, language)
@@ -234,11 +239,11 @@ class Orchestrator(
         // ── Crash Recovery: persist trace and mark task complete ──
         checkpointId?.let { id ->
             if (sanitizedResponse.type != ResponseType.ERROR) {
-                taskCheckpointManager?.markCompleted(id)
+                taskCheckpointManager.markCompleted(id)
             } else {
-                taskCheckpointManager?.markFailed(id, sanitizedResponse.text.take(200))
+                taskCheckpointManager.markFailed(id, sanitizedResponse.text.take(200))
             }
-            taskCheckpointManager?.persistReActTrace(id, trace)
+            taskCheckpointManager.persistReActTrace(id, trace)
         }
 
         conversationManager.publishTaskCompleted(trace, response)
@@ -275,7 +280,7 @@ class Orchestrator(
         originalInput: String,
         language: String
     ): AgentResponse {
-        val agi = agiReadyLayer ?: return response
+        val agi = agiReadyLayer
 
         val safetyResult = agi.checkResponseSafety(response, originalInput, language)
 
@@ -322,7 +327,7 @@ class Orchestrator(
         intentResult: IntentResult,
         language: String
     ): AgentResponse {
-        val agi = agiReadyLayer ?: return response
+        val agi = agiReadyLayer
 
         // Classify the action
         val isHighValue = intentResult.intent in setOf(
@@ -350,8 +355,8 @@ class Orchestrator(
      * Called at init and after autonomy changes.
      */
     private fun syncAutonomyLevel() {
-        val pa = progressiveAutonomy ?: return
-        val agi = agiReadyLayer ?: return
+        val pa = progressiveAutonomy.get() ?: return
+        val agi = agiReadyLayer
 
         val minLevel = pa.getMinimumLevel()
         agi.setAutonomyLevelFromProgressive(minLevel)
@@ -370,7 +375,7 @@ class Orchestrator(
      * @see VoicePersonality for personality engine details
      */
     private fun applyPersonality(response: AgentResponse, language: String): AgentResponse {
-        val personality = voicePersonality ?: return response
+        val personality = voicePersonality.get() ?: return response
 
         val personalizedText = personality.wrapResponse(
             text = response.text,
@@ -505,10 +510,10 @@ class Orchestrator(
     fun triggerBackgroundLearning() = adaptiveLearning.launchBackgroundLearning()
 
     suspend fun initializeStickiness() {
-        gamificationEngine?.initialize()
-        mindsetAcademy?.seedLessons()
-        titheTracker?.loadFromDb()
-        gamificationEngine?.let { ge ->
+        gamificationEngine.get()?.initialize()
+        mindsetAcademy.get()?.seedLessons()
+        titheTracker.get()?.loadFromDb()
+        gamificationEngine.get()?.let { ge ->
             try {
                 ge.getStreakRiskReminder()?.let { _responses.emit(AgentResponse(text = it, type = ResponseType.INFORMATION, shouldSpeak = true)) }
                 ge.getStreakRecoveryMessage()?.let { _responses.emit(AgentResponse(text = it, type = ResponseType.INFORMATION, shouldSpeak = true)) }
@@ -523,10 +528,10 @@ class Orchestrator(
      */
     fun getSessionWelcome(language: String = "sw"): String? {
         // Try AhaMomentFlow first (existing system)
-        val ahaWelcome = ahaMomentFlow?.onSessionStart(language)?.getText(language)
+        val ahaWelcome = ahaMomentFlow.get()?.onSessionStart(language)?.getText(language)
 
         // If VoicePersonality is available, enhance with contextual greeting
-        val personality = voicePersonality
+        val personality = voicePersonality.get()
         if (personality != null) {
             val greeting = personality.getGreeting(workerName = "Msaidizi", language = language)
             return if (ahaWelcome != null) {
@@ -538,11 +543,11 @@ class Orchestrator(
 
         return ahaWelcome
     }
-    suspend fun getGamificationState() = gamificationEngine?.getState()
-    suspend fun getStreakProtection() = gamificationEngine?.getStreakFreezeStatus()
-    suspend fun getBriefingLoopPerformance() = briefingDelivery?.getBriefingPerformance()
-    suspend fun getRichHabitsScore() = richHabitsScore?.getTodayScore()
-    suspend fun getMindsetProgress() = mindsetAcademy?.getProgress()
+    suspend fun getGamificationState() = gamificationEngine.get()?.getState()
+    suspend fun getStreakProtection() = gamificationEngine.get()?.getStreakFreezeStatus()
+    suspend fun getBriefingLoopPerformance() = briefingDelivery.get()?.getBriefingPerformance()
+    suspend fun getRichHabitsScore() = richHabitsScore.get()?.getTodayScore()
+    suspend fun getMindsetProgress() = mindsetAcademy.get()?.getProgress()
     fun getReActTraces(n: Int = 10): List<Map<String, Any>> = reActLoop.getRecentTraces(n)
     fun getReasoningExamples(n: Int = 5): List<Map<String, Any>> = reActLoop.getReasoningExamples(n)
     fun getReflexionCritiques(n: Int = 10): List<Map<String, Any>> = reflexionLoop.getCritiqueHistory(n)
@@ -551,25 +556,25 @@ class Orchestrator(
 
     // ── Crash Recovery ──
     /** Check for incomplete tasks on startup and return those that need recovery. */
-    suspend fun recoverIncompleteTasks() = taskCheckpointManager?.recoverIncompleteTasks() ?: emptyList()
+    suspend fun recoverIncompleteTasks() = taskCheckpointManager.recoverIncompleteTasks() ?: emptyList()
     /** Get recovery system health stats. */
-    suspend fun getRecoveryStats() = taskCheckpointManager?.getStats()
+    suspend fun getRecoveryStats() = taskCheckpointManager.getStats()
     /** Get persisted traces for a task. */
-    suspend fun getRecoveryTraces(taskId: String) = taskCheckpointManager?.getTracesForTask(taskId) ?: emptyList()
+    suspend fun getRecoveryTraces(taskId: String) = taskCheckpointManager.getTracesForTask(taskId) ?: emptyList()
     /** Get recent persisted traces. */
-    suspend fun getRecentRecoveryTraces(limit: Int = 50) = taskCheckpointManager?.getRecentTraces(limit) ?: emptyList()
+    suspend fun getRecentRecoveryTraces(limit: Int = 50) = taskCheckpointManager.getRecentTraces(limit) ?: emptyList()
     /** Clean up old recovery data. */
-    suspend fun cleanupRecoveryData() = taskCheckpointManager?.cleanup()
+    suspend fun cleanupRecoveryData() = taskCheckpointManager.cleanup()
 
     // ── Inference Harness metrics ──
     /** Get aggregate inference harness stats (latency, success rate, circuit breakers). */
-    fun getInferenceHarnessStats() = inferenceHarness?.getAggregateStats()
+    fun getInferenceHarnessStats() = inferenceHarness.get()?.getAggregateStats()
     /** Get per-provider inference metrics. */
-    fun getInferenceProviderMetrics() = inferenceHarness?.getAllMetrics()
+    fun getInferenceProviderMetrics() = inferenceHarness.get()?.getAllMetrics()
     /** Get circuit breaker states for all providers. */
-    fun getCircuitBreakerStates() = inferenceHarness?.getAllCircuitBreakerStates()
+    fun getCircuitBreakerStates() = inferenceHarness.get()?.getAllCircuitBreakerStates()
     /** Get daily cost breakdown for a user. */
-    fun getUserDailyInferenceCosts(userId: String) = inferenceHarness?.getUserDailyCosts(userId)
+    fun getUserDailyInferenceCosts(userId: String) = inferenceHarness.get()?.getUserDailyCosts(userId)
     fun getConversationMemory(): ConversationMemory = conversationManager.conversationMemory
     fun clearConversationMemory() = conversationManager.clearConversationMemory()
 
@@ -580,7 +585,7 @@ class Orchestrator(
 
     /** Get AGI safety audit: current autonomy level, active boundaries, trust score. */
     fun getAGISafetyAudit(): Map<String, Any> {
-        val agi = agiReadyLayer ?: return emptyMap()
+        val agi = agiReadyLayer
         val state = agi.autonomyState
         return mapOf(
             "autonomyLevel" to state.level,
@@ -594,32 +599,32 @@ class Orchestrator(
     }
 
     /** Get progressive autonomy state. */
-    fun getAutonomyState() = progressiveAutonomy?.overallState?.value
-    fun getAutonomyDomainStates() = progressiveAutonomy?.getAllDomainStates()
-    fun getHumanInTheLoopRequirements() = progressiveAutonomy?.getHumanInTheLoopRequirements() ?: emptyList()
+    fun getAutonomyState() = progressiveAutonomy.get()?.overallState?.value
+    fun getAutonomyDomainStates() = progressiveAutonomy.get()?.getAllDomainStates()
+    fun getHumanInTheLoopRequirements() = progressiveAutonomy.get()?.getHumanInTheLoopRequirements() ?: emptyList()
 
     /** Get proactive alerts. */
-    fun getRecentAlerts() = proactiveAlertEngine?.getRecentAlerts() ?: emptyList()
-    fun startProactiveMonitoring() = proactiveAlertEngine?.startMonitoring()
-    fun stopProactiveMonitoring() = proactiveAlertEngine?.stopMonitoring()
+    fun getRecentAlerts() = proactiveAlertEngine.get()?.getRecentAlerts() ?: emptyList()
+    fun startProactiveMonitoring() = proactiveAlertEngine.get()?.startMonitoring()
+    fun stopProactiveMonitoring() = proactiveAlertEngine.get()?.stopMonitoring()
 
     /** Get A2A protocol metrics. */
-    fun getA2AMetrics() = a2aProtocol?.getMetrics()
-    fun discoverAgents(capability: String) = a2aProtocol?.discoverAgents(capability) ?: emptyList()
+    fun getA2AMetrics() = a2aProtocol.get()?.getMetrics()
+    fun discoverAgents(capability: String) = a2aProtocol.get()?.discoverAgents(capability) ?: emptyList()
 
     /** Get knowledge graph stats. */
-    fun getKnowledgeGraphStats() = knowledgeGraph?.getStats()
-    fun getCrossDomainInsights(limit: Int = 20) = knowledgeGraph?.getInsights(limit) ?: emptyList()
-    fun getKnowledgeContext(topic: String) = knowledgeGraph?.getContextForTopic(topic) ?: ""
+    fun getKnowledgeGraphStats() = knowledgeGraph.get()?.getStats()
+    fun getCrossDomainInsights(limit: Int = 20) = knowledgeGraph.get()?.getInsights(limit) ?: emptyList()
+    fun getKnowledgeContext(topic: String) = knowledgeGraph.get()?.getContextForTopic(topic) ?: ""
 
-    fun triggerEvolutionCycle() = selfEvolution?.launchEvolutionCycle()
-    fun getWorkerPreferences() = selfEvolution?.getPreferences()
-    fun getEvolutionMetrics() = selfEvolution?.evolutionMetrics?.value
-    suspend fun getGoalAdaptation(goalId: Long, currentTarget: Double, actualProgress: Double, daysElapsed: Int, totalDays: Int) = selfEvolution?.analyzeGoalAdaptation(goalId, currentTarget, actualProgress, daysElapsed, totalDays)
-    suspend fun recordAdviceFollowed(adviceId: String) { selfEvolution?.recordAdviceOutcome(adviceId, followed = true, outcomeScore = 0.9) }
-    suspend fun getPreferredReportFormat() = preferenceLearner?.getPreferredReportFormat() ?: "daily"
-    suspend fun getPreferredVoiceSpeed() = preferenceLearner?.getPreferredVoiceSpeed() ?: 1.0f
-    suspend fun getPreferredLanguage() = preferenceLearner?.getPreferredLanguage() ?: "sw"
+    fun triggerEvolutionCycle() = selfEvolution.get()?.launchEvolutionCycle()
+    fun getWorkerPreferences() = selfEvolution.get()?.getPreferences()
+    fun getEvolutionMetrics() = selfEvolution.get()?.evolutionMetrics?.value
+    suspend fun getGoalAdaptation(goalId: Long, currentTarget: Double, actualProgress: Double, daysElapsed: Int, totalDays: Int) = selfEvolution.get()?.analyzeGoalAdaptation(goalId, currentTarget, actualProgress, daysElapsed, totalDays)
+    suspend fun recordAdviceFollowed(adviceId: String) { selfEvolution.get()?.recordAdviceOutcome(adviceId, followed = true, outcomeScore = 0.9) }
+    suspend fun getPreferredReportFormat() = preferenceLearner.get()?.getPreferredReportFormat() ?: "daily"
+    suspend fun getPreferredVoiceSpeed() = preferenceLearner.get()?.getPreferredVoiceSpeed() ?: 1.0f
+    suspend fun getPreferredLanguage() = preferenceLearner.get()?.getPreferredLanguage() ?: "sw"
 
     // ═══════════════ AGI INTEGRATION ═══════════════
 
@@ -629,7 +634,7 @@ class Orchestrator(
      */
     fun initializeAGI() {
         // Register orchestrator as an A2A agent
-        a2aProtocol?.registerAgent(AgentProfile(
+        a2aProtocol.get()?.registerAgent(AgentProfile(
             agentId = "orchestrator",
             displayName = "Orchestrator",
             capabilities = listOf("routing", "intent_classification", "response_generation"),
@@ -637,19 +642,19 @@ class Orchestrator(
         ))
 
         // Register domain agents
-        a2aProtocol?.registerAgent(AgentProfile(
+        a2aProtocol.get()?.registerAgent(AgentProfile(
             agentId = "business-agent",
             displayName = "Business Agent",
             capabilities = listOf("transaction_recording", "sales_analysis"),
             priority = 900
         ))
-        a2aProtocol?.registerAgent(AgentProfile(
+        a2aProtocol.get()?.registerAgent(AgentProfile(
             agentId = "analysis-agent",
             displayName = "Analysis Agent",
             capabilities = listOf("trend_analysis", "anomaly_detection", "forecasting"),
             priority = 800
         ))
-        a2aProtocol?.registerAgent(AgentProfile(
+        a2aProtocol.get()?.registerAgent(AgentProfile(
             agentId = "advisor-agent",
             displayName = "Advisor Agent",
             capabilities = listOf("advice", "recommendations", "financial_planning"),
@@ -657,7 +662,7 @@ class Orchestrator(
         ))
 
         // Start proactive monitoring
-        proactiveAlertEngine?.startMonitoring()
+        proactiveAlertEngine.get()?.startMonitoring()
 
         Timber.d("AGI components initialized")
     }
@@ -673,7 +678,7 @@ class Orchestrator(
         ) && !wasCorrect
 
         // Update ProgressiveAutonomy
-        val autonomy = progressiveAutonomy
+        val autonomy = progressiveAutonomy.get()
         if (autonomy != null) {
             val domain = mapIntentToDomain(intentResult.intent)
             autonomy.recordOutcome(domain, intentResult.intent.name, wasCorrect, wasCritical)
@@ -681,15 +686,13 @@ class Orchestrator(
 
         // Update AGIReadyLayer trust and capability
         val agi = agiReadyLayer
-        if (agi != null) {
-            val capability = mapIntentToCapability(intentResult.intent)
-            if (capability != null) {
-                val newState = agi.updateCapability(agi.autonomyState, capability, wasCorrect)
-                agi.updateAutonomyState { newState }
-            }
-            // Sync autonomy level after outcome
-            syncAutonomyLevel()
+        val capability = mapIntentToCapability(intentResult.intent)
+        if (capability != null) {
+            val newState = agi.updateCapability(agi.autonomyState, capability, wasCorrect)
+            agi.updateAutonomyState { newState }
         }
+        // Sync autonomy level after outcome
+        syncAutonomyLevel()
     }
 
     /**
@@ -734,7 +737,7 @@ class Orchestrator(
      * Generate cross-domain insights from knowledge graph.
      */
     private fun generateCrossDomainInsights() {
-        knowledgeGraph?.let { kg ->
+        knowledgeGraph.get()?.let { kg ->
             kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                 try {
                     kg.generateInsights()

@@ -40,6 +40,10 @@
 -keepclassmembers class * { @androidx.room.* <methods>; }
 -keepclassmembers class * { @androidx.room.* <fields>; }
 
+# Sentry crash reporting — keep all classes (reflection, event processors, etc.)
+-keep class io.sentry.** { *; }
+-dontwarn io.sentry.**
+
 # ONNX Runtime
 -keep class ai.onnxruntime.** { *; }
 
@@ -113,38 +117,27 @@
 # Prevents PII, tokens, keys, and internal state from leaking via logs
 # ══════════════════════════════════════════════════════════════
 
-# Remove all android.util.Log calls
+# Strip verbose/debug/info android.util.Log calls in release builds
+# KEEP warn/error/wtf — these are needed for crash diagnostics
 -assumenosideeffects class android.util.Log {
     public static int v(...);
     public static int d(...);
     public static int i(...);
-    public static int w(...);
-    public static int e(...);
-    public static int wtf(...);
-    public static int println(...);
 }
 
-# Remove all Timber logging (used throughout the app)
+# Strip verbose/debug/info Timber calls in release builds
+# KEEP warn/error/wtf — these are needed for crash diagnostics
 -assumenosideeffects class timber.log.Timber {
     public static *** v(...);
     public static *** d(...);
     public static *** i(...);
-    public static *** w(...);
-    public static *** e(...);
-    public static *** wtf(...);
-    public static *** tag(...);
-    public static *** plant(...);
-    public static *** uproot(...);
-    public static *** uprootAll(...);
 }
 
-# Remove Timber.Tree subclasses (prevents any custom log trees)
+# Strip verbose/debug/info on Timber.Tree subclasses
 -assumenosideeffects class timber.log.Timber$Tree {
     protected *** v(...);
     protected *** d(...);
     protected *** i(...);
-    protected *** w(...);
-    protected *** e(...);
 }
 
 # Remove java.util.logging calls (if any library uses JUL)
@@ -171,12 +164,7 @@
 -keepattributes SourceFile,LineNumberTable
 
 # SECURITY: Strip debug metadata
--assumenosideeffects class kotlin.jvm.internal.Intrinsics {
-    public static void checkNotNull(...);
-    public static void checkNotNullParameter(...);
-    public static void checkExpressionValueIsNotNull(...);
-    public static void checkNotNullExpressionValue(...);
-    public static void checkParameterIsNotNull(...);
-    public static void checkReturnedValueIsNotNull(...);
-    public static void checkFieldIsNotNull(...);
-}
+# NOTE: Intrinsics.checkNotNull stripping was intentionally REMOVED.
+# Stripping it disables Kotlin null-safety in release builds, causing
+# NullPointerExceptions where the compiler guarantees non-null types.
+# This was the likely cause of release-only crashes.
