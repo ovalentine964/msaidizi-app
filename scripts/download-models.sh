@@ -22,7 +22,7 @@ declare -A MODEL_URLS=(
   ["ggml-tiny.en-q5_1.bin"]="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en-q5_1.bin"
   ["piper-swahili.onnx"]="https://huggingface.co/rhasspy/piper-voices/resolve/main/vi/vi_VN/vais1000/medium/vi_VN-vais1000-medium.onnx"
   ["piper-swahili.onnx.json"]="https://huggingface.co/rhasspy/piper-voices/resolve/main/vi/vi_VN/vais1000/medium/vi_VN-vais1000-medium.onnx.json"
-  ["silero_vad.onnx"]="https://huggingface.co/snakers4/silero-vad/resolve/main/src/silero_vad/silero_vad.onnx"
+  ["silero_vad.onnx"]="https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx"
   ["qwen3.5-0.8b-q4_k_m.gguf"]="https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf"
 )
 
