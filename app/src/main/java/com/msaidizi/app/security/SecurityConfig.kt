@@ -251,7 +251,7 @@ class SecurityConfig @Inject constructor(
             currentSim.carrierName != null &&
             !carrierEquals(baselineCarrier, currentSim.carrierName)
 
-        val countryChanged = baselineCountry.isNotBlank() &&
+        val countryChanged = !baselineCountry.isNullOrBlank() &&
             currentSim.networkCountry != null &&
             !baselineCountry.equals(currentSim.networkCountry, ignoreCase = true)
 

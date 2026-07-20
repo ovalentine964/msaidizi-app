@@ -288,8 +288,7 @@ class ModelRouter(
     // Pre-built reasoning templates for common informal economy tasks
     // ═══════════════════════════════════════════════════════════════
 
-    // Delegate to CreditScoringLogic.FinancialTemplate
-    typealias FinancialTemplate = CreditScoringLogic.FinancialTemplate
+    // Delegate to CreditScoringLogic.FinancialTemplate — see top-level typealias below
 
     /**
      * Get the reasoning template prompt for a financial analysis task.
@@ -456,9 +455,7 @@ class ModelRouter(
 
     // Per-user cost tracking is now delegated to CostBudgetManager
 
-    // RequestLogEntry and CostBudgetStatus are delegated to CostBudgetManager
-    typealias RequestLogEntry = CostBudgetManager.RequestLogEntry
-    typealias CostBudgetStatus = CostBudgetManager.CostBudgetStatus
+    // RequestLogEntry and CostBudgetStatus — see top-level typealiases below
 
     // ═══════════════════════════════════════════════════════════════
     // REASONING CHAIN STORAGE
@@ -1160,3 +1157,8 @@ class ModelRouter(
 
     class BudgetExceededException(message: String) : Exception(message)
 }
+
+// ── Top-level type aliases (moved from inside ModelRouter to fix Kotlin compilation) ──
+typealias FinancialTemplate = CreditScoringLogic.FinancialTemplate
+typealias RequestLogEntry = CostBudgetManager.RequestLogEntry
+typealias CostBudgetStatus = CostBudgetManager.CostBudgetStatus

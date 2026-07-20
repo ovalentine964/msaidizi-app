@@ -34,7 +34,6 @@ import com.msaidizi.app.core.database.GoalDao
 import com.msaidizi.app.core.database.LoanDao
 import com.msaidizi.app.core.database.BriefingDeliveryDao
 import com.msaidizi.app.core.database.TransactionDao
-import com.msaidizi.app.core.database.PatternDao
 import com.msaidizi.app.social.*
 import dagger.Module
 import dagger.Provides

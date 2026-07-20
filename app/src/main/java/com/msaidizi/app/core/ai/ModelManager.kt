@@ -307,7 +307,7 @@ class ModelManager @Inject constructor(
      * Get the best model for this device based on performance history.
      * Falls back to device tier if no performance data available.
      */
-    fun getBestModelForDevice(): String {
+    fun getBestModelForDevice(): String? {
         // Check if we have performance data
         val bestByPerformance = modelPerformance.values
             .filter { it.totalInferences >= 10 && it.errorRate() < 0.1 }

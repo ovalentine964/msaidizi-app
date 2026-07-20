@@ -43,7 +43,8 @@ class DeviceBinder @Inject constructor(
     ) {
         fun toHash(): String {
             val combined = "$deviceId|$model|$manufacturer|$osVersion|$appVersion|$hardwareId"
-            return cryptoService.sha256(combined)
+            val digest = java.security.MessageDigest.getInstance("SHA-256")
+            return digest.digest(combined.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
         }
     }
 
