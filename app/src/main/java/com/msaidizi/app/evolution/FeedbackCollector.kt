@@ -129,7 +129,7 @@ class FeedbackCollector @Inject constructor(
             } else {
                 SyncResult(0, unsynced.size, "Server error: ${response.status}")
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             SyncResult(0, unsynced.size, e.message)
         }
     }

@@ -148,7 +148,7 @@ class SpeechToSpeechEngine @Inject constructor(
             _engineState.value = StsEngineState.LISTENING
             Timber.tag(TAG).i("STS session started: %s (provider: %s)", session.sessionId, provider.id)
             return session.sessionId
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Failed to initialize STS session")
             return null
         }
@@ -162,7 +162,7 @@ class SpeechToSpeechEngine @Inject constructor(
             try {
                 session.provider.endSession(session)
                 Timber.tag(TAG).i("STS session ended: %s (turns: %d)", session.sessionId, session.turnCount)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.tag(TAG).e(e, "Error ending STS session")
             }
         }

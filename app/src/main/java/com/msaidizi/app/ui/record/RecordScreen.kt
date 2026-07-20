@@ -319,7 +319,7 @@ class RecordFragment : Fragment() {
                             }
                             viewModel.processTextInput(input)
                         }
-                    } catch (e: Exception) {
+                    } catch (e: Throwable) {
                         Timber.e(e, "Error creating transactions from receipt")
                     }
                 }

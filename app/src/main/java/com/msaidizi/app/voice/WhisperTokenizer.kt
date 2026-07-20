@@ -62,7 +62,7 @@ class WhisperTokenizer @Inject constructor(
                 Timber.w("WhisperTokenizer: Vocab file parsed but empty, using fallback")
                 loadFallbackVocab()
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(e, "WhisperTokenizer: Failed to load whisper_vocab.json, using fallback")
             loadFallbackVocab()
         }

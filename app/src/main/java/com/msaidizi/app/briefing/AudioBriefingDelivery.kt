@@ -188,7 +188,7 @@ class AudioBriefingDelivery @Inject constructor(
 
             Timber.tag(TAG).d("Audio briefing shared via WhatsApp: %s", audioFile.name)
             true
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Failed to deliver via WhatsApp")
             false
         }
@@ -265,7 +265,7 @@ class AudioBriefingDelivery @Inject constructor(
 
             Timber.tag(TAG).d("Audio briefing shared via chooser: %s", audioFile.name)
             true
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Failed to share audio briefing")
             false
         }
@@ -298,7 +298,7 @@ class AudioBriefingDelivery @Inject constructor(
         return try {
             context.packageManager.getPackageInfo(packageName, 0)
             true
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             false
         }
     }

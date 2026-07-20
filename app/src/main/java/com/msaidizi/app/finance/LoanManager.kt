@@ -456,7 +456,7 @@ class LoanManager(
                     dueDate = r.dueDate,
                     paidDate = r.paidDate,
                     paidAmount = r.paidAmount,
-                    status = try { RepaymentStatus.valueOf(r.status) } catch (_: Exception) { RepaymentStatus.PENDING },
+                    status = try { RepaymentStatus.valueOf(r.status) } catch (_: Throwable) { RepaymentStatus.PENDING },
                     penalty = r.penalty
                 )
             }
@@ -469,7 +469,7 @@ class LoanManager(
                 startDate = entity.startDate,
                 endDate = entity.endDate,
                 lender = entity.lender,
-                status = try { LoanStatus.valueOf(entity.status) } catch (_: Exception) { LoanStatus.ACTIVE },
+                status = try { LoanStatus.valueOf(entity.status) } catch (_: Throwable) { LoanStatus.ACTIVE },
                 totalRepaid = entity.totalRepaid
             ).also { loans[it.id] = it }
         }
@@ -489,7 +489,7 @@ class LoanManager(
                 dueDate = r.dueDate,
                 paidDate = r.paidDate,
                 paidAmount = r.paidAmount,
-                status = try { RepaymentStatus.valueOf(r.status) } catch (_: Exception) { RepaymentStatus.PENDING },
+                status = try { RepaymentStatus.valueOf(r.status) } catch (_: Throwable) { RepaymentStatus.PENDING },
                 penalty = r.penalty
             )
         }
@@ -502,7 +502,7 @@ class LoanManager(
             startDate = entity.startDate,
             endDate = entity.endDate,
             lender = entity.lender,
-            status = try { LoanStatus.valueOf(entity.status) } catch (_: Exception) { LoanStatus.ACTIVE },
+            status = try { LoanStatus.valueOf(entity.status) } catch (_: Throwable) { LoanStatus.ACTIVE },
             totalRepaid = entity.totalRepaid
         ).also { loans[it.id] = it }
     }
@@ -896,7 +896,7 @@ class LoanManager(
                     dueDate = r.dueDate,
                     paidDate = r.paidDate,
                     paidAmount = r.paidAmount,
-                    status = try { RepaymentStatus.valueOf(r.status) } catch (_: Exception) { RepaymentStatus.PENDING },
+                    status = try { RepaymentStatus.valueOf(r.status) } catch (_: Throwable) { RepaymentStatus.PENDING },
                     penalty = r.penalty
                 )
             }
@@ -909,7 +909,7 @@ class LoanManager(
                 startDate = entity.startDate,
                 endDate = entity.endDate,
                 lender = entity.lender,
-                status = try { LoanStatus.valueOf(entity.status) } catch (_: Exception) { LoanStatus.ACTIVE },
+                status = try { LoanStatus.valueOf(entity.status) } catch (_: Throwable) { LoanStatus.ACTIVE },
                 totalRepaid = entity.totalRepaid
             ).also { loans[it.id] = it }
         } ?: emptyList()

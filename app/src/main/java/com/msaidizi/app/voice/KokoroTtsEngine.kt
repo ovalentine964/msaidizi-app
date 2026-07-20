@@ -184,7 +184,7 @@ class KokoroTtsEngine @Inject constructor(
             ortEnvironment = null
             System.gc()
             false
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to load Kokoro TTS model")
             isModelLoaded = false
             false
@@ -326,7 +326,7 @@ class KokoroTtsEngine @Inject constructor(
             Timber.e("OOM during Kokoro TTS synthesis")
             unloadModel()
             System.gc()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Kokoro TTS synthesis error")
         } finally {
             isCurrentlySpeaking = false
@@ -393,7 +393,7 @@ class KokoroTtsEngine @Inject constructor(
             results.close()
 
             pcmData
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Kokoro synthesizeToPcm error")
             ShortArray(0)
         }
@@ -422,7 +422,7 @@ class KokoroTtsEngine @Inject constructor(
                     track.flush()
                 }
                 track.release()
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.w(e, "Error stopping AudioTrack")
             }
         }
@@ -490,7 +490,7 @@ class KokoroTtsEngine @Inject constructor(
             if (output.isNotEmpty()) {
                 output.split(Regex("\\s+")).filter { it.isNotEmpty() }
             } else null
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(e, "espeak-ng phonemization failed")
             null
         }
@@ -533,7 +533,7 @@ class KokoroTtsEngine @Inject constructor(
             } else {
                 loadDefaultPhonemeMap()
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to load Kokoro phoneme map")
             loadDefaultPhonemeMap()
         }
@@ -595,7 +595,7 @@ class KokoroTtsEngine @Inject constructor(
 
             isVoiceStylesLoaded = true
             Timber.d("Kokoro: Loaded %d voice styles", numVoices)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to load Kokoro voice styles")
             isVoiceStylesLoaded = false
         }
@@ -641,13 +641,13 @@ class KokoroTtsEngine @Inject constructor(
             ) {
                 kotlinx.coroutines.delay(20)
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "AudioTrack playback error")
         } finally {
             try {
                 audioTrack.stop()
                 audioTrack.release()
-            } catch (_: Exception) {}
+            } catch (_: Throwable) {}
             if (currentAudioTrack == audioTrack) currentAudioTrack = null
         }
     }

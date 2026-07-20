@@ -34,7 +34,8 @@ import javax.inject.Inject
 class MainActivity : AppCompatActivity() {
 
     @Inject
-    lateinit var autoUpdater: AutoUpdater
+    lateinit var autoUpdaterProvider: dagger.Lazy<AutoUpdater>
+    private val autoUpdater by lazy { autoUpdaterProvider.get() }
 
     companion object {
         private const val REQUEST_AUDIO_PERMISSION = 1001
@@ -140,7 +141,7 @@ class MainActivity : AppCompatActivity() {
         return bytes.joinToString("") { "%02x".format(it) }
     }
 
-    private val executor = java.util.concurrent.Executors.newSingleThreadExecutor()
+    private val executor by lazy { androidx.core.content.ContextCompat.getMainExecutor(this) }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)

@@ -116,7 +116,7 @@ class MpesaSmsReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 processTransaction(parsed, context)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.tag(TAG).e(e, "Error processing M-Pesa SMS transaction")
             } finally {
                 pendingResult.finish()
@@ -148,7 +148,7 @@ class MpesaSmsReceiver : BroadcastReceiver() {
         try {
             businessAgent.recordTransaction(transaction)
             Timber.tag(TAG).d("Transaction saved: %s", parsed.receipt)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Failed to save M-Pesa transaction to database")
             return
         }
@@ -159,14 +159,14 @@ class MpesaSmsReceiver : BroadcastReceiver() {
                 gamificationEngine.onSaleRecorded()
             }
             gamificationEngine.onDailyActivity()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).w(e, "Gamification update failed for M-Pesa transaction")
         }
 
         // Notify MorningBriefingLoop of new transaction (for feedback loop)
         try {
             morningBriefingLoop.onTransactionAfterBriefing(transaction)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).w(e, "Briefing loop notification failed")
         }
 

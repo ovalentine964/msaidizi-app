@@ -205,7 +205,7 @@ class ReceiptScanActivity : AppCompatActivity() {
                     imageCapture
                 )
                 Timber.d("ReceiptScanActivity: Camera started")
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "ReceiptScanActivity: Camera bind failed")
                 Toast.makeText(this, "Kamera imeshindwa kuanza", Toast.LENGTH_SHORT).show()
                 setResult(RESULT_CANCELED)
@@ -321,7 +321,7 @@ class ReceiptScanActivity : AppCompatActivity() {
             } else {
                 bitmap
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "ReceiptScanActivity: Bitmap conversion failed")
             null
         }

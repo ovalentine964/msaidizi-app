@@ -176,7 +176,7 @@ object DeviceBinder {
         } catch (e: SecurityException) {
             Log.d(TAG, "IMEI permission denied: ${e.message}")
             null
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.w(TAG, "Error getting IMEI: ${e.message}")
             null
         }
@@ -190,7 +190,7 @@ object DeviceBinder {
                 Settings.Secure.ANDROID_ID
             )
             if (androidId.isNullOrBlank()) null else androidId
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.w(TAG, "Error getting ANDROID_ID: ${e.message}")
             null
         }

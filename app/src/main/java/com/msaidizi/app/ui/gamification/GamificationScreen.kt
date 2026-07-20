@@ -272,7 +272,7 @@ class GamificationScreen : Fragment() {
                 lottieView.setAnimation(R.raw.anim_celebration)
             }
             lottieView.playAnimation()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             // Lottie animation files not yet bundled — hide gracefully
             Timber.w(e, "Lottie animation not found, hiding animation view")
             lottieView.visibility = View.GONE

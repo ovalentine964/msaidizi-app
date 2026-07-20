@@ -121,7 +121,7 @@ class MultimodalPipeline(
                 height = resized.height,
                 metadata = metadata
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Error loading image from URI: %s", uri)
             null
         }
@@ -283,7 +283,7 @@ class MultimodalPipeline(
                 ).toString()
                 inputStream.close()
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.d("Could not read EXIF data: %s", e.message)
         }
 

@@ -479,7 +479,7 @@ class AdaptiveLearningEngine(
             } else {
                 "Business health: ${health.totalScore.toInt()}/100. "
             })
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.d(e, "Could not calculate health score for context")
         }
 
@@ -612,7 +612,7 @@ class AdaptiveLearningEngine(
             userCorrectionDao.deleteOlderThan(cutoff)
 
             Timber.d("Background learning complete")
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Background learning failed")
         }
     }

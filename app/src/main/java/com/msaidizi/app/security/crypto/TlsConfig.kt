@@ -147,7 +147,7 @@ class TlsConfig @Inject constructor(
                     PqcConfig.shouldUseHybridKeyExchange(),
                     PqcConfig.migrationPhase.name)
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e("TLS 1.3 initialization FAILED — this is a critical security error: %s", e.message)
             auditLogger?.logTlsConnection(
                 host = "*",

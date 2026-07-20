@@ -125,7 +125,7 @@ class CommunityTips(
                         language = language
                     )
                 )
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.tag(TAG).w(e, "Failed to sync tip to server (still saved locally)")
             }
         }
@@ -216,7 +216,7 @@ class CommunityTips(
 
             Timber.tag(TAG).d("Tip %d upvoted", tipId)
             return UpvoteResult(success = true)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).w(e, "Failed to upvote tip %d", tipId)
             return UpvoteResult(success = false, message = "Failed to upvote")
         }
@@ -424,7 +424,7 @@ class CommunityTips(
                 socialDao.insertTips(response.tips.map { it.copy(isOwnTip = false) })
                 Timber.tag(TAG).d("Synced %d tips from server", response.tips.size)
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).w(e, "Failed to sync tips from server")
         }
     }

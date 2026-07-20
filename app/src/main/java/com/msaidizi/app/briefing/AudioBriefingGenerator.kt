@@ -407,7 +407,7 @@ class AudioBriefingGenerator @Inject constructor(
             Timber.tag(TAG).d("Saved audio briefing: %s (%.1fKB)",
                 file.name, file.length() / 1024.0)
             file
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Failed to save WAV file")
             null
         }
@@ -433,7 +433,7 @@ class AudioBriefingGenerator @Inject constructor(
                     }
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).w(e, "Failed to clean up old briefings")
         }
     }

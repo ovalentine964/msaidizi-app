@@ -196,7 +196,7 @@ class SpeechRecognizer @Inject constructor(
             ortEnvironment = null
             System.gc()
             false
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to load ASR model: %s", modelId)
             isModelLoaded = false
             false
@@ -314,7 +314,7 @@ class SpeechRecognizer @Inject constructor(
             unloadModel()
             System.gc()
             null
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "ASR transcription failed")
             null
         }
@@ -367,7 +367,7 @@ class SpeechRecognizer @Inject constructor(
             unloadModel()
             System.gc()
             null
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(e, "Language-hinted ASR failed, falling back to standard")
             transcribe(audioData)
         }
@@ -383,7 +383,7 @@ class SpeechRecognizer @Inject constructor(
         try {
             val audioData = readWavFile(audioFile)
             transcribe(audioData)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to read audio file: %s", audioFile.name)
             null
         }
@@ -472,7 +472,7 @@ class SpeechRecognizer @Inject constructor(
                                 val confidence = (0.4f + 0.5f * (bufferedSamples.toFloat() / STREAMING_WINDOW_SAMPLES)).coerceAtMost(0.85f)
                                 onPartial(text, confidence)
                             }
-                        } catch (e: Exception) {
+                        } catch (e: Throwable) {
                             // Partial failures are non-fatal
                             Timber.v("Streaming ASR partial skipped: %s", e.message)
                         }

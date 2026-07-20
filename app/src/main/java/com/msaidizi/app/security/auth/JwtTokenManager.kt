@@ -161,7 +161,7 @@ class JwtTokenManager @Inject constructor(
                 }
                 return null
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Token refresh failed")
             _state.value = TokenState.Error("Connection error. Please try again.")
             null
@@ -184,7 +184,7 @@ class JwtTokenManager @Inject constructor(
         return try {
             val claims = parseTokenClaims(token)
             claims?.optLong("exp")?.let { it * 1000 } // Convert seconds to ms
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             null
         }
     }
@@ -199,7 +199,7 @@ class JwtTokenManager @Inject constructor(
             if (parts.size != 3) return null
             val payload = String(Base64.decode(parts[1], Base64.URL_SAFE))
             JSONObject(payload)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w("Failed to parse JWT claims: %s", e.message)
             null
         }

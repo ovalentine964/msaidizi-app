@@ -82,7 +82,7 @@ class NetworkMonitor(
         if (!isRegistered) return
         try {
             networkCallback?.let { connectivityManager.unregisterNetworkCallback(it) }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(e, "Error unregistering network callback")
         }
         networkCallback = null

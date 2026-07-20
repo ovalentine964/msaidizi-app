@@ -125,7 +125,7 @@ class SkillBridge @Inject constructor(
 
             Timber.d(TAG, "Loaded ${skills.size} skills from backend")
             skills
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(TAG, "Failed to load skills from backend, using cache: ${e.message}")
             skillCache.values.map { it.info }
         }
@@ -144,7 +144,7 @@ class SkillBridge @Inject constructor(
             val response: SkillInfo = httpClient.get("$SKILLS_PATH/$skillName").body()
             skillCache[skillName] = CachedSkill(response)
             response
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(TAG, "Failed to get skill $skillName: ${e.message}")
             cached?.info
         }
@@ -188,7 +188,7 @@ class SkillBridge @Inject constructor(
             )
 
             response
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(TAG, "Failed to execute $skillName.$action: ${e.message}")
 
             // Return cached result if available (offline mode)

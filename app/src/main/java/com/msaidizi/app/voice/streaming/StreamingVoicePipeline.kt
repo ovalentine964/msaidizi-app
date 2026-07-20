@@ -258,7 +258,7 @@ class StreamingVoicePipeline @Inject constructor(
                             val features = featureExtractor.extractEmotionFeatures(chunk)
                             val emotionResult = emotionDetector.detect(features)
                             _emotion.emit(emotionResult.primaryEmotion)
-                        } catch (e: Exception) {
+                        } catch (e: Throwable) {
                             // Non-fatal
                         }
                     }
@@ -384,7 +384,7 @@ class StreamingVoicePipeline @Inject constructor(
             )
 
             _pipelineState.value = StreamingPipelineState.IDLE
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Error processing streaming result")
             _pipelineState.value = StreamingPipelineState.ERROR
         }
@@ -481,7 +481,7 @@ class StreamingVoicePipeline @Inject constructor(
             memoryManager.releaseHeavyModelSlot(MemoryManager.LoadedHeavyModel.KOKORO)
             System.gc()
             _pipelineState.value = StreamingPipelineState.ERROR
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Error in streaming pipeline")
             _pipelineState.value = StreamingPipelineState.ERROR
         }

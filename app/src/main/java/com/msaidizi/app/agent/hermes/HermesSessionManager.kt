@@ -308,7 +308,7 @@ class HermesSessionManager(
                     success = success,
                     error = error
                 ))
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.w(e, "Failed to persist trace step")
             }
         }
@@ -521,7 +521,7 @@ class HermesSessionManager(
             if (deleted > 0) {
                 Timber.i("Cleaned up %d expired Hermes sessions", deleted)
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(e, "Failed to cleanup expired sessions")
         }
     }
@@ -677,7 +677,7 @@ class HermesSessionManager(
                 activeSkillIdsJson = json.encodeToString(session.activeSkillIds),
                 lastSkillQuery = session.lastSkillQuery
             ))
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(e, "Failed to persist session %s", session.sessionId)
         }
     }
@@ -695,11 +695,11 @@ class HermesSessionManager(
 
             val contextWindow: MutableList<ContextEntry> = try {
                 json.decodeFromString(entity.contextWindowJson)
-            } catch (_: Exception) { mutableListOf() }
+            } catch (_: Throwable) { mutableListOf() }
 
             val activeSkillIds: List<String> = try {
                 json.decodeFromString(entity.activeSkillIdsJson)
-            } catch (_: Exception) { emptyList() }
+            } catch (_: Throwable) { emptyList() }
 
             // Restore trace steps if there was an active trace
             val traceSteps = if (entity.activeTraceId != null) {
@@ -716,7 +716,7 @@ class HermesSessionManager(
                             durationMs = t.durationMs
                         )
                     }.toMutableList()
-                } catch (_: Exception) { mutableListOf() }
+                } catch (_: Throwable) { mutableListOf() }
             } else {
                 mutableListOf()
             }
@@ -733,7 +733,7 @@ class HermesSessionManager(
                 contextWindow = contextWindow,
                 traceSteps = traceSteps
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(e, "Failed to restore session for worker %s", workerId)
             null
         }

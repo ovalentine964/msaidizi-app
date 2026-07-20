@@ -174,7 +174,7 @@ class LanguageLearningPipeline @Inject constructor(
             _learningProgress.value = computeProgress(language)
             _pipelineState.value = PipelineState.Idle
 
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Pipeline error")
             _pipelineState.value = PipelineState.Error(e.message ?: "Unknown error")
         }
@@ -393,7 +393,7 @@ class LanguageLearningPipeline @Inject constructor(
 
             _pipelineState.value = PipelineState.Idle
 
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "LoRA training failed")
             _pipelineState.value = PipelineState.Error(e.message ?: "Training failed")
         }
@@ -515,7 +515,7 @@ class LanguageLearningPipeline @Inject constructor(
             lastFederatedSyncTime = System.currentTimeMillis()
             _pipelineState.value = PipelineState.Idle
 
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Federated sync failed")
             _pipelineState.value = PipelineState.Error(e.message ?: "Sync failed")
         }

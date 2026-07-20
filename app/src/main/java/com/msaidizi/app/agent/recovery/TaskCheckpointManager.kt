@@ -274,7 +274,7 @@ class TaskCheckpointManager(
     fun <T> deserializeInput(checkpoint: AgentTaskCheckpoint, clazz: Class<T>): T? {
         return try {
             gson.fromJson(checkpoint.inputJson, clazz)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(e, "Failed to deserialize input for task %s", checkpoint.taskId)
             null
         }
@@ -287,7 +287,7 @@ class TaskCheckpointManager(
         return try {
             val type = object : TypeToken<Map<String, Any>>() {}.type
             gson.fromJson(checkpoint.observationsJson, type) ?: emptyMap()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(e, "Failed to deserialize observations for task %s", checkpoint.taskId)
             emptyMap()
         }
@@ -300,7 +300,7 @@ class TaskCheckpointManager(
         return try {
             val type = object : TypeToken<Map<String, Double>>() {}.type
             gson.fromJson(checkpoint.orientationJson, type) ?: emptyMap()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(e, "Failed to deserialize orientation for task %s", checkpoint.taskId)
             emptyMap()
         }

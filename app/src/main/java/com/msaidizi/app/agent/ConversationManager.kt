@@ -100,7 +100,7 @@ class ConversationManager(
                     correctedText = text,
                     language = language
                 )
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.w(e, "Failed to feed correction to learning pipeline")
             }
 
@@ -222,7 +222,7 @@ class ConversationManager(
                     qualityThreshold = 0.5
                 )
                 result.value
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.w(e, "Harness-wrapped LLM escalation failed, falling back to direct call")
                 null
             }
@@ -236,7 +236,7 @@ class ConversationManager(
                 Timber.e(e, "OOM during LLM escalation")
                 engine.unloadModel()
                 null
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "LLM escalation failed")
                 null
             }
@@ -433,7 +433,7 @@ class ConversationManager(
                 if (critique.suggestions.isNotEmpty()) {
                     evolution.recordFeatureUsage("REFLEXION_FEEDBACK_${intentName}")
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.w(e, "Failed to feed critique to evolution manager")
             }
         }

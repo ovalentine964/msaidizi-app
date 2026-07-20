@@ -133,13 +133,21 @@ class Orchestrator(
     private val _responses = MutableSharedFlow<AgentResponse>(extraBufferCapacity = 8)
     val responses: SharedFlow<AgentResponse> = _responses
 
-    init {
-        // Wire conversation learning pipeline to conversation manager
-        // This enables vocabulary learning from corrections and confirmations
-        conversationManager.conversationLearningPipeline = conversationLearningPipeline.get()
+    /**
+     * Explicit initialization - called AFTER all dependencies are ready.
+     * Must be called once from MsaidiziApp.initializeApp() after database is ready.
+     */
+    fun initialize() {
+        try {
+            // Wire conversation learning pipeline to conversation manager
+            // This enables vocabulary learning from corrections and confirmations
+            conversationManager.conversationLearningPipeline = conversationLearningPipeline.get()
 
-        // Sync ProgressiveAutonomy level into AGIReadyLayer
-        syncAutonomyLevel()
+            // Sync ProgressiveAutonomy level into AGIReadyLayer
+            syncAutonomyLevel()
+        } catch (e: Throwable) {
+            Timber.e(e, "Orchestrator.initialize() failed - running in degraded mode")
+        }
     }
 
     /**
@@ -493,7 +501,7 @@ class Orchestrator(
                 else "⚠️ Memory issue. Close other apps and try again.",
                 type = ResponseType.ERROR
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Error during agent routing for intent: %s", intentResult.intent)
             AgentResponse(
                 text = if (language == "sw") "⚠️ Kuna tatizo. Jaribu tena."
@@ -517,7 +525,7 @@ class Orchestrator(
             try {
                 ge.getStreakRiskReminder()?.let { _responses.emit(AgentResponse(text = it, type = ResponseType.INFORMATION, shouldSpeak = true)) }
                 ge.getStreakRecoveryMessage()?.let { _responses.emit(AgentResponse(text = it, type = ResponseType.INFORMATION, shouldSpeak = true)) }
-            } catch (_: Exception) {}
+            } catch (_: Throwable) {}
         }
         Timber.d("Stickiness features initialized")
     }
@@ -741,7 +749,7 @@ class Orchestrator(
             kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                 try {
                     kg.generateInsights()
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     Timber.w(e, "Cross-domain insight generation failed")
                 }
             }

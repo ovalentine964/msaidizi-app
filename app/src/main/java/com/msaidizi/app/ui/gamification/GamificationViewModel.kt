@@ -157,7 +157,7 @@ class GamificationViewModel @Inject constructor(
 
                 _isLoading.value = false
                 Timber.d(TAG, "Gamification data loaded: %d/%d badges, level %d", earned, badgeStatuses.size, level.levelIndex)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Failed to load gamification data")
                 _isLoading.value = false
             }
@@ -260,7 +260,7 @@ class GamificationViewModel @Inject constructor(
                 messageSw = buildSocialProofMessage(percentile, dailyAvg, peerAvgSales, streak),
                 messageEn = buildSocialProofMessageEn(percentile, dailyAvg, peerAvgSales, streak)
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to load social proof")
         }
     }

@@ -460,7 +460,7 @@ class ModelDownloader @Inject constructor(
                 updateDownloadState(modelId, DownloadState.CANCELLED)
                 progressTracker.stopTracking(modelId)
                 Timber.i(TAG, "Model %s download cancelled", modelId)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 updateDownloadState(modelId, DownloadState.FAILED)
                 progressTracker.stopTracking(modelId)
                 showErrorNotification(modelId, def, e.message ?: "Unknown error")
@@ -575,7 +575,7 @@ class ModelDownloader @Inject constructor(
             NotificationManagerCompat.from(context).cancel(
                 NOTIFICATION_ID_BASE + modelId.hashCode() and 0xFFFF
             )
-        } catch (_: Exception) {}
+        } catch (_: Throwable) {}
     }
 
     private fun friendlyModelName(modelId: String): String {
@@ -692,7 +692,7 @@ class ModelDownloadWorkerImpl(
                 Timber.w("Model %s download failed — retrying", modelId)
                 Result.retry()
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Model %s download error", modelId)
             if (runAttemptCount < 3) Result.retry() else Result.failure()
         }

@@ -124,7 +124,7 @@ class AdaptiveVocabulary(
                 if (sessionWords.size % 50 == 0) {
                     pruneOldWords()
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.tag(TAG).e(e, "Failed to track word: %s", clean)
             }
         }
@@ -366,7 +366,7 @@ class AdaptiveVocabulary(
                     userVocabDao.getForLanguage("luo")
             userVocabCache = entries.associate { it.spokenForm to it.canonicalForm }
             Timber.tag(TAG).d("Cache refreshed: %d entries", userVocabCache.size)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Failed to refresh cache")
         }
     }
@@ -379,7 +379,7 @@ class AdaptiveVocabulary(
             val cutoff = System.currentTimeMillis() / 1000 - PRUNE_AGE_SECONDS
             learningDao.pruneOldWords(cutoff)
             Timber.tag(TAG).d("Pruned old words before %d", cutoff)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Failed to prune words")
         }
     }

@@ -168,3 +168,15 @@
 # Stripping it disables Kotlin null-safety in release builds, causing
 # NullPointerExceptions where the compiler guarantees non-null types.
 # This was the likely cause of release-only crashes.
+
+# Keep WorkManager
+-keep class * extends androidx.work.Worker { *; }
+-keep class * extends androidx.work.ListenableWorker { *; }
+-keep class androidx.work.impl.** { *; }
+
+# Keep Hilt Workers
+-keep class * extends androidx.hilt.work.HiltWorkerFactory { *; }
+
+# Keep AndroidX Startup
+-keep class androidx.startup.** { *; }
+-keep class * extends androidx.startup.Initializer { *; }

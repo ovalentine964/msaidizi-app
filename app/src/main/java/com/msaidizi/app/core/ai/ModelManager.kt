@@ -278,7 +278,7 @@ class ModelManager @Inject constructor(
                 _modelState.value = ModelManagerState.ERROR
                 false
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Hot-swap failed")
             _modelState.value = ModelManagerState.ERROR
             false
@@ -393,7 +393,7 @@ class ModelManager @Inject constructor(
                 llmEngine.unloadModel()
                 System.gc()
                 continue
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Failed to load model %s", modelId)
                 continue
             }
@@ -802,7 +802,7 @@ class ModelManager @Inject constructor(
                             unloadLlm()
                         }
                     }
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     Timber.e(e, "Memory monitor error")
                 }
                 delay(30_000) // Check every 30 seconds

@@ -136,7 +136,7 @@ class FinancialCoachOrchestrator(
             ))
 
             response
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Error processing coach request: %s", coachIntent)
 
             eventBus.publish(AgentEvent.AgentTaskFailed(

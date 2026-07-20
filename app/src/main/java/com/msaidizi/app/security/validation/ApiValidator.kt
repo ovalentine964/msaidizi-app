@@ -36,7 +36,7 @@ object ApiValidator {
                 return ValidationResult.Invalid("Response is not a valid JSON object or array")
             }
             ValidationResult.Valid
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             ValidationResult.Invalid("Malformed JSON: ${e.message}")
         }
     }

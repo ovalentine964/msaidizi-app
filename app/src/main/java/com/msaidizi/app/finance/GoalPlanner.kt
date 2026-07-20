@@ -291,7 +291,7 @@ class GoalPlanner(
             targetAmount = targetAmount,
             currentAmount = currentAmount,
             deadline = deadline,
-            category = try { GoalCategory.valueOf(category) } catch (_: Exception) { GoalCategory.OTHER },
+            category = try { GoalCategory.valueOf(category) } catch (_: Throwable) { GoalCategory.OTHER },
             isActive = status == "ACTIVE"
         )
     }

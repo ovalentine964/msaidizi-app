@@ -95,7 +95,7 @@ class ElevenLabsProvider @Inject constructor() : StsProvider {
     override fun isAvailable(): Boolean {
         return try {
             getApiKey().isNotBlank()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             false
         }
     }
@@ -317,7 +317,7 @@ class ElevenLabsProvider @Inject constructor() : StsProvider {
                     Timber.tag(TAG).d("Unhandled message type: %s", type)
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Error parsing message: %s", text.take(100))
         }
     }
@@ -339,7 +339,7 @@ class ElevenLabsProvider @Inject constructor() : StsProvider {
                     _audioOutput.emit(shortArray)
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Error processing binary audio message")
         }
     }
@@ -379,7 +379,7 @@ class ElevenLabsProvider @Inject constructor() : StsProvider {
             val field = Class.forName("com.msaidizi.app.BuildConfig")
                 .getDeclaredField("ELEVENLABS_API_KEY")
             field.get(null) as? String ?: ""
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             ""
         }
     }

@@ -117,7 +117,7 @@ class AudioRecorder @Inject constructor(
         } catch (e: SecurityException) {
             Timber.e(e, "SecurityException starting recording")
             _recordingState.emit(RecordingState.ERROR_NO_PERMISSION)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Error starting recording")
             _recordingState.emit(RecordingState.ERROR_INIT)
         }
@@ -139,7 +139,7 @@ class AudioRecorder @Inject constructor(
                     recorder.stop()
                 }
                 recorder.release()
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Error stopping recording")
             }
         }

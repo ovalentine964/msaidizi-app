@@ -143,7 +143,7 @@ class BiometricAuthManager @Inject constructor(
 
         try {
             biometricPrompt.authenticate(promptInfoBuilder.build())
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to launch biometric prompt")
             _state.value = BiometricState.Error(-1, "Failed to start biometric authentication")
             onError(-1, "Failed to start biometric authentication")

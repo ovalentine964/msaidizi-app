@@ -56,7 +56,7 @@ class DashboardViewModel @Inject constructor(
                     abcAnalysis = abcAnalysis,
                     error = null
                 )
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = "Failed to load dashboard: ${e.message}"

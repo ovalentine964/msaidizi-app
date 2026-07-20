@@ -158,7 +158,7 @@ class VoicePipeline @Inject constructor(
                 Timber.w("VoicePipeline: No sherpa-onnx components loaded")
             }
             anyLoaded
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(e, "VoicePipeline: Sherpa-ONNX init failed")
             false
         }
@@ -363,7 +363,7 @@ class VoicePipeline @Inject constructor(
                     dialectRegion = result.dialectRegion,
                     isConfirmed = false  // Not yet confirmed at this point
                 )
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.w(e, "VoicePipeline: Failed to feed learning pipeline")
             }
 
@@ -390,7 +390,7 @@ class VoicePipeline @Inject constructor(
             ))
             _voiceInputAvailable.value = false
             _pipelineState.value = PipelineState.ERROR
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Error processing speech")
             _transcription.emit(TranscriptionResult(
                 text = "",
@@ -483,7 +483,7 @@ class VoicePipeline @Inject constructor(
                 success = result.transcript.isNotBlank(),
                 error = if (result.transcript.isBlank()) "Empty transcription" else null
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "VoicePipeline: STT error in harness mode")
             return TranscriptionResult(
                 text = "",
@@ -554,10 +554,10 @@ class VoicePipeline @Inject constructor(
             // Try Piper as last resort
             try {
                 piperTts.speak(text, language)
-            } catch (_: Exception) {
+            } catch (_: Throwable) {
                 Timber.e("VoicePipeline: Even Piper TTS failed — text-only mode")
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "TTS error")
         } finally {
             // Wait for audio playback to complete before transitioning to IDLE.
@@ -774,7 +774,7 @@ class VoicePipeline @Inject constructor(
             Timber.e("OOM loading %s model", name)
             System.gc()
             false
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to load %s model", name)
             false
         }

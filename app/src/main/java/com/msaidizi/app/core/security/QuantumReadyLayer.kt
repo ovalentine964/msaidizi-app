@@ -204,7 +204,7 @@ class QuantumReadyLayer(
                     ?: return CryptoResult(ByteArray(0), algorithmName, false, "CryptoService not available")
                 val encrypted = cs.encrypt(plaintext)
                 CryptoResult(data = encrypted, algorithm = algorithmName, success = true)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Log.e(TAG, "Classical encrypt failed", e)
                 CryptoResult(ByteArray(0), algorithmName, false, e.message)
             }
@@ -216,7 +216,7 @@ class QuantumReadyLayer(
                     ?: return CryptoResult(ByteArray(0), algorithmName, false, "CryptoService not available")
                 val decrypted = cs.decrypt(ciphertext)
                 CryptoResult(data = decrypted, algorithm = algorithmName, success = true)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Log.e(TAG, "Classical decrypt failed", e)
                 CryptoResult(ByteArray(0), algorithmName, false, e.message)
             }
@@ -257,7 +257,7 @@ class QuantumReadyLayer(
                     ?: return CryptoResult(ByteArray(0), algorithmName, false, "CryptoService not available")
                 val encrypted = cs.encrypt(plaintext)
                 CryptoResult(data = encrypted, algorithm = "ML-KEM-768+AES-256-GCM", success = true)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Log.e(TAG, "PQC encrypt failed", e)
                 CryptoResult(ByteArray(0), algorithmName, false, e.message)
             }
@@ -269,7 +269,7 @@ class QuantumReadyLayer(
                     ?: return CryptoResult(ByteArray(0), algorithmName, false, "CryptoService not available")
                 val decrypted = cs.decrypt(ciphertext)
                 CryptoResult(data = decrypted, algorithm = "ML-KEM-768+AES-256-GCM", success = true)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Log.e(TAG, "PQC decrypt failed", e)
                 CryptoResult(ByteArray(0), algorithmName, false, e.message)
             }
@@ -330,7 +330,7 @@ class QuantumReadyLayer(
             return try {
                 val result = classical.encrypt(plaintext, key)
                 result.copy(algorithm = algorithmName)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Log.e(TAG, "Hybrid encrypt failed", e)
                 CryptoResult(ByteArray(0), algorithmName, false, e.message)
             }
@@ -340,7 +340,7 @@ class QuantumReadyLayer(
             return try {
                 val result = classical.decrypt(ciphertext, key)
                 result.copy(algorithm = algorithmName)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Log.e(TAG, "Hybrid decrypt failed", e)
                 CryptoResult(ByteArray(0), algorithmName, false, e.message)
             }

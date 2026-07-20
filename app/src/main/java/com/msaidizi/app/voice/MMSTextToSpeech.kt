@@ -195,7 +195,7 @@ class MMSTextToSpeech @Inject constructor(
             val elapsed = System.currentTimeMillis() - startTime
             Timber.i("MMS TTS model '%s' loaded in %dms", modelId, elapsed)
             true
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to load MMS TTS model '%s'", modelId)
             isModelLoaded = false
             false
@@ -349,7 +349,7 @@ class MMSTextToSpeech @Inject constructor(
             Timber.e("OOM during MMS TTS synthesis")
             unloadModel()
             System.gc()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "MMS TTS synthesis error")
         } finally {
             isCurrentlySpeaking = false
@@ -429,7 +429,7 @@ class MMSTextToSpeech @Inject constructor(
             results.close()
 
             pcmData
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "MMS synthesizeToPcm error")
             ShortArray(0)
         }
@@ -458,7 +458,7 @@ class MMSTextToSpeech @Inject constructor(
                     track.flush()
                 }
                 track.release()
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.w(e, "Error stopping AudioTrack")
             }
         }
@@ -574,7 +574,7 @@ class MMSTextToSpeech @Inject constructor(
                 Timber.w("MMS TTS: vocab.txt is empty")
                 isVocabLoaded = false
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to load MMS vocabulary")
             isVocabLoaded = false
         }
@@ -635,13 +635,13 @@ class MMSTextToSpeech @Inject constructor(
             ) {
                 kotlinx.coroutines.delay(20)
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "AudioTrack playback error")
         } finally {
             try {
                 audioTrack.stop()
                 audioTrack.release()
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 // Ignore cleanup errors
             }
             if (currentAudioTrack == audioTrack) {

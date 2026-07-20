@@ -27,7 +27,7 @@ class ModelVersionTracker @Inject constructor(
             val versionFile = getVersionFile(modelId)
             versionFile.writeText(version)
             Timber.d("Version file written for %s: %s", modelId, version)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to write version for %s", modelId)
         }
     }
@@ -43,7 +43,7 @@ class ModelVersionTracker @Inject constructor(
             } else {
                 null
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to read version for %s", modelId)
             null
         }
@@ -64,7 +64,7 @@ class ModelVersionTracker @Inject constructor(
     fun removeVersion(modelId: String) {
         try {
             getVersionFile(modelId).delete()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(e, "Failed to remove version file for %s", modelId)
         }
     }

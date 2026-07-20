@@ -46,31 +46,42 @@ class MsaidiziApp : Application(), Configuration.Provider {
     lateinit var workerFactory: HiltWorkerFactory
 
     @Inject
-    lateinit var modelRegistry: ModelRegistry
+    lateinit var modelRegistryProvider: javax.inject.Provider<ModelRegistry>
 
     @Inject
-    lateinit var networkMonitor: NetworkMonitor
+    lateinit var networkMonitorProvider: javax.inject.Provider<NetworkMonitor>
 
     @Inject
-    lateinit var federatedLearningClient: com.msaidizi.app.core.language.FederatedLearningClient
+    lateinit var federatedLearningClientProvider: javax.inject.Provider<com.msaidizi.app.core.language.FederatedLearningClient>
 
     @Inject
-    lateinit var syncManager: com.msaidizi.app.sync.SyncManager
+    lateinit var syncManagerProvider: javax.inject.Provider<com.msaidizi.app.sync.SyncManager>
 
     @Inject
-    lateinit var briefingDelivery: BriefingDelivery
+    lateinit var briefingDeliveryProvider: javax.inject.Provider<BriefingDelivery>
 
     @Inject
-    lateinit var audioBriefingDelivery: com.msaidizi.app.voice.briefing.AudioBriefingDelivery
+    lateinit var audioBriefingDeliveryProvider: javax.inject.Provider<com.msaidizi.app.voice.briefing.AudioBriefingDelivery>
 
     @Inject
-    lateinit var bundledModelManager: com.msaidizi.app.core.ai.BundledModelManager
+    lateinit var bundledModelManagerProvider: javax.inject.Provider<com.msaidizi.app.core.ai.BundledModelManager>
 
     @Inject
-    lateinit var memoryManager: com.msaidizi.app.core.MemoryManager
+    lateinit var memoryManagerProvider: javax.inject.Provider<com.msaidizi.app.core.MemoryManager>
 
     @Inject
-    lateinit var orchestrator: com.msaidizi.app.agent.Orchestrator
+    lateinit var orchestratorProvider: javax.inject.Provider<com.msaidizi.app.agent.Orchestrator>
+
+    // Lazy accessors — deferred construction until first access
+    private val modelRegistry by lazy { modelRegistryProvider.get() }
+    private val networkMonitor by lazy { networkMonitorProvider.get() }
+    private val federatedLearningClient by lazy { federatedLearningClientProvider.get() }
+    private val syncManager by lazy { syncManagerProvider.get() }
+    private val briefingDelivery by lazy { briefingDeliveryProvider.get() }
+    private val audioBriefingDelivery by lazy { audioBriefingDeliveryProvider.get() }
+    private val bundledModelManager by lazy { bundledModelManagerProvider.get() }
+    private val memoryManager by lazy { memoryManagerProvider.get() }
+    private val orchestrator by lazy { orchestratorProvider.get() }
 
     override fun onCreate() {
         super.onCreate()
@@ -180,6 +191,14 @@ class MsaidiziApp : Application(), Configuration.Provider {
             networkMonitor.startMonitoring()
         } catch (e: Throwable) {
             Timber.e(e, "Init step FAILED: Network monitoring")
+        }
+
+        // Step 4b: Explicit Orchestrator initialization (deferred from constructor)
+        Timber.d("Init step: Orchestrator initialization")
+        try {
+            orchestrator.initialize()
+        } catch (e: Throwable) {
+            Timber.e(e, "Init step FAILED: Orchestrator initialization")
         }
 
         // ── Deferred initialization ──────────────────────────────────────

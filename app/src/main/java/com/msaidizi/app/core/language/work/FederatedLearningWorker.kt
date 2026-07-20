@@ -135,7 +135,7 @@ class FederatedLearningWorker @AssistedInject constructor(
                     Result.failure()
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag("FLWorker").e(e, "FL task failed: %s", task)
             Result.retry()
         }

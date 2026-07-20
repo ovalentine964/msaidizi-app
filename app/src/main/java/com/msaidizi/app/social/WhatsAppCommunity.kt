@@ -135,7 +135,7 @@ class WhatsAppCommunity(
             socialDao.updateMemberStatus(groupId, isMember = false, delta = -1)
             Timber.tag(TAG).d("Left group %d", groupId)
             return true
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).w(e, "Failed to leave group %d", groupId)
             return false
         }
@@ -519,7 +519,7 @@ class WhatsAppCommunity(
                     )
                 )
                 if (serverGroup != null) return serverGroup
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.tag(TAG).w(e, "Failed to find/create group on server")
             }
         }
@@ -573,7 +573,7 @@ class WhatsAppCommunity(
                 groupId = group.id,
                 briefType = briefType
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).w(e, "Failed to share to group %s", group.groupName)
             BriefShareResult(
                 success = false,
@@ -587,7 +587,7 @@ class WhatsAppCommunity(
     // ═══════════════════════════════════════════════════════════════
 
     private fun getBusinessTypeLabel(businessType: String, language: String): String {
-        val type = try { WorkerType.valueOf(businessType) } catch (_: Exception) { WorkerType.UNKNOWN }
+        val type = try { WorkerType.valueOf(businessType) } catch (_: Throwable) { WorkerType.UNKNOWN }
         return if (language == "sw") {
             when (type) {
                 WorkerType.TRADER -> "Mama mboga"

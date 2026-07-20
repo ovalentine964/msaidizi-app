@@ -101,7 +101,7 @@ class DialectDetectionEngine @Inject constructor() {
                         matchedMarkers = csResult.dialectWords
                     ))
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 // Skip adapters that fail
             }
         }
@@ -188,7 +188,7 @@ class DialectDetectionEngine @Inject constructor() {
         val entry = adapters[dialectId] ?: return text
         return try {
             entry.adapter.normalize(text)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).w(e, "Normalization failed for dialect: %s", dialectId)
             text
         }

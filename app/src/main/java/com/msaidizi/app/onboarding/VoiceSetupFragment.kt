@@ -272,7 +272,7 @@ class VoiceSetupFragment : Fragment() {
         try {
             audioRecord?.stop()
             audioRecord?.release()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             // Ignore
         }
         audioRecord = null
@@ -296,6 +296,6 @@ class VoiceSetupFragment : Fragment() {
         try {
             audioRecord?.stop()
             audioRecord?.release()
-        } catch (e: Exception) { }
+        } catch (e: Throwable) { }
     }
 }

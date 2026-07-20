@@ -122,7 +122,7 @@ class ModelDownloadWorker @AssistedInject constructor(
             } else {
                 Result.success(workDataOf(KEY_RESULT_MESSAGE to message))
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "ModelDownloadWorker: Error downloading tier %s", tier)
             Result.retry()
         }

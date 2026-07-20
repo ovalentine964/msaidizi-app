@@ -174,7 +174,7 @@ class ModelVersionManager(private val context: Context) {
     fun getCurrentVersion(): ModelVersion {
         val saved = prefs.getString("current_version", null)
         return if (saved != null) {
-            try { ModelVersion.valueOf(saved) } catch (_: Exception) { ModelVersion.GEMMA4_E2B }
+            try { ModelVersion.valueOf(saved) } catch (_: Throwable) { ModelVersion.GEMMA4_E2B }
         } else ModelVersion.GEMMA4_E2B
     }
 
@@ -332,7 +332,7 @@ class ModelVersionManager(private val context: Context) {
             prefs.getString("ab_version_b", null)
         }
 
-        return try { versionName?.let { ModelVersion.valueOf(it) } } catch (_: Exception) { null }
+        return try { versionName?.let { ModelVersion.valueOf(it) } } catch (_: Throwable) { null }
     }
 
     // ── Rollback ───────────────────────────────────────────────────

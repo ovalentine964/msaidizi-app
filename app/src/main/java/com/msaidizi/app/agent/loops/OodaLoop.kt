@@ -221,7 +221,7 @@ class OodaLoop(
                 actResult = actResult
             )
 
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             val totalMs = System.currentTimeMillis() - startTime
             Timber.e(e, "OODA cycle %d failed", cycleNum)
             return OodaCycleResult(

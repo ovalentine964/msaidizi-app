@@ -204,7 +204,7 @@ class BusinessDiscoveryFragment : Fragment() {
             try {
                 voicePipeline.initialize()
                 Timber.d("VoicePipeline initialized for BusinessDiscovery")
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "VoicePipeline init failed in BusinessDiscovery")
             }
         }
@@ -380,7 +380,7 @@ class BusinessDiscoveryFragment : Fragment() {
             viewLifecycleOwner.lifecycleScope.launch {
                 try {
                     voicePipeline.stopListening()
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     Timber.e(e, "Error stopping voice")
                     voiceButton.text = "🎤 Sema Sasa"
                     voiceButton.isEnabled = true
@@ -393,7 +393,7 @@ class BusinessDiscoveryFragment : Fragment() {
             viewLifecycleOwner.lifecycleScope.launch {
                 try {
                     voicePipeline.startListening(this)
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     Timber.e(e, "Error starting voice")
                     isVoiceListening = false
                     voiceButton.text = "🎤 Sema Sasa"
@@ -472,7 +472,7 @@ class BusinessDiscoveryFragment : Fragment() {
                 // Primary: persist to Room (single source of truth)
                 workerProfileDao.upsert(profile)
                 Timber.i("Worker profile saved to Room database")
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Failed to save profile to Room — falling back to SharedPreferences")
             }
 
@@ -505,7 +505,7 @@ class BusinessDiscoveryFragment : Fragment() {
                     voicePipeline.stopListening()
                 }
             }
-        } catch (_: Exception) {}
+        } catch (_: Throwable) {}
     }
 
     /**

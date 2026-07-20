@@ -67,7 +67,7 @@ object DatabaseModule {
                         dbFile.delete()
                     }
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Error checking database encryption state — proceeding with fresh database")
                 dbFile.delete()
             }
@@ -75,9 +75,9 @@ object DatabaseModule {
 
         val passphrase = try {
             databaseKeyManager.getPassphrase()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "CRITICAL: getPassphrase() threw — using transient key")
-            try { io.sentry.Sentry.captureException(e) } catch (_: Exception) {}
+            try { io.sentry.Sentry.captureException(e) } catch (_: Throwable) {}
             ByteArray(32).apply { java.security.SecureRandom().nextBytes(this) }
         }
 
@@ -102,9 +102,9 @@ object DatabaseModule {
                     srcDb.close()
                     java.io.File(oldDbPath).delete()
                     Timber.i("SQLCipher migration: data exported from unencrypted database into encrypted database")
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     Timber.e(e, "SQLCipher migration failed — falling back to destructive migration")
-                    try { java.io.File(oldDbPath).delete() } catch (_: Exception) {}
+                    try { java.io.File(oldDbPath).delete() } catch (_: Throwable) {}
                 }
             }
 
@@ -112,18 +112,18 @@ object DatabaseModule {
             commonDbBuilder(context, dbName)
                 .openHelperFactory(factory)
                 .build()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Encrypted database build failed — falling back to UNENCRYPTED database")
-            try { io.sentry.Sentry.captureException(e) } catch (_: Exception) {}
+            try { io.sentry.Sentry.captureException(e) } catch (_: Throwable) {}
             try {
                 context.deleteDatabase(dbName)
                 Timber.i("Deleted corrupt encrypted database '%s'", dbName)
-            } catch (delEx: Exception) {
+            } catch (delEx: Throwable) {
                 Timber.e(delEx, "Failed to delete corrupt database")
             }
             // Clean up old DB migration file if it exists
             if (oldDbPath != null) {
-                try { java.io.File(oldDbPath).delete() } catch (_: Exception) {}
+                try { java.io.File(oldDbPath).delete() } catch (_: Throwable) {}
             }
             Timber.w("Building UNENCRYPTED database '%s' as fallback — encryption disabled", dbName)
             commonDbBuilder(context, dbName)

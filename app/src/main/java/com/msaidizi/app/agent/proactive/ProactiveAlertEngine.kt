@@ -122,7 +122,7 @@ class ProactiveAlertEngine(
             while (isMonitoring) {
                 try {
                     runAlertChecks()
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     Timber.e(e, "Alert check cycle failed")
                 }
                 delay(MONITORING_INTERVAL_MS)

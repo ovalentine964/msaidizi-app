@@ -542,7 +542,7 @@ class ModelRegistry @Inject constructor(
                 updateState(modelId, ModelState.READY)
                 Timber.i("Model %s installed from staging", modelId)
                 true
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Failed to install model %s from staging", modelId)
                 false
             }
@@ -770,7 +770,7 @@ class ModelRegistry @Inject constructor(
                 updateState(modelId, ModelState.PAUSED)
                 Timber.i("Model %s download paused", modelId)
                 throw e
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 updateState(modelId, ModelState.ERROR)
                 Timber.e(e, "Failed to download model %s", modelId)
             }
@@ -816,7 +816,7 @@ class ModelRegistry @Inject constructor(
             updateState(modelId, ModelState.READY)
             onProgress(1.0f)
             true
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             tempFile.delete()
             updateState(modelId, ModelState.ERROR)
             Timber.e(e, "Failed to download model %s", modelId)
@@ -881,7 +881,7 @@ class ModelRegistry @Inject constructor(
                 }
                 else -> true
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Smoke test failed for model %s", modelId)
             false
         }
@@ -1043,7 +1043,7 @@ class ModelRegistry @Inject constructor(
             extractDir.deleteRecursively()
 
             Timber.i("Archive downloaded and extracted for model %s", modelId)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             archiveFile.delete()
             extractDir.deleteRecursively()
             throw e

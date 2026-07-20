@@ -121,7 +121,7 @@ class TextToSpeech @Inject constructor(
             val elapsed = System.currentTimeMillis() - startTime
             Timber.i("Piper TTS model loaded in %dms", elapsed)
             true
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to load Piper TTS model")
             isModelLoaded = false
             false
@@ -246,7 +246,7 @@ class TextToSpeech @Inject constructor(
             Timber.e("OOM during TTS synthesis")
             unloadModel()
             System.gc()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Piper TTS synthesis error")
         } finally {
             isCurrentlySpeaking = false
@@ -323,7 +323,7 @@ class TextToSpeech @Inject constructor(
             results.close()
 
             pcmData
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Piper synthesizeToPcm error")
             ShortArray(0)
         }
@@ -353,7 +353,7 @@ class TextToSpeech @Inject constructor(
                     track.flush()
                 }
                 track.release()
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.w(e, "Error stopping AudioTrack")
             }
         }
@@ -450,7 +450,7 @@ class TextToSpeech @Inject constructor(
                 // Split IPA output into individual phonemes
                 output.split(Regex("\\s+")).filter { it.isNotEmpty() }
             } else null
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             // espeak-ng not available on this device
             null
         }
@@ -475,7 +475,7 @@ class TextToSpeech @Inject constructor(
                 return
             }
             parsePhonemeConfig(configFile)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to load phoneme map")
             loadDefaultPhonemeMap()
         }
@@ -512,7 +512,7 @@ class TextToSpeech @Inject constructor(
             } else {
                 loadDefaultPhonemeMap()
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to parse phoneme config")
             loadDefaultPhonemeMap()
         }
@@ -611,13 +611,13 @@ class TextToSpeech @Inject constructor(
             ) {
                 delay(20)
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "AudioTrack playback error")
         } finally {
             try {
                 audioTrack.stop()
                 audioTrack.release()
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 // Ignore cleanup errors
             }
             if (currentAudioTrack == audioTrack) {

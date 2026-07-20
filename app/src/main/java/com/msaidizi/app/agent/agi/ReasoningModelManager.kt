@@ -167,7 +167,7 @@ class ReasoningModelManager(private val context: Context) {
             modelLoadTimeMs = System.currentTimeMillis() - startTime
             Timber.tag(TAG).i("Model loaded in ${modelLoadTimeMs}ms")
             return true
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Failed to load model")
             return false
         }
@@ -208,7 +208,7 @@ class ReasoningModelManager(private val context: Context) {
         val response = try {
             // LlmEngine.getInstance().infer(prompt, systemPrompt, maxTokens)
             "[ON_DEVICE_INFERENCE]" // Placeholder — actual LlmEngine call
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).w(e, "On-device inference failed, falling back to cloud")
             return inferCloud(prompt, systemPrompt, maxTokens)
         }
@@ -236,7 +236,7 @@ class ReasoningModelManager(private val context: Context) {
         val response = try {
             // BackendClient.infer(prompt, systemPrompt, maxTokens)
             "[CLOUD_INFERENCE]" // Placeholder — actual API call
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Cloud inference failed")
             return InferenceResult(
                 response = "I'm having trouble thinking right now. Please try again.",

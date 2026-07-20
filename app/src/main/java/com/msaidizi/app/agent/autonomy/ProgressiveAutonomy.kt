@@ -394,7 +394,7 @@ class ProgressiveAutonomy(
                     confidence = state.accuracy
                 ))
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to persist autonomy state for %s", domain.name)
         }
     }
@@ -415,7 +415,7 @@ class ProgressiveAutonomy(
                         promotionReason = data.promotionReason
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.w(e, "Failed to load autonomy state for %s, using default", domain.name)
             }
         }

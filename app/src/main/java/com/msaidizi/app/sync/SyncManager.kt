@@ -105,7 +105,7 @@ class SyncManager(
             try {
                 performSync()
                 _syncState.value = SyncState.SUCCESS
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Sync failed")
                 _syncState.value = SyncState.ERROR
             }
@@ -148,7 +148,7 @@ class SyncManager(
             performSync()
             _syncState.value = SyncState.SUCCESS
             unsyncedCount
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             _syncState.value = SyncState.ERROR
             throw e
         }
@@ -216,7 +216,7 @@ class SyncManager(
                         delay(delay)
                     }
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Push attempt $attempt failed")
                 attempt++
                 if (attempt < MAX_RETRY_ATTEMPTS) {
@@ -271,13 +271,13 @@ class SyncManager(
                     if (remoteChanges.patterns.isNotEmpty()) {
                         Timber.d("Received ${remoteChanges.patterns.size} remote patterns (apply not yet implemented)")
                     }
-                } catch (parseEx: Exception) {
+                } catch (parseEx: Throwable) {
                     Timber.w(parseEx, "Failed to parse remote sync payload — skipping pull")
                 }
             } else {
                 Timber.w("Pull failed with status: ${response.status}")
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             // Pull failure is non-critical — local data is still valid
             Timber.w(e, "Pull failed (non-critical)")
         }
@@ -289,7 +289,7 @@ class SyncManager(
     private fun compressData(data: ByteArray): ByteArray {
         return try {
             com.github.luben.zstd.Zstd.compress(data)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(e, "zstd compression failed, using raw data")
             data
         }
@@ -425,7 +425,7 @@ class SyncWorker(
                     workDataOf(KEY_ERROR_MESSAGE to (e.message ?: "Network error"))
                 )
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "SyncWorker: Background sync failed")
             if (runAttemptCount < 3) {
                 Result.retry()
@@ -456,7 +456,7 @@ class BootReceiver : android.content.BroadcastReceiver() {
                 } else {
                     Timber.w("Could not reschedule sync: MsaidiziApp not available")
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Failed to reschedule sync after boot")
             }
         }

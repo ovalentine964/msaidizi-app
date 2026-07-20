@@ -185,7 +185,7 @@ class AgentEventBus(
         events.collect { event ->
             try {
                 collector(event)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Error in event subscriber for %s", event::class.simpleName)
             }
         }
@@ -203,7 +203,7 @@ class AgentEventBus(
         filterEvents<T>().collect { event ->
             try {
                 collector(event)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Error in typed event subscriber for %s", T::class.simpleName)
             }
         }

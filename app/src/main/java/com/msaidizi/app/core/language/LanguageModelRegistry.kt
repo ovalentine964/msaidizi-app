@@ -343,7 +343,7 @@ class LanguageModelRegistry(
 
             Timber.tag(TAG).i("Switched to language: %s", languageCode)
             true
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Failed to switch to language: %s", languageCode)
             _languageState.value = LanguageState.Error(languageCode, e.message ?: "Unknown error")
             false
@@ -427,7 +427,7 @@ class LanguageModelRegistry(
 
                 Timber.tag(TAG).i("Installed adapter for %s (%d bytes)", languageCode, destFile.length())
                 true
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.tag(TAG).e(e, "Failed to install adapter for %s", languageCode)
                 false
             }
@@ -444,7 +444,7 @@ class LanguageModelRegistry(
                 file.writeBytes(adapterBytes)
                 Timber.tag(TAG).i("Saved user adapter for %s (%d bytes)", languageCode, adapterBytes.size)
                 true
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.tag(TAG).e(e, "Failed to save user adapter for %s", languageCode)
                 false
             }
@@ -487,7 +487,7 @@ class LanguageModelRegistry(
                 val json = vocabFile.readText()
                 activeVocabulary = parseVocabularyJson(json)
                 Timber.tag(TAG).d("Loaded vocabulary for %s (%d entries)", langDef.code, activeVocabulary?.size ?: 0)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.tag(TAG).w("Failed to load vocabulary for %s: %s", langDef.code, e.message)
                 activeVocabulary = null
             }

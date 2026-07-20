@@ -73,7 +73,11 @@ class BootstrapViewModel @Inject constructor(application: Application) : Android
         updateUiState()
 
         // Start model downloads in background
-        modelDownloadManager.startDownloads(viewModelScope)
+        try {
+            modelDownloadManager.startDownloads(viewModelScope)
+        } catch (e: Throwable) {
+            Timber.e(e, "ModelDownloadManager.startDownloads failed")
+        }
     }
 
     /**
@@ -113,13 +117,13 @@ class BootstrapViewModel @Inject constructor(application: Application) : Android
                     saveProfile(nextStep.profile)
                     try {
                         BriefingNotificationWorker.scheduleAllBriefings(getApplication())
-                    } catch (e: Exception) {
+                    } catch (e: Throwable) {
                         Timber.e(e, "Failed to schedule briefing notifications")
                     }
                 }
 
                 _voiceState.value = VoiceInputState.IDLE
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Error processing voice input")
                 _voiceState.value = VoiceInputState.ERROR
                 _uiState.value = _uiState.value.copy(

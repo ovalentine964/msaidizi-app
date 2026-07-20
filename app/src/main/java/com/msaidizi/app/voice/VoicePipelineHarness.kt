@@ -664,7 +664,7 @@ class VoicePipelineHarness @Inject constructor(
                         return sanitized
                     }
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.w(TAG, "[%s] LLM degraded retry %d failed: %s", pipelineId, attempt, e.message)
             }
         }
@@ -846,7 +846,7 @@ class VoicePipelineHarness @Inject constructor(
         try {
             _processingFeedback.emit(message)
             feedbackCall?.invoke(message)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.d(TAG, "Feedback emission failed (non-critical): %s", e.message)
         }
     }

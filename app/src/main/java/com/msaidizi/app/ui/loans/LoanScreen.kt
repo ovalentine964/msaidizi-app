@@ -690,7 +690,7 @@ class LoanFragment : Fragment() {
                 .atZone(ZoneId.systemDefault())
                 .toLocalDate()
             date.format(DateTimeFormatter.ofPattern("dd MMM"))
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             "—"
         }
     }

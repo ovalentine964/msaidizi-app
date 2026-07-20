@@ -187,7 +187,7 @@ class ReceiptConfirmationFragment : Fragment() {
                     "Nimesoma risiti. Thibitisha au hariri bidhaa."
                 }
                 ttsEngine.speak(text, "sw")
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.w(e, "TTS failed for receipt confirmation")
             }
         }
@@ -211,7 +211,7 @@ class ReceiptConfirmationFragment : Fragment() {
             try {
                 val summary = editableItems.joinToString(", ") { "${it.currentName} KSh ${"%.0f".format(it.totalPrice)}" }
                 ttsEngine.speak("Nimescan risiti. $summary. Imerekodwa.", "sw")
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.w(e, "TTS failed for receipt save confirmation")
             }
         }

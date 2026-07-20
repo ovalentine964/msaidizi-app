@@ -120,7 +120,7 @@ class OtpManager @Inject constructor(
 
             _state.value = OtpState.Sent(normalizedPhone, OTP_EXPIRY_MS)
             _state.value
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to request OTP")
             _state.value = OtpState.Failed(FailureReason.NETWORK_ERROR)
             _state.value

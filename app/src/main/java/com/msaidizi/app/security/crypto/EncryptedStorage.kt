@@ -47,7 +47,7 @@ class EncryptedStorage @Inject constructor(
 
             file.writeBytes(payload)
             Timber.d("Encrypted storage: wrote %d bytes for key '%s'", payload.size, key)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to write encrypted storage for key '%s'", key)
             throw SecurityException("Failed to store encrypted data", e)
         }
@@ -79,7 +79,7 @@ class EncryptedStorage @Inject constructor(
             }
 
             cryptoService.decrypt(encrypted, keyAlias)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to read encrypted storage for key '%s'", key)
             null
         }

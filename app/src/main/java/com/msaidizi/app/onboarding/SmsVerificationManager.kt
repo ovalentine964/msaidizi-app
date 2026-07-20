@@ -109,7 +109,7 @@ class SmsVerificationManager(
                 }
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Log.e(TAG, "Unexpected error in SMS verification", e)
                 _state.value = SmsState.Failed(SmsVerificationError.UNKNOWN_ERROR, canRetry = true)
             }
@@ -139,7 +139,7 @@ class SmsVerificationManager(
                             lastResponse = response.body()
                             return@repeat
                         }
-                    } catch (e: Exception) {
+                    } catch (e: Throwable) {
                         Log.w(TAG, "Verify attempt ${attempt + 1} failed", e)
                     }
                     if (attempt < MAX_SEND_RETRIES - 1) delay(RETRY_DELAY_MS * (attempt + 1))
@@ -172,7 +172,7 @@ class SmsVerificationManager(
                 }
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Log.e(TAG, "Error verifying code", e)
                 _state.value = SmsState.Failed(SmsVerificationError.NETWORK_ERROR, canRetry = true)
             }
@@ -225,7 +225,7 @@ class SmsVerificationManager(
                     delay(retryAfter * 1000)
                     return null
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Log.w(TAG, "SMS request attempt ${attempt + 1} exception", e)
             }
             if (attempt < MAX_SEND_RETRIES - 1) delay(RETRY_DELAY_MS * (attempt + 1))

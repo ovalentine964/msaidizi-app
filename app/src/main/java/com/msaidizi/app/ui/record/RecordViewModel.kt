@@ -262,7 +262,7 @@ class RecordViewModel @Inject constructor(
 
             // Add to conversation history
             addToHistory(text, response.text)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Error processing transcription")
             _uiState.value = _uiState.value.copy(
                 statusMessage = "Error: ${e.message}",

@@ -123,7 +123,7 @@ class DarajaClient @Inject constructor(
 
         } catch (e: DarajaException) {
             throw e
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             throw DarajaException("OAuth request failed: ${e.message}", e)
         }
     }
@@ -206,7 +206,7 @@ class DarajaClient @Inject constructor(
 
             return stkResponse
 
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             throw DarajaException("STK Push request failed: ${e.message}", e)
         }
     }
@@ -241,7 +241,7 @@ class DarajaClient @Inject constructor(
 
             return json.decodeFromString<StkQueryResponse>(response.bodyAsText())
 
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             throw DarajaException("STK Query failed: ${e.message}", e)
         }
     }
@@ -297,7 +297,7 @@ class DarajaClient @Inject constructor(
         return try {
             val prefs = getEncryptedPrefs()
             prefs.getString("production_shortcode", SHORTCODE_SANDBOX) ?: SHORTCODE_SANDBOX
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             SHORTCODE_SANDBOX
         }
     }
@@ -307,7 +307,7 @@ class DarajaClient @Inject constructor(
             // Environment flag is non-sensitive, plain prefs acceptable
             val prefs = context.getSharedPreferences("mpesa_config", Context.MODE_PRIVATE)
             prefs.getBoolean("use_sandbox", true)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             true  // Default to sandbox
         }
     }
@@ -331,7 +331,7 @@ class DarajaClient @Inject constructor(
                 consumerKey = prefs.getString("consumer_key", "") ?: "",
                 consumerSecret = prefs.getString("consumer_secret", "") ?: ""
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to read Daraja credentials from encrypted storage")
             DarajaCredentials("", "")
         }
@@ -348,7 +348,7 @@ class DarajaClient @Inject constructor(
                 .putString("consumer_secret", consumerSecret)
                 .apply()
             Timber.i("Daraja credentials stored in encrypted storage")
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to store Daraja credentials")
         }
     }
@@ -360,7 +360,7 @@ class DarajaClient @Inject constructor(
     private fun getPasskey(): String {
         return try {
             getEncryptedPrefs().getString("mpesa_passkey", "") ?: ""
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to read M-Pesa passkey from encrypted storage")
             ""
         }
@@ -374,7 +374,7 @@ class DarajaClient @Inject constructor(
         try {
             getEncryptedPrefs().edit().putString("mpesa_passkey", passkey).apply()
             Timber.d("M-Pesa passkey stored securely")
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to store M-Pesa passkey")
         }
     }

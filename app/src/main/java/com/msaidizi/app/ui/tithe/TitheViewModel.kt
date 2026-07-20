@@ -65,7 +65,7 @@ class TitheViewModel @Inject constructor(
                     topRecipient = summary.topRecipient,
                     error = null
                 )
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Error loading tithe data")
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -102,7 +102,7 @@ class TitheViewModel @Inject constructor(
                         error = "Sikuelewi. Sema kama: \"Nilitoa sadaka KSh 200\""
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Error recording giving from voice")
                 _uiState.value = _uiState.value.copy(
                     isProcessing = false,
@@ -139,7 +139,7 @@ class TitheViewModel @Inject constructor(
 
                 val givingType = try {
                     TitheTracker.GivingType.valueOf(type)
-                } catch (_: Exception) {
+                } catch (_: Throwable) {
                     TitheTracker.GivingType.OFFERING
                 }
 
@@ -162,7 +162,7 @@ class TitheViewModel @Inject constructor(
 
                 // Reload data
                 loadData()
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Error recording giving manually")
                 _uiState.value = _uiState.value.copy(
                     isProcessing = false,

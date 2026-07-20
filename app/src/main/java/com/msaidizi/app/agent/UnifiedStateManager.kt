@@ -79,7 +79,7 @@ class UnifiedStateManager(
                 if (value != null) {
                     state[key] = value as Any
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.w("UnifiedState[%s]: Provider error for '%s': %s",
                     agentName, key, e.message)
             }
@@ -244,7 +244,7 @@ class UnifiedStateManager(
         subscribers[key]?.forEach { callback ->
             try {
                 callback(key, value, event)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.w("UnifiedState[%s]: Subscriber error for '%s': %s",
                     agentName, key, e.message)
             }

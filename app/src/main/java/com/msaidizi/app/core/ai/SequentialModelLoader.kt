@@ -178,7 +178,7 @@ class SequentialModelLoader @Inject constructor(
                 Timber.e(TAG, "OOM during %s operation — emergency cleanup", modelType)
                 emergencyUnload()
                 null
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Error during %s operation", modelType)
                 null
             } finally {
@@ -345,7 +345,7 @@ class SequentialModelLoader @Inject constructor(
                 ModelType.PIPER -> ttsEngine.unloadModel()
             }
             Timber.d(TAG, "%s unloaded", modelType.displayName)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Error unloading %s", modelType.displayName)
         }
     }
@@ -358,13 +358,13 @@ class SequentialModelLoader @Inject constructor(
         Timber.e(TAG, "EMERGENCY UNLOAD — freeing all model memory")
         try {
             speechRecognizer.unloadModel()
-        } catch (_: Exception) {}
+        } catch (_: Throwable) {}
         try {
             llmEngine.unloadModel()
-        } catch (_: Exception) {}
+        } catch (_: Throwable) {}
         try {
             ttsEngine.unloadModel()
-        } catch (_: Exception) {}
+        } catch (_: Throwable) {}
         currentModel.set(null)
         System.gc()
     }

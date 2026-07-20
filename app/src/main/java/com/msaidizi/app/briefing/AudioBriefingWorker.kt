@@ -174,7 +174,7 @@ class AudioBriefingWorker(
         val language = prefs.getString("language", "sw") ?: "sw"
         val workerType = try {
             WorkerType.valueOf(workerTypeName)
-        } catch (_: Exception) {
+        } catch (_: Throwable) {
             WorkerType.UNKNOWN
         }
 
@@ -221,7 +221,7 @@ class AudioBriefingWorker(
                 // Don't retry — text briefing was already delivered as fallback
                 Result.success()
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "AudioBriefingWorker failed")
             // Don't retry — text briefing is the reliable fallback
             Result.success()

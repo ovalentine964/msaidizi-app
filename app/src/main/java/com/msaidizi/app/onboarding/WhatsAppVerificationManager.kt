@@ -89,7 +89,7 @@ class WhatsAppVerificationManager(
                 }
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Log.e(TAG, "Unexpected error in connect flow", e)
                 _state.value = VerificationState.Failed(WhatsAppError.UNKNOWN_ERROR, canRetry = true)
             }
@@ -110,7 +110,7 @@ class WhatsAppVerificationManager(
                 } else {
                     _state.value = VerificationState.Failed(WhatsAppError.UNKNOWN_ERROR, canRetry = true)
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Log.e(TAG, "Error confirming receipt", e)
                 _state.value = VerificationState.Failed(WhatsAppError.NETWORK_ERROR, canRetry = true)
             }
@@ -145,7 +145,7 @@ class WhatsAppVerificationManager(
                     delay(retryAfter * 1000)
                     return null
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Log.w(TAG, "Connect attempt ${attempt + 1} exception", e)
             }
             if (attempt < MAX_CONNECT_RETRIES - 1) delay(RETRY_DELAY_MS * (attempt + 1))
@@ -177,7 +177,7 @@ class WhatsAppVerificationManager(
                 }
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Log.w(TAG, "Poll attempt failed", e)
             }
         }

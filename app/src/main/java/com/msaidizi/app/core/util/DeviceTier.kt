@@ -27,7 +27,7 @@ object DeviceTier {
         PREMIUM     // 6GB+ RAM
     }
 
-    lateinit var current: Tier
+    var current: Tier = Tier.BASIC  // Safe default for budget devices; updated by initialize()
         private set
 
     var totalRamMB: Long = 0

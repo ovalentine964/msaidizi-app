@@ -75,7 +75,7 @@ class InfrastructureViewModel @Inject constructor(
                         _workerContribution.value = data
                     }
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 _error.value = "Failed to load infrastructure data: ${e.message}"
             } finally {
                 _isLoading.value = false

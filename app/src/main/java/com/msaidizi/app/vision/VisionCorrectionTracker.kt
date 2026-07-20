@@ -267,7 +267,7 @@ class VisionCorrectionTracker @Inject constructor(
 
             Timber.i(TAG, "Flushed %d corrections to federated backend", corrections.size)
 
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(e, "Failed to flush corrections — will retry")
             // Re-add for next attempt
             pendingCorrections.addAll(0, corrections)

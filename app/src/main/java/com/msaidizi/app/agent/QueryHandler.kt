@@ -49,10 +49,10 @@ class QueryHandler(
 
         val gamificationMessages = mutableListOf<String>()
         gamificationEngine?.let { ge ->
-            try { gamificationMessages.addAll(ge.onBalanceChecked(language).messages) } catch (_: Exception) {}
+            try { gamificationMessages.addAll(ge.onBalanceChecked(language).messages) } catch (_: Throwable) {}
         }
         richHabitsScore?.let { rhs ->
-            try { rhs.autoCompleteFromAction("balance_check", language).forEach { gamificationMessages.add(it.message) } } catch (_: Exception) {}
+            try { rhs.autoCompleteFromAction("balance_check", language).forEach { gamificationMessages.add(it.message) } } catch (_: Throwable) {}
         }
 
         val baseText = if (language == "sw") "💰 Salio lako ni KSh ${"%.0f".format(balance)}"

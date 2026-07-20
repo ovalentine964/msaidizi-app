@@ -55,13 +55,13 @@ class DatabaseKeyManager @Inject constructor(
                 androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                 androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             // Keystore corruption, lock screen change, hardware failure, etc.
             // This is a known failure mode on low-end Android devices.
             Timber.e(e, "EncryptedSharedPreferences init failed — will use fallback")
             try {
                 io.sentry.Sentry.captureException(e)
-            } catch (_: Exception) {}
+            } catch (_: Throwable) {}
             null
         }
     }
@@ -101,14 +101,14 @@ class DatabaseKeyManager @Inject constructor(
             } else {
                 generateAndStorePassphrase(prefs)
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             // Catastrophic failure — generate a transient key
             // This means the DB will be re-created on next launch,
             // but at least the app doesn't crash.
             Timber.e(e, "CRITICAL: Failed to read/generate DB passphrase — using transient key")
             try {
                 io.sentry.Sentry.captureException(e)
-            } catch (_: Exception) {}
+            } catch (_: Throwable) {}
             generateTransientPassphrase()
         }
     }
@@ -125,11 +125,11 @@ class DatabaseKeyManager @Inject constructor(
                 .putString(KEY_DB_PASSPHRASE, Base64.encodeToString(passphrase, Base64.NO_WRAP))
                 .apply()
             Timber.i("Generated new database encryption key (%d bytes)", PASSPHRASE_LENGTH)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to store passphrase — key will be transient")
             try {
                 io.sentry.Sentry.captureException(e)
-            } catch (_: Exception) {}
+            } catch (_: Throwable) {}
         }
         return passphrase
     }
@@ -155,7 +155,7 @@ class DatabaseKeyManager @Inject constructor(
         try {
             getActivePrefs().edit().remove(KEY_DB_PASSPHRASE).apply()
             Timber.i("Database encryption key cleared")
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to clear database key")
         }
     }

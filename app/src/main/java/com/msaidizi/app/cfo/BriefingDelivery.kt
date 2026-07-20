@@ -156,7 +156,7 @@ class BriefingDelivery(
                     if (streakInfo.currentStreak > 0) {
                         append(" | 🔥 Mfululizo: siku ${streakInfo.currentStreak}")
                     }
-                } catch (_: Exception) {}
+                } catch (_: Throwable) {}
             }
 
             // Mindset: daily lesson prompt
@@ -166,7 +166,7 @@ class BriefingDelivery(
                     if (lessonPrompt != null) {
                         append("\n\n$lessonPrompt")
                     }
-                } catch (_: Exception) {}
+                } catch (_: Throwable) {}
             }
 
             // ═══ SOCIAL LAYER — Peer comparison, leaderboard, community tips ═══
@@ -181,7 +181,7 @@ class BriefingDelivery(
                     if (tip != null) {
                         append("\n\n$tip")
                     }
-                } catch (_: Exception) {}
+                } catch (_: Throwable) {}
             }
 
             // Peer comparison social proof
@@ -195,7 +195,7 @@ class BriefingDelivery(
                     if (proof != null) {
                         append("\n\n${proof.message}")
                     }
-                } catch (_: Exception) {}
+                } catch (_: Throwable) {}
             }
 
             // Leaderboard position
@@ -209,7 +209,7 @@ class BriefingDelivery(
                     if (positionMsg != null) {
                         append("\n\n${positionMsg.message}")
                     }
-                } catch (_: Exception) {}
+                } catch (_: Throwable) {}
             }
         }
 
@@ -244,7 +244,7 @@ class BriefingDelivery(
                 )
             )
             return result.copy(data = result.data + ("deliveryId" to (deliveryId ?: 0L).toString()))
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).w(e, "Failed to track briefing delivery")
         }
 
@@ -351,7 +351,7 @@ class BriefingDelivery(
                     if (streakInfo.currentStreak > 0) {
                         append(" | 🔥 Mfululizo: siku ${streakInfo.currentStreak}")
                     }
-                } catch (_: Exception) {}
+                } catch (_: Throwable) {}
             }
 
             // Mindset: weekly progress
@@ -359,7 +359,7 @@ class BriefingDelivery(
                 try {
                     val progress = ma.getProgress()
                     append("\n\n📖 Somo: ${progress.completedLessons}/${progress.totalLessons} zimekamilisha (${progress.progressPercent}%)")
-                } catch (_: Exception) {}
+                } catch (_: Throwable) {}
             }
 
             // Rich Habits: weekly average
@@ -367,7 +367,7 @@ class BriefingDelivery(
                 try {
                     val avg = rhs.getWeeklyAverage()
                     if (avg > 0) append("\n\n📋 Wastani wa tabia wiki hii: ${"%.0f".format(avg)}/100")
-                } catch (_: Exception) {}
+                } catch (_: Throwable) {}
             }
         }
 
@@ -393,7 +393,7 @@ class BriefingDelivery(
                     predictedProfit = report.totalProfit
                 )
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).w(e, "Failed to track weekly briefing delivery")
         }
 
@@ -432,7 +432,7 @@ class BriefingDelivery(
         gamificationEngine?.let { ge ->
             try {
                 ge.onDailyActivity()
-            } catch (_: Exception) {}
+            } catch (_: Throwable) {}
         }
 
         val message = buildString {
@@ -458,7 +458,7 @@ class BriefingDelivery(
                     if (streakInfo.currentStreak > 0) {
                         append(" | 🔥 Mfululizo: siku ${streakInfo.currentStreak}")
                     }
-                } catch (_: Exception) {}
+                } catch (_: Throwable) {}
             }
 
             // Rich Habits: evening score & improvement
@@ -470,7 +470,7 @@ class BriefingDelivery(
                     if (improvement != null) {
                         append("\n$improvement")
                     }
-                } catch (_: Exception) {}
+                } catch (_: Throwable) {}
             }
 
             append("\n\nUsiku mwema! 🌙")
@@ -497,7 +497,7 @@ class BriefingDelivery(
                     predictedProfit = profit
                 )
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).w(e, "Failed to track evening briefing delivery")
         }
 
@@ -515,7 +515,7 @@ class BriefingDelivery(
         try {
             briefingDeliveryDao?.markOpened(deliveryId)
             Timber.tag(TAG).d("Briefing %d marked as opened", deliveryId)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).w(e, "Failed to mark briefing opened")
         }
     }
@@ -559,7 +559,7 @@ class BriefingDelivery(
                 "Briefing outcome: predicted=%.0f actual=%.0f score=%.2f",
                 briefing.predictedSales, actualSales, outcomeScore
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).w(e, "Failed to record briefing outcome")
         }
     }
@@ -576,7 +576,7 @@ class BriefingDelivery(
             val actedOn = briefingDeliveryDao?.getActedOnCountSince(weekAgo) ?: 0
             val actionRate = if (delivered > 0) actedOn.toDouble() / delivered else 0.0
             Pair(avgScore, actionRate)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Pair(0.0, 0.0)
         }
     }
@@ -587,7 +587,7 @@ class BriefingDelivery(
     suspend fun getLatestPendingBriefing(): BriefingDeliveryEntity? {
         return try {
             briefingDeliveryDao?.getLatestPendingBriefing()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             null
         }
     }

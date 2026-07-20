@@ -93,7 +93,8 @@ class BootstrapActivity : AppCompatActivity() {
     }
 
     @Inject
-    lateinit var voicePipeline: VoicePipeline
+    lateinit var voicePipelineProvider: dagger.Lazy<VoicePipeline>
+    private val voicePipeline by lazy { voicePipelineProvider.get() }
 
     private lateinit var viewModel: BootstrapViewModel
     private var isVoiceListening = false
@@ -140,7 +141,7 @@ class BootstrapActivity : AppCompatActivity() {
             try {
                 voicePipeline.initialize()
                 Timber.i(TAG, "VoicePipeline initialized")
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "VoicePipeline init failed")
             }
         }
@@ -509,7 +510,7 @@ class BootstrapActivity : AppCompatActivity() {
             lifecycleScope.launch {
                 try {
                     voicePipeline.stopListening()
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     Timber.e(e, "Error stopping voice")
                     viewModel.onVoiceInput("", 0f)
                 }
@@ -521,7 +522,7 @@ class BootstrapActivity : AppCompatActivity() {
             lifecycleScope.launch {
                 try {
                     voicePipeline.startListening(this)
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     Timber.e(e, "Error starting voice")
                     isVoiceListening = false
                     // Fall back to text input
@@ -598,7 +599,7 @@ class BootstrapActivity : AppCompatActivity() {
                 viewModel.onTtsStarted()
                 voicePipeline.speakAndWait(text, "sw")
                 viewModel.onTtsFinished()
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "TTS error")
                 viewModel.onTtsFinished()
             }

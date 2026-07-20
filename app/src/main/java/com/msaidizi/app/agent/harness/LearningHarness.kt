@@ -523,7 +523,7 @@ class LearningHarness @Inject constructor() {
                 val score = testFn(sample)
                 if (score > 0.5) correct++
                 total++
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.tag(TAG).w("Held-out test failed for '%s': %s", sample.input, e.message)
                 total++ // Count failures as wrong
             }
@@ -566,7 +566,7 @@ class LearningHarness @Inject constructor() {
         // 1. Measure baseline quality
         val baselineQuality = try {
             qualityCheckFn()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).w("[%s] Quality check failed: %s — proceeding without baseline", updateId, e.message)
             -1.0
         }
@@ -585,7 +585,7 @@ class LearningHarness @Inject constructor() {
         val result: T
         try {
             result = updateFn()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "[%s] Learning update failed: %s", updateId, e.message)
             emitEvent(LearningHarnessEvent.UpdateFailed(updateId, updateType, e.message ?: "unknown"))
             return LearningUpdateResult(
@@ -604,7 +604,7 @@ class LearningHarness @Inject constructor() {
         val newQuality = try {
             delay(100) // Brief settle time
             qualityCheckFn()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).w("[%s] Post-update quality check failed: %s", updateId, e.message)
             baselineQuality
         }
@@ -642,7 +642,7 @@ class LearningHarness @Inject constructor() {
                     rolledBack = true,
                     error = "Regression: quality dropped from %.3f to %.3f".format(baselineQuality, newQuality)
                 )
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.tag(TAG).e(e, "[%s] Rollback FAILED: %s", updateId, e.message)
                 emitEvent(LearningHarnessEvent.RollbackFailed(updateId, updateType, e.message ?: "unknown"))
             }
@@ -736,7 +736,7 @@ class LearningHarness @Inject constructor() {
             try {
                 val r = challengerFn(query)
                 Pair(r, ExperimentGroup.CHALLENGER)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.tag(TAG).w("Challenger failed, falling back to baseline: %s", e.message)
                 Pair(baselineFn(query), ExperimentGroup.BASELINE)
             }
@@ -853,7 +853,7 @@ class LearningHarness @Inject constructor() {
             Timber.tag(TAG).i("Rolled back to checkpoint %s (%s)", checkpointId, checkpoint.description)
             emitEvent(LearningHarnessEvent.ManualRollback(checkpointId, checkpoint.description))
             return true
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Rollback to %s failed: %s", checkpointId, e.message)
             return false
         }
@@ -1028,7 +1028,7 @@ class LearningHarness @Inject constructor() {
     }
 
     private fun emitEvent(event: LearningHarnessEvent) {
-        try { eventListener?.invoke(event) } catch (_: Exception) {}
+        try { eventListener?.invoke(event) } catch (_: Throwable) {}
     }
 
     // ═══════════════════════════════════════════════════════════════

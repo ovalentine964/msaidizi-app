@@ -687,7 +687,7 @@ class ModelRouter(
 
                 return@withContext result
 
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 lastException = e
                 provider.totalFailures.incrementAndGet()
                 provider.consecutiveFailures++
@@ -902,7 +902,7 @@ class ModelRouter(
             } else {
                 throw Exception("Cloud API error: ${response.code()}")
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             throw Exception("Cloud inference failed: ${e.message}")
         }
     }
@@ -925,7 +925,7 @@ class ModelRouter(
             } else {
                 throw Exception("Backend API error: ${response.code()}")
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             throw Exception("Backend inference failed: ${e.message}")
         }
     }
@@ -965,7 +965,7 @@ class ModelRouter(
             val response = callProvider(provider, request, complexity)
             val latencyMs = System.currentTimeMillis() - startTime
             response.copy(latencyMs = latencyMs, costMicros = 0)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             null
         }
     }

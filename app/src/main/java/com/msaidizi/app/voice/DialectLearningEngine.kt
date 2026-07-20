@@ -216,7 +216,7 @@ class DialectLearningEngine @Inject constructor(
                 "DialectLearningEngine ready: %d dialect profiles, %d patterns buffered",
                 dialectProfiles.size, patternBuffer.size
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Initialization failed")
             _engineState.value = EngineState.Error(e.message ?: "Init failed")
         }
@@ -328,7 +328,7 @@ class DialectLearningEngine @Inject constructor(
                 totalUtterances = totalUtterancesProcessed
             )
 
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Error processing utterance")
             _engineState.value = EngineState.Error(e.message ?: "Processing error")
             DialectLearningResult.empty()
@@ -783,7 +783,7 @@ class DialectLearningEngine @Inject constructor(
 
             _engineState.value = EngineState.Ready
 
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "On-device adaptation failed for [%s]", profile.dialectId)
             _engineState.value = EngineState.Error(e.message ?: "Adaptation failed")
         }
@@ -970,7 +970,7 @@ class DialectLearningEngine @Inject constructor(
 
             _engineState.value = EngineState.Ready
 
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Gradient upload failed for [%s]", dialectId)
             _engineState.value = EngineState.Error(e.message ?: "Upload failed")
         }
@@ -1120,12 +1120,12 @@ class DialectLearningEngine @Inject constructor(
                         dialectProfiles[profile.dialectId] = profile
                         Timber.tag(TAG).d("Loaded dialect profile: %s (%d samples)",
                             profile.dialectId, profile.sampleCount)
-                    } catch (e: Exception) {
+                    } catch (e: Throwable) {
                         Timber.tag(TAG).w(e, "Failed to load profile: %s", file.name)
                     }
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).w(e, "Failed to load persisted profiles")
         }
     }
@@ -1143,7 +1143,7 @@ class DialectLearningEngine @Inject constructor(
                 file.writeText(json.encodeToString(profile))
             }
             Timber.tag(TAG).d("Persisted %d dialect profiles", dialectProfiles.size)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).w(e, "Failed to persist profiles")
         }
     }

@@ -190,7 +190,7 @@ class SelfEvolutionManager @Inject constructor(
                     val key = "$original→$corrected"
                     itemTypeCorrections[key] = (itemTypeCorrections[key] ?: 0) + 1
                 }
-            } catch (_: Exception) { }
+            } catch (_: Throwable) { }
         }
 
         // Identify patterns with enough data
@@ -468,7 +468,7 @@ class SelfEvolutionManager @Inject constructor(
                     val type = adviceId.substringBefore("_", "general")
                     adviceScores.getOrPut(type) { mutableListOf() }.add(score)
                 }
-            } catch (_: Exception) { }
+            } catch (_: Throwable) { }
         }
 
         adviceScores.mapValues { (_, scores) -> scores.average() }
@@ -591,7 +591,7 @@ class SelfEvolutionManager @Inject constructor(
                             }
                         }
                     }
-                } catch (_: Exception) { }
+                } catch (_: Throwable) { }
             }
 
             val metrics = EvolutionMetrics(
@@ -610,7 +610,7 @@ class SelfEvolutionManager @Inject constructor(
 
             _evolutionMetrics.value = metrics
             metrics
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Failed to compute evolution metrics")
             EvolutionMetrics()
         }
@@ -650,7 +650,7 @@ class SelfEvolutionManager @Inject constructor(
                 ),
                 confidence = 0.95
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Failed to persist preferences")
         }
     }
@@ -662,7 +662,7 @@ class SelfEvolutionManager @Inject constructor(
                 try {
                     val data = json.decodeFromString<Map<String, String>>(pattern.data)
                     data["type"] == PREFERENCE_KEY
-                } catch (_: Exception) { false }
+                } catch (_: Throwable) { false }
             }
 
             if (prefPattern != null) {
@@ -675,7 +675,7 @@ class SelfEvolutionManager @Inject constructor(
                         loaded.preferredLanguage, loaded.preferredVoiceSpeed)
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Failed to load preferences, using defaults")
         }
     }
@@ -708,7 +708,7 @@ class SelfEvolutionManager @Inject constructor(
             adaptiveLearning.runBackgroundLearning()
 
             Timber.tag(TAG).d("Evolution cycle complete")
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Evolution cycle failed")
         }
     }

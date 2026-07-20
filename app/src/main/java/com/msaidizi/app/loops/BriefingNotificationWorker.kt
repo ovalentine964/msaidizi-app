@@ -223,7 +223,7 @@ class BriefingNotificationWorker(
         val language = prefs.getString("language", "sw") ?: "sw"
         val workerType = try {
             WorkerType.valueOf(workerTypeName)
-        } catch (_: Exception) {
+        } catch (_: Throwable) {
             WorkerType.UNKNOWN
         }
 
@@ -277,7 +277,7 @@ class BriefingNotificationWorker(
             showNotification(result, briefingType, language)
             Timber.i(TAG, "%s briefing delivered as notification", briefingType)
             Result.success()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to deliver %s briefing", briefingType)
             if (runAttemptCount < 3) Result.retry()
             else Result.failure(workDataOf("error" to e.message))
@@ -349,7 +349,7 @@ class BriefingNotificationWorker(
             val db = com.msaidizi.app.core.database.AppDatabase.getInstance(applicationContext)
             val gamification = db.gamificationDao().getGamification()
             currentStreak = gamification?.currentStreak ?: 0
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(e, "Could not read gamification state for streak reminder")
         }
 
@@ -386,7 +386,7 @@ class BriefingNotificationWorker(
         return try {
             val db = com.msaidizi.app.core.database.AppDatabase.getInstance(applicationContext)
             db.transactionDao()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(e, "Could not get TransactionDao")
             null
         }

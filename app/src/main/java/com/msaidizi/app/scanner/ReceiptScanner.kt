@@ -125,7 +125,7 @@ class ReceiptScanner {
                 rawOcrText = rawText,
                 processingTimeMs = System.currentTimeMillis() - startTime
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "ReceiptScanner: Error scanning receipt")
             null
         }

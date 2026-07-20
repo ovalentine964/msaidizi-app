@@ -257,7 +257,7 @@ class MicroRewards(
 
         val topItems = try {
             transactionDao.getTopSellingItems(weekAgo, now, 5)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             emptyList()
         }
 
@@ -321,7 +321,7 @@ class MicroRewards(
                         "and you'll get detailed analysis of your best business days!"
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             if (language == "sw") {
                 "🔬 **Ufahamu wa Juu:** Biashara yako inakua! Endelea kurekodi " +
                     "kila siku kupata uchambuzi zaidi."
@@ -350,7 +350,7 @@ class MicroRewards(
 
         val margins = try {
             businessPatternTracker?.analyzeProfitMargins(30)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             null
         }
 
@@ -398,7 +398,7 @@ class MicroRewards(
             val firstTx = System.currentTimeMillis() / 1000 - 30 * 86400
             val count = transactionDao.getTransactionCount(firstTx, System.currentTimeMillis() / 1000)
             (count / 3.0).toInt().coerceAtLeast(1)
-        } catch (e: Exception) { 1 }
+        } catch (e: Throwable) { 1 }
 
         val dailyAvg = entity.totalSalesRecorded.toDouble() / daysActive
 

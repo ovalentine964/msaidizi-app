@@ -205,7 +205,7 @@ class ConversationLearningPipeline @Inject constructor(
 
             _learningState.value = ConversationLearningState.Idle
 
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Error processing transcription for learning")
             _learningState.value = ConversationLearningState.Error(e.message ?: "Unknown error")
         }
@@ -448,7 +448,7 @@ class ConversationLearningPipeline @Inject constructor(
                 )
                 Timber.tag(TAG).d("Added pronunciation variant '%s' to '%s'", word, existing.spokenForm)
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             // JSON parse error — reset variants
             workerVocabularyDao.updatePronunciationVariants(
                 workerId, existing.spokenForm,
@@ -628,7 +628,7 @@ class ConversationLearningPipeline @Inject constructor(
         try {
             val normalized = com.msaidizi.app.core.dialect.MigoriDialectAdapter.normalize(word)
             if (normalized != word) return normalized
-        } catch (_: Exception) {}
+        } catch (_: Throwable) {}
 
         // Common ASR error patterns
         val corrections = mapOf(

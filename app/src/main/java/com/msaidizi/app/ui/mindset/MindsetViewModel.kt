@@ -83,7 +83,7 @@ class MindsetViewModel @Inject constructor(
                     totalLessons = progress.totalLessons,
                     error = null
                 )
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = "Imeshindwa kupakia data: ${e.message}"
@@ -108,7 +108,7 @@ class MindsetViewModel @Inject constructor(
                     isLessonPlaying = true,
                     currentPlayingLessonId = lesson.id
                 )
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 _uiState.value = _uiState.value.copy(
                     error = "Imeshindwa kuanza somo: ${e.message}"
                 )
@@ -131,7 +131,7 @@ class MindsetViewModel @Inject constructor(
                 )
                 // Refresh data to show updated progress
                 loadMindsetData()
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 _uiState.value = _uiState.value.copy(
                     error = "Imeshindwa kukamilisha somo: ${e.message}"
                 )
@@ -173,7 +173,7 @@ class MindsetViewModel @Inject constructor(
                     weeklyAverage = weeklyAverage,
                     peerComparison = peerComparison
                 )
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 _uiState.value = _uiState.value.copy(
                     error = "Imeshindwa kubadilisha tabia: ${e.message}"
                 )

@@ -130,7 +130,7 @@ class ProductClassifier @Inject constructor(
             cleanup()
             System.gc()
             false
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to load product classifier")
             cleanup()
             false
@@ -217,7 +217,7 @@ class ProductClassifier @Inject constructor(
                 cleanup()
                 System.gc()
                 null
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Classification failed")
                 null
             }
@@ -250,7 +250,7 @@ class ProductClassifier @Inject constructor(
                 results.close()
 
                 probabilities
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Raw classification failed")
                 null
             }
@@ -321,7 +321,7 @@ class ProductClassifier @Inject constructor(
         } catch (e: OutOfMemoryError) {
             Timber.e(TAG, "OOM during image preprocessing")
             null
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Image preprocessing failed")
             null
         }
@@ -350,7 +350,7 @@ class ProductClassifier @Inject constructor(
                 }
             }
             internalFile
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.d(TAG, "Model not in assets: %s", e.message)
             null
         }
@@ -372,7 +372,7 @@ class ProductClassifier @Inject constructor(
     private fun cleanup() {
         try {
             ortSession?.close()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.d(TAG, "Error closing session: %s", e.message)
         }
         ortSession = null

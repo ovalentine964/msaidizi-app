@@ -506,7 +506,7 @@ class MpesaReconciler(
                 .atTime(hour, minute)
                 .atZone(ZoneId.of("Africa/Nairobi"))
                 .toEpochSecond()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             null
         }
     }

@@ -586,7 +586,7 @@ class TitheHistoryAdapter(
         // Type label in Swahili
         holder.typeLabel.text = try {
             TitheTracker.GivingType.valueOf(record.type).swahili
-        } catch (_: Exception) {
+        } catch (_: Throwable) {
             record.type
         }
 

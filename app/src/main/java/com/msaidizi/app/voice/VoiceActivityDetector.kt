@@ -118,7 +118,7 @@ class VoiceActivityDetector @Inject constructor(
             val elapsed = System.currentTimeMillis() - startTime
             Timber.i("Silero VAD model loaded in %dms", elapsed)
             true
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to load Silero VAD model")
             isSileroLoaded = false
             false
@@ -381,7 +381,7 @@ class VoiceActivityDetector @Inject constructor(
             results.close()
 
             prob
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(e, "Silero inference error, falling back to energy")
             processEnergyChunk(audioWindow)
         }

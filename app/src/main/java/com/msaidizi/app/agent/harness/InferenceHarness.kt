@@ -253,7 +253,7 @@ class InferenceHarness @Inject constructor(
                     // Already handled — don't double-count
                     throw e
 
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     lastException = e
                     metrics.recordFailure()
                     breaker.recordFailure()
@@ -557,7 +557,7 @@ class InferenceHarness @Inject constructor(
     }
 
     private suspend fun emitEvent(event: InferenceEvent) {
-        try { _events.emit(event) } catch (_: Exception) {}
+        try { _events.emit(event) } catch (_: Throwable) {}
     }
 
     private fun percentile(sortedValues: List<Long>, pct: Double): Long {

@@ -61,7 +61,7 @@ class EvolutionViewModel @Inject constructor(
                     totalRequests = requestStats["totalRequests"] as? Int ?: 0,
                     error = null
                 )
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = "Failed to load evolution data: ${e.message}"
@@ -94,7 +94,7 @@ class EvolutionViewModel @Inject constructor(
 
                 // Reload dashboard
                 loadEvolutionData()
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 _uiState.value = _uiState.value.copy(
                     error = "Failed to submit feedback: ${e.message}"
                 )
@@ -130,7 +130,7 @@ class EvolutionViewModel @Inject constructor(
                         lastSyncResult = "Sync failed: ${result.error}"
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 _uiState.value = _uiState.value.copy(
                     lastSyncResult = "Sync error: ${e.message}"
                 )

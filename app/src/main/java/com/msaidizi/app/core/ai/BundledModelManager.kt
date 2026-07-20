@@ -161,7 +161,7 @@ class BundledModelManager @Inject constructor(
             ))
             _bundledModelState.value = BundledModelState.UNAVAILABLE
             System.gc()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Bundled model initialization failed")
             reportSentryBreadcrumb("bundled_model_init_exception", mapOf(
                 "error" to (e.message ?: "unknown")
@@ -246,7 +246,7 @@ class BundledModelManager @Inject constructor(
         // Check if first model file exists in assets
         return try {
             context.assets.open("models/${BUNDLED_ASSETS.first()}").use { it.available() > 0 }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             false
         }
     }
@@ -307,7 +307,7 @@ class BundledModelManager @Inject constructor(
             Timber.i(TAG, "All bundled models extracted: %d MB total", totalExtracted / (1024 * 1024))
             _bundledModelState.value = BundledModelState.READY
             true
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to extract bundled models")
             _bundledModelState.value = BundledModelState.UNAVAILABLE
             false
@@ -421,7 +421,7 @@ class BundledModelManager @Inject constructor(
                 data.forEach { (k, v) -> setData(k, v) }
             }
             io.sentry.Sentry.addBreadcrumb(breadcrumb)
-        } catch (_: Exception) {}
+        } catch (_: Throwable) {}
     }
 
     // ────────────────────── Private ──────────────────────
@@ -470,7 +470,7 @@ class BundledModelManager @Inject constructor(
                     _downloadState.value = FullModelDownloadState.WAITING_FOR_WIFI
                     Timber.i(TAG, "Full model download deferred (waiting for WiFi)")
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Full model download failed")
                 _downloadState.value = FullModelDownloadState.FAILED
             }
@@ -517,7 +517,7 @@ class BundledModelManager @Inject constructor(
                 } else {
                     Timber.i(TAG, "Alt model download deferred (waiting for WiFi)")
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Alt model download failed")
             }
         }

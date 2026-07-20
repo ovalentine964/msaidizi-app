@@ -50,7 +50,7 @@ class IntentPatternConfig(private val context: Context) {
         val compiled = intentConfig.patterns.mapNotNull { pattern ->
             try {
                 Regex(pattern)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Invalid regex in intent '$intentKey': $pattern")
                 null
             }
@@ -115,7 +115,7 @@ class IntentPatternConfig(private val context: Context) {
                 cachedConfig = json.decodeFromString<IntentPatternsFile>(text).toParsedConfig()
                 Timber.i("IntentPatternConfig: Loaded OTA-updated patterns (v${cachedConfig?.version})")
                 return
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.w(e, "IntentPatternConfig: OTA file corrupted, falling back to assets")
             }
         }
@@ -138,7 +138,7 @@ class IntentPatternConfig(private val context: Context) {
             reload() // Hot-swap
             Timber.i("IntentPatternConfig: OTA update saved and applied")
             true
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "IntentPatternConfig: Failed to save OTA update")
             false
         }
@@ -158,7 +158,7 @@ class IntentPatternConfig(private val context: Context) {
             val text = context.assets.open("intent_patterns.json").bufferedReader().readText()
             val file = json.decodeFromString<IntentPatternsFile>(text)
             file.toParsedConfig().also { cachedConfig = it }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "IntentPatternConfig: Failed to load from assets")
             ParsedConfig.empty()
         }

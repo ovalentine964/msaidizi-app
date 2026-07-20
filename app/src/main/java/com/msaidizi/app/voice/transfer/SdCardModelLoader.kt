@@ -194,7 +194,7 @@ class SdCardModelLoader @Inject constructor(
                 copiedCount++
                 Timber.i("Model %s copied from SD card successfully", sdModel.modelId)
 
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Failed to copy model %s from SD card", sdModel.modelId)
             }
         }

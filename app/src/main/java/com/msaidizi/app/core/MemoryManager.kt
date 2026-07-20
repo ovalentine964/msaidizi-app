@@ -334,7 +334,7 @@ class MemoryManager @Inject constructor(
             try {
                 releaser()
                 Timber.d("MemoryManager: Released model '$name'")
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "MemoryManager: Failed to release model '$name'")
             }
         }
@@ -351,7 +351,7 @@ class MemoryManager @Inject constructor(
             try {
                 releaser()
                 Timber.d("MemoryManager: Released non-essential model '$name'")
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "MemoryManager: Failed to release model '$name'")
             }
         }
@@ -410,14 +410,14 @@ class MemoryManager @Inject constructor(
         // Notify sequential coordinator first (higher priority — may abort operations)
         try {
             sequentialCoordinationCallback?.invoke(level)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "MemoryManager: Sequential coordinator threw exception")
         }
 
         memoryListeners.forEach { (name, listener) ->
             try {
                 listener(level)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "MemoryManager: Listener '$name' threw exception")
             }
         }

@@ -362,7 +362,7 @@ class VisionHarness @Inject constructor(
                 qualityIssues = listOf("Muda wa kusoma risiti umekwisha"),
                 latencyMs = System.currentTimeMillis() - startTime
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "[%s] Receipt scan failed", scanId)
             receiptVoiceFallbacks.incrementAndGet()
             return ReceiptScanResult(

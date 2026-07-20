@@ -156,7 +156,7 @@ class AutoUpdater @Inject constructor(
                 Timber.d("App is up to date (version $currentVersionCode)")
                 UpdateResult.UpToDate
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Update check failed")
             UpdateResult.Error(e.message ?: "Unknown error")
         }
@@ -207,7 +207,7 @@ class AutoUpdater @Inject constructor(
                 Timber.e("Download failed or file missing")
                 false
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Download/install failed")
             false
         }
@@ -278,7 +278,7 @@ class AutoUpdater @Inject constructor(
         continuation.invokeOnCancellation {
             try {
                 context.unregisterReceiver(receiver)
-            } catch (_: Exception) {}
+            } catch (_: Throwable) {}
         }
 
         // Poll for progress updates
@@ -339,7 +339,7 @@ class AutoUpdater @Inject constructor(
         try {
             context.startActivity(intent)
             Timber.i("System installer launched for ${apkFile.name}")
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to launch installer")
             // Fallback: open file with default handler
             val fallback = Intent(Intent.ACTION_VIEW)
@@ -347,7 +347,7 @@ class AutoUpdater @Inject constructor(
             fallback.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
             try {
                 context.startActivity(fallback)
-            } catch (e2: Exception) {
+            } catch (e2: Throwable) {
                 Timber.e(e2, "Fallback installer also failed")
             }
         }

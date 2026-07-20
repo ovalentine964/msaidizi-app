@@ -146,7 +146,7 @@ class DataRetentionManager @Inject constructor(
                     //   2. Encrypt with ephemeral key (for recovery within 30 days)
                     //   3. Schedule hard-delete after recovery window
 
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     Timber.e(e, "Retention cleanup failed for %s", category.name)
                 }
             }
@@ -155,7 +155,7 @@ class DataRetentionManager @Inject constructor(
             // This is critical for privacy — raw audio must not persist
             try {
                 purgeExpiredVoiceData()
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Voice data purge failed")
             }
 
@@ -191,7 +191,7 @@ class DataRetentionManager @Inject constructor(
                     file.writeBytes(randomBytes)
                     file.delete()
                     purgedCount++
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     Timber.w(e, "Failed to securely delete voice file: %s", file.name)
                 }
             }

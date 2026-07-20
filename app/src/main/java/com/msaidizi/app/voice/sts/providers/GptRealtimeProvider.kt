@@ -107,7 +107,7 @@ Speak in the user's language and dialect."""
     override fun isAvailable(): Boolean {
         return try {
             getApiKey().isNotBlank()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             false
         }
     }
@@ -426,7 +426,7 @@ Speak in the user's language and dialect."""
                     Timber.tag(TAG).v("Unhandled event: %s", type)
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Error parsing server event: %s", text.take(100))
         }
     }
@@ -519,7 +519,7 @@ Speak in the user's language and dialect."""
             val field = Class.forName("com.msaidizi.app.BuildConfig")
                 .getDeclaredField("OPENAI_API_KEY")
             field.get(null) as? String ?: ""
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             ""
         }
     }

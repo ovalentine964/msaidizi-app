@@ -129,7 +129,7 @@ class ModelTransfer @Inject constructor(
             activity.startActivity(Intent.createChooser(intent, "Tuma Model (Send Model)"))
             _transferState.value = TransferState.Transferring(modelId, -1) // Indeterminate
             Timber.i("Bluetooth send initiated for model %s", modelId)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to initiate Bluetooth send")
             _transferState.value = TransferState.Error("Imeshindikana kutuma (Failed to send)")
         }
@@ -230,7 +230,7 @@ class ModelTransfer @Inject constructor(
                     _transferState.value = TransferState.Error("Mdhibiti hakubali (Receiver rejected)")
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "WiFi Direct send failed")
             _transferState.value = TransferState.Error("Umeshindwa kutuma (Send failed)")
         }
@@ -260,7 +260,7 @@ class ModelTransfer @Inject constructor(
                         handleIncomingTransfer(clientSocket)
                     }
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Model transfer server error")
                 _transferState.value = TransferState.Error("Server error: ${e.message}")
             }
@@ -362,7 +362,7 @@ class ModelTransfer @Inject constructor(
                     _transferState.value = TransferState.Error("Kusanikisha imeshindwa (Install failed)")
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Error handling incoming transfer")
             _transferState.value = TransferState.Error("Kupokea imeshindwa (Receive failed)")
         }
@@ -449,7 +449,7 @@ class ModelTransfer @Inject constructor(
                     "Uthibitisho umeshindwa — faili limeondolewa (Verification failed — file removed)"
                 )
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Error handling Bluetooth received file: %s", file.name)
             _transferState.value = TransferState.Error(
                 "Imeshindwa kuchakata faili la Bluetooth (Failed to process Bluetooth file)"
@@ -479,7 +479,7 @@ class ModelTransfer @Inject constructor(
         stopBluetoothFileObserver()
         try {
             context.unregisterReceiver(bluetoothReceiver)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(e, "Error unregistering Bluetooth receiver")
         }
     }

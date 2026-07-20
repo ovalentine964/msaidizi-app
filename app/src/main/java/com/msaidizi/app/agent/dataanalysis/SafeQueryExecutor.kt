@@ -54,7 +54,7 @@ class SafeQueryExecutor @Inject constructor(
                         originalQuery = intent.originalQuery
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, TAG, "Query execution failed")
                 QueryResult.Error(
                     message = "Kuna tatizo la kiufundi. Tafadhali jaribu tena.",

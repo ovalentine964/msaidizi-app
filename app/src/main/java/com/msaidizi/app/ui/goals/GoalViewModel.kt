@@ -78,7 +78,7 @@ class GoalViewModel @Inject constructor(
                     overallProgress = overallProgress,
                     error = null
                 )
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Error loading goal data")
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -123,7 +123,7 @@ class GoalViewModel @Inject constructor(
                 val goalCategory = if (category.isNotBlank()) {
                     try {
                         GoalPlanner.GoalCategory.valueOf(category)
-                    } catch (_: Exception) {
+                    } catch (_: Throwable) {
                         GoalPlanner.GoalCategory.OTHER
                     }
                 } else {
@@ -144,7 +144,7 @@ class GoalViewModel @Inject constructor(
                 )
 
                 loadData()
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Error creating goal from voice")
                 _uiState.value = _uiState.value.copy(
                     isProcessing = false,
@@ -219,7 +219,7 @@ class GoalViewModel @Inject constructor(
                 )
 
                 loadData()
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Error updating goal progress")
                 _uiState.value = _uiState.value.copy(
                     isProcessing = false,
@@ -251,7 +251,7 @@ class GoalViewModel @Inject constructor(
                 }
 
                 updateProgress(goalId, amount, voiceText)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Error processing voice progress")
                 _uiState.value = _uiState.value.copy(
                     isProcessing = false,
@@ -277,7 +277,7 @@ class GoalViewModel @Inject constructor(
                 )
 
                 loadData()
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Error completing goal")
                 _uiState.value = _uiState.value.copy(
                     error = "Kosa. Jaribu tena."
@@ -301,7 +301,7 @@ class GoalViewModel @Inject constructor(
                 )
 
                 loadData()
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Error abandoning goal")
                 _uiState.value = _uiState.value.copy(
                     error = "Kosa. Jaribu tena."
@@ -406,7 +406,7 @@ class GoalViewModel @Inject constructor(
             deadline = deadline,
             category = try {
                 GoalPlanner.GoalCategory.valueOf(category)
-            } catch (_: Exception) {
+            } catch (_: Throwable) {
                 GoalPlanner.GoalCategory.OTHER
             },
             isActive = status == "ACTIVE"

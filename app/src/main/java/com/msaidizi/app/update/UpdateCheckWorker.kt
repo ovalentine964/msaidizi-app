@@ -82,7 +82,7 @@ class UpdateCheckWorker @AssistedInject constructor(
                     Result.retry()
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Update check worker failed")
             Result.retry()
         }

@@ -131,7 +131,7 @@ class WaxalAdapter @Inject constructor(
             val elapsed = System.currentTimeMillis() - startTime
             Timber.tag(TAG).i("WAXAL adapter loaded for '%s' in %dms", language, elapsed)
             true
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Failed to load WAXAL adapter for: %s", language)
             isAdapterLoaded = false
             false
@@ -194,7 +194,7 @@ class WaxalAdapter @Inject constructor(
             val adapted = results.get("adapted_hidden_states") as OnnxTensor
 
             adapted
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).w(e, "Failed to apply WAXAL adapter")
             null
         }

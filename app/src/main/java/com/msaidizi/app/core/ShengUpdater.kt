@@ -394,7 +394,7 @@ class ShengUpdater @Inject constructor() {
 
             Timber.tag(TAG).d("Flushed %d words to database", pendingFlush.size)
             pendingFlush.clear()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Failed to flush vocabulary")
         }
     }
@@ -424,7 +424,7 @@ class ShengUpdater @Inject constructor() {
 
             _activeVocabularySize.value = activeVocabulary.size
             Timber.tag(TAG).d("Loaded %d active words from database", activeVocabulary.size)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Failed to load persisted vocabulary")
         }
     }

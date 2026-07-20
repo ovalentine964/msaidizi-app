@@ -46,7 +46,7 @@ class GamificationHandler(
                     type = ResponseType.CLARIFICATION
                 )
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Error recording giving")
             AgentResponse(text = if (language == "sw") "⚠️ Kuna tatizo. Jaribu tena." else "⚠️ Something went wrong.", type = ResponseType.ERROR)
         }
@@ -57,7 +57,7 @@ class GamificationHandler(
         return try {
             val summary = tracker.getGivingSummary("month")
             AgentResponse(text = tracker.generateSummaryResponse(summary), type = ResponseType.INFORMATION)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Error querying giving")
             AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR)
         }
@@ -81,7 +81,7 @@ class GamificationHandler(
             } else {
                 AgentResponse(text = if (language == "sw") "Lengo ni KSh ngapi?" else "What's the target amount?", type = ResponseType.CLARIFICATION)
             }
-        } catch (e: Exception) { AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR) }
+        } catch (e: Throwable) { AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR) }
     }
 
     // ═══════════════ GOALS ═══════════════
@@ -102,7 +102,7 @@ class GamificationHandler(
             } else {
                 AgentResponse(text = if (language == "sw") "Lengo lako ni nini? Bei ngapi?" else "What's your goal? How much?", type = ResponseType.CLARIFICATION)
             }
-        } catch (e: Exception) { Timber.e(e, "Error creating goal"); AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR) }
+        } catch (e: Throwable) { Timber.e(e, "Error creating goal"); AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR) }
     }
 
     suspend fun handleGoalProgress(intentResult: IntentResult, language: String, fallback: suspend () -> AgentResponse): AgentResponse {
@@ -121,7 +121,7 @@ class GamificationHandler(
             } else {
                 AgentResponse(text = if (language == "sw") "Umetoa KSh ngapi?" else "How much did you save?", type = ResponseType.CLARIFICATION)
             }
-        } catch (e: Exception) { Timber.e(e, "Error updating goal progress"); AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR) }
+        } catch (e: Throwable) { Timber.e(e, "Error updating goal progress"); AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR) }
     }
 
     suspend fun handleGoalReport(language: String): AgentResponse {
@@ -130,7 +130,7 @@ class GamificationHandler(
             val goals = planner.getAllGoals()
             val report = planner.getGoalReport(goals)
             AgentResponse(text = report.message, type = ResponseType.INFORMATION)
-        } catch (e: Exception) { AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR) }
+        } catch (e: Throwable) { AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR) }
     }
 
     suspend fun handleGoalTimeForecast(language: String): AgentResponse {
@@ -139,7 +139,7 @@ class GamificationHandler(
             val goal = planner.getActiveGoals().firstOrNull()
             if (goal != null) { AgentResponse(text = planner.getTimeToGoal(goal).message, type = ResponseType.INFORMATION) }
             else { AgentResponse(text = if (language == "sw") "Huna lengo." else "No goal.", type = ResponseType.INFORMATION) }
-        } catch (e: Exception) { AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR) }
+        } catch (e: Throwable) { AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR) }
     }
 
     suspend fun handleGoalAdjust(intentResult: IntentResult, language: String, fallback: suspend () -> AgentResponse): AgentResponse {
@@ -151,7 +151,7 @@ class GamificationHandler(
                 planner.adjustGoal(goal, newTarget = amount)
                 AgentResponse(text = if (language == "sw") "✅ Lengo limesasishwa." else "✅ Goal updated.", type = ResponseType.CONFIRMATION)
             } else { AgentResponse(text = if (language == "sw") "Huna lengo." else "No goal.", type = ResponseType.INFORMATION) }
-        } catch (e: Exception) { AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR) }
+        } catch (e: Throwable) { AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR) }
     }
 
     suspend fun handleGoalEncouragement(language: String): AgentResponse {
@@ -163,7 +163,7 @@ class GamificationHandler(
             val goal = planner.getActiveGoals().firstOrNull()
             if (goal != null) { AgentResponse(text = planner.getEncouragement(goal), type = ResponseType.INFORMATION) }
             else { AgentResponse(text = if (language == "sw") "Anza na lengo! Sema 'Lengo langu ni...'" else "Start with a goal! Say 'My goal is...'", type = ResponseType.INFORMATION) }
-        } catch (e: Exception) { AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR) }
+        } catch (e: Throwable) { AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR) }
     }
 
     // ═══════════════ LOANS ═══════════════
@@ -190,24 +190,24 @@ class GamificationHandler(
             } else {
                 AgentResponse(text = if (language == "sw") "Mkopo ni KSh ngapi?" else "How much is the loan?", type = ResponseType.CLARIFICATION)
             }
-        } catch (e: Exception) { Timber.e(e, "Error recording loan"); AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR) }
+        } catch (e: Throwable) { Timber.e(e, "Error recording loan"); AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR) }
     }
 
     suspend fun handleLoanQuery(language: String): AgentResponse {
         val manager = loanManager ?: return AgentResponse(text = if (language == "sw") "Huna mkopo." else "No loans.", type = ResponseType.INFORMATION)
         return try { AgentResponse(text = manager.getRepaymentReminder(), type = ResponseType.INFORMATION) }
-        catch (e: Exception) { AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR) }
+        catch (e: Throwable) { AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR) }
     }
 
     suspend fun handleLoanReport(language: String): AgentResponse {
         val manager = loanManager ?: return AgentResponse(text = if (language == "sw") "Huna mkopo." else "No loans.", type = ResponseType.INFORMATION)
         return try { AgentResponse(text = manager.getLoanReport(), type = ResponseType.INFORMATION) }
-        catch (e: Exception) { AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR) }
+        catch (e: Throwable) { AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR) }
     }
 
     suspend fun handleLoanDeadline(language: String): AgentResponse {
         val manager = loanManager ?: return AgentResponse(text = if (language == "sw") "Huna mkopo." else "No loans.", type = ResponseType.INFORMATION)
         return try { AgentResponse(text = manager.getRepaymentReminder(), type = ResponseType.INFORMATION) }
-        catch (e: Exception) { AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR) }
+        catch (e: Throwable) { AgentResponse(text = "⚠️ Kuna tatizo.", type = ResponseType.ERROR) }
     }
 }

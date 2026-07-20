@@ -529,7 +529,7 @@ class ActiveGoalAdapter(
         // Category icon
         val category = try {
             GoalPlanner.GoalCategory.valueOf(goal.category)
-        } catch (_: Exception) {
+        } catch (_: Throwable) {
             GoalPlanner.GoalCategory.OTHER
         }
         holder.categoryIcon.text = getCategoryIcon(category)

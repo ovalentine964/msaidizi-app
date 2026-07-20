@@ -234,7 +234,7 @@ class FederatedLearningClient(
                 SyncState.Error("Upload failed")
             }
 
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Upload failed")
             _syncState.value = SyncState.Error(e.message ?: "Upload failed")
         }
@@ -281,7 +281,7 @@ class FederatedLearningClient(
             _syncState.value = SyncState.Idle
             null
 
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Download failed for %s", language)
             _syncState.value = SyncState.Error(e.message ?: "Download failed")
             null
@@ -340,7 +340,7 @@ class FederatedLearningClient(
 
             Timber.tag(TAG).i("Applied global update for %s (v%s)", language, update.version)
 
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Failed to apply global update for %s", language)
         }
     }
@@ -524,7 +524,7 @@ class FederatedLearningClient(
                 }
 
                 success
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.tag(TAG).e(e, "Network error during upload")
                 false
             }
@@ -725,7 +725,7 @@ class FederatedLearningClient(
 
             true
 
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "LoRA training failed")
             _trainingState.value = LoRATrainingState.Error(e.message ?: "Training failed")
             false

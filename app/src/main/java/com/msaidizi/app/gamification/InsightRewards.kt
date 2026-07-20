@@ -230,7 +230,7 @@ class InsightRewards(
                     "averageSales" to bestDayAvg.toString()
                 )
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to generate bronze insight")
             InsightReward.error(language)
         }
@@ -297,7 +297,7 @@ class InsightRewards(
                     "topRevenue" to top.totalRev.toString()
                 )
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to generate silver insight")
             InsightReward.error(language)
         }
@@ -354,7 +354,7 @@ class InsightRewards(
                     "topHour" to "${peaks.first().hour}:00"
                 )
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to generate gold insight")
             InsightReward.error(language)
         }
@@ -440,7 +440,7 @@ class InsightRewards(
                     "changePercent" to trend.changePercent.toString()
                 )
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to generate platinum insight")
             InsightReward.error(language)
         }
@@ -522,7 +522,7 @@ class InsightRewards(
                     "trend" to healthScore.trend.name
                 )
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to generate diamond insight")
             InsightReward.error(language)
         }

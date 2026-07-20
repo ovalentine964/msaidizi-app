@@ -325,7 +325,7 @@ class CryptoAuditLogger @Inject constructor(
                 writer.append(event.toLogLine())
                 writer.append('\n')
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to write audit log")
         }
     }
@@ -347,7 +347,7 @@ class CryptoAuditLogger @Inject constructor(
         return try {
             // Parse JSON line (simplified — use proper JSON parser in production)
             AuditEvent.fromLogLine(line)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             null
         }
     }

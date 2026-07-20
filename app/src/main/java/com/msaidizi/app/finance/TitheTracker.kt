@@ -760,7 +760,7 @@ class TitheTracker(
     private fun TitheRecord.toGivingRecord(): GivingRecord {
         return GivingRecord(
             amount = amount,
-            type = try { GivingType.valueOf(type) } catch (_: Exception) { GivingType.OTHER },
+            type = try { GivingType.valueOf(type) } catch (_: Throwable) { GivingType.OTHER },
             recipient = recipient,
             date = date,
             notes = notes,

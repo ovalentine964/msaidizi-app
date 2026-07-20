@@ -392,7 +392,7 @@ class MorningBriefingLoop(
             if (health.totalScore < 50) {
                 insights.appendLine("⚠️ Business health: ${health.totalScore.toInt()}/100 — let's work on improving this!")
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).w(e, "Failed to enrich briefing with pattern insights")
             return message
         }

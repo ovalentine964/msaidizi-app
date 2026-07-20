@@ -73,7 +73,7 @@ class VoiceInputHelper(
             updateMicButtonState()
             ttsHelper?.speak("Sikiliza... Sasa sema")
 
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Error starting speech recognition")
             ttsHelper?.speakError("voice")
             onError?.invoke("start_failed")

@@ -128,7 +128,7 @@ class SecurityConfig @Inject constructor(
             val tags = process.inputStream.bufferedReader().readLine()?.trim() ?: ""
             process.waitFor()
             tags.contains("test-keys")
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             false
         }
     }
@@ -153,11 +153,11 @@ class SecurityConfig @Inject constructor(
                 try {
                     pm.getPackageInfo(pkg, 0)
                     true
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     false
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             false
         }
     }
@@ -168,7 +168,7 @@ class SecurityConfig @Inject constructor(
             val result = process.inputStream.bufferedReader().readLine()
             process.waitFor()
             !result.isNullOrBlank()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             false
         }
     }
@@ -308,7 +308,7 @@ class SecurityConfig @Inject constructor(
                 networkCountry = tm.networkCountryIso?.takeIf { it.isNotBlank() },
                 simOperator = tm.simOperator?.takeIf { it.isNotBlank() }
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(e, "Failed to read SIM info")
             null
         }

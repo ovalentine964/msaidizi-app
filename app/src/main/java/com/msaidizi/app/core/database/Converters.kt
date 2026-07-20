@@ -54,7 +54,7 @@ class Converters {
     fun toWorkingHours(value: String): WorkingHours {
         return try {
             gson.fromJson(value, WorkingHours::class.java) ?: WorkingHours()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             WorkingHours()
         }
     }

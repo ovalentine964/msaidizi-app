@@ -159,7 +159,7 @@ class CryptoServiceImpl @Inject constructor(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 try {
                     setIsStrongBoxBacked(true)
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     Timber.d("StrongBox not available for %s, using TEE", alias.aliasName)
                 }
             }

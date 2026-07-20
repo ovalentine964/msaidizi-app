@@ -223,7 +223,7 @@ class PeerComparison(
             } else {
                 cached
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).w(e, "Failed to fetch peer metrics, using cache")
             cached
         }
@@ -441,7 +441,7 @@ class PeerComparison(
      * Get a human-readable business type label.
      */
     private fun getBusinessTypeLabel(businessType: String, language: String): String {
-        val type = try { WorkerType.valueOf(businessType) } catch (_: Exception) { WorkerType.UNKNOWN }
+        val type = try { WorkerType.valueOf(businessType) } catch (_: Throwable) { WorkerType.UNKNOWN }
         return if (language == "sw") {
             when (type) {
                 WorkerType.TRADER -> "Wafanyabiashara"

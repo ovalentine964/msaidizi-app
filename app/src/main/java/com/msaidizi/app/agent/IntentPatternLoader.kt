@@ -131,7 +131,7 @@ class IntentPatternLoader @Inject constructor(
             Timber.i(TAG, "Updated patterns from remote: version=%s, intents=%d",
                 config._metadata?.version, config.intents.size)
             true
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to update patterns from remote")
             false
         }
@@ -150,7 +150,7 @@ class IntentPatternLoader @Inject constructor(
             activeSource = PatternSource.AB_TEST
             Timber.i(TAG, "Set A/B test variant: version=%s", config._metadata?.version)
             true
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to set A/B test variant")
             false
         }
@@ -184,7 +184,7 @@ class IntentPatternLoader @Inject constructor(
         return try {
             val jsonText = context.assets.open(ASSETS_FILE).bufferedReader().use { it.readText() }
             json.decodeFromString<IntentPatternConfig>(jsonText)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to load patterns from assets")
             // Return empty config as ultimate fallback
             IntentPatternConfig()
@@ -198,7 +198,7 @@ class IntentPatternLoader @Inject constructor(
             if (!file.exists()) return null
             val jsonText = file.readText()
             json.decodeFromString<IntentPatternConfig>(jsonText)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to load patterns from cache: %s", fileName)
             null
         }

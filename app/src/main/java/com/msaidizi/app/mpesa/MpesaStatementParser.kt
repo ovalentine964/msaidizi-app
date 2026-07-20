@@ -88,7 +88,7 @@ class MpesaStatementParser {
                 } else {
                     skippedCount++
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.w("Failed to parse M-Pesa line %d: %s (%s)", lineNum, e.message, line.take(80))
                 skippedCount++
             }
@@ -237,7 +237,7 @@ class MpesaStatementParser {
                 if (date != null) {
                     return date.time / 1000  // Convert ms to seconds
                 }
-            } catch (_: Exception) {
+            } catch (_: Throwable) {
                 // Try next format
             }
         }
@@ -512,7 +512,7 @@ class MpesaSmsParser {
             // Try "d/M/yy at h:mm a" format
             val format = SimpleDateFormat("d/M/yy 'at' h:mm a", Locale.US)
             format.parse(dateStr.trim())?.time?.div(1000)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             null
         }
     }

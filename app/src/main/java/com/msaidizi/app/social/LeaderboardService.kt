@@ -220,7 +220,7 @@ class LeaderboardService(
 
         val streak = try {
             gamificationEngine?.getState()?.currentStreak ?: 0
-        } catch (_: Exception) { 0 }
+        } catch (_: Throwable) { 0 }
 
         return (weeklySales * WEIGHT_SALES) +
             (weeklyProfit * WEIGHT_PROFIT) +
@@ -249,11 +249,11 @@ class LeaderboardService(
 
         val streak = try {
             gamificationEngine?.getState()?.currentStreak ?: 0
-        } catch (_: Exception) { 0 }
+        } catch (_: Throwable) { 0 }
 
         val totalPoints = try {
             gamificationEngine?.getState()?.totalPoints ?: 0
-        } catch (_: Exception) { 0 }
+        } catch (_: Throwable) { 0 }
 
         return WeeklyStats(
             weeklySales = weeklySales,
@@ -360,7 +360,7 @@ class LeaderboardService(
      * Get a human-readable business type label.
      */
     private fun getBusinessTypeLabel(businessType: String, language: String): String {
-        val type = try { WorkerType.valueOf(businessType) } catch (_: Exception) { WorkerType.UNKNOWN }
+        val type = try { WorkerType.valueOf(businessType) } catch (_: Throwable) { WorkerType.UNKNOWN }
         return if (language == "sw") {
             when (type) {
                 WorkerType.TRADER -> "Wafanyabiashara"
@@ -411,7 +411,7 @@ class LeaderboardService(
 
         return try {
             leaderboardSource.fetchLeaderboard(location, businessType, weekStart)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).w(e, "Failed to fetch leaderboard from server")
             null
         }
@@ -446,7 +446,7 @@ class LeaderboardService(
             // Cleanup old entries (keep 8 weeks)
             val cutoff = System.currentTimeMillis() / 1000 - (8 * 7 * 86400)
             socialDao.deleteOldLeaderboardEntries(cutoff)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).w(e, "Failed to cache leaderboard data")
         }
     }

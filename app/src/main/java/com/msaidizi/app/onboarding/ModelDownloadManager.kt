@@ -201,7 +201,7 @@ class ModelDownloadManager(
             updateModelState(model.id, ModelState.PAUSED)
             Timber.i(TAG, "Download cancelled for %s", model.id)
             false
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             updateModelState(model.id, ModelState.FAILED)
             Timber.e(e, "Download failed for %s", model.id)
             false
@@ -285,7 +285,7 @@ class ModelDownloadManager(
         return try {
             val modelDir = java.io.File(context.filesDir, "models/$modelId")
             modelDir.exists() && modelDir.listFiles()?.isNotEmpty() == true
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             _modelStates.value[modelId] == ModelState.COMPLETED
         }
     }
@@ -385,7 +385,7 @@ class ModelDownloadManager(
 
         try {
             cm.registerNetworkCallback(request, networkCallback!!)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(e, "Failed to register network callback")
         }
     }
@@ -398,7 +398,7 @@ class ModelDownloadManager(
             try {
                 val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
                 cm.unregisterNetworkCallback(it)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.w(e, "Failed to unregister network callback")
             }
         }

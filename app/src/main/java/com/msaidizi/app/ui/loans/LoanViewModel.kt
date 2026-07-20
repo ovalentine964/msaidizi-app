@@ -117,7 +117,7 @@ class LoanViewModel @Inject constructor(
                     repaymentSchedule = allRepayments,
                     error = null
                 )
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = "Imeshindwa kupakia mikopo: ${e.message}"
@@ -180,7 +180,7 @@ class LoanViewModel @Inject constructor(
                 )
 
                 loadLoans()
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 _uiState.value = _uiState.value.copy(
                     isRecording = false,
                     error = "Imeshindwa kurekodi mkopo: ${e.message}"
@@ -214,7 +214,7 @@ class LoanViewModel @Inject constructor(
                         error = "Mkopo haujapatikana."
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 _uiState.value = _uiState.value.copy(
                     isRecordingRepayment = false,
                     error = "Imeshindwa kurekodi malipo: ${e.message}"

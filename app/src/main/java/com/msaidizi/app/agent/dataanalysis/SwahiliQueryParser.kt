@@ -291,7 +291,7 @@ Examples:
                 temperature = 0.0f // Deterministic for parsing
             )
             parseLlmJsonResponse(response, query)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(e, TAG, "LLM parsing failed")
             QueryIntent.Unknown(query, "LLM parsing failed: ${e.message}")
         }

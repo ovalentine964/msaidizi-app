@@ -253,7 +253,7 @@ class BatteryOptimizer @Inject constructor(
             for (request in pendingRequests) {
                 try {
                     request.execute()
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     Timber.e(e, "Error executing batched request")
                 }
             }

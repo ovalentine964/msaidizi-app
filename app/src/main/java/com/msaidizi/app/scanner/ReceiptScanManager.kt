@@ -113,7 +113,7 @@ class ReceiptScanManager @Inject constructor(
 
                 Timber.d("ReceiptScanManager: Created transaction — %s x%.0f = KSh %.0f",
                     item.currentName, item.quantity, item.totalPrice)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "ReceiptScanManager: Failed to create transaction for %s", item.currentName)
             }
         }
@@ -160,7 +160,7 @@ class ReceiptScanManager @Inject constructor(
             }
 
             voicePipeline.speak(summary, language)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(e, "ReceiptScanManager: TTS failed for summary")
         }
     }

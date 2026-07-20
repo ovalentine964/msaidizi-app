@@ -98,7 +98,7 @@ object BiasharaSync {
                     batch.size, hashDeviceId(deviceId).take(8))
                 totalSynced += batch.size
 
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Batch sync failed")
                 totalFailed += batch.size
                 errors.add(e.message ?: "Unknown error")

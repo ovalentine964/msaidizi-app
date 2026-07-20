@@ -158,7 +158,7 @@ class SherpaVoiceEngine @Inject constructor(
             unloadAsr()
             System.gc()
             false
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "SherpaVoiceEngine: Failed to load ASR")
             unloadAsr()
             false
@@ -250,7 +250,7 @@ class SherpaVoiceEngine @Inject constructor(
             onlineRecognizer = OnlineRecognizer(config)
             activeAsrModel = "streaming-zipformer"
             true
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(e, "SherpaVoiceEngine: Failed to load native streaming ASR")
             false
         }
@@ -459,7 +459,7 @@ class SherpaVoiceEngine @Inject constructor(
                             val confidence = (0.4f + 0.5f * (bufferedSamples.toFloat() / (SAMPLE_RATE * 5))).coerceAtMost(0.85f)
                             onPartial(text, confidence)
                         }
-                    } catch (e: Exception) {
+                    } catch (e: Throwable) {
                         Timber.v("Simulated streaming partial skipped: %s", e.message)
                     }
                 }
@@ -548,7 +548,7 @@ class SherpaVoiceEngine @Inject constructor(
             unloadAsr()
             System.gc()
             null
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "SherpaVoiceEngine: ASR transcription failed")
             null
         }
@@ -647,7 +647,7 @@ class SherpaVoiceEngine @Inject constructor(
             unloadTts()
             System.gc()
             false
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "SherpaVoiceEngine: Failed to load TTS")
             unloadTts()
             false
@@ -697,7 +697,7 @@ class SherpaVoiceEngine @Inject constructor(
             Timber.e("SherpaVoiceEngine: OOM during TTS synthesis")
             unloadTts()
             System.gc()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "SherpaVoiceEngine: TTS synthesis error")
         } finally {
             isCurrentlySpeaking = false
@@ -723,7 +723,7 @@ class SherpaVoiceEngine @Inject constructor(
                 ShortArray(audioData.samples.size) { i ->
                     (audioData.samples[i].coerceIn(-1f, 1f) * Short.MAX_VALUE).toInt().toShort()
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "SherpaVoiceEngine: TTS synthesizeToPcm error")
                 ShortArray(0)
             }
@@ -740,7 +740,7 @@ class SherpaVoiceEngine @Inject constructor(
                     track.flush()
                 }
                 track.release()
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.w(e, "SherpaVoiceEngine: Error stopping AudioTrack")
             }
         }
@@ -810,7 +810,7 @@ class SherpaVoiceEngine @Inject constructor(
             val elapsed = System.currentTimeMillis() - startTime
             Timber.i("SherpaVoiceEngine: VAD loaded in %dms", elapsed)
             true
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "SherpaVoiceEngine: Failed to load VAD")
             isVadLoaded = false
             false
@@ -948,13 +948,13 @@ class SherpaVoiceEngine @Inject constructor(
             ) {
                 delay(20)
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "SherpaVoiceEngine: AudioTrack playback error")
         } finally {
             try {
                 audioTrack.stop()
                 audioTrack.release()
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 // Ignore cleanup errors
             }
             if (currentAudioTrack == audioTrack) {

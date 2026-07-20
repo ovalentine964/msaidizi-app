@@ -56,7 +56,7 @@ class DomainRouter(
                     type = ResponseType.UNKNOWN
                 )
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Error handling domain intent: %s", intentResult.intent)
             AgentResponse(
                 text = if (language == "sw") "⚠️ Kuna tatizo. Jaribu tena." else "⚠️ Something went wrong. Try again.",

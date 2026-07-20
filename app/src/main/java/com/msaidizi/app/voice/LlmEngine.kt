@@ -64,7 +64,7 @@ class LlmEngine @Inject constructor(
                 data.forEach { (k, v) -> setData(k, v) }
             }
             io.sentry.Sentry.addBreadcrumb(breadcrumb)
-        } catch (_: Exception) {
+        } catch (_: Throwable) {
             // Sentry may not be initialized — silently ignore
         }
     }
@@ -225,7 +225,7 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
                     reportSentryBreadcrumb("llm_engine_gemma_oom")
                     llamaCppEngine.unload()
                     System.gc()
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     Timber.e(e, "Exception loading Gemma 4 E2B — falling back to Qwen")
                     reportSentryBreadcrumb("llm_engine_gemma_exception", mapOf(
                         "error" to (e.message ?: "unknown")
@@ -254,7 +254,7 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
                 reportSentryBreadcrumb("llm_engine_qwen_oom")
                 llamaCppEngine.unload()
                 System.gc()
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Exception loading Qwen 3.5 0.8B")
                 reportSentryBreadcrumb("llm_engine_qwen_exception", mapOf(
                     "error" to (e.message ?: "unknown")
@@ -390,7 +390,7 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
             unloadModel()
             System.gc()
             return ""
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "LLM generation error")
             return ""
         } finally {
@@ -488,7 +488,7 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
 
         val stats = try {
             adaptiveAsrEngine?.getCorrectionStats()
-        } catch (e: Exception) { null }
+        } catch (e: Throwable) { null }
 
         if (stats != null && stats.totalCorrections > 0) {
             parts.add("Ukuzi wa msamiati: maneno ${stats.totalCorrections}")
@@ -544,7 +544,7 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
                     textResponse = output
                 )
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             FunctionCallResult(
                 isFunctionCall = false,
                 functionCallJson = null,
@@ -657,7 +657,7 @@ JSON:"""
                     originalItem = wrongItem
                 )
             } else null
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             null
         }
     }

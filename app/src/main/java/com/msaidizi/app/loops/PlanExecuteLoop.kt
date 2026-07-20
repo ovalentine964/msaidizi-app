@@ -238,7 +238,7 @@ class PlanExecuteLoop(
                     // Mark dependent steps as skipped
                     skipDependents(plan, step.stepId)
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 plan.markStep(step.stepId, PlanStep.StepStatus.FAILED, error = e.message)
                 Timber.e(e, "Step exception: %s", step.stepId)
                 skipDependents(plan, step.stepId)

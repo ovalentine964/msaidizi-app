@@ -63,7 +63,7 @@ class DocumentSigner @Inject constructor(
                 provider.algorithmId, provider.isPostQuantum, dataHash)
 
             result
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             auditLogger.logSignature(
                 algorithmId = provider.algorithmId,
                 dataHash = dataHash,
@@ -103,7 +103,7 @@ class DocumentSigner @Inject constructor(
                 signatureResult.algorithmId, valid, dataHash)
 
             valid
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             auditLogger.logVerification(
                 algorithmId = signatureResult.algorithmId,
                 dataHash = dataHash,

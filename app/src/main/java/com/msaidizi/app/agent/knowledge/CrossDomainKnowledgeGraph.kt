@@ -103,7 +103,7 @@ class CrossDomainKnowledgeGraph(
             eventBus.events.collect { event ->
                 try {
                     ingestEvent(event)
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     Timber.w(e, "Failed to ingest event into knowledge graph")
                 }
             }
@@ -124,7 +124,7 @@ class CrossDomainKnowledgeGraph(
             for (entity in nodeEntities) {
                 val valueMap: Map<String, String> = try {
                     json.decodeFromString(entity.valueJson)
-                } catch (_: Exception) { emptyMap() }
+                } catch (_: Throwable) { emptyMap() }
 
                 val node = KnowledgeNode(
                     nodeId = entity.nodeId,
@@ -145,7 +145,7 @@ class CrossDomainKnowledgeGraph(
             for (edge in edgeEntities) {
                 val sharedKeys: List<String> = try {
                     json.decodeFromString(edge.sharedKeysJson)
-                } catch (_: Exception) { emptyList() }
+                } catch (_: Throwable) { emptyList() }
 
                 val relation = KnowledgeRelation(
                     relationId = "${edge.fromNode}→${edge.toNode}",
@@ -163,7 +163,7 @@ class CrossDomainKnowledgeGraph(
             hydrated = true
             Timber.i("Hydrated knowledge graph from Room: %d nodes, %d edges",
                 nodeEntities.size, edgeEntities.size)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to hydrate knowledge graph from Room")
         }
     }
@@ -592,7 +592,7 @@ class CrossDomainKnowledgeGraph(
                 createdAt = node.createdAt,
                 updatedAt = node.updatedAt
             ))
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(e, "Failed to persist node %s", node.nodeId)
         }
     }
@@ -607,7 +607,7 @@ class CrossDomainKnowledgeGraph(
                 strength = relation.strength,
                 sharedKeysJson = json.encodeToString(relation.sharedKeys)
             ))
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(e, "Failed to persist edge %s→%s", relation.fromNode, relation.toNode)
         }
     }
@@ -639,7 +639,7 @@ class CrossDomainKnowledgeGraph(
             try {
                 knowledgeDao.deleteNodes(toRemove.map { it.nodeId })
                 knowledgeDao.deleteEdgesForNodes(toRemove.map { it.nodeId })
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.w(e, "Failed to prune nodes from Room")
             }
         }
@@ -673,7 +673,7 @@ class CrossDomainKnowledgeGraph(
                     confidence = 0.9
                 ))
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Failed to persist knowledge graph state")
         }
     }

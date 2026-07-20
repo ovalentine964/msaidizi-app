@@ -148,7 +148,7 @@ class AdaptiveAsrEngine(
                 correctionCache.size, vocabulary.size, knownVocabulary.size
             )
             initialized = true
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Initialization failed")
         }
     }
@@ -182,7 +182,7 @@ class AdaptiveAsrEngine(
                 seedWords.add(correct)
             }
             Timber.tag(TAG).d("Loaded %d seed vocabulary terms", seedWords.size)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.tag(TAG).w(e, "Failed to load seed vocabulary")
         }
         return seedWords
@@ -266,7 +266,7 @@ class AdaptiveAsrEngine(
                     language = detectedLanguage,
                     dialectRegion = detectDialectRegion(rawTranscript, detectedLanguage)
                 )
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.tag(TAG).w(e, "Failed to feed learning pipeline")
             }
         }
@@ -416,7 +416,7 @@ class AdaptiveAsrEngine(
         if (language != "sw" && language != "luo") return text
         return try {
             MigoriDialectAdapter.normalize(text)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             text
         }
     }
@@ -553,7 +553,7 @@ class AdaptiveAsrEngine(
         if (language == "sw") {
             return try {
                 MigoriDialectAdapter.detectRegion(text).name.lowercase()
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 "standard"
             }
         }

@@ -228,7 +228,7 @@ class LlamaCppEngine @Inject constructor(
                 ))
                 return@withLock false
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(TAG, "Could not read GGUF magic bytes (proceeding anyway): %s", e.message)
         }
 
@@ -292,7 +292,7 @@ class LlamaCppEngine @Inject constructor(
             Timber.e(e, "Native library not available")
             reportSentryBreadcrumb("model_load_unsatisfied_link", mapOf("path" to path))
             false
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Model load error")
             reportSentryBreadcrumb("model_load_exception", mapOf(
                 "path" to path,
@@ -345,7 +345,7 @@ class LlamaCppEngine @Inject constructor(
             unload()
             System.gc()
             ""
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Generation error")
             ""
         }
@@ -361,7 +361,7 @@ class LlamaCppEngine @Inject constructor(
                 nativeFreeModel(modelHandle)
                 Timber.d(TAG, "Model unloaded (freed handle=%d)", modelHandle)
                 reportSentryBreadcrumb("model_unloaded", mapOf("handle" to modelHandle.toString()))
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Error freeing model")
                 reportSentryBreadcrumb("model_unload_error", mapOf("error" to (e.message ?: "unknown")))
             }
@@ -404,7 +404,7 @@ class LlamaCppEngine @Inject constructor(
                 try {
                     val loaded = loadModel(gemmaPath.absolutePath)
                     if (loaded) return true
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     Timber.e(e, "Exception loading Gemma 4 E2B")
                     reportSentryBreadcrumb("gemma_load_exception", mapOf(
                         "path" to gemmaPath.absolutePath,
@@ -451,7 +451,7 @@ class LlamaCppEngine @Inject constructor(
                 data.forEach { (k, v) -> setData(k, v) }
             }
             io.sentry.Sentry.addBreadcrumb(breadcrumb)
-        } catch (_: Exception) {
+        } catch (_: Throwable) {
             // Sentry may not be initialized — silently ignore
         }
     }

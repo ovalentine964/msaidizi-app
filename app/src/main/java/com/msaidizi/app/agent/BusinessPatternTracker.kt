@@ -256,7 +256,7 @@ class BusinessPatternTracker(
 
                     Timber.d("Price updated: %s EMA=%.0f last=%.0f (n=%d)",
                         item, emaPrice, newPrice, updated.observations)
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     Timber.w(e, "Failed to parse price data for %s, resetting", item)
                     createNewPricePattern(item, newPrice)
                 }
@@ -299,7 +299,7 @@ class BusinessPatternTracker(
                 observationCount = data.observations,
                 confidence = pattern.confidence
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             null
         }
     }

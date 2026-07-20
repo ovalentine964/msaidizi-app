@@ -53,7 +53,7 @@ object DeviceCapability {
     fun isAndroidGo(context: Context): Boolean {
         return try {
             context.packageManager.hasSystemFeature("android.software.go")
-        } catch (_: Exception) {
+        } catch (_: Throwable) {
             false
         }
     }

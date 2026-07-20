@@ -295,7 +295,7 @@ class CameraCaptureFragment : Fragment() {
                     imageAnalysis
                 )
                 Timber.d(TAG, "Camera started")
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.e(e, "Camera bind failed")
                 statusText.text = "Kamera haikuanza. Jaribu tena."
             }
@@ -542,7 +542,7 @@ class CameraCaptureFragment : Fragment() {
 
             val bytes = out.toByteArray()
             BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "ImageProxy to Bitmap conversion failed")
             null
         }

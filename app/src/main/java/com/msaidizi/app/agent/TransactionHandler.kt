@@ -78,7 +78,7 @@ class TransactionHandler(
 
             // Loop closure: morning briefing feedback
             morningBriefingLoop?.let { loop ->
-                try { loop.onTransactionAfterBriefing(transaction) } catch (_: Exception) {}
+                try { loop.onTransactionAfterBriefing(transaction) } catch (_: Throwable) {}
             } ?: run {
                 briefingDelivery?.let { bd ->
                     try {
@@ -91,7 +91,7 @@ class TransactionHandler(
                                 adviceFollowed = null
                             )
                         }
-                    } catch (_: Exception) {}
+                    } catch (_: Throwable) {}
                 }
             }
 
@@ -127,7 +127,7 @@ class TransactionHandler(
                     "profit" to profit.toString()
                 )
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Error recording sale: %s x%.0f @ %.0f", item, quantity, amount)
             AgentResponse(
                 text = if (language == "sw") "⚠️ Imeshindikana kurekodi mauzo. Jaribu tena."
@@ -172,7 +172,7 @@ class TransactionHandler(
                     "amount" to amount.toString()
                 )
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Error recording purchase: %s x%.0f @ %.0f", item, quantity, amount)
             AgentResponse(
                 text = if (language == "sw") "⚠️ Imeshindikana kurekodi ununuzi. Jaribu tena."
@@ -208,7 +208,7 @@ class TransactionHandler(
                     "amount" to amount.toString()
                 )
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.e(e, "Error recording expense: %s %.0f", category, amount)
             AgentResponse(
                 text = if (language == "sw") "⚠️ Imeshindikana kurekodi matumizi. Jaribu tena."
@@ -229,19 +229,19 @@ class TransactionHandler(
                 messages.addAll(event.messages)
 
                 streakProtectionLoop?.let { spl ->
-                    try { spl.checkStreakMilestone(language)?.let { messages.add(it) } } catch (_: Exception) {}
+                    try { spl.checkStreakMilestone(language)?.let { messages.add(it) } } catch (_: Throwable) {}
                 }
 
                 variableRewardsLoop?.let { vrl ->
-                    try { vrl.evaluateReward(RewardAction.SALE, language)?.let { messages.add(it.message) } } catch (_: Exception) {}
+                    try { vrl.evaluateReward(RewardAction.SALE, language)?.let { messages.add(it.message) } } catch (_: Throwable) {}
                 }
-            } catch (_: Exception) {}
+            } catch (_: Throwable) {}
         }
 
         richHabitsScore?.let { rhs ->
             try {
                 rhs.autoCompleteFromAction("sale", language).forEach { messages.add(it.message) }
-            } catch (_: Exception) {}
+            } catch (_: Throwable) {}
         }
 
         return messages
