@@ -15,11 +15,13 @@ import javax.inject.Singleton
  * - Voice recordings encrypted with AES-256-GCM, auto-delete after processing
  * - Downloaded statements encrypted
  * - Data classified by tier (T1 Restricted, T2 Confidential)
+ *
+ * Uses the unified [CryptoService] for all encryption operations.
  */
 @Singleton
 class EncryptedStorage @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val keyManager: KeyManager
+    private val cryptoService: CryptoService
 ) {
     companion object {
         private const val ENCRYPTED_DIR = "encrypted_store"
@@ -34,9 +36,9 @@ class EncryptedStorage @Inject constructor(
      * Data is encrypted with AES-256-GCM using Android Keystore.
      * Includes HMAC integrity verification on the stored file.
      */
-    fun put(key: String, value: ByteArray, keyAlias: String = KeyManager.KEY_ALIAS_STORAGE) {
+    fun put(key: String, value: ByteArray, keyAlias: CryptoService.KeyAlias = CryptoService.KeyAlias.STORAGE) {
         try {
-            val encrypted = keyManager.encrypt(value, keyAlias)
+            val encrypted = cryptoService.encrypt(value, keyAlias)
             val file = File(encryptedDir, sanitizeFilename(key))
 
             // Compute HMAC over the ciphertext for integrity verification
@@ -55,7 +57,7 @@ class EncryptedStorage @Inject constructor(
      * Retrieve and decrypt data for a given key.
      * Verifies HMAC integrity before decryption.
      */
-    fun get(key: String, keyAlias: String = KeyManager.KEY_ALIAS_STORAGE): ByteArray? {
+    fun get(key: String, keyAlias: CryptoService.KeyAlias = CryptoService.KeyAlias.STORAGE): ByteArray? {
         val file = File(encryptedDir, sanitizeFilename(key))
         if (!file.exists()) return null
 
@@ -76,7 +78,7 @@ class EncryptedStorage @Inject constructor(
                 return null
             }
 
-            keyManager.decrypt(encrypted, keyAlias)
+            cryptoService.decrypt(encrypted, keyAlias)
         } catch (e: Exception) {
             Timber.e(e, "Failed to read encrypted storage for key '%s'", key)
             null
@@ -88,7 +90,7 @@ class EncryptedStorage @Inject constructor(
      * Uses a different key from encryption to prevent cross-protocol attacks.
      */
     private fun computeHmac(data: ByteArray): ByteArray {
-        val hmacKey = keyManager.getOrCreateKey("angavu_hmac_storage")
+        val hmacKey = cryptoService.ensureKey(CryptoService.KeyAlias.HMAC)
         val mac = javax.crypto.Mac.getInstance("HmacSHA256")
         mac.init(hmacKey)
         return mac.doFinal(data)
@@ -109,14 +111,14 @@ class EncryptedStorage @Inject constructor(
     /**
      * Store a string value (encrypted).
      */
-    fun putString(key: String, value: String, keyAlias: String = KeyManager.KEY_ALIAS_STORAGE) {
+    fun putString(key: String, value: String, keyAlias: CryptoService.KeyAlias = CryptoService.KeyAlias.STORAGE) {
         put(key, value.toByteArray(Charsets.UTF_8), keyAlias)
     }
 
     /**
      * Retrieve and decrypt a string value.
      */
-    fun getString(key: String, keyAlias: String = KeyManager.KEY_ALIAS_STORAGE): String? {
+    fun getString(key: String, keyAlias: CryptoService.KeyAlias = CryptoService.KeyAlias.STORAGE): String? {
         return get(key, keyAlias)?.let { String(it, Charsets.UTF_8) }
     }
 

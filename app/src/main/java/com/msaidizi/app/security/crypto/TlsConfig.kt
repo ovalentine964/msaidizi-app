@@ -29,7 +29,8 @@ import javax.net.ssl.X509TrustManager
 @Singleton
 class TlsConfig @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val auditLogger: CryptoAuditLogger? = null
+    private val auditLogger: CryptoAuditLogger? = null,
+    private val securityConfig: com.msaidizi.app.security.SecurityConfig? = null
 ) {
     companion object {
         // API hosts that require certificate pinning
@@ -160,8 +161,25 @@ class TlsConfig @Inject constructor(
             throw SecurityException("TLS 1.3 is required but unavailable: ${e.message}", e)
         }
 
-        // Certificate pinning — disabled in debug builds for development
-        if (!BuildConfig.DEBUG && API_PINS.isNotEmpty()) {
+        // Certificate pinning — environment-aware configuration
+        // Uses SecurityConfig to determine pin policy per environment:
+        //   - DEVELOPMENT: no pinning (allows mitmproxy, Charles)
+        //   - STAGING: pinning enabled for staging domains
+        //   - PRODUCTION: strict pinning for production domains
+        // Falls back to legacy debug check if SecurityConfig unavailable.
+        val pinConfigs = securityConfig?.getCertificatePins()
+        if (pinConfigs != null && pinConfigs.isNotEmpty()) {
+            val pinner = CertificatePinner.Builder()
+            pinConfigs.forEach { config ->
+                config.pins.forEach { pin ->
+                    pinner.add(config.host, pin)
+                }
+            }
+            builder.certificatePinner(pinner.build())
+            Timber.d("Certificate pinning enabled for %d hosts (env=%s)",
+                pinConfigs.size, securityConfig.getEnvironment().name)
+        } else if (!BuildConfig.DEBUG && API_PINS.isNotEmpty()) {
+            // Legacy fallback: hardcoded pins when SecurityConfig not injected
             val pinner = CertificatePinner.Builder()
                 .apply {
                     API_PINS.forEach { pin ->
@@ -171,9 +189,10 @@ class TlsConfig @Inject constructor(
                 }
                 .build()
             builder.certificatePinner(pinner)
-            Timber.d("Certificate pinning enabled for %s and %s", API_HOST, API_HOST_IO)
+            Timber.d("Certificate pinning enabled (legacy) for %s and %s", API_HOST, API_HOST_IO)
         } else {
-            Timber.w("Certificate pinning DISABLED (debug build)")
+            Timber.w("Certificate pinning DISABLED (env=%s)",
+                securityConfig?.getEnvironment()?.name ?: "DEBUG")
         }
 
         // Interceptor to enforce HTTPS — HARD BLOCK on cleartext

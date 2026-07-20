@@ -66,7 +66,8 @@ import javax.inject.Singleton
 @Singleton
 class ModelDownloader @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val modelRegistry: ModelRegistry
+    private val modelRegistry: ModelRegistry,
+    private val dataSaverManager: DataSaverManager
 ) {
     companion object {
         private const val TAG = "ModelDownloader"
@@ -109,6 +110,13 @@ class ModelDownloader @Inject constructor(
 
     /** Coroutine scope for background downloads */
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /** Download progress tracker with speed/ETA/data usage */
+    private val progressTracker = DownloadProgressTracker()
+
+    /** Observable progress info with speed, ETA, data usage */
+    val detailedProgress: StateFlow<Map<String, DownloadProgressInfo>>
+        get() = progressTracker.progressState
 
     // ────────────────────── Public API ──────────────────────
 
@@ -160,7 +168,32 @@ class ModelDownloader @Inject constructor(
             return@withContext false
         }
 
-        // Check WiFi-only constraint
+        // Data-saver check: get recommendation based on network conditions
+        val recommendation = dataSaverManager.getDownloadRecommendation(def.sizeBytes)
+        when (recommendation.action) {
+            DownloadAction.BLOCKED -> {
+                Timber.w(TAG, "Download blocked: %s — %s", modelId, recommendation.messageEn)
+                updateDownloadState(modelId, DownloadState.WAITING_FOR_WIFI)
+                return@withContext false
+            }
+            DownloadAction.WAIT_FOR_NETWORK -> {
+                Timber.i(TAG, "No network — queuing %s", modelId)
+                queueBackgroundDownload(modelId)
+                updateDownloadState(modelId, DownloadState.QUEUED)
+                return@withContext false
+            }
+            DownloadAction.CONFIRM_REQUIRED -> {
+                if (!forceNetwork) {
+                    Timber.i(TAG, "Data saver: %s needs confirmation (%s)", modelId, recommendation.messageEn)
+                    updateDownloadState(modelId, DownloadState.WAITING_FOR_WIFI)
+                    queueBackgroundDownload(modelId)
+                    return@withContext false
+                }
+            }
+            else -> { /* proceed */ }
+        }
+
+        // Check WiFi-only constraint (legacy check)
         val requiresWifi = wifiOnlyMode && def.sizeBytes > WIFI_ONLY_SIZE_THRESHOLD
         if (requiresWifi && !forceNetwork && !isOnWifi()) {
             Timber.i(TAG, "Model %s requires WiFi (%d MB) — queuing for background", modelId, def.sizeBytes / (1024 * 1024))
@@ -173,14 +206,42 @@ class ModelDownloader @Inject constructor(
     }
 
     /**
-     * Download the on-demand LLM model.
-     * Updated (2026-07-16): Downloads Gemma 4 E2B (primary) first,
-     * falls back to Qwen 3.5 0.8B if Gemma download fails.
+     * Download the on-demand LLM model with progressive loading.
+     * Updated: Starts with smallest variant (Q2_K) if data-saver is on,
+     * then upgrades to Q4_K_M when WiFi becomes available.
      *
+     * @param preferLite If true, download the smallest available variant first
      * @return true if download succeeded
      */
-    suspend fun downloadLlmModel(): Boolean {
-        // Try Gemma 4 E2B first (primary model)
+    suspend fun downloadLlmModel(preferLite: Boolean = false): Boolean {
+        val useLite = preferLite || dataSaverManager.isDataSaverEnabled()
+
+        if (useLite && !dataSaverManager.isOnUnmeteredConnection()) {
+            // Data-saver: try Q2_K first (~300MB for Qwen, ~650MB for Gemma)
+            val liteGemma = "gemma-4-e2b-q2k"
+            val liteQwen = "qwen-3.5-0.8b-q2k"
+
+            if (!modelRegistry.isModelReady(liteGemma)) {
+                Timber.i(TAG, "Data-saver mode: downloading lite Gemma Q2_K (%d MB)", 650)
+                val downloaded = downloadModel(liteGemma)
+                if (downloaded) {
+                    // Queue full model for WiFi upgrade later
+                    queueUpgradeDownload("gemma-4-e2b-q4km")
+                    return true
+                }
+            }
+
+            if (!modelRegistry.isModelReady(liteQwen)) {
+                Timber.i(TAG, "Data-saver mode: downloading lite Qwen Q2_K (%d MB)", 300)
+                val downloaded = downloadModel(liteQwen)
+                if (downloaded) {
+                    queueUpgradeDownload("qwen-3.5-0.8b-q4km")
+                    return true
+                }
+            }
+        }
+
+        // Standard path: try Gemma 4 E2B first (primary model)
         val gemmaModelId = "gemma-4-e2b-q4km"
         if (modelRegistry.isModelReady(gemmaModelId)) return true
 
@@ -194,6 +255,24 @@ class ModelDownloader @Inject constructor(
 
         Timber.i(TAG, "Gemma download failed, starting fallback: Qwen 3.5 0.8B (%d MB)", 580)
         return downloadModel(qwenModelId)
+    }
+
+    /**
+     * Queue a model upgrade download for when WiFi becomes available.
+     * Used for progressive loading: download Q2_K now, upgrade to Q4_K_M on WiFi.
+     */
+    fun queueUpgradeDownload(targetModelId: String) {
+        Timber.i(TAG, "Queuing upgrade download: %s (will run on WiFi)", targetModelId)
+        queueBackgroundDownload(targetModelId, wifiOnly = true)
+    }
+
+    /**
+     * Get the download recommendation for a model (for UI display).
+     * Shows data cost, warnings, and alternative model suggestions.
+     */
+    fun getDownloadRecommendation(modelId: String): DownloadRecommendation? {
+        val def = ModelRegistry.MODELS[modelId] ?: return null
+        return dataSaverManager.getDownloadRecommendation(def.sizeBytes)
     }
 
     /**
@@ -334,6 +413,8 @@ class ModelDownloader @Inject constructor(
 
     /**
      * Internal download implementation with full progress tracking and notification.
+     * Now integrates DownloadProgressTracker for speed/ETA/data usage and
+     * records data usage with DataSaverManager.
      */
     private suspend fun downloadModelInternal(
         modelId: String,
@@ -349,30 +430,39 @@ class ModelDownloader @Inject constructor(
 
         updateDownloadState(modelId, DownloadState.DOWNLOADING)
         updateProgress(modelId, 0f)
+        progressTracker.startTracking(modelId, def.sizeBytes)
         showDownloadNotification(modelId, def, 0)
 
         val job = scope.launch {
             try {
                 val success = modelRegistry.downloadModel(modelId) { progress ->
                     updateProgress(modelId, progress)
+                    val downloadedBytes = (def.sizeBytes * progress).toLong()
+                    progressTracker.updateProgress(modelId, downloadedBytes)
                     showDownloadNotification(modelId, def, (progress * 100).toInt())
                 }
 
                 if (success) {
                     updateDownloadState(modelId, DownloadState.COMPLETED)
                     updateProgress(modelId, 1f)
+                    progressTracker.completeTracking(modelId)
+                    dataSaverManager.recordDataUsage(def.sizeBytes)
                     showCompletedNotification(modelId, def)
-                    Timber.i(TAG, "Model %s downloaded successfully", modelId)
+                    Timber.i(TAG, "Model %s downloaded successfully (%d MB)",
+                        modelId, def.sizeBytes / (1024 * 1024))
                 } else {
                     updateDownloadState(modelId, DownloadState.FAILED)
+                    progressTracker.stopTracking(modelId)
                     showErrorNotification(modelId, def, "Download failed")
                     Timber.e(TAG, "Model %s download failed", modelId)
                 }
             } catch (e: CancellationException) {
                 updateDownloadState(modelId, DownloadState.CANCELLED)
+                progressTracker.stopTracking(modelId)
                 Timber.i(TAG, "Model %s download cancelled", modelId)
             } catch (e: Exception) {
                 updateDownloadState(modelId, DownloadState.FAILED)
+                progressTracker.stopTracking(modelId)
                 showErrorNotification(modelId, def, e.message ?: "Unknown error")
                 Timber.e(e, "Model %s download error", modelId)
             } finally {
@@ -495,7 +585,9 @@ class ModelDownloader @Inject constructor(
             "piper-swahili" -> "Swahili Voice"
             "gemma-4-e2b-q4km" -> "AI Assistant (Gemma 4)"
             "gemma-4-e2b-q3km" -> "AI Assistant (Gemma 4 Lite)"
+            "gemma-4-e2b-q2k" -> "AI Assistant (Gemma 4 Mini)"
             "qwen-3.5-0.8b-q4km" -> "AI Fallback (Qwen)"
+            "qwen-3.5-0.8b-q2k" -> "AI Starter (Qwen Mini)"
             else -> modelId
         }
     }

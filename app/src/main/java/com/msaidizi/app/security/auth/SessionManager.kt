@@ -24,7 +24,8 @@ import javax.inject.Singleton
 class SessionManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val tokenStorage: SecureTokenStorage,
-    private val jwtTokenManager: JwtTokenManager
+    private val jwtTokenManager: JwtTokenManager,
+    private val cryptoService: com.msaidizi.app.security.crypto.CryptoService
 ) {
     companion object {
         private const val SESSION_TIMEOUT_MS = 5 * 60 * 1000L  // 5 minutes inactivity
@@ -65,7 +66,7 @@ class SessionManager @Inject constructor(
         ) ?: UUID.randomUUID().toString()
 
         // Hash the ANDROID_ID for privacy (don't store raw device identifier)
-        val hashedId = com.msaidizi.app.core.util.CryptoUtils.sha256("angavu:$androidId")
+        val hashedId = cryptoService.sha256("angavu:$androidId")
         tokenStorage.saveDeviceId(hashedId)
         return hashedId
     }

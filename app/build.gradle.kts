@@ -2,7 +2,7 @@
 // Msaidizi Android App — build.gradle.kts
 // ============================================================
 // Uses KSP (not kapt) for annotation processing.
-// Kotlin 2.0.21, KSP 2.0.21-1.0.28, Hilt 2.52, Room 2.7.0-alpha12
+// Kotlin 2.0.21, KSP 2.0.21-1.0.28, Hilt 2.52, Room 2.6.1
 // Requires: NDK r26b, CMake 3.22.1
 // ============================================================
 
@@ -55,7 +55,11 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         ndk {
-            abiFilters += listOf("arm64-v8a")
+            // Support both 64-bit (arm64-v8a) and 32-bit (armeabi-v7a) ARM devices.
+            // Many devices in Africa are still 32-bit (Tecno, Infinix, Itel budget phones).
+            // 32-bit devices run in cloud-only mode — native llama.cpp models are too large
+            // for their limited RAM (≤2GB usable). See DeviceCapability.is32BitDevice().
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
         }
 
         // Build config fields for model paths
@@ -116,12 +120,25 @@ android {
 
             if (!envStoreFile.isNullOrBlank() && !envStorePassword.isNullOrBlank()) {
                 val ksFile = File(envStoreFile)
-                storeFile = if (ksFile.isAbsolute) ksFile else file("${rootProject.projectDir}/$envStoreFile")
-                storePassword = envStorePassword
-                keyAlias = envKeyAlias ?: "msaidizi-release"
-                keyPassword = envKeyPassword ?: envStorePassword
-                // Auto-detect store type from file extension
-                storeType = if (storeFile?.name?.endsWith(".p12", true) == true) "pkcs12" else "jks"
+                val resolvedFile = if (ksFile.isAbsolute) ksFile else file("${rootProject.projectDir}/$envStoreFile")
+                if (resolvedFile.exists()) {
+                    storeFile = resolvedFile
+                    storePassword = envStorePassword
+                    keyAlias = envKeyAlias ?: "msaidizi-release"
+                    keyPassword = envKeyPassword ?: envStorePassword
+                    // Auto-detect store type from file extension
+                    storeType = if (storeFile?.name?.endsWith(".p12", true) == true) "pkcs12" else "jks"
+                } else {
+                    // Env var set but file missing — fall back to debug
+                    println("WARNING: RELEASE_KEYSTORE_FILE=$envStoreFile does not exist, falling back to debug signing")
+                    val projectDebugKs = file("${rootProject.projectDir}/debug.keystore")
+                    val homeDebugKs = file("${System.getProperty("user.home")}/.android/debug.keystore")
+                    val fallbackKs = if (projectDebugKs.exists()) projectDebugKs else homeDebugKs
+                    storeFile = fallbackKs
+                    storePassword = "android"
+                    keyAlias = "androiddebugkey"
+                    keyPassword = "android"
+                }
             } else {
                 val props = Properties()
                 val propsFile = file("${rootProject.projectDir}/keystore.properties")
@@ -199,6 +216,12 @@ android {
         }
     }
 
+    // Return default values for android.util.Log etc. in unit tests
+    // Required because source code uses Timber (which wraps android.util.Log)
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
+
     // Don't compress large model files — they need to be memory-mapped or streamed
     // GGUF (~580MB) and ONNX (~40-80MB) models must remain uncompressed for mmap access
     androidResources {
@@ -225,11 +248,11 @@ dependencies {
     implementation("androidx.navigation:navigation-ui-ktx:2.7.6")
 
     // Room Database — KSP replaces kapt for annotation processing
-    // 2.7.0-alpha12: KMP support, improved paging, better KSP performance, Kotlin 2.0 compat
-    implementation("androidx.room:room-runtime:2.7.0-alpha12")
-    implementation("androidx.room:room-ktx:2.7.0-alpha12")
-    implementation("androidx.room:room-paging:2.7.0-alpha12")
-    ksp("androidx.room:room-compiler:2.7.0-alpha12")  // was: kapt(...)
+    // 2.6.1: Stable release, Kotlin 2.0 KSP support, production-ready
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    implementation("androidx.room:room-paging:2.6.1")
+    ksp("androidx.room:room-compiler:2.6.1")  // was: kapt(...)
 
     // SQLCipher for Room database encryption
     implementation("net.zetetic:android-database-sqlcipher:4.5.4")
@@ -325,7 +348,7 @@ dependencies {
     // Testing — Android Integration
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    androidTestImplementation("androidx.room:room-testing:2.7.0-alpha12")
+    androidTestImplementation("androidx.room:room-testing:2.6.1")
     androidTestImplementation("androidx.test:runner:1.5.2")
 
     // Detekt linting
@@ -345,14 +368,14 @@ dependencies {
 // (replaces javaCompileOptions.annotationProcessorOptions for kapt)
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
-    arg("room.incremental", "true")  // enabled for Kotlin 2.0 KSP
-    arg("room.generateKotlin", "true")
+    arg("room.incremental", "true")
+    // room.generateKotlin is a Room 2.7+ feature; not needed for 2.6.1 (generates Java by default)
     arg("room.verbose", "true")
 }
 
 // Kotlin 2.0.21 — all deps are now consistent, no force hacks needed.
 // Ktor 3.0.3 pulls kotlinx-serialization 1.7.x natively.
-// Room 2.7.0-alpha12, Hilt 2.52 all target Kotlin 2.0+.
+// Room 2.6.1 (stable), Hilt 2.52 all target Kotlin 2.0+.
 
 // JUnit 5 platform for all test tasks
 tasks.withType<Test> {

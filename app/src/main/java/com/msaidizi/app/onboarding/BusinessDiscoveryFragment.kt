@@ -68,6 +68,9 @@ class BusinessDiscoveryFragment : Fragment() {
     @Inject
     lateinit var voicePipeline: VoicePipeline
 
+    @Inject
+    lateinit var workerProfileDao: com.msaidizi.app.onboarding.WorkerProfileDao
+
     private lateinit var conversation: OnboardingConversation
     private var currentStep: ConversationStep? = null
     private var isVoiceListening = false
@@ -460,26 +463,36 @@ class BusinessDiscoveryFragment : Fragment() {
     }
 
     /**
-     * Save the completed worker profile to local storage.
+     * Save the completed worker profile to Room database.
+     * Retains SharedPreferences fallback for backward compatibility.
      */
     private fun saveProfile(profile: WorkerProfile) {
-        // TODO: Save to Room database
-        // For now, store in shared preferences
-        val prefs = requireContext().getSharedPreferences("worker_profile", 0)
-        prefs.edit().apply {
-            putString("worker_name", profile.workerName)
-            putString("msaidizi_name", profile.msaidiziName)
-            putString("business_type", profile.businessType.name)
-            putString("business_description", profile.businessDescription)
-            putString("location", profile.location)
-            putString("language", profile.language)
-            putString("payment_method", profile.paymentMethod.name)
-            putString("record_method", profile.keepsRecords.name)
-            putBoolean("work_alone", profile.workAlone)
-            putString("biggest_challenge", profile.biggestChallenge)
-            putLong("onboarding_completed_at", profile.onboardingCompletedAt)
-            putBoolean("onboarding_complete", true)
-            apply()
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                // Primary: persist to Room (single source of truth)
+                workerProfileDao.upsert(profile)
+                Timber.i("Worker profile saved to Room database")
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to save profile to Room — falling back to SharedPreferences")
+            }
+
+            // Secondary: SharedPreferences for backward compat with existing reads
+            val prefs = requireContext().getSharedPreferences("worker_profile", 0)
+            prefs.edit().apply {
+                putString("worker_name", profile.workerName)
+                putString("msaidizi_name", profile.msaidiziName)
+                putString("business_type", profile.businessType.name)
+                putString("business_description", profile.businessDescription)
+                putString("location", profile.location)
+                putString("language", profile.language)
+                putString("payment_method", profile.paymentMethod.name)
+                putString("record_method", profile.keepsRecords.name)
+                putBoolean("work_alone", profile.workAlone)
+                putString("biggest_challenge", profile.biggestChallenge)
+                putLong("onboarding_completed_at", profile.onboardingCompletedAt)
+                putBoolean("onboarding_complete", true)
+                apply()
+            }
         }
     }
 

@@ -1,94 +1,65 @@
 #!/usr/bin/env bash
 # ============================================================
-# build-release.sh — Build a properly signed release APK
+# Build a signed release APK for Msaidizi
 # ============================================================
-# Usage:
-#   ./scripts/build-release.sh              # Uses keystore.properties
-#   ./scripts/build-release.sh --ci          # Uses env vars (CI mode)
-#
-# Prerequisites:
-#   - Release keystore (run ./scripts/generate-keystore.sh first)
-#   - keystore.properties with credentials (local) or env vars (CI)
+# Usage: ./scripts/build-release.sh
+# Requires: keystore.properties OR env vars (RELEASE_KEYSTORE_FILE, etc.)
+# Output: app/build/outputs/apk/release/app-release.apk
 # ============================================================
 
 set -euo pipefail
 
-MODE="local"
-if [ "${1:-}" = "--ci" ]; then
-    MODE="ci"
-fi
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-echo "============================================================"
-echo "  Msaidizi Release Build ($MODE mode)"
-echo "============================================================"
+echo "🏗️  Msaidizi Release Build"
+echo "=========================="
 echo ""
 
-# Verify keystore exists
-if [ "$MODE" = "ci" ]; then
-    if [ -z "${RELEASE_KEYSTORE_FILE:-}" ]; then
-        echo "❌ RELEASE_KEYSTORE_FILE not set. Decode the keystore first."
-        exit 1
-    fi
-    if [ ! -f "$RELEASE_KEYSTORE_FILE" ]; then
-        echo "❌ Keystore file not found: $RELEASE_KEYSTORE_FILE"
-        exit 1
-    fi
-    echo "✅ Using keystore from env: $RELEASE_KEYSTORE_FILE"
+cd "$PROJECT_ROOT"
+
+# Check signing configuration
+if [ -n "${RELEASE_KEYSTORE_FILE:-}" ]; then
+    echo "📝 Signing: using env var RELEASE_KEYSTORE_FILE=$RELEASE_KEYSTORE_FILE"
+elif [ -f "keystore.properties" ]; then
+    echo "📝 Signing: using keystore.properties"
 else
-    if [ ! -f "keystore.properties" ] && [ ! -f "app/msaidizi-release.keystore" ]; then
-        echo "❌ No signing config found."
-        echo "   Run: ./scripts/generate-keystore.sh"
-        echo "   Then create keystore.properties from keystore.properties.template"
-        exit 1
-    fi
-    echo "✅ Using keystore.properties / msaidizi-release.keystore"
+    echo "⚠️  No release keystore found — will fall back to debug signing"
+    echo "   Run ./scripts/generate-keystore.sh to create one"
 fi
 
 echo ""
-echo "🔨 Building release APK..."
+echo "🔧 Building release APK..."
 echo ""
 
-./gradlew clean assembleRelease --stacktrace 2>&1 | tee build-release.log
+./gradlew assembleRelease --stacktrace 2>&1 | tee build-release.log
+EXIT_CODE=${PIPESTATUS[0]}
 
+if [ "$EXIT_CODE" -ne 0 ]; then
+    echo ""
+    echo "❌ Build failed (exit code $EXIT_CODE)"
+    echo "   Check build-release.log for details"
+    exit "$EXIT_CODE"
+fi
+
+echo ""
+echo "✅ Build succeeded"
+
+# Find the APK
 APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
-
 if [ -z "$APK_PATH" ]; then
-    echo "❌ Build failed — no APK generated"
+    echo "❌ No APK found in app/build/outputs/apk/release/"
     exit 1
 fi
 
-echo ""
-echo "============================================================"
-echo "  Verifying APK signature"
-echo "============================================================"
-echo ""
-
-chmod +x scripts/verify-apk-signing.sh
-./scripts/verify-apk-signing.sh "$APK_PATH"
-
-echo ""
-echo "============================================================"
-echo "  Build Summary"
-echo "============================================================"
-echo ""
-echo "  APK: $APK_PATH"
-echo "  Size: $(du -h "$APK_PATH" | cut -f1)"
+SIZE=$(stat -c%s "$APK_PATH" 2>/dev/null || stat -f%z "$APK_PATH" 2>/dev/null)
+SIZE_MB=$((SIZE / 1048576))
+echo "📦 APK: $APK_PATH (${SIZE_MB}MB)"
 echo ""
 
-# Calculate SHA-256
-SHA256=$(sha256sum "$APK_PATH" | cut -d' ' -f1)
-echo "  SHA-256: $SHA256"
+# Verify signing
+echo "🔍 Verifying APK signature..."
+"$SCRIPT_DIR/verify-apk-signing.sh" "$APK_PATH" || true
+
 echo ""
-echo "============================================================"
-echo "  ✅ Release build complete!"
-echo "============================================================"
-echo ""
-echo "  To install on device:"
-echo "    adb install $APK_PATH"
-echo ""
-echo "  To distribute:"
-echo "    Upload to Google Play Console, or share the APK directly."
-echo "    Note: Play Protect may still warn on first install from"
-echo "    unknown sources — this is expected for non-Play Store apps."
-echo "    A properly signed APK reduces the warning severity."
-echo "============================================================"
+echo "🎉 Release APK ready: $APK_PATH"

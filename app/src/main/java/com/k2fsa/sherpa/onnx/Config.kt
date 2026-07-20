@@ -4,7 +4,11 @@ package com.k2fsa.sherpa.onnx
  * Sherpa-ONNX JNI bridge — native library loader and shared types.
  *
  * This file loads the prebuilt sherpa-onnx JNI libraries that are placed
- * in app/src/main/jniLibs/arm64-v8a/ by scripts/setup-sherpa-onnx.sh.
+ * in app/src/main/jniLibs/{arm64-v8a,armeabi-v7a}/ by scripts/setup-sherpa-onnx.sh.
+ *
+ * The Android build system automatically selects the correct .so for the
+ * device's primary ABI (arm64-v8a on 64-bit, armeabi-v7a on 32-bit).
+ * Voice features (ASR/TTS/VAD) work on both architectures.
  *
  * Libraries loaded:
  * - libonnxruntime.so  (~15MB) — ONNX Runtime for ARM64

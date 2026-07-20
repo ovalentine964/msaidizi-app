@@ -1,54 +1,32 @@
-# Detekt configuration for Msaidizi Android
-# https://detekt.dev/docs/introduction/configurations
+# Detekt configuration for Msaidizi
+# https://detekt.github.io/detekt/configurations.html
 
 build:
-  maxIssues: 10000
-  excludeCorrectable: false
-  weights:
-    complexity: 2
-    LongParameterList: 1
-    comments: 1
+  maxIssues: 0
 
 complexity:
+  LongMethod:
+    threshold: 60
   LongParameterList:
-    active: true
     functionThreshold: 8
     constructorThreshold: 10
-    ignoreDefaultParameters: true
-    ignoreAnnotated: ['Composable', 'Preview']
-  LongMethod:
-    active: true
-    threshold: 100
-    ignoreAnnotated: ['Test']
-  CyclomaticComplexMethod:
-    active: true
-    threshold: 25
-    ignoreAnnotated: ['Test']
+  ComplexMethod:
+    threshold: 15
   TooManyFunctions:
-    active: true
-    thresholdInFiles: 50
-    thresholdInClasses: 40
-    ignoreAnnotated: ['Test']
+    thresholdInFiles: 25
+    thresholdInClasses: 25
   LargeClass:
-    active: true
-    threshold: 1000
-    ignoreAnnotated: ['Nested', 'Test']
-  NestedBlockDepth:
-    active: true
-    threshold: 4
+    threshold: 600
 
 style:
   MaxLineLength:
-    active: true
     maxLineLength: 120
-    excludePackageStatements: true
-    excludeImportStatements: true
-    excludeCommentStatements: true
   MagicNumber:
     active: false
   ReturnCount:
-    active: true
-    max: 3
+    max: 4
+  NestedBlockDepth:
+    max: 5
   ForbiddenComment:
     active: false
   WildcardImport:
@@ -57,69 +35,24 @@ style:
     active: true
   UnusedPrivateMember:
     active: true
-  ExpressionBodySyntax:
-    active: false
-  ForbiddenMethodCall:
-    active: true
-    methods:
-      - 'kotlin.io.println'
-      - 'kotlin.io.print'
-      - 'android.util.Log.v'
-      - 'android.util.Log.d'
-    ignoreAnnotated:
-      - 'Test'
+  MaxLineLength:
+    maxLineLength: 150
+    ignoreBackTickedIdentifier: true
 
 naming:
   FunctionNaming:
-    active: true
-    functionPattern: '[a-z][a-zA-Z0-9]*'
-    ignoreAnnotated: ['Composable', 'Preview', 'Test']
+    # Allow test function names with backticks
+    functionPattern: '[a-zA-Z][a-zA-Z0-9_]*|`[^`]+`'
   TopLevelPropertyNaming:
-    active: true
-    constantPattern: '[A-Z][_A-Z0-9]*'
-  ClassNaming:
-    active: true
-    classPattern: '[A-Z][a-zA-Z0-9]*'
+    constantPattern: '[A-Za-z][_A-Za-z0-9]*'
+
+exceptions:
+  TooGenericExceptionCaught:
+    active: false
+  TooGenericExceptionThrown:
+    active: false
 
 empty-blocks:
   EmptyFunctionBlock:
     active: true
     ignoreOverridden: true
-  EmptyWhenBlock:
-    active: true
-  EmptyCatchBlock:
-    active: true
-    allowedExceptionNameRegex: 'expected|ignore|_'
-
-exceptions:
-  TooGenericExceptionCaught:
-    active: true
-    exceptionNames:
-      - ArrayIndexOutOfBoundsException
-      - Error
-      - IllegalMonitorStateException
-      - NullPointerException
-      - Throwable
-    allowedExceptionNameRegex: 'expected|ignore|_|e'
-  TooGenericExceptionThrown:
-    active: true
-
-potential-bugs:
-  UnsafeCallOnNullableType:
-    active: true
-  UnsafeCast:
-    active: true
-  LateinitUsage:
-    active: false
-
-performance:
-  ForEachOnRange:
-    active: true
-  SpreadOperator:
-    active: true
-
-coroutines:
-  GlobalCoroutineUsage:
-    active: true
-  RedundantSuspendModifier:
-    active: true

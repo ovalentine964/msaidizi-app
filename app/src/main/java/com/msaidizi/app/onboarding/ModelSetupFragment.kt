@@ -109,9 +109,8 @@ class ModelSetupFragment : Fragment() {
         }
         layout.addView(progressText)
 
-        // Mobile data toggle — defaults to ALLOW mobile data (target users have no WiFi)
+        // Mobile data toggle — data-saver aware
         wifiToggle = Button(requireContext()).apply {
-            text = "📱 Pakia kwa data ya simu (inatumia ~500MB)"
             textSize = 14f
             setPadding(32, 16, 32, 16)
             setOnClickListener {
@@ -119,6 +118,16 @@ class ModelSetupFragment : Fragment() {
             }
         }
         layout.addView(wifiToggle)
+
+        // Data saver info — shows data cost estimate
+        val dataSaverInfo = TextView(requireContext()).apply {
+            text = "💡 Data Saver: Pakia toleo ndogo kwanza (≈300MB), kisha ongeza ubora kwenye WiFi"
+            textSize = 12f
+            gravity = android.view.Gravity.CENTER
+            setPadding(32, 8, 32, 16)
+            setTextColor(resources.getColor(android.R.color.darker_gray, null))
+        }
+        layout.addView(dataSaverInfo)
 
         // Spacer
         val spacer = View(requireContext()).apply {

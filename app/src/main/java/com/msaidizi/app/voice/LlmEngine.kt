@@ -4,7 +4,10 @@ import android.content.Context
 import com.msaidizi.app.core.language.LanguageLearningPipeline
 import com.msaidizi.app.core.language.LanguageModelRegistry
 import com.msaidizi.app.core.language.AdaptiveAsrEngine
+import com.msaidizi.app.core.util.DeviceCapability
 import dagger.hilt.android.qualifiers.ApplicationContext
+import io.sentry.Breadcrumb
+import io.sentry.Sentry
 import kotlinx.coroutines.*
 import timber.log.Timber
 import java.io.File
@@ -47,6 +50,24 @@ class LlmEngine @Inject constructor(
     private val languageModelRegistry: LanguageModelRegistry? = null,
     private val adaptiveAsrEngine: AdaptiveAsrEngine? = null
 ) {
+
+    /**
+     * Report a Sentry breadcrumb for model loading diagnostics.
+     * Lightweight — only adds context to crash reports.
+     */
+    private fun reportSentryBreadcrumb(event: String, data: Map<String, String> = emptyMap()) {
+        try {
+            val breadcrumb = io.sentry.Breadcrumb().apply {
+                category = "llm_engine"
+                type = "navigation"
+                message = event
+                data.forEach { (k, v) -> setData(k, v) }
+            }
+            io.sentry.Sentry.addBreadcrumb(breadcrumb)
+        } catch (_: Exception) {
+            // Sentry may not be initialized — silently ignore
+        }
+    }
     companion object {
         // Default context lengths by device tier (expanded 2026-07-16)
         private const val CTX_BASIC = 2048     // Expanded from 1024 for Gemma 4 E2B
@@ -152,13 +173,30 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
      *
      * Updated (2026-07-16): Prefers Gemma 4 E2B, falls back to Qwen 3.5 0.8B.
      *
-     * @return true if model loaded successfully
+     * On 32-bit (armeabi-v7a) devices, model loading is skipped entirely.
+     * The process address space (~1.5GB usable) cannot hold llama.cpp models.
+     * The app operates in cloud-only mode via ModelRouter's fallback chain.
+     *
+     * @return true if model loaded successfully, false for 32-bit or on failure
      */
     suspend fun loadModel(): Boolean {
         if (llamaCppEngine.isModelLoaded()) return true
 
         if (!LlamaCppEngine.isNativeAvailable) {
             Timber.w("Cannot load LLM: llama_jni native library is not available")
+            reportSentryBreadcrumb("llm_engine_native_unavailable")
+            return false
+        }
+
+        // 32-bit devices cannot run on-device LLM — model loading is blocked.
+        // The process address space is too small for llama.cpp models (580MB+).
+        if (DeviceCapability.is32BitDevice()) {
+            Timber.i("LLM model loading skipped: 32-bit device (" + DeviceCapability.getPrimaryAbi() + "). " +
+                "On-device inference not available. Using cloud API.")
+            reportSentryBreadcrumb("llm_engine_32bit_skipped", mapOf(
+                "abi" to DeviceCapability.getPrimaryAbi(),
+                "supported_abis" to android.os.Build.SUPPORTED_ABIS.joinToString()
+            ))
             return false
         }
 
@@ -166,6 +204,11 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
         // Use Qwen 3.5 0.8B as primary for LOW-tier; Gemma only for MEDIUM (3GB+) and HIGH (4GB+).
         val maxMemoryMB = Runtime.getRuntime().maxMemory() / (1024 * 1024)
         val isLowTier = maxMemoryMB < 3072
+
+        reportSentryBreadcrumb("llm_engine_load_model_start", mapOf(
+            "maxMemoryMB" to maxMemoryMB.toString(),
+            "isLowTier" to isLowTier.toString()
+        ))
 
         if (!isLowTier) {
             // Try Gemma 4 E2B first on MEDIUM/HIGH tier devices (promoted 2026-07-16)
@@ -179,10 +222,18 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
                     }
                 } catch (e: OutOfMemoryError) {
                     Timber.e(e, "OOM loading Gemma 4 E2B — releasing and falling back to Qwen")
+                    reportSentryBreadcrumb("llm_engine_gemma_oom")
                     llamaCppEngine.unload()
                     System.gc()
+                } catch (e: Exception) {
+                    Timber.e(e, "Exception loading Gemma 4 E2B — falling back to Qwen")
+                    reportSentryBreadcrumb("llm_engine_gemma_exception", mapOf(
+                        "error" to (e.message ?: "unknown")
+                    ))
                 }
                 Timber.w("Gemma 4 E2B failed to load, falling back to Qwen")
+            } else {
+                Timber.i("Gemma 4 E2B model not available")
             }
         } else {
             Timber.i("LOW-tier device (%dMB RAM) — skipping Gemma 4 E2B, using Qwen 3.5 0.8B as primary", maxMemoryMB)
@@ -192,14 +243,30 @@ Kuwa brief na toa info poa. Usiwatie maneno mangi."""
         // NOTE: Filename case must match ModelRegistry exactly (ext4/f2fs are case-sensitive)
         val qwenPath = File(context.filesDir, "models/Qwen3.5-0.8B-Q4_K_M.gguf")
         if (qwenPath.exists()) {
-            val loaded = llamaCppEngine.loadModel(qwenPath.absolutePath)
-            if (loaded) {
-                Timber.i("Loaded fallback model: Qwen 3.5 0.8B")
-                return true
+            try {
+                val loaded = llamaCppEngine.loadModel(qwenPath.absolutePath)
+                if (loaded) {
+                    Timber.i("Loaded fallback model: Qwen 3.5 0.8B")
+                    return true
+                }
+            } catch (e: OutOfMemoryError) {
+                Timber.e(e, "OOM loading Qwen 3.5 0.8B")
+                reportSentryBreadcrumb("llm_engine_qwen_oom")
+                llamaCppEngine.unload()
+                System.gc()
+            } catch (e: Exception) {
+                Timber.e(e, "Exception loading Qwen 3.5 0.8B")
+                reportSentryBreadcrumb("llm_engine_qwen_exception", mapOf(
+                    "error" to (e.message ?: "unknown")
+                ))
             }
+        } else {
+            Timber.w("Qwen model file not found: %s", qwenPath.absolutePath)
+            reportSentryBreadcrumb("llm_engine_qwen_not_found", mapOf("path" to qwenPath.absolutePath))
         }
 
         Timber.w("No LLM model could be loaded")
+        reportSentryBreadcrumb("llm_engine_no_model_loaded")
         return false
     }
 

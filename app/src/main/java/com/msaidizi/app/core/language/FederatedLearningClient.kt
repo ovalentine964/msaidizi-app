@@ -3,7 +3,7 @@ package com.msaidizi.app.core.language
 import android.content.Context
 import com.msaidizi.app.core.model.UserCorrection
 import com.msaidizi.app.core.network.PinnedHttpClient
-import com.msaidizi.app.core.util.CryptoUtils
+import com.msaidizi.app.security.crypto.CryptoService
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -74,6 +74,7 @@ class FederatedLearningClient(
     private val context: Context,
     private val pinnedHttpClient: PinnedHttpClient,
     private val consentManager: com.msaidizi.app.security.privacy.ConsentManager? = null,
+    private val cryptoService: CryptoService,
 ) {
     companion object {
         private const val TAG = "FederatedLearning"
@@ -474,7 +475,7 @@ class FederatedLearningClient(
     private fun encryptAdapter(adapterBytes: ByteArray): ByteArray {
         // SECURITY: Must fail-closed — never silently fall back to plaintext.
         // Encryption failure means the adapter cannot be safely uploaded.
-        return com.msaidizi.app.core.util.CryptoUtils.encrypt(adapterBytes)
+        return cryptoService.encrypt(adapterBytes)
     }
 
     /**

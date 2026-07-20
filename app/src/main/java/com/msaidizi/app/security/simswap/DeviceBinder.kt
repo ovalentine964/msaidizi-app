@@ -3,8 +3,8 @@ package com.msaidizi.app.security.simswap
 import android.content.Context
 import android.os.Build
 import android.provider.Settings
-import com.msaidizi.app.core.util.CryptoUtils
 import com.msaidizi.app.security.auth.SecureTokenStorage
+import com.msaidizi.app.security.crypto.CryptoService
 import com.msaidizi.app.security.crypto.EncryptedStorage
 import dagger.hilt.android.qualifiers.ApplicationContext
 import timber.log.Timber
@@ -24,7 +24,8 @@ import javax.inject.Singleton
 class DeviceBinder @Inject constructor(
     @ApplicationContext private val context: Context,
     private val tokenStorage: SecureTokenStorage,
-    private val encryptedStorage: EncryptedStorage
+    private val encryptedStorage: EncryptedStorage,
+    private val cryptoService: CryptoService
 ) {
     companion object {
         private const val KEY_DEVICE_FINGERPRINT = "device_fingerprint"
@@ -42,7 +43,7 @@ class DeviceBinder @Inject constructor(
     ) {
         fun toHash(): String {
             val combined = "$deviceId|$model|$manufacturer|$osVersion|$appVersion|$hardwareId"
-            return CryptoUtils.sha256(combined)
+            return cryptoService.sha256(combined)
         }
     }
 
@@ -56,7 +57,7 @@ class DeviceBinder @Inject constructor(
         ) ?: "unknown"
 
         // Hardware-level identifiers (non-resettable)
-        val hardwareId = CryptoUtils.sha256(
+        val hardwareId = cryptoService.sha256(
             "${Build.BOARD}|${Build.BRAND}|${Build.DEVICE}|${Build.HARDWARE}|${Build.MANUFACTURER}|${Build.MODEL}"
         )
 
@@ -121,7 +122,7 @@ class DeviceBinder @Inject constructor(
      */
     fun recordSimInfo(userId: String, simSerial: String?) {
         if (simSerial != null) {
-            val hash = CryptoUtils.sha256(simSerial)
+            val hash = cryptoService.sha256(simSerial)
             encryptedStorage.putString("$userId:$KEY_SIM_SERIAL", hash)
         }
     }
@@ -132,7 +133,7 @@ class DeviceBinder @Inject constructor(
     fun hasSimChanged(userId: String, currentSimSerial: String?): Boolean {
         if (currentSimSerial == null) return false
         val storedHash = encryptedStorage.getString("$userId:$KEY_SIM_SERIAL") ?: return false
-        val currentHash = CryptoUtils.sha256(currentSimSerial)
+        val currentHash = cryptoService.sha256(currentSimSerial)
         return storedHash != currentHash
     }
 

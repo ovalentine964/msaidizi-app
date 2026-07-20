@@ -122,6 +122,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun sessionDao(): SessionDao
     abstract fun taskCheckpointDao(): com.msaidizi.app.agent.recovery.TaskCheckpointDao
     abstract fun agentRecoveryTraceDao(): com.msaidizi.app.agent.recovery.AgentTraceDao
+    abstract fun workerProfileDao(): com.msaidizi.app.onboarding.WorkerProfileDao
 
     companion object {
         @Volatile

@@ -27,7 +27,8 @@ import javax.inject.Inject
 @HiltViewModel
 class EvolutionViewModel @Inject constructor(
     private val feedbackCollector: FeedbackCollector,
-    private val featureTracker: FeatureRequestTracker
+    private val featureTracker: FeatureRequestTracker,
+    private val sessionManager: com.msaidizi.app.security.auth.SessionManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(EvolutionUiState())
@@ -142,11 +143,19 @@ class EvolutionViewModel @Inject constructor(
     }
 
     /**
-     * Get current worker ID. In production, from auth/session.
+     * Get current worker ID from the authenticated session.
+     * Falls back to device-bound ID when no active session exists.
      */
     private fun getCurrentWorkerId(): String {
-        // TODO: Get from authenticated session
-        return "worker_default"
+        val deviceId = sessionManager.getDeviceId()
+        return if (sessionManager.isSessionValid()) {
+            // Session is active — use the device ID as the worker identifier
+            // (sessions are bound to device + user via SessionManager.startSession)
+            "worker_${deviceId.take(16)}"
+        } else {
+            // No active session — use device ID for anonymous/local tracking
+            "worker_${deviceId.take(16)}"
+        }
     }
 }
 

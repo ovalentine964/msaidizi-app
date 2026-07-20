@@ -2,6 +2,7 @@ package com.msaidizi.app.core.ai
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.msaidizi.app.core.util.DeviceCapability
 import com.msaidizi.app.voice.ModelRegistry
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
@@ -68,6 +69,11 @@ class BundledModelManager @Inject constructor(
          * - Silero VAD: k2-fsa/sherpa-onnx GitHub releases
          * - Piper TTS: k2-fsa/sherpa-onnx GitHub releases (tar.bz2 extraction)
          * - Qwen LLM: bartowski/Qwen_Qwen3.5-0.8B-GGUF on HuggingFace
+         *
+         * NOTE: On 32-bit (armeabi-v7a) devices, the LLM model (Qwen3.5-0.8B-Q4_K_M.gguf)
+         * is skipped during extraction — it cannot be loaded on 32-bit due to address
+         * space limitations (~1.5GB usable). Voice (ASR/TTS/VAD) models are still extracted
+         * as they work fine on 32-bit.
          */
         private val BUNDLED_ASSETS = listOf(
             "whisper-encoder-int8.onnx",
@@ -78,6 +84,9 @@ class BundledModelManager @Inject constructor(
             "tokens.txt",
             "Qwen3.5-0.8B-Q4_K_M.gguf"
         )
+
+        /** Assets that are safe to extract on 32-bit devices (everything except the LLM) */
+        private val BUNDLED_ASSETS_32BIT = BUNDLED_ASSETS.filter { !it.endsWith(".gguf") }
 
         /** espeak-ng-data directory name in assets */
         private const val ESPEAK_ASSET_DIR = "espeak-ng-data"
@@ -115,28 +124,48 @@ class BundledModelManager @Inject constructor(
     suspend fun initialize() = withContext(Dispatchers.IO) {
         Timber.i(TAG, "Initializing BundledModelManager")
 
-        // Check if all bundled models are already extracted
-        val modelsDir = File(context.filesDir, "models")
-        val allExtracted = BUNDLED_ASSETS.all { asset ->
-            val file = File(modelsDir, asset)
-            file.exists() && file.length() > 1000
-        }
-
-        if (allExtracted) {
-            Timber.i(TAG, "All bundled models already extracted")
-            _bundledModelState.value = BundledModelState.READY
-        } else if (isBundledModelAvailable()) {
-            // Extract bundled models from APK assets
-            Timber.i(TAG, "Extracting bundled models from APK assets...")
-            val extracted = extractAllBundledModels()
-            _bundledModelState.value = if (extracted) {
-                Timber.i(TAG, "All bundled models extracted successfully")
-                BundledModelState.READY
-            } else {
-                BundledModelState.UNAVAILABLE
+        try {
+            // Check if all bundled models are already extracted
+            val modelsDir = File(context.filesDir, "models")
+            val allExtracted = BUNDLED_ASSETS.all { asset ->
+                val file = File(modelsDir, asset)
+                file.exists() && file.length() > 1000
             }
-        } else {
-            Timber.w(TAG, "Bundled models not found in assets")
+
+            if (allExtracted) {
+                Timber.i(TAG, "All bundled models already extracted")
+                _bundledModelState.value = BundledModelState.READY
+            } else if (isBundledModelAvailable()) {
+                // Extract bundled models from APK assets
+                Timber.i(TAG, "Extracting bundled models from APK assets...")
+                reportSentryBreadcrumb("bundled_model_extraction_start")
+                val extracted = extractAllBundledModels()
+                _bundledModelState.value = if (extracted) {
+                    Timber.i(TAG, "All bundled models extracted successfully")
+                    reportSentryBreadcrumb("bundled_model_extraction_success")
+                    BundledModelState.READY
+                } else {
+                    reportSentryBreadcrumb("bundled_model_extraction_failed")
+                    BundledModelState.UNAVAILABLE
+                }
+            } else {
+                Timber.w(TAG, "Bundled models not found in assets")
+                reportSentryBreadcrumb("bundled_models_not_in_assets")
+                _bundledModelState.value = BundledModelState.UNAVAILABLE
+            }
+        } catch (e: OutOfMemoryError) {
+            // OOM during model extraction on 2GB devices — recoverable
+            Timber.e(e, "OOM during bundled model initialization")
+            reportSentryBreadcrumb("bundled_model_oom", mapOf(
+                "freeHeapMB" to (Runtime.getRuntime().freeMemory() / (1024 * 1024)).toString()
+            ))
+            _bundledModelState.value = BundledModelState.UNAVAILABLE
+            System.gc()
+        } catch (e: Exception) {
+            Timber.e(e, "Bundled model initialization failed")
+            reportSentryBreadcrumb("bundled_model_init_exception", mapOf(
+                "error" to (e.message ?: "unknown")
+            ))
             _bundledModelState.value = BundledModelState.UNAVAILABLE
         }
     }
@@ -144,19 +173,58 @@ class BundledModelManager @Inject constructor(
     /**
      * Check if the app has any usable model (bundled or full).
      * This is the key method: if true, the app can do AI inference.
+     *
+     * On 32-bit devices, on-device LLM is not available — the app uses cloud API.
+     * Voice models (ASR/TTS/VAD) still work on 32-bit.
      */
     fun hasUsableModel(): Boolean {
+        // On 32-bit devices, LLM is cloud-only — voice models are still usable
+        if (DeviceCapability.is32BitDevice()) {
+            return hasVoiceModelsAvailable()
+        }
         return isBundledModelAvailable() ||
                modelRegistry.isModelReady(FULL_MODEL_ID) ||
                modelRegistry.isModelReady(BUNDLED_MODEL_ID)
     }
 
     /**
+     * Check if voice models (Whisper, Silero VAD, Piper TTS) are available.
+     * These work on both 32-bit and 64-bit devices.
+     */
+    private fun hasVoiceModelsAvailable(): Boolean {
+        val modelsDir = File(context.filesDir, "models")
+        val voiceAssets = listOf(
+            "whisper-encoder-int8.onnx",
+            "whisper-decoder-int8.onnx",
+            "silero_vad.onnx",
+            "piper-swahili.onnx"
+        )
+        return voiceAssets.all { asset ->
+            val file = File(modelsDir, asset)
+            file.exists() && file.length() > 1000
+        }
+    }
+
+    /**
+     * Check if the on-device LLM model is available.
+     * Returns false on 32-bit devices (LLM is cloud-only).
+     */
+    fun hasLlmModel(): Boolean {
+        if (DeviceCapability.is32BitDevice()) return false
+        return modelRegistry.isModelReady(FULL_MODEL_ID) ||
+               modelRegistry.isModelReady(BUNDLED_MODEL_ID)
+    }
+
+    /**
      * Get the path to the best available model.
      * Prefers full model, falls back to bundled.
+     * Returns null on 32-bit devices (LLM is cloud-only).
      */
     fun getBestModelPath(): File? {
-        // Prefer full model (Qwen 3.5 0.8B)
+        // On 32-bit devices, there's no local LLM model
+        if (DeviceCapability.is32BitDevice()) return null
+
+        // Prefer full model (Gemma 4 E2B)
         val fullPath = modelRegistry.getModelPath(FULL_MODEL_ID)
         if (fullPath != null && fullPath.exists()) return fullPath
 
@@ -185,18 +253,30 @@ class BundledModelManager @Inject constructor(
 
     /**
      * Extract all bundled models from APK assets to internal storage.
-     * This runs once on first launch. Total extraction: ~730MB.
+     * This runs once on first launch.
      *
-     * @return true if all models extracted successfully
+     * On 32-bit (armeabi-v7a) devices, only voice models (Whisper, VAD, TTS) are
+     * extracted. The LLM model (Qwen3.5-0.8B-Q4_K_M.gguf, ~580MB) is skipped
+     * because it cannot be loaded on 32-bit due to process address space limits.
+     *
+     * @return true if all applicable models extracted successfully
      */
     suspend fun extractAllBundledModels(): Boolean = withContext(Dispatchers.IO) {
         try {
             val outputDir = File(context.filesDir, "models")
             outputDir.mkdirs()
 
+            // On 32-bit devices, skip LLM extraction — it wastes ~580MB of storage
+            // and the model can never be loaded.
+            val is32bit = DeviceCapability.is32BitDevice()
+            val assetsToExtract = if (is32bit) BUNDLED_ASSETS_32BIT else BUNDLED_ASSETS
+            if (is32bit) {
+                Timber.i(TAG, "32-bit device detected — extracting voice models only (skipping LLM)")
+            }
+
             var totalExtracted = 0L
 
-            for (assetName in BUNDLED_ASSETS) {
+            for (assetName in assetsToExtract) {
                 val outputFile = File(outputDir, assetName)
                 if (outputFile.exists() && outputFile.length() > 1000) {
                     Timber.d(TAG, "Already extracted: %s", assetName)
@@ -330,29 +410,54 @@ class BundledModelManager @Inject constructor(
         return prefs.getBoolean(KEY_FIRST_LAUNCH_COMPLETED, false)
     }
 
+    // ────────────────────── Sentry ──────────────────────
+
+    private fun reportSentryBreadcrumb(event: String, data: Map<String, String> = emptyMap()) {
+        try {
+            val breadcrumb = io.sentry.Breadcrumb().apply {
+                category = "bundled_model"
+                type = "navigation"
+                message = event
+                data.forEach { (k, v) -> setData(k, v) }
+            }
+            io.sentry.Sentry.addBreadcrumb(breadcrumb)
+        } catch (_: Exception) {}
+    }
+
     // ────────────────────── Private ──────────────────────
 
     /**
-     * Start background download of the full model (Qwen 3.5 0.8B Q4_K_M).
+     * Start background download of the full model with progressive loading.
+     * Skipped on 32-bit devices — on-device LLM is not supported.
+     *
+     * Progressive strategy: If data-saver is enabled and user is on mobile data,
+     * downloads the smallest viable model (Q2_K, ~300-650MB) first,
+     * then queues the full Q4_K_M model for WiFi upgrade.
      */
     private fun startFullModelDownload() {
+        if (DeviceCapability.is32BitDevice()) {
+            Timber.i(TAG, "Skipping full model download: 32-bit device (cloud-only mode)")
+            _downloadState.value = FullModelDownloadState.NOT_STARTED
+            return
+        }
+
         _downloadState.value = FullModelDownloadState.DOWNLOADING
 
         scope.launch {
             try {
-                // Observe download progress
+                // Observe download progress (track whichever model is downloading)
                 val progressJob = launch {
                     modelDownloader.downloadProgress.collect { progressMap ->
-                        val p = progressMap[FULL_MODEL_ID] ?: 0f
+                        val p = progressMap[FULL_MODEL_ID]
+                            ?: progressMap["gemma-4-e2b-q2k"]
+                            ?: progressMap["qwen-3.5-0.8b-q2k"]
+                            ?: 0f
                         _fullModelProgress.value = p
                     }
                 }
 
-                // Start the download (WiFi-only by default)
-                val success = modelDownloader.downloadModel(
-                    modelId = FULL_MODEL_ID,
-                    forceNetwork = !isWifiOnlyDownload()
-                )
+                // Progressive loading: downloadLlmModel handles Q2_K → Q4_K_M strategy
+                val success = modelDownloader.downloadLlmModel(preferLite = false)
 
                 progressJob.cancel()
 
@@ -360,7 +465,7 @@ class BundledModelManager @Inject constructor(
                     prefs.edit().putBoolean(KEY_FULL_MODEL_DOWNLOADED, true).apply()
                     _downloadState.value = FullModelDownloadState.COMPLETED
                     _fullModelProgress.value = 1f
-                    Timber.i(TAG, "Full model (Qwen 3.5 0.8B) downloaded successfully")
+                    Timber.i(TAG, "Full model downloaded successfully")
                 } else {
                     _downloadState.value = FullModelDownloadState.WAITING_FOR_WIFI
                     Timber.i(TAG, "Full model download deferred (waiting for WiFi)")
@@ -373,12 +478,17 @@ class BundledModelManager @Inject constructor(
     }
 
     /**
-     * Start background download of the alternative model (Gemma 4 E2B Q4_K_M).
-     * Only available for MID/HIGH tier devices.
+     * Start background download of the alternative model (Qwen 3.5 0.8B Q4_K_M).
+     * Skipped on 32-bit devices — on-device LLM is not supported.
      *
      * @param deviceTier The current device tier (from ModelManager)
      */
     fun startAltModelDownload(deviceTier: ModelManager.DeviceTier) {
+        if (DeviceCapability.is32BitDevice()) {
+            Timber.i(TAG, "Skipping alt model download: 32-bit device (cloud-only mode)")
+            return
+        }
+
         if (deviceTier == ModelManager.DeviceTier.LOW) {
             Timber.w(TAG, "Alt model (Gemma 4 E2B) not available for LOW-tier devices")
             return

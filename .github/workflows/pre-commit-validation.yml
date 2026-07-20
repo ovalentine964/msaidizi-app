@@ -1,4 +1,4 @@
-name: Pre-Commit Validation
+name: Pre-Commit Validation (Full)
 
 on:
   push:
@@ -9,6 +9,7 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -30,6 +31,7 @@ jobs:
 
   room-entities:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -45,6 +47,7 @@ jobs:
 
   kapt-compat:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 

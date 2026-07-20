@@ -1,201 +1,175 @@
 #!/usr/bin/env bash
 # ============================================================
-# setup-sherpa-onnx.sh
-# Downloads sherpa-onnx pre-built Android JNI libraries and
-# places them in app/src/main/jniLibs/arm64-v8a/ for the
-# Msaidizi APK build.
-#
-# Required libs:
-#   - libsherpa-onnx-jni.so  (~4.5MB) — JNI bridge
-#   - libonnxruntime.so      (~21MB)  — ONNX Runtime (bundled)
-#
-# Usage:
-#   ./scripts/setup-sherpa-onnx.sh [--version v1.13.4]
-#
-# The script is idempotent — re-running it skips the download
-# if the target files already exist (use --force to re-download).
+# setup-sherpa-onnx.sh — Download sherpa-onnx JNI libs for Android
 # ============================================================
+# Downloads pre-built sherpa-onnx JNI libraries for arm64-v8a AND armeabi-v7a.
+# These are the native shared libraries needed for offline
+# ASR (speech recognition), TTS (text-to-speech), and VAD.
+#
+# 32-bit (armeabi-v7a) support enables voice features on budget phones
+# common in Africa (Tecno, Infinix, Itel). On-device LLM is NOT available
+# on 32-bit — those devices use cloud-only mode for text inference.
+# ============================================================
+
 set -euo pipefail
 
-# ── Configuration ────────────────────────────────────────────
-SHERPA_VERSION="${SHERPA_VERSION:-v1.13.4}"
-DOWNLOAD_URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/${SHERPA_VERSION}/sherpa-onnx-${SHERPA_VERSION}-android.tar.bz2"
+KT_API_DIR="app/src/main/java/com/k2fsa/sherpa/onnx"
+MAX_RETRIES=3
+RETRY_DELAY=5
 
-# Resolve project root (parent of scripts/ dir)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+# sherpa-onnx version — update when upgrading
+SHERPA_VERSION="1.10.43"
 
-JNILIBS_DIR="${PROJECT_ROOT}/app/src/main/jniLibs/arm64-v8a"
-TMP_DIR="${PROJECT_ROOT}/.openclaw/tmp/sherpa-onnx-setup"
+# Download for both architectures
+# arm64-v8a: 64-bit devices (primary)
+# armeabi-v7a: 32-bit devices (budget phones in Africa)
+ARCHITECTURES=("arm64-v8a" "armeabi-v7a")
 
-# Only these two are needed for JNI-based usage (per sherpa-onnx docs)
-REQUIRED_LIBS=(
-    "libsherpa-onnx-jni.so"
-    "libonnxruntime.so"
-)
+echo "📦 Setting up sherpa-onnx v${SHERPA_VERSION} JNI libs for: ${ARCHITECTURES[*]}..."
 
-# ── Argument parsing ─────────────────────────────────────────
-FORCE=false
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --version)  SHERPA_VERSION="$2"; shift 2 ;;
-        --force)    FORCE=true; shift ;;
-        -h|--help)
-            echo "Usage: $0 [--version vX.Y.Z] [--force]"
-            echo ""
-            echo "Options:"
-            echo "  --version   sherpa-onnx release tag (default: v1.13.4)"
-            echo "  --force     re-download even if libs exist"
-            exit 0
-            ;;
-        *) echo "Unknown option: $1"; exit 1 ;;
-    esac
-done
+# ─────────────────────────────────────────────────────────────
+# Helper: download with retry
+# ─────────────────────────────────────────────────────────────
+download_with_retry() {
+  local url="$1"
+  local dest="$2"
+  local attempt=0
 
-# Update URL after arg parsing
-DOWNLOAD_URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/${SHERPA_VERSION}/sherpa-onnx-${SHERPA_VERSION}-android.tar.bz2"
+  while [ $attempt -lt $MAX_RETRIES ]; do
+    attempt=$((attempt + 1))
+    echo "  ⬇️  Downloading (attempt $attempt/$MAX_RETRIES)..."
 
-# ── Helper functions ─────────────────────────────────────────
-info()  { echo "ℹ️  $*"; }
-ok()    { echo "✅ $*"; }
-warn()  { echo "⚠️  $*"; }
-fail()  { echo "❌ $*" >&2; exit 1; }
+    if curl -fSL --retry 3 --retry-delay 5 --connect-timeout 30 --max-time 600 \
+         -o "$dest" "$url" 2>&1; then
+      if [ -f "$dest" ] && [ -s "$dest" ]; then
+        echo "  ✅ Downloaded: $(du -h "$dest" | cut -f1)"
+        return 0
+      fi
+    fi
 
-check_libs_exist() {
-    for lib in "${REQUIRED_LIBS[@]}"; do
-        [[ -f "${JNILIBS_DIR}/${lib}" ]] || return 1
-    done
-    return 0
+    echo "  ⚠️  Download failed, retrying in ${RETRY_DELAY}s..."
+    rm -f "$dest"
+    sleep $((RETRY_DELAY * attempt))
+  done
+
+  echo "  ❌ Failed to download after $MAX_RETRIES attempts"
+  return 1
 }
 
-# ── Main ─────────────────────────────────────────────────────
-echo ""
-echo "╔══════════════════════════════════════════════════════╗"
-echo "║       Sherpa-ONNX JNI Library Setup for Msaidizi    ║"
-echo "╚══════════════════════════════════════════════════════╝"
-echo ""
-info "Version:  ${SHERPA_VERSION}"
-info "Target:   ${JNILIBS_DIR}"
-echo ""
-
+# ─────────────────────────────────────────────────────────────
 # Check if libs already exist
-if check_libs_exist && [[ "$FORCE" != "true" ]]; then
-    ok "JNI libraries already present. Use --force to re-download."
-    echo ""
-    ls -lh "${JNILIBS_DIR}"/lib*.so 2>/dev/null
-    echo ""
-    exit 0
+# ─────────────────────────────────────────────────────────────
+if [ -f "$JNI_DIR/libsherpa-onnx-jni.so" ] && [ -f "$JNI_DIR/libonnxruntime.so" ]; then
+  echo "✅ sherpa-onnx JNI libs already present"
+  ls -lh "$JNI_DIR/"*.so
+  exit 0
 fi
 
-# Verify tools
-for cmd in wget tar; do
-    command -v "$cmd" >/dev/null 2>&1 || fail "'$cmd' is required but not installed."
-done
+mkdir -p "$JNI_DIR"
 
-# Create directories
-mkdir -p "${JNILIBS_DIR}"
-mkdir -p "${TMP_DIR}"
+# ─────────────────────────────────────────────────────────────
+# Download and extract for each architecture
+# ─────────────────────────────────────────────────────────────
 
-# Download
-ARCHIVE="${TMP_DIR}/sherpa-onnx-${SHERPA_VERSION}-android.tar.bz2"
-if [[ -f "${ARCHIVE}" ]] && [[ "$FORCE" != "true" ]]; then
-    info "Using cached archive: ${ARCHIVE}"
-else
-    info "Downloading sherpa-onnx ${SHERPA_VERSION} Android pre-built libs..."
-    info "URL: ${DOWNLOAD_URL}"
-    if ! wget -q --show-progress -O "${ARCHIVE}" "${DOWNLOAD_URL}"; then
-        fail "Download failed. Check your network connection and the release URL."
-    fi
-    ok "Download complete."
-fi
+KT_SRC_COPIED=false
 
-# Extract only arm64-v8a libs
-info "Extracting arm64-v8a libraries..."
-tar xjf "${ARCHIVE}" -C "${TMP_DIR}" \
-    --wildcards "*/arm64-v8a/*.so" 2>/dev/null \
-    || tar xjf "${ARCHIVE}" -C "${TMP_DIR}" 2>/dev/null
+for ARCH in "${ARCHITECTURES[@]}"; do
+  JNI_DIR="app/src/main/jniLibs/${ARCH}"
+  SHERPA_URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/v${SHERPA_VERSION}/sherpa-onnx-${SHERPA_VERSION}-android-${ARCH}.tar.bz2"
 
-# Find extracted arm64-v8a directory
-EXTRACTED_DIR=""
-for candidate in \
-    "${TMP_DIR}/jniLibs/arm64-v8a" \
-    "${TMP_DIR}/sherpa-onnx-${SHERPA_VERSION}-android/jniLibs/arm64-v8a" \
-    "${TMP_DIR}/build-android-arm64-v8a/install/lib"; do
-    if [[ -d "$candidate" ]]; then
-        EXTRACTED_DIR="$candidate"
-        break
-    fi
-done
+  # Check if libs already exist for this architecture
+  if [ -f "$JNI_DIR/libsherpa-onnx-jni.so" ] && [ -f "$JNI_DIR/libonnxruntime.so" ]; then
+    echo "✅ sherpa-onnx JNI libs already present for ${ARCH}"
+    ls -lh "$JNI_DIR/"*.so
+    continue
+  fi
 
-# Fallback: search for it
-if [[ -z "$EXTRACTED_DIR" ]]; then
-    EXTRACTED_DIR=$(find "${TMP_DIR}" -type d -name "arm64-v8a" | head -1)
-fi
+  mkdir -p "$JNI_DIR"
 
-[[ -n "$EXTRACTED_DIR" ]] || fail "Could not find arm64-v8a directory in extracted archive."
-info "Found libs in: ${EXTRACTED_DIR}"
+  TMPDIR=$(mktemp -d)
+  trap 'rm -rf "$TMPDIR"' EXIT
 
-# Copy required libs to jniLibs
-info "Copying libraries to ${JNILIBS_DIR}..."
-for lib in "${REQUIRED_LIBS[@]}"; do
-    src="${EXTRACTED_DIR}/${lib}"
-    if [[ -f "$src" ]]; then
-        cp -v "$src" "${JNILIBS_DIR}/"
-        ok "Installed: ${lib}"
+  ARCHIVE="$TMPDIR/sherpa-onnx-android-${ARCH}.tar.bz2"
+  echo ""
+  echo "  ⬇️  Downloading sherpa-onnx v${SHERPA_VERSION} for ${ARCH}..."
+
+  if ! download_with_retry "$SHERPA_URL" "$ARCHIVE"; then
+    echo "❌ Failed to download sherpa-onnx for ${ARCH}"
+    exit 1
+  fi
+
+  echo "  📂 Extracting ${ARCH}..."
+  tar -xjf "$ARCHIVE" -C "$TMPDIR"
+
+  # Find and copy the .so files
+  EXTRACTED_DIR=$(find "$TMPDIR" -maxdepth 2 -type d -name "lib" | head -1)
+  if [ -z "$EXTRACTED_DIR" ]; then
+    # Try finding .so files directly
+    SO_FILES=$(find "$TMPDIR" -name "libsherpa-onnx-jni.so" -o -name "libonnxruntime.so")
+    if [ -n "$SO_FILES" ]; then
+      echo "$SO_FILES" | while read -r f; do
+        cp "$f" "$JNI_DIR/"
+        echo "  ✅ Copied: $(basename "$f")"
+      done
     else
-        fail "Required library not found in archive: ${lib}"
+      echo "❌ Could not find .so files in extracted archive for ${ARCH}"
+      echo "  Contents of $TMPDIR:"
+      find "$TMPDIR" -type f | head -20
+      exit 1
     fi
-done
+  else
+    cp "$EXTRACTED_DIR"/*/*.so "$JNI_DIR/" 2>/dev/null || \
+    cp "$EXTRACTED_DIR"/*.so "$JNI_DIR/" 2>/dev/null || {
+      echo "❌ Could not copy .so files from $EXTRACTED_DIR for ${ARCH}"
+      ls -la "$EXTRACTED_DIR"/
+      exit 1
+    }
+    echo "  ✅ Copied JNI libs to $JNI_DIR"
+  fi
 
-# Also copy optional C/C++ API libs (harmless, may be useful)
-for lib in libsherpa-onnx-c-api.so libsherpa-onnx-cxx-api.so; do
-    src="${EXTRACTED_DIR}/${lib}"
-    if [[ -f "$src" ]]; then
-        cp -v "$src" "${JNILIBS_DIR}/"
-        info "Optional: ${lib} (for non-JNI C/C++ usage)"
-    fi
-done
-
-# Clean up extracted files (keep the cached archive)
-rm -rf "${TMP_DIR}/jniLibs" 2>/dev/null
-rm -rf "${TMP_DIR}/sherpa-onnx-"* 2>/dev/null
-rm -rf "${TMP_DIR}/build-android-"* 2>/dev/null
-
-# ── Verify ───────────────────────────────────────────────────
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-info "Verification — ${JNILIBS_DIR}:"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-ls -lh "${JNILIBS_DIR}"/lib*.so 2>/dev/null
-
-ALL_OK=true
-for lib in "${REQUIRED_LIBS[@]}"; do
-    if [[ -f "${JNILIBS_DIR}/${lib}" ]]; then
-        size=$(stat -c%s "${JNILIBS_DIR}/${lib}" 2>/dev/null || stat -f%z "${JNILIBS_DIR}/${lib}" 2>/dev/null)
-        if [[ "$size" -gt 100000 ]]; then
-            ok "${lib}  ($(numfmt --to=iec "$size" 2>/dev/null || echo "${size} bytes"))"
-        else
-            warn "${lib} exists but seems too small (${size} bytes) — may be corrupted."
-            ALL_OK=false
-        fi
+  # Setup Kotlin API source files (only once — same for all architectures)
+  if [ "$KT_SRC_COPIED" = false ]; then
+    KT_SRC=$(find "$TMPDIR" -path "*/com/k2fsa/sherpa/onnx/*.kt" -type f 2>/dev/null | head -1)
+    if [ -n "$KT_SRC" ]; then
+      mkdir -p "$KT_API_DIR"
+      KT_SRC_DIR=$(dirname "$KT_SRC")
+      cp "$KT_SRC_DIR"/*.kt "$KT_API_DIR/" 2>/dev/null || true
+      KT_COUNT=$(find "$KT_API_DIR" -name "*.kt" | wc -l)
+      echo "  ✅ Installed $KT_COUNT Kotlin API files to $KT_API_DIR"
+      KT_SRC_COPIED=true
     else
-        fail "${lib} — MISSING"
-        ALL_OK=false
+      echo "  ℹ️  No Kotlin API files in archive (already in source tree)"
+      KT_SRC_COPIED=true
     fi
+  fi
+
 done
 
+# ─────────────────────────────────────────────────────────────
+# Verify all architectures
+# ─────────────────────────────────────────────────────────────
 echo ""
-if [[ "$ALL_OK" == "true" ]]; then
-    echo "╔══════════════════════════════════════════════════════╗"
-    echo "║  ✅  Sherpa-ONNX JNI libraries installed!           ║"
-    echo "║                                                     ║"
-    echo "║  The APK build should now find:                     ║"
-    echo "║    • libsherpa-onnx-jni.so  (JNI bridge)            ║"
-    echo "║    • libonnxruntime.so      (ONNX Runtime)          ║"
-    echo "║                                                     ║"
-    echo "║  Next: ./gradlew assembleDebug                      ║"
-    echo "╚══════════════════════════════════════════════════════╝"
-else
-    fail "Some libraries are missing or corrupted. Check the output above."
+echo "🔍 Verifying JNI libs for all architectures..."
+TOTAL_MISSING=0
+for ARCH in "${ARCHITECTURES[@]}"; do
+  JNI_DIR="app/src/main/jniLibs/${ARCH}"
+  echo "  [${ARCH}]"
+  MISSING=0
+  for lib in libsherpa-onnx-jni.so libonnxruntime.so; do
+    if [ -f "$JNI_DIR/$lib" ] && [ -s "$JNI_DIR/$lib" ]; then
+      SIZE=$(stat -c%s "$JNI_DIR/$lib" 2>/dev/null || stat -f%z "$JNI_DIR/$lib" 2>/dev/null || echo 0)
+      echo "    ✅ $lib ($(( SIZE / 1024 )) KB)"
+    else
+      echo "    ❌ MISSING: $lib"
+      MISSING=$((MISSING + 1))
+      TOTAL_MISSING=$((TOTAL_MISSING + 1))
+    fi
+  done
+done
+
+if [ "$TOTAL_MISSING" -gt 0 ]; then
+  echo "❌ $TOTAL_MISSING required lib(s) missing!"
+  exit 1
 fi
-echo ""
+
+echo "✅ sherpa-onnx setup complete for ${ARCHITECTURES[*]}"

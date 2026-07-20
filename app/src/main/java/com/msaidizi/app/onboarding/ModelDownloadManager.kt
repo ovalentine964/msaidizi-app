@@ -51,7 +51,8 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class ModelDownloadManager(
     private val context: Context,
-    private val modelDownloader: com.msaidizi.app.core.ai.ModelDownloader? = null
+    private val modelDownloader: com.msaidizi.app.core.ai.ModelDownloader? = null,
+    private val dataSaverManager: com.msaidizi.app.core.ai.DataSaverManager? = null
 ) {
     companion object {
         private const val TAG = "ModelDownloadManager"
@@ -232,6 +233,48 @@ class ModelDownloadManager(
         updateModelState(model.id, ModelState.COMPLETED)
         updateModelProgress(model.id, 1f)
         return true
+    }
+
+    /**
+     * Get a download recommendation based on current network and data plan.
+     * Shows estimated data cost in local currency.
+     */
+    fun getDownloadRecommendation(): com.msaidizi.app.core.ai.DownloadRecommendation? {
+        val totalBytes = getTotalSize()
+        return dataSaverManager?.getDownloadRecommendation(totalBytes)
+    }
+
+    /**
+     * Check if data saver mode is enabled.
+     */
+    fun isDataSaverEnabled(): Boolean {
+        return dataSaverManager?.isDataSaverEnabled() ?: false
+    }
+
+    /**
+     * Get the smallest available model set for data-limited users.
+     * Returns Q2_K variants instead of Q4_K_M.
+     */
+    fun getLiteModelSize(): Long {
+        // Q2_K variants: Gemma ~650MB + Qwen ~300MB = ~950MB vs 2GB
+        return 650_000_000L + 300_000_000L
+    }
+
+    /**
+     * Get full model set size.
+     */
+    fun getFullModelSize(): Long {
+        return getTotalSize()
+    }
+
+    /**
+     * Get data cost estimate for the full download.
+     */
+    fun getDataCostEstimate(): String {
+        val recommendation = getDownloadRecommendation()
+        return recommendation?.dataCost?.let {
+            "~${it.mbEquivalent} MB (KES ${it.kes})"
+        } ?: "~${getTotalSize() / (1024 * 1024)} MB"
     }
 
     /**

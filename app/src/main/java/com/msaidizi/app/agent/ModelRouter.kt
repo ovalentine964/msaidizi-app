@@ -15,6 +15,8 @@ import com.msaidizi.app.agent.moe.MoERouter
 import com.msaidizi.app.agent.moe.ExpertRegistry
 import com.msaidizi.app.agent.cost.InferenceCostTracker
 import com.msaidizi.app.agent.cost.CostRecord
+import com.msaidizi.app.agent.cost.CostBudgetManager
+import com.msaidizi.app.agent.credit.CreditScoringLogic
 import com.msaidizi.app.agent.version.ModelVersionManager
 import com.msaidizi.app.agent.multimodal.MultimodalPipeline
 import com.msaidizi.app.agent.harness.InferenceHarness
@@ -75,6 +77,13 @@ class ModelRouter(
     // ── Harness integration: wraps every provider call ──
     // If harness is injected, all provider calls go through timeout/retry/monitoring
     private val useHarness: Boolean get() = inferenceHarness != null
+
+    // ── Extracted: Cost budget management ──
+    private val costBudgetManager = CostBudgetManager(
+        monthlyBudgetMicros = config.monthlyBudgetMicros,
+        dailyBudgetMicros = config.dailyBudgetMicros,
+        alertThresholdPct = config.alertThresholdPct
+    )
 
     // ── Evolution Signals for Adaptive Routing ──
     /** Recent evolution quality scores (0.0–1.0) per task type */
@@ -279,186 +288,15 @@ class ModelRouter(
     // Pre-built reasoning templates for common informal economy tasks
     // ═══════════════════════════════════════════════════════════════
 
-    enum class FinancialTemplate(val displayName: String, val requiredComplexity: TaskComplexity) {
-        PRICE_ANALYSIS("Price Analysis", TaskComplexity.MEDIUM),
-        CREDIT_ASSESSMENT("Credit Assessment", TaskComplexity.HIGH),
-        CASH_FLOW_ANALYSIS("Cash Flow Analysis", TaskComplexity.MEDIUM),
-        RISK_ASSESSMENT("Risk Assessment", TaskComplexity.HIGH),
-        MARKET_FORECAST("Market Forecast", TaskComplexity.HIGH),
-        GROWTH_PLANNING("Growth Planning", TaskComplexity.CRITICAL),
-        DAILY_BRIEFING("Daily Briefing", TaskComplexity.LOW),
-        INVENTORY_OPTIMIZATION("Inventory Optimization", TaskComplexity.MEDIUM),
-        SUPPLIER_ANALYSIS("Supplier Analysis", TaskComplexity.MEDIUM),
-        PROFITABILITY_ANALYSIS("Profitability Analysis", TaskComplexity.MEDIUM)
-    }
+    // Delegate to CreditScoringLogic.FinancialTemplate
+    typealias FinancialTemplate = CreditScoringLogic.FinancialTemplate
 
     /**
      * Get the reasoning template prompt for a financial analysis task.
-     * These templates guide the model's reasoning for common informal economy tasks.
+     * Delegates to CreditScoringLogic for the actual template content.
      */
     fun getFinancialTemplatePrompt(template: FinancialTemplate, context: Map<String, String> = emptyMap()): String {
-        return when (template) {
-            FinancialTemplate.PRICE_ANALYSIS -> """
-                You are analyzing pricing for an informal market vendor.
-                
-                Data: ${context["data"] ?: "No data provided"}
-                Product: ${context["product"] ?: "Unknown"}
-                
-                Think step by step:
-                1. What is the current price and how does it compare to market average?
-                2. What factors affect this price (season, supply, demand, competition)?
-                3. What is the optimal price considering customer loyalty and location?
-                4. What is the expected impact on sales volume?
-                
-                Provide a clear recommendation with reasoning.
-            """.trimIndent()
-
-            FinancialTemplate.CREDIT_ASSESSMENT -> """
-                You are assessing creditworthiness for an informal economy worker.
-                
-                Transaction history: ${context["history"] ?: "No history"}
-                Business type: ${context["business_type"] ?: "Unknown"}
-                
-                Analyze these signals:
-                1. Transaction consistency (frequency, regularity)
-                2. Revenue trend (growing, stable, declining)
-                3. Cash flow patterns (seasonal, cyclical)
-                4. Risk factors (single supplier, open-air market, seasonal business)
-                
-                Alternative data signals to consider:
-                - Mobile money transaction patterns
-                - Utility bill payment consistency
-                - Inventory turnover rate
-                - Customer base diversity
-                
-                Provide credit score (0-100), risk level, and recommendation.
-            """.trimIndent()
-
-            FinancialTemplate.CASH_FLOW_ANALYSIS -> """
-                You are analyzing cash flow for a small business.
-                
-                Income data: ${context["income"] ?: "No data"}
-                Expense data: ${context["expenses"] ?: "No data"}
-                Period: ${context["period"] ?: "This week"}
-                
-                Analyze:
-                1. Net cash flow (income - expenses)
-                2. Cash flow timing (when money comes in vs goes out)
-                3. Safety buffer (days of expenses covered)
-                4. Upcoming obligations (loan payments, restocking)
-                
-                Identify any cash crunch risks and suggest mitigation.
-            """.trimIndent()
-
-            FinancialTemplate.RISK_ASSESSMENT -> """
-                You are assessing business risk for an informal vendor.
-                
-                Business profile: ${context["profile"] ?: "Unknown"}
-                Market conditions: ${context["market"] ?: "Unknown"}
-                
-                Evaluate these risk dimensions:
-                1. Market risk (competition, demand volatility)
-                2. Supply chain risk (single supplier, logistics)
-                3. Weather/environmental risk (open-air market, seasonal)
-                4. Financial risk (debt level, cash reserves)
-                5. Operational risk (theft, illness, market closure)
-                
-                For each risk, assess probability and impact.
-                Suggest micro-insurance or mitigation strategies.
-            """.trimIndent()
-
-            FinancialTemplate.MARKET_FORECAST -> """
-                You are forecasting market conditions for a vendor.
-                
-                Historical data: ${context["history"] ?: "No data"}
-                Market type: ${context["market_type"] ?: "Local market"}
-                
-                Consider:
-                1. Seasonal patterns (holidays, rainy season, school terms)
-                2. Supply chain trends (input costs, availability)
-                3. Demand patterns (customer behavior, competition)
-                4. External factors (economic conditions, regulations)
-                
-                Provide 7-day and 30-day price/demand forecast with confidence levels.
-            """.trimIndent()
-
-            FinancialTemplate.GROWTH_PLANNING -> """
-                You are creating a growth plan for a micro-entrepreneur.
-                
-                Current business: ${context["business"] ?: "Unknown"}
-                Financial position: ${context["financials"] ?: "Unknown"}
-                Goals: ${context["goals"] ?: "Not specified"}
-                
-                Create a realistic growth plan:
-                1. Current state assessment (revenue, margins, capacity)
-                2. Growth opportunities (new products, new locations, hiring)
-                3. Investment requirements (capital, time, skills)
-                4. Risk-adjusted ROI projections
-                5. Milestone timeline (30/60/90 day goals)
-                
-                Be realistic for informal economy context.
-            """.trimIndent()
-
-            FinancialTemplate.DAILY_BRIEFING -> """
-                Generate a morning briefing for a vendor.
-                
-                Yesterday's data: ${context["yesterday"] ?: "No data"}
-                Current goals: ${context["goals"] ?: "No goals set"}
-                Weather: ${context["weather"] ?: "Unknown"}
-                
-                Include:
-                1. Yesterday's performance summary
-                2. Today's action items (restock, pricing, marketing)
-                3. Goal progress update
-                4. Market insight or tip of the day
-                5. Motivational message
-                
-                Keep it brief and actionable. Use simple language.
-            """.trimIndent()
-
-            FinancialTemplate.INVENTORY_OPTIMIZATION -> """
-                You are optimizing inventory for a vendor.
-                
-                Current stock: ${context["stock"] ?: "Unknown"}
-                Sales data: ${context["sales"] ?: "No data"}
-                Storage capacity: ${context["capacity"] ?: "Unknown"}
-                
-                Optimize:
-                1. Which items to restock (turnover rate analysis)
-                2. Optimal order quantities (avoid stockouts and waste)
-                3. Product mix recommendations (margin vs volume)
-                4. Timing of purchases (price cycles, supplier schedules)
-            """.trimIndent()
-
-            FinancialTemplate.SUPPLIER_ANALYSIS -> """
-                You are analyzing suppliers for a vendor.
-                
-                Current suppliers: ${context["suppliers"] ?: "Unknown"}
-                Purchase history: ${context["purchases"] ?: "No data"}
-                
-                Evaluate:
-                1. Price competitiveness across suppliers
-                2. Reliability (delivery consistency, quality)
-                3. Payment terms and flexibility
-                4. Risk of single-supplier dependency
-                5. Recommendations for diversification
-            """.trimIndent()
-
-            FinancialTemplate.PROFITABILITY_ANALYSIS -> """
-                You are analyzing profitability for a business.
-                
-                Revenue data: ${context["revenue"] ?: "No data"}
-                Cost data: ${context["costs"] ?: "No data"}
-                Time period: ${context["period"] ?: "This month"}
-                
-                Calculate and explain:
-                1. Gross margin per product
-                2. Net profit margin
-                3. Most and least profitable items
-                4. Break-even analysis
-                5. Recommendations to improve profitability
-            """.trimIndent()
-        }
+        return CreditScoringLogic.getTemplatePrompt(template, context)
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -616,41 +454,24 @@ class ModelRouter(
     private val totalCostMicros = AtomicLong(0)
     private val requestLog = mutableListOf<RequestLogEntry>()
 
-    /** Per-user monthly cost tracking (keyed by userId) */
-    private val userMonthlyCost = ConcurrentHashMap<String, AtomicLong>()
-    private val userDailyCost = ConcurrentHashMap<String, AtomicLong>()
-    private var currentMonth: Int = Calendar.getInstance().get(Calendar.MONTH)
-    private var currentDay: Int = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
+    // Per-user cost tracking is now delegated to CostBudgetManager
 
-    data class RequestLogEntry(
-        val requestId: String,
-        val providerId: String,
-        val model: String,
-        val taskType: TaskType,
-        val inputTokens: Int,
-        val outputTokens: Int,
-        val latencyMs: Long,
-        val fromCache: Boolean,
-        val costMicros: Long,
-        val timestamp: Long = System.currentTimeMillis()
-    )
-
-    data class CostBudgetStatus(
-        val userId: String,
-        val monthlyUsedMicros: Long,
-        val monthlyBudgetMicros: Long,
-        val dailyUsedMicros: Long,
-        val dailyBudgetMicros: Long,
-        val monthlyPctUsed: Float,
-        val isOverBudget: Boolean,
-        val isNearBudget: Boolean
-    )
+    // RequestLogEntry and CostBudgetStatus are delegated to CostBudgetManager
+    typealias RequestLogEntry = CostBudgetManager.RequestLogEntry
+    typealias CostBudgetStatus = CostBudgetManager.CostBudgetStatus
 
     // ═══════════════════════════════════════════════════════════════
     // REASONING CHAIN STORAGE
     // ═══════════════════════════════════════════════════════════════
 
-    private val reasoningChains = LruCache<String, ReasoningChain>(50)
+    // Bounded LinkedHashMap — maintains insertion order like a deque, O(1) get/put.
+    // Unlike LruCache (which evicts by access recency and doesn't expose ordered entries),
+    // this gives us ordered iteration for getRecentReasoningChains() while staying bounded.
+    // Wrapped in synchronizedMap for thread safety (LruCache was internally synchronized).
+    private val reasoningChains: MutableMap<String, ReasoningChain> =
+        java.util.Collections.synchronizedMap(object : LinkedHashMap<String, ReasoningChain>(64, 0.75f, false) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, ReasoningChain>?): Boolean = size > 50
+        })
 
     // ═══════════════════════════════════════════════════════════════
     // MAIN INFERENCE METHOD
@@ -684,7 +505,7 @@ class ModelRouter(
 
         // 3. Check user budget
         val userId = request.userId ?: "anonymous"
-        val budgetStatus = checkBudget(userId)
+        val budgetStatus = costBudgetManager.checkBudget(userId)
         if (budgetStatus.isOverBudget) {
             // Force on-device when over budget
             return@withContext inferOnDevice(request, effectiveComplexity)
@@ -1117,8 +938,7 @@ class ModelRouter(
     // ═══════════════════════════════════════════════════════════════
 
     private fun calculateCost(provider: Provider, inputTokens: Int, outputTokens: Int): Long {
-        return ((inputTokens * provider.costPer1kInput / 1000.0) +
-                (outputTokens * provider.costPer1kOutput / 1000.0) * 1_000_000).toLong()
+        return costBudgetManager.calculateCost(provider.costPer1kInput, provider.costPer1kOutput, inputTokens, outputTokens)
     }
 
     private fun trackUsage(
@@ -1131,63 +951,10 @@ class ModelRouter(
         totalTokensIn.addAndGet(inputTokens.toLong())
         totalTokensOut.addAndGet(outputTokens.toLong())
         totalCostMicros.addAndGet(costMicros)
-
-        // Per-user tracking
-        userMonthlyCost.getOrPut(userId) { AtomicLong(0) }.addAndGet(costMicros)
-        userDailyCost.getOrPut(userId) { AtomicLong(0) }.addAndGet(costMicros)
-
-        // Log entry
-        synchronized(requestLog) {
-            requestLog.add(RequestLogEntry(
-                requestId = java.util.UUID.randomUUID().toString().take(8),
-                providerId = "",
-                model = "",
-                taskType = taskType,
-                inputTokens = inputTokens,
-                outputTokens = outputTokens,
-                latencyMs = 0,
-                fromCache = false,
-                costMicros = costMicros
-            ))
-            if (requestLog.size > 500) requestLog.removeAt(0)
-        }
-
-        // Reset daily/monthly counters if needed
-        resetCountersIfNeeded()
+        costBudgetManager.trackUsage(userId, inputTokens, outputTokens, costMicros, taskType.name)
     }
 
-    private fun checkBudget(userId: String): CostBudgetStatus {
-        resetCountersIfNeeded()
-
-        val monthlyUsed = userMonthlyCost[userId]?.get() ?: 0L
-        val dailyUsed = userDailyCost[userId]?.get() ?: 0L
-
-        return CostBudgetStatus(
-            userId = userId,
-            monthlyUsedMicros = monthlyUsed,
-            monthlyBudgetMicros = config.monthlyBudgetMicros,
-            dailyUsedMicros = dailyUsed,
-            dailyBudgetMicros = config.dailyBudgetMicros,
-            monthlyPctUsed = monthlyUsed.toFloat() / config.monthlyBudgetMicros,
-            isOverBudget = monthlyUsed >= config.monthlyBudgetMicros,
-            isNearBudget = monthlyUsed >= (config.monthlyBudgetMicros * config.alertThresholdPct).toLong()
-        )
-    }
-
-    private fun resetCountersIfNeeded() {
-        val cal = Calendar.getInstance()
-        val nowMonth = cal.get(Calendar.MONTH)
-        val nowDay = cal.get(Calendar.DAY_OF_YEAR)
-
-        if (nowMonth != currentMonth) {
-            currentMonth = nowMonth
-            userMonthlyCost.values.forEach { it.set(0) }
-        }
-        if (nowDay != currentDay) {
-            currentDay = nowDay
-            userDailyCost.values.forEach { it.set(0) }
-        }
-    }
+    private fun checkBudget(userId: String): CostBudgetStatus = costBudgetManager.checkBudget(userId)
 
     private suspend fun inferOnDevice(
         request: InferenceRequest,
@@ -1286,7 +1053,7 @@ class ModelRouter(
             "totalCostMicros" to totalCostMicros.get(),
             "totalCostDollars" to totalCostMicros.get() / 1_000_000.0,
             "cacheSize" to resultCache.size(),
-            "reasoningChainsStored" to reasoningChains.size(),
+            "reasoningChainsStored" to reasoningChains.size,
             "providers" to providerStats,
             "isOnline" to isNetworkAvailable(),
             // Swarm 7 metrics
@@ -1298,13 +1065,21 @@ class ModelRouter(
         )
     }
 
-    fun getUserCostStatus(userId: String): CostBudgetStatus = checkBudget(userId)
+    fun getUserCostStatus(userId: String): CostBudgetStatus = costBudgetManager.checkBudget(userId)
 
-    fun getReasoningChain(chainId: String): ReasoningChain? = reasoningChains.get(chainId)
+    fun getReasoningChain(chainId: String): ReasoningChain? = reasoningChains[chainId]
 
     fun getRecentReasoningChains(n: Int = 10): List<Map<String, Any>> {
-        // LruCache doesn't expose ordered entries, so we use a snapshot
-        return emptyList() // TODO: implement with a bounded deque
+        // LinkedHashMap maintains insertion order — return the N most recent chains.
+        // synchronizedMap doesn't synchronize iteration, so snapshot the values first.
+        val snapshot: List<ReasoningChain>
+        synchronized(reasoningChains) {
+            snapshot = reasoningChains.values.toList()
+        }
+        return snapshot
+            .takeLast(n)
+            .reversed()  // most recent first
+            .map { it.toMap() }
     }
 
     fun getProviderHealth(): List<Map<String, Any>> {

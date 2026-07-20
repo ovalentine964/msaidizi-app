@@ -3,6 +3,7 @@ import android.content.ComponentCallbacks2
 
 import android.app.ActivityManager
 import android.content.Context
+import com.msaidizi.app.core.util.DeviceCapability
 import com.msaidizi.app.voice.LlmEngine
 import com.msaidizi.app.voice.ModelRegistry
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -98,6 +99,12 @@ class ModelManager @Inject constructor(
 
         /** Qwen 3.5 2B Q4_K_M — higher-quality fallback for HIGH-tier devices (~1.2GB) */
         private const val MODEL_QWEN_2B = "qwen3.5-2b-q4km"
+
+        /** Gemma 4 E2B Q2_K — ultra-lite model for data-limited users (~650MB) */
+        private const val MODEL_GEMMA_4_E2B_ULTRA = "gemma-4-e2b-q2k"
+
+        /** Qwen 3.5 0.8B Q2_K — smallest viable LLM for initial download (~300MB) */
+        private const val MODEL_QWEN_08B_LITE = "qwen-3.5-0.8b-q2k"
 
         /** Tiny Aya Earth — future placeholder (not yet available) */
         private const val MODEL_TINY_AYA_EARTH = "tiny-aya-earth"
@@ -327,12 +334,15 @@ class ModelManager @Inject constructor(
 
     /**
      * Get estimated model size in MB.
+     * Now includes Q2_K ultra-lite variants for data-limited users.
      */
     private fun getModelSizeMb(modelId: String): Int {
         return when (modelId) {
             MODEL_GEMMA_4_E2B -> 1500       // ~1.5GB Q4_K_M (Gemma 4 E2B)
             MODEL_GEMMA_4_E2B_SMALL -> 1000 // ~1.0GB Q3_K_M (Gemma 4 E2B, LOW tier)
+            MODEL_GEMMA_4_E2B_ULTRA -> 650  // ~650MB Q2_K (Gemma 4 E2B, data-saver)
             MODEL_QWEN_08B -> 580           // ~580MB Q4_K_M (Qwen3.5-0.8B)
+            MODEL_QWEN_08B_LITE -> 300      // ~300MB Q2_K (Qwen3.5-0.8B, data-saver)
             MODEL_QWEN_2B -> 1200           // ~1.2GB Q4_K_M (Qwen3.5-2B)
             MODEL_TINY_AYA_EARTH -> 400     // ~400MB estimated (Tiny Aya Earth)
             else -> 500
@@ -343,6 +353,8 @@ class ModelManager @Inject constructor(
      * Load the best available LLM for this device.
      * Handles fallback chain: preferred → smaller → cloud.
      * Now with graceful degradation for oversized models.
+     *
+     * On 32-bit devices, this immediately falls back to cloud — no model candidates.
      *
      * @param forceReload Force reload even if a model is already loaded
      * @return true if an on-device model was loaded successfully
@@ -357,6 +369,14 @@ class ModelManager @Inject constructor(
 
         // Determine the best model for this device
         val candidateModels = getModelCandidates()
+
+        // No candidates (32-bit device or insufficient RAM) — go straight to cloud
+        if (candidateModels.isEmpty()) {
+            val reason = if (DeviceCapability.is32BitDevice()) "32-bit device" else "insufficient RAM"
+            Timber.i(TAG, "No on-device LLM candidates (%s) — using cloud API", reason)
+            _modelState.value = ModelManagerState.FALLBACK_TO_CLOUD
+            return false
+        }
 
         for (modelId in candidateModels) {
             try {
@@ -406,8 +426,12 @@ class ModelManager @Inject constructor(
      * - LOW:  Gemma 4 E2B Q3_K_M primary (~1GB), Qwen 3.5 0.8B fallback
      * - MID:  Gemma 4 E2B Q4_K_M primary (~1.5GB), Qwen 3.5 0.8B fallback
      * - HIGH: Gemma 4 E2B Q4_K_M primary, Qwen 3.5 2B fallback
+     *
+     * Returns null on 32-bit devices (no on-device LLM available).
      */
-    fun getOptimalModelId(): String {
+    fun getOptimalModelId(): String? {
+        if (DeviceCapability.is32BitDevice()) return null
+
         return when (deviceTier) {
             DeviceTier.LOW -> MODEL_GEMMA_4_E2B_SMALL  // Gemma 4 E2B Q3_K_M (~1GB) for 2GB devices
             DeviceTier.MID -> MODEL_GEMMA_4_E2B        // Gemma 4 E2B Q4_K_M (~1.5GB) primary
@@ -422,8 +446,12 @@ class ModelManager @Inject constructor(
      * - LOW:  Qwen 3.5 0.8B (memory pressure fallback)
      * - MID:  Qwen 3.5 0.8B (memory pressure fallback)
      * - HIGH: Qwen 3.5 2B (higher quality fallback)
+     *
+     * Returns null on 32-bit devices.
      */
     fun getAlternativeModelId(): String? {
+        if (DeviceCapability.is32BitDevice()) return null
+
         return when (deviceTier) {
             DeviceTier.LOW -> MODEL_QWEN_08B      // Qwen fallback for 2GB devices
             DeviceTier.MID -> MODEL_QWEN_08B       // Qwen fallback for MID tier
@@ -448,10 +476,15 @@ class ModelManager @Inject constructor(
 
     /**
      * Check if on-device LLM inference is feasible on this device.
-     * Returns false for very low-end devices where cloud-only is better.
-     * Updated (2026-07-16): Gemma 4 E2B Q3_K_M (~1GB) enables on-device on LOW tier.
+     * Returns false for 32-bit devices (address space too small) and very low RAM devices.
+     *
+     * Updated: 32-bit (armeabi-v7a) devices are explicitly blocked.
+     * Even though the native code compiles for armeabi-v7a, the process address
+     * space (~1.5GB usable) cannot hold llama.cpp models (580MB+).
      */
     fun isOnDeviceLlmFeasible(): Boolean {
+        // 32-bit devices cannot run on-device LLM
+        if (DeviceCapability.is32BitDevice()) return false
         return getTotalRamMb() >= 1536  // Gemma 4 E2B Q3_K_M needs ~1.5GB total
     }
 
@@ -570,33 +603,73 @@ class ModelManager @Inject constructor(
      * First element is the preferred model; later elements are fallbacks.
      * Includes graceful degradation: tries larger models first on capable devices.
      *
+     * 32-bit devices return an empty list — on-device LLM is not available.
+     * Voice models (Whisper, VAD, TTS) still work on 32-bit.
+     *
      * Decision Council (2026-07-15):
      * - LOW:  Qwen 3.5 0.8B ONLY (Gemma 4 E2B ~600MB too large for ≤2GB devices)
      * - MID:  Qwen 3.5 0.8B default → Gemma 4 E2B fallback
      * - HIGH: Qwen 3.5 2B default → Gemma 4 E2B fallback → Qwen 3.5 0.8B last resort
+     *
+     * Now includes Q2_K ultra-lite variants for data-limited scenarios.
+     * Data-saver path: Q2_K → Q3_K_M → Q4_K_M (progressive quality upgrade)
      */
     private fun getModelCandidates(): List<String> {
+        if (!isOnDeviceLlmFeasible()) return emptyList()
+
         return when (deviceTier) {
-            DeviceTier.LOW -> listOf(MODEL_GEMMA_4_E2B_SMALL, MODEL_QWEN_08B)               // Gemma Q3 primary, Qwen fallback
-            DeviceTier.MID -> listOf(MODEL_GEMMA_4_E2B, MODEL_QWEN_08B)                     // Gemma primary, Qwen fallback
-            DeviceTier.HIGH -> listOf(MODEL_GEMMA_4_E2B, MODEL_QWEN_2B, MODEL_QWEN_08B)     // Gemma primary, Qwen 2B, then 0.8B
+            DeviceTier.LOW -> listOf(
+                MODEL_GEMMA_4_E2B_SMALL,     // Gemma Q3 primary (~1GB)
+                MODEL_GEMMA_4_E2B_ULTRA,     // Gemma Q2_K fallback (~650MB)
+                MODEL_QWEN_08B,              // Qwen Q4 fallback (~580MB)
+                MODEL_QWEN_08B_LITE          // Qwen Q2_K last resort (~300MB)
+            )
+            DeviceTier.MID -> listOf(
+                MODEL_GEMMA_4_E2B,           // Gemma Q4 primary (~1.5GB)
+                MODEL_GEMMA_4_E2B_SMALL,     // Gemma Q3 fallback (~1GB)
+                MODEL_QWEN_08B               // Qwen Q4 fallback (~580MB)
+            )
+            DeviceTier.HIGH -> listOf(
+                MODEL_GEMMA_4_E2B,           // Gemma Q4 primary (~1.5GB)
+                MODEL_QWEN_2B,               // Qwen 2B fallback (~1.2GB)
+                MODEL_QWEN_08B               // Qwen 0.8B last resort (~580MB)
+            )
         }
     }
 
     /**
      * Get essential models that should always be available.
+     * On 32-bit devices, only voice models are essential (LLM is cloud-only).
+     * Now includes Q2_K ultra-lite models for LOW-tier devices.
      */
     private fun getEssentialModels(): List<String> {
-        return listOf(
+        val voiceModels = listOf(
             "silero-vad",
             "whisper-tiny-int4",
             "piper-swahili"
-        ) + if (isOnDeviceLlmFeasible()) {
-            when (deviceTier) {
-                DeviceTier.LOW -> listOf(MODEL_GEMMA_4_E2B_SMALL, MODEL_QWEN_08B)
-                else -> listOf(MODEL_GEMMA_4_E2B, MODEL_QWEN_08B)
+        )
+
+        return if (isOnDeviceLlmFeasible()) {
+            voiceModels + when (deviceTier) {
+                DeviceTier.LOW -> listOf(
+                    MODEL_GEMMA_4_E2B_SMALL,     // Primary Q3_K_M (~1GB)
+                    MODEL_GEMMA_4_E2B_ULTRA,     // Fallback Q2_K (~650MB)
+                    MODEL_QWEN_08B,              // Qwen fallback (~580MB)
+                    MODEL_QWEN_08B_LITE          // Qwen Q2_K last resort (~300MB)
+                )
+                DeviceTier.MID -> listOf(
+                    MODEL_GEMMA_4_E2B,           // Primary Q4_K_M (~1.5GB)
+                    MODEL_GEMMA_4_E2B_SMALL,     // Fallback Q3_K_M (~1GB)
+                    MODEL_QWEN_08B               // Qwen fallback (~580MB)
+                )
+                else -> listOf(
+                    MODEL_GEMMA_4_E2B,           // Primary Q4_K_M (~1.5GB)
+                    MODEL_QWEN_08B               // Qwen fallback (~580MB)
+                )
             }
-        } else emptyList()
+        } else {
+            voiceModels
+        }
     }
 
     // ────────────────────── Private: Model Loading ──────────────────────

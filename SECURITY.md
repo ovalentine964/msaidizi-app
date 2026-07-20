@@ -1,4 +1,10 @@
-# Security Policy
+# Security Policy — Msaidizi Android App
+
+Msaidizi is an **offline-first Android app** for informal-sector workers in Kenya/East Africa. It records business transactions via voice, manages inventory, tracks M-Pesa payments, and provides AI-powered financial advice — all on-device where possible.
+
+The security model must protect real threats to users who store sensitive financial data on shared, low-cost, potentially compromised devices.
+
+---
 
 ## Supported Versions
 
@@ -9,124 +15,172 @@
 
 ## Reporting a Vulnerability
 
-We take the security of Msaidizi seriously. If you discover a security vulnerability, please report it responsibly.
-
-### How to Report
-
 **Please do NOT report security vulnerabilities through public GitHub issues.**
 
-Instead, please report them via email to [security@msaidizi.app](mailto:security@msaidizi.app).
+Instead, report via email to [security@msaidizi.app](mailto:security@msaidizi.app).
 
-You should receive a response within 48 hours. If for some reason you do not, please follow up to ensure we received your original message.
+You should receive a response within 48 hours.
 
 ### What to Include
 
-Please include the following information in your report:
-
-- Type of vulnerability (e.g., buffer overflow, SQL injection, cross-site scripting, etc.)
+- Type of vulnerability (e.g., SQL injection, key extraction, auth bypass, etc.)
 - Full paths of source file(s) related to the vulnerability
 - The location of the affected source code (tag/branch/commit or direct URL)
-- Any special configuration required to reproduce the issue
 - Step-by-step instructions to reproduce the issue
 - Proof-of-concept or exploit code (if possible)
-- Impact of the issue, including how an attacker might exploit it
+- Impact assessment: how an attacker could exploit this on a real user's phone
 
 ### What to Expect
 
-After submitting a report, you can expect:
+1. **Acknowledgment** within 48 hours
+2. **Assessment** of the vulnerability and its impact
+3. **Fix** developed and tested
+4. **Disclosure** coordinated with you
+5. **Credit** in the security advisory (unless you prefer anonymity)
 
-1. **Acknowledgment**: We will acknowledge receipt of your report within 48 hours.
-2. **Assessment**: We will assess the vulnerability and determine its impact.
-3. **Fix**: We will develop and test a fix for the vulnerability.
-4. **Disclosure**: We will coordinate with you on the timing of public disclosure.
-5. **Credit**: We will credit you in the security advisory (unless you prefer to remain anonymous).
+---
 
-## Security Measures
+## Threat Model
 
-### Authentication
+### Who Are We Protecting?
 
-- JWT tokens for API authentication
-- Token expiration and refresh mechanisms
-- Secure token storage on mobile devices
+Msaidizi's users are small business owners in Kenya and East Africa who:
+- Often share devices with family members or employees
+- May use budget Android phones (2GB RAM, Tecno/Infinix/Itel)
+- Store M-Pesa transaction data and business financial records
+- May not have screen locks or understand security prompts
 
-### Authorization
+### Priority Threats (Real First)
 
-- Role-based access control (RBAC)
-- User-specific data access
-- Admin privileges separation
+| Priority | Threat | Status | Mitigation |
+|----------|--------|--------|------------|
+| **P0** | Device theft / unauthorized access | ✅ Addressed | SQLCipher encryption, BiometricAuthManager, EncryptedSharedPreferences |
+| **P0** | SIM swap / account takeover | ✅ Addressed | SIM change detection (SecurityConfig), SuspiciousLoginDetector, 48h cooling period |
+| **P0** | Rooted device key extraction | ✅ Addressed | SecurityConfig.isRootedDevice(), reduced feature access on rooted devices |
+| **P1** | Network MITM | ✅ Addressed | TLS 1.3 only, certificate pinning (env-aware), cleartext HTTP blocked |
+| **P1** | M-Pesa credential theft | ✅ Addressed | EncryptedStorage with HMAC integrity, SecureTokenStorage |
+| **P1** | Data exfiltration from backup | ✅ Addressed | android:allowBackup="false" |
+| **P2** | Social engineering (impersonation) | ⚠️ Partial | Biometric + OTP verification, SuspiciousLoginDetector risk scoring |
+| **P2** | Supply chain (dependency compromise) | ⚠️ Partial | Dependency verification, Detekt static analysis |
+| **P3** | Post-quantum "Harvest Now, Decrypt Later" | ⏳ Deferred | PQC code present but disabled (PqcConfig defaults to classical). See below. |
 
-### Data Protection
+### Post-Quantum Cryptography (PQC) — Honest Assessment
 
-- Phone number masking in logs
-- Encrypted data transmission (HTTPS/TLS)
-- Secure database connections
-- Input validation and sanitization
+**Status: Code exists, disabled by default.**
 
-### Rate Limiting
+We have Bouncy Castle PQC code (ML-KEM, ML-DSA) in `security/crypto/pqc/`. This was built as forward-looking R&D. **It is currently disabled** (`PqcConfig` defaults to `PHASE_0_CLASSICAL`) because:
 
-- Global rate limiting (100 requests/15 minutes)
-- Per-endpoint rate limiting
-- Per-user rate limiting
-- WhatsApp message rate limiting
+1. Android's TLS stack doesn't support hybrid PQC key exchange groups yet
+2. The real threats to our users (SIM swap, device theft, rooted phones) are classical
+3. AES-256-GCM already provides 128-bit post-quantum security for the symmetric layer
+4. Short token lifetimes (15-min access tokens) limit the "Harvest Now, Decrypt Later" window
 
-### Webhook Security
+**When to re-enable:** When Android 16+ adds ML-KEM hybrid TLS support, and when Let's Encrypt or another CA issues PQC certificates. See `PqcConfig.kt` for migration phase control.
 
-- Webhook signature verification
-- IP allowlisting (optional)
-- Payload validation
+---
 
-## Best Practices
+## Security Architecture
 
-### For Developers
+### Data-at-Rest Encryption
 
-1. **Keep dependencies updated**: Regularly update all dependencies to their latest secure versions.
-2. **Use HTTPS**: Always use HTTPS in production environments.
-3. **Validate inputs**: Validate and sanitize all user inputs.
-4. **Handle errors securely**: Don't expose sensitive information in error messages.
-5. **Use parameterized queries**: Prevent SQL injection by using parameterized queries.
-6. **Implement logging**: Log security-relevant events for audit purposes.
-7. **Follow principle of least privilege**: Grant minimum necessary permissions.
+- **SQLCipher** (`net.zetetic:android-database-sqlcipher:4.5.4`): The Room database (`msaidizi.db`) is fully encrypted with AES-256. The 256-bit passphrase is stored in EncryptedSharedPreferences (backed by Android Keystore / TEE).
+- **EncryptedSharedPreferences**: Used for tokens, SIM baseline data, and device binding info.
+- **EncryptedStorage**: Custom file-level AES-256-GCM encryption with HMAC integrity verification for cached data.
 
-### For Users
+**Migration path:** Existing unencrypted databases are automatically detected and migrated to SQLCipher on first launch. See `AppModule.provideDatabase()`.
 
-1. **Use strong passwords**: Use strong, unique passwords for all accounts.
-2. **Enable 2FA**: Enable two-factor authentication where available.
-3. **Keep apps updated**: Always use the latest version of the app.
-4. **Report suspicious activity**: Report any suspicious activity immediately.
-5. **Don't share credentials**: Never share your login credentials with others.
+### Data-in-Transit Encryption
+
+- **TLS 1.3 only** — TLS 1.2 is rejected for all API calls
+- **Certificate pinning** — environment-aware (disabled in dev, enforced in prod) via `SecurityConfig.getCertificatePins()`
+- **Cleartext HTTP blocked** — all non-HTTPS requests throw `SecurityException`
+- **Cipher suites**: `TLS_AES_256_GCM_SHA384` (preferred), `TLS_CHACHA20_POLY1305_SHA256`, `TLS_AES_128_GCM_SHA256`
+- **Network security config**: `network_security_config.xml` enforces cleartext traffic policy at the OS level
+
+### Authentication & Authorization
+
+- **JWT tokens** with 15-minute access tokens and secure refresh mechanism
+- **Biometric authentication** (`BiometricAuthManager`) for sensitive operations
+- **OTP verification** (`OtpManager`) for phone number verification during onboarding
+- **Session management** (`SessionManager`) with automatic timeout
+
+### Device Security
+
+- **Root detection** (`SecurityConfig.isRootedDevice()`): Checks for su binaries, dangerous props, root packages (Magisk, SuperSU), and test-keys builds. Rooted devices get reduced feature access.
+- **SIM change detection** (`SecurityConfig.checkSimChanged()`): Records SIM baseline on first run, detects carrier/country changes, triggers 48-hour cooling period for sensitive operations.
+- **Device binding** (`security/simswap/DeviceBinder`): Binds user account to device fingerprint, tracks device changes for anomaly detection.
+- **Suspicious login detection** (`SuspiciousLoginDetector`): Risk scoring based on SIM change, new device, unusual location/time, login velocity, and biometric failures.
+
+### Network Security
+
+- **Certificate pinning**: `TlsConfig` uses OkHttp `CertificatePinner` with SHA-256 SPKI hashes. Environment-aware via `SecurityConfig` — dev disables pinning for debugging.
+- **Domain allowlisting**: API calls restricted to `api.angavu.com` and `api.angavu.io`
+
+### Privacy
+
+- **Data minimization** (`DataMinimizer`): Strips unnecessary PII from logs and analytics
+- **Consent management** (`ConsentManager`): GDPR/Kenya DPA compliant consent flow
+- **Differential privacy** (`DifferentialPrivacy`): Noise injection for federated learning
+- **Data retention** (`DataRetentionManager`): Automatic purge of old data
+
+---
 
 ## Security Checklist
 
-### Backend
+### Android App
 
-- [ ] HTTPS enabled
-- [ ] JWT tokens properly validated
-- [ ] Rate limiting configured
-- [ ] Input validation implemented
-- [ ] SQL injection prevention
-- [ ] XSS prevention
-- [ ] CORS properly configured
-- [ ] Security headers set
-- [ ] Dependencies updated
-- [ ] Secrets properly managed
+- [x] SQLCipher database encryption (AES-256)
+- [x] EncryptedSharedPreferences for tokens and keys
+- [x] Biometric authentication for sensitive ops
+- [x] Root detection (su binary, props, packages, test-keys)
+- [x] SIM change detection with cooling period
+- [x] Device binding and fingerprinting
+- [x] Certificate pinning (environment-aware)
+- [x] TLS 1.3 enforcement (no TLS 1.2 fallback)
+- [x] Cleartext HTTP blocked
+- [x] android:allowBackup="false"
+- [x] ProGuard/R8 code obfuscation (release builds)
+- [x] Sentry crash reporting (no PII in crash logs)
+- [x] Secure token storage with auto-expiry
+- [ ] Play Integrity API integration (recommended for Play Store builds)
+- [ ] SafetyNet attestation (deprecated but still useful for older devices)
 
-### Mobile App
+### Backend / API
 
-- [ ] Secure storage for sensitive data
-- [ ] Certificate pinning (optional)
-- [ ] Root/jailbreak detection
-- [ ] Code obfuscation
-- [ ] Secure communication
-- [ ] Input validation
-- [ ] Error handling
+- [x] JWT token validation
+- [x] Rate limiting
+- [x] Input validation
+- [x] Security headers (HSTS, X-Content-Type-Options)
+- [x] CORS configuration
+- [ ] SIM swap detection API integration (Safaricom)
+- [ ] Webhook signature verification
 
-### Database
+---
 
-- [ ] Encrypted connections
-- [ ] Access control
-- [ ] Regular backups
-- [ ] Audit logging
-- [ ] Data encryption at rest (optional)
+## Security Config
+
+All security decisions are centralized in `SecurityConfig.kt`:
+
+```kotlin
+// Check device integrity
+val rooted = securityConfig.isRootedDevice()
+
+// Check SIM change
+val simResult = securityConfig.checkSimChanged()
+
+// Get environment-aware cert pins
+val pins = securityConfig.getCertificatePins()
+
+// Run full security gate at startup
+val gate = securityConfig.runSecurityGate()
+```
+
+Environment is determined by:
+1. Build type (debug → development, release → production)
+2. System property override: `adb shell setprop debug.msaidizi.env staging`
+3. Environment variable: `MSAIDIZI_ENV=staging`
+
+---
 
 ## Incident Response
 
@@ -134,32 +188,26 @@ After submitting a report, you can expect:
 
 | Level | Description | Response Time |
 |-------|-------------|---------------|
-| Critical | Data breach, system compromise | Immediate |
-| High | Significant vulnerability, service disruption | 24 hours |
-| Medium | Minor vulnerability, limited impact | 72 hours |
-| Low | Informational, no immediate risk | 1 week |
+| **Critical** | Key extraction, data breach, account takeover | Immediate |
+| **High** | Auth bypass, SQLCipher compromise, TLS downgrade | 24 hours |
+| **Medium** | Root detection bypass, cert pin bypass | 72 hours |
+| **Low** | Informational, no immediate risk | 1 week |
 
 ### Response Process
 
-1. **Detection**: Identify and verify the security incident.
-2. **Containment**: Contain the incident to prevent further damage.
-3. **Eradication**: Remove the root cause of the incident.
-4. **Recovery**: Restore affected systems and services.
-5. **Lessons Learned**: Document and learn from the incident.
+1. **Detection**: Identify and verify the security incident
+2. **Containment**: Contain the incident to prevent further damage
+3. **Eradication**: Remove the root cause
+4. **Recovery**: Restore affected systems
+5. **Lessons Learned**: Document and update threat model
+
+---
 
 ## Contact
 
 - **Security Email**: [security@msaidizi.app](mailto:security@msaidizi.app)
 - **PGP Key**: [Available on request]
 
-## Acknowledgments
+---
 
-We would like to thank the following individuals for responsibly disclosing security vulnerabilities:
-
-- [Your name here]
-
-## Updates
-
-This security policy may be updated from time to time. Please check back regularly for updates.
-
-Last updated: January 2024
+Last updated: July 2026

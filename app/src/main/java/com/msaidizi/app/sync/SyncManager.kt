@@ -3,7 +3,7 @@ package com.msaidizi.app.sync
 import android.content.Context
 import androidx.work.*
 import com.msaidizi.app.MsaidiziApp
-import com.msaidizi.app.core.util.CryptoUtils
+import com.msaidizi.app.security.crypto.CryptoService
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -11,7 +11,9 @@ import io.ktor.http.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import com.msaidizi.app.core.database.TransactionDao
 import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import timber.log.Timber
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.TimeUnit
@@ -30,7 +32,9 @@ class SyncManager(
     private val syncQueue: SyncQueue,
     private val networkMonitor: NetworkMonitor,
     private val httpClient: HttpClient,
-    private val json: Gson
+    private val json: Gson,
+    private val cryptoService: CryptoService,
+    private val transactionDao: TransactionDao? = null
 ) {
     companion object {
         private const val SYNC_WORK_NAME = "msaidizi_sync"
@@ -182,7 +186,7 @@ class SyncManager(
         val compressed = compressData(payloadJson.toByteArray(Charsets.UTF_8))
 
         // Encrypt
-        val encrypted = CryptoUtils.encrypt(compressed)
+        val encrypted = cryptoService.encrypt(compressed)
 
         // Upload with retry
         var attempt = 0
@@ -229,7 +233,8 @@ class SyncManager(
 
     /**
      * Pull remote changes from the backend.
-     * Downloads new intelligence products and server-side updates.
+     * Downloads new intelligence products and server-side updates,
+     * deserializes them, and upserts into the local Room database.
      */
     private suspend fun pullChanges() {
         try {
@@ -240,9 +245,35 @@ class SyncManager(
             if (response.status.isSuccess()) {
                 val body = response.bodyAsText()
                 Timber.d("Pull successful: received changes")
-                // TODO: Parse and apply remote changes to local DB
-                // This would involve deserializing the response and upserting
-                // into Room DB via the appropriate DAOs
+
+                // Parse the remote changes payload
+                try {
+                    val remoteChanges: RemoteSyncPayload = json.fromJson(
+                        body,
+                        object : TypeToken<RemoteSyncPayload>() {}.type
+                    )
+
+                    // Apply transactions to local DB via DAO
+                    val dao = transactionDao
+                    if (dao != null && remoteChanges.transactions.isNotEmpty()) {
+                        val syncTime = System.currentTimeMillis() / 1000
+                        val toInsert = remoteChanges.transactions.map { txn ->
+                            txn.copy(id = 0) // Let Room auto-generate local IDs
+                        }
+                        dao.insertAll(toInsert)
+                        Timber.d("Applied ${toInsert.size} remote transactions to local DB")
+                    }
+
+                    // Future: apply inventory, goals, patterns when backend supports them
+                    if (remoteChanges.inventoryItems.isNotEmpty()) {
+                        Timber.d("Received ${remoteChanges.inventoryItems.size} remote inventory items (apply not yet implemented)")
+                    }
+                    if (remoteChanges.patterns.isNotEmpty()) {
+                        Timber.d("Received ${remoteChanges.patterns.size} remote patterns (apply not yet implemented)")
+                    }
+                } catch (parseEx: Exception) {
+                    Timber.w(parseEx, "Failed to parse remote sync payload — skipping pull")
+                }
             } else {
                 Timber.w("Pull failed with status: ${response.status}")
             }
@@ -268,7 +299,7 @@ class SyncManager(
      * Get unique device ID.
      */
     private fun getDeviceId(): String {
-        return CryptoUtils.sha256(
+        return cryptoService.sha256(
             "${android.os.Build.FINGERPRINT}-${android.os.Build.SERIAL}"
         )
     }
@@ -294,6 +325,18 @@ class SyncManager(
         )
     }
 }
+
+/**
+ * Response payload from the sync/pull endpoint.
+ * Contains remote changes to apply to the local database.
+ */
+data class RemoteSyncPayload(
+    val transactions: List<com.msaidizi.app.core.model.Transaction> = emptyList(),
+    val inventoryItems: List<Any> = emptyList(),  // Future: typed when backend supports
+    val patterns: List<Any> = emptyList(),          // Future: typed when backend supports
+    val timestamp: Long = 0,
+    val syncToken: String = ""
+)
 
 /**
  * Sync states.

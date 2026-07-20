@@ -266,6 +266,37 @@ class ModelRegistry @Inject constructor(
             // LLM MODEL
             // ═══════════════════════════════════════════════════════════════
 
+            // ═══════════════════════════════════════════════════════════════
+            // ULTRA-LITE MODELS — Q2_K quantization for data-limited users
+            // ═══════════════════════════════════════════════════════════════
+            // These are the smallest viable quantization for initial download.
+            // Users on limited data plans (1GB/month) can start with these,
+            // then upgrade to Q3_K_M or Q4_K_M when on WiFi.
+
+            "gemma-4-e2b-q2k" to ModelDef(
+                id = "gemma-4-e2b-q2k",
+                filename = "gemma-4-e2b-Q2_K.gguf",
+                url = "https://huggingface.co/bartowski/google_gemma-4-e2b-it-GGUF/resolve/main/google_gemma-4-e2b-it-Q2_K.gguf",
+                sha256 = "PENDING",
+                sizeBytes = 650_000_000L,  // ~650MB — 57% smaller than Q4_K_M
+                priority = ModelPriority.LOW,
+                requiredFor = listOf(Feature.LLM_INFERENCE),
+                tier = ModelTier.ON_DEMAND,
+                version = "1.0.0"
+            ),
+
+            "qwen-3.5-0.8b-q2k" to ModelDef(
+                id = "qwen-3.5-0.8b-q2k",
+                filename = "Qwen3.5-0.8B-Q2_K.gguf",
+                url = "https://huggingface.co/bartowski/Qwen_Qwen3.5-0.8B-GGUF/resolve/main/Qwen_Qwen3.5-0.8B-Q2_K.gguf",
+                sha256 = "PENDING",
+                sizeBytes = 300_000_000L,  // ~300MB — 48% smaller than Q4_K_M
+                priority = ModelPriority.LOW,
+                requiredFor = listOf(Feature.LLM_INFERENCE),
+                tier = ModelTier.ON_DEMAND,
+                version = "1.0.0"
+            ),
+
             // ── Qwen 3.5 0.8B Q4_K_M ───────────────────────────────────
             // FIXED: Model ID and filename now match the actual downloaded file.
             // Previously: id="qwen-0.5b-q4km" downloaded "Qwen3.5-0.8B-Q4_K_M.gguf"
@@ -280,7 +311,8 @@ class ModelRegistry @Inject constructor(
                 priority = ModelPriority.HIGH,
                 requiredFor = listOf(Feature.LLM_INFERENCE),
                 tier = ModelTier.ON_DEMAND,
-                version = "1.0.0"
+                version = "1.0.0",
+                upgradePath = "gemma-4-e2b-q2k"  // Users can upgrade from Q2_K → Q4_K_M
             ),
 
             // ── Gemma 4 E2B Q3_K_M — Primary LLM for LOW-tier 2GB devices ─
@@ -454,7 +486,8 @@ class ModelRegistry @Inject constructor(
         private val MODEL_ID_ALIASES = mapOf(
             "qwen-0.5b-q4km" to "qwen-3.5-0.8b-q4km",
             "qwen3.5-0.8b-q4km" to "qwen-3.5-0.8b-q4km",
-            "qwen-3.5-0.8b-mini" to "qwen-3.5-0.8b-q4km"
+            "qwen-3.5-0.8b-mini" to "qwen-3.5-0.8b-q4km",
+            "qwen-3.5-0.8b-mini" to "qwen-3.5-0.8b-q2k"  // Default mini → Q2_K for data savings
         )
 
         /**
@@ -1078,7 +1111,9 @@ data class ModelDef(
     val requiredFor: List<Feature>,
     val tier: ModelTier = ModelTier.FIRST_LAUNCH,
     val version: String = "1.0.0",
-    val files: Map<String, ModelFileDef> = emptyMap()
+    val files: Map<String, ModelFileDef> = emptyMap(),
+    /** Model ID to upgrade to (e.g., Q2_K → Q4_K_M when on WiFi) */
+    val upgradePath: String? = null
 )
 
 data class ModelFileDef(

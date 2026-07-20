@@ -13,6 +13,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.button.MaterialButton
 import com.msaidizi.app.R
+import com.msaidizi.app.core.ai.ConnectionType
 import com.msaidizi.app.core.model.ModelTier
 import com.msaidizi.app.voice.ModelState
 import com.msaidizi.app.voice.transfer.ModelTransfer
@@ -121,10 +122,10 @@ class ModelDownloadFragment : Fragment() {
                 "piper-swahili" -> updateModelItem(
                     piperStatusIcon, piperProgress, model
                 )
-                "gemma-4-e2b-q4km", "gemma-4-e2b-q3km" -> updateModelItem(
+                "gemma-4-e2b-q4km", "gemma-4-e2b-q3km", "gemma-4-e2b-q2k" -> updateModelItem(
                     qwenStatusIcon, qwenProgress, model  // Reuse Qwen views for primary model display
                 )
-                "qwen-3.5-0.8b-q4km" -> { /* Qwen is now fallback; primary model shown above */ }
+                "qwen-3.5-0.8b-q4km", "qwen-3.5-0.8b-q2k" -> { /* Qwen is now fallback */ }
             }
         }
 
@@ -137,14 +138,56 @@ class ModelDownloadFragment : Fragment() {
             downloadTier1Button.isEnabled = true
         }
 
-        // Tier 2 button state
+        // Tier 2 button state — data-saver aware
         if (state.tier2Ready) {
             downloadTier2Button.text = getString(R.string.models_tier2_ready)
             downloadTier2Button.isEnabled = false
+            wifiNotice.visibility = View.GONE
         } else {
-            downloadTier2Button.text = getString(R.string.models_download_ai)
-            downloadTier2Button.isEnabled = state.isWifi
-            wifiNotice.visibility = if (state.isWifi) View.GONE else View.VISIBLE
+            // Show data-saver context
+            val recommendation = state.models.firstOrNull {
+                it.id.contains("gemma-4-e2b") || it.id.contains("qwen")
+            }?.dataSaverRecommendation
+
+            when {
+                state.isWifi -> {
+                    downloadTier2Button.text = getString(R.string.models_download_ai)
+                    downloadTier2Button.isEnabled = true
+                    wifiNotice.visibility = View.GONE
+                }
+                state.dataSaverEnabled -> {
+                    downloadTier2Button.text = "📦 Pakia toleo ndogo (data ndogo)"
+                    downloadTier2Button.isEnabled = true
+                    wifiNotice.text = "💡 Data Saver: Pakia Q2_K kwanza (${recommendation?.dataCost?.mbEquivalent ?: 300}MB), kisha ongeza ubora kwenye WiFi"
+                    wifiNotice.visibility = View.VISIBLE
+                }
+                else -> {
+                    downloadTier2Button.text = getString(R.string.models_download_ai)
+                    downloadTier2Button.isEnabled = true
+                    wifiNotice.text = "📶 Pakia kwenye data (${recommendation?.dataCost?.mbEquivalent ?: 580}MB)"
+                    wifiNotice.visibility = View.VISIBLE
+                }
+            }
+        }
+
+        // Connection type indicator
+        val connectionIcon = when (state.connectionType) {
+            com.msaidizi.app.core.ai.ConnectionType.WIFI -> "📶 WiFi"
+            com.msaidizi.app.core.ai.ConnectionType.CELLULAR_5G -> "📱 5G"
+            com.msaidizi.app.core.ai.ConnectionType.CELLULAR_4G -> "📱 4G"
+            com.msaidizi.app.core.ai.ConnectionType.CELLULAR_3G -> "📱 3G"
+            com.msaidizi.app.core.ai.ConnectionType.CELLULAR_2G -> "📱 2G"
+            com.msaidizi.app.core.ai.ConnectionType.NONE -> "❌ Hakuna mtandao"
+            else -> "📱 Mtandao"
+        }
+
+        // Data usage summary
+        state.dataUsageSummary?.let { summary ->
+            if (summary.downloadCount > 0) {
+                statusMessage.visibility = View.VISIBLE
+                statusMessage.text = "📊 Data iliyotumika: ${summary.totalFormatted} (downloads: ${summary.downloadCount})"
+                statusMessage.setTextColor(resources.getColor(R.color.text_secondary, null))
+            }
         }
 
         // Transfer state messages

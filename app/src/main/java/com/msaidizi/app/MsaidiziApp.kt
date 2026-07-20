@@ -74,26 +74,31 @@ class MsaidiziApp : Application(), Configuration.Provider {
         super.onCreate()
 
         // Initialize Sentry crash reporting (must be before other init)
-        val sentryDsn = BuildConfig.SENTRY_DSN
-        if (sentryDsn.isNotBlank()) {
-            SentryAndroid.init(this) { options ->
-                options.dsn = sentryDsn
-                options.environment = if (BuildConfig.DEBUG) "development" else "production"
-                options.release = "${BuildConfig.APPLICATION_ID}@${BuildConfig.VERSION_NAME}"
-                options.tracesSampleRate = if (BuildConfig.DEBUG) 1.0 else 0.2
-                options.isEnableAutoSessionTracking = true
-                options.sessionTrackingIntervalMillis = 30_000L
-                options.isAttachStacktrace = true
-                options.isSendDefaultPii = false
-                // Performance monitoring
-                options.isEnableUserInteractionTracing = true
-                options.isEnableActivityLifecycleBreadcrumbs = true
-                options.isEnableAppLifecycleBreadcrumbs = true
-                options.isEnableSystemEventBreadcrumbs = true
+        try {
+            val sentryDsn = BuildConfig.SENTRY_DSN
+            if (sentryDsn.isNotBlank()) {
+                SentryAndroid.init(this) { options ->
+                    options.dsn = sentryDsn
+                    options.environment = if (BuildConfig.DEBUG) "development" else "production"
+                    options.release = "${BuildConfig.APPLICATION_ID}@${BuildConfig.VERSION_NAME}"
+                    options.tracesSampleRate = if (BuildConfig.DEBUG) 1.0 else 0.2
+                    options.isEnableAutoSessionTracking = true
+                    options.sessionTrackingIntervalMillis = 30_000L
+                    options.isAttachStacktrace = true
+                    options.isSendDefaultPii = false
+                    // Performance monitoring
+                    options.isEnableUserInteractionTracing = true
+                    options.isEnableActivityLifecycleBreadcrumbs = true
+                    options.isEnableAppLifecycleBreadcrumbs = true
+                    options.isEnableSystemEventBreadcrumbs = true
+                }
+                Timber.i("Sentry crash reporting initialized")
+            } else {
+                Timber.d("Sentry DSN not configured, skipping crash reporting")
             }
-            Timber.i("Sentry crash reporting initialized")
-        } else {
-            Timber.d("Sentry DSN not configured, skipping crash reporting")
+        } catch (e: Exception) {
+            // Sentry init failure must not crash the app
+            Timber.e(e, "Sentry init failed — crash reporting disabled")
         }
 
         // Initialize logging
@@ -102,48 +107,81 @@ class MsaidiziApp : Application(), Configuration.Provider {
         }
 
         // Register Bouncy Castle provider for Post-Quantum Cryptography
-        // ML-KEM (FIPS 203) and ML-DSA (FIPS 204) require Bouncy Castle 1.79+
-        // Android's built-in BC is stripped and lacks PQC support
-        if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
-            Security.insertProviderAt(BouncyCastleProvider(), 1)
-            Timber.i("Bouncy Castle provider registered for PQC support")
-        } else {
-            // Replace Android's stripped BC with the full version
-            Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME)
-            Security.insertProviderAt(BouncyCastleProvider(), 1)
-            Timber.i("Bouncy Castle provider replaced with PQC-capable version")
+        try {
+            if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
+                Security.insertProviderAt(BouncyCastleProvider(), 1)
+                Timber.i("Bouncy Castle provider registered for PQC support")
+            } else {
+                // Replace Android's stripped BC with the full version
+                Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME)
+                Security.insertProviderAt(BouncyCastleProvider(), 1)
+                Timber.i("Bouncy Castle provider replaced with PQC-capable version")
+            }
+        } catch (e: Exception) {
+            // BouncyCastle failure must not crash the app
+            Timber.e(e, "BouncyCastle provider registration failed")
         }
 
         // Detect device tier
-        DeviceTier.initialize(this)
-
-        Timber.d("MsaidiziApp: Device tier = ${DeviceTier.current}")
+        try {
+            DeviceTier.initialize(this)
+            Timber.d("MsaidiziApp: Device tier = ${DeviceTier.current}")
+        } catch (e: Exception) {
+            Timber.e(e, "DeviceTier initialization failed")
+        }
         Timber.d("MsaidiziApp: Total RAM = ${getTotalRamMB()}MB")
         Timber.d("MsaidiziApp: Available cores = ${Runtime.getRuntime().availableProcessors()}")
 
         // Start network monitoring
-        networkMonitor.startMonitoring()
+        try {
+            networkMonitor.startMonitoring()
+        } catch (e: Exception) {
+            Timber.e(e, "Network monitoring start failed")
+        }
 
         // Initialize federated learning with hashed device ID
-        val deviceId = android.provider.Settings.Secure.getString(
-            contentResolver, android.provider.Settings.Secure.ANDROID_ID
-        ) ?: "unknown"
-        federatedLearningClient.initialize(deviceId)
+        try {
+            val deviceId = android.provider.Settings.Secure.getString(
+                contentResolver, android.provider.Settings.Secure.ANDROID_ID
+            ) ?: "unknown"
+            federatedLearningClient.initialize(deviceId)
+        } catch (e: Exception) {
+            Timber.e(e, "Federated learning init failed")
+        }
 
         // Schedule tiered model downloads
-        scheduleModelDownloads()
+        try {
+            scheduleModelDownloads()
+        } catch (e: Exception) {
+            Timber.e(e, "Model download scheduling failed")
+        }
 
         // Extract bundled models from APK assets (offline-first)
         CoroutineScope(Dispatchers.IO).launch {
-            bundledModelManager.initialize()
-            Timber.i("Bundled models initialized")
+            try {
+                bundledModelManager.initialize()
+                Timber.i("Bundled models initialized")
+            } catch (e: Exception) {
+                Timber.e(e, "Bundled model initialization failed")
+                try {
+                    io.sentry.Sentry.captureException(e)
+                } catch (_: Exception) {}
+            }
         }
 
         // Schedule background update checks (silent, 24h interval)
-        UpdateCheckWorker.schedule(this)
+        try {
+            UpdateCheckWorker.schedule(this)
+        } catch (e: Exception) {
+            Timber.e(e, "Update check scheduling failed")
+        }
 
         // Schedule daily briefing notifications (7 AM morning, 7 PM evening)
-        scheduleBriefingNotifications()
+        try {
+            scheduleBriefingNotifications()
+        } catch (e: Exception) {
+            Timber.e(e, "Briefing notification scheduling failed")
+        }
 
         // ── Crash Recovery: check for incomplete agent tasks ──
         CoroutineScope(Dispatchers.IO).launch {
@@ -155,9 +193,6 @@ class MsaidiziApp : Application(), Configuration.Provider {
                         delay(rt.delayMs)
                         Timber.i("Recovering task %s (action=%s, phase=%s)",
                             rt.checkpoint.taskId, rt.action, rt.checkpoint.lastPhase)
-                        // Re-process the input from the checkpoint
-                        // This re-runs the full OODA cycle from scratch,
-                        // which is safe because transaction handlers are idempotent
                         try {
                             val inputJson = rt.checkpoint.inputJson
                             val input = com.google.gson.Gson().fromJson(

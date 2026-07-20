@@ -1,7 +1,7 @@
 package com.msaidizi.app.security.privacy
 
 import android.content.Context
-import com.msaidizi.app.core.util.CryptoUtils
+import com.msaidizi.app.security.crypto.CryptoService
 import dagger.hilt.android.qualifiers.ApplicationContext
 import timber.log.Timber
 import javax.inject.Inject
@@ -19,7 +19,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class DataMinimizer @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val cryptoService: CryptoService
 ) {
     companion object {
         // Minimum data required for different service levels
@@ -71,7 +72,7 @@ class DataMinimizer @Inject constructor(
      * Used for phone numbers in logs, analytics, etc.
      */
     fun hashForStorage(value: String): String {
-        return CryptoUtils.sha256("angavu_pii:$value")
+        return cryptoService.sha256("angavu_pii:$value")
     }
 
     /**

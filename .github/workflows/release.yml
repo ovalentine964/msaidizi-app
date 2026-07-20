@@ -16,6 +16,7 @@ env:
   GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true"
   NDK_VERSION: "26.1.10909125"
   CMAKE_VERSION: "3.22.1"
+  MODEL_CACHE_KEY: "models-v7-sherpa-v1"
 
 jobs:
   build-release:
@@ -70,7 +71,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: app/src/main/assets/models
-          key: models-v6-piper-fixed
+          key: ${{ env.MODEL_CACHE_KEY }}
 
       - name: Download AI Models
         if: steps.cache-models.outputs.cache-hit != 'true'
@@ -92,7 +93,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: app/src/main/jniLibs
-          key: sherpa-onnx-jni-v1-arm64
+          key: sherpa-onnx-jni-v2-arm64
 
       - name: Setup sherpa-onnx JNI libs
         if: steps.cache-sherpa.outputs.cache-hit != 'true'
@@ -168,8 +169,6 @@ jobs:
         run: |
           echo "🔧 Starting Gradle bundleRelease..."
           echo "   NDK_HOME=$ANDROID_NDK_HOME"
-          echo "   JNI libs:"
-          ls -la app/src/main/jniLibs/arm64-v8a/ 2>/dev/null || echo "   (no jniLibs found)"
           echo ""
 
           set -o pipefail

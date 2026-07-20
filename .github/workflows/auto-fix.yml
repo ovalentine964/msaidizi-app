@@ -21,6 +21,7 @@ env:
   GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true"
   NDK_VERSION: "26.1.10909125"
   CMAKE_VERSION: "3.22.1"
+  MODEL_CACHE_KEY: "models-v7-sherpa-v1"
 
 jobs:
   auto-fix:
@@ -125,6 +126,10 @@ jobs:
             "ndk;${{ env.NDK_VERSION }}" \
             "cmake;${{ env.CMAKE_VERSION }}"
 
+      - name: Set NDK environment
+        run: |
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${{ env.NDK_VERSION }}" >> $GITHUB_ENV
+
       - name: Ensure debug keystore exists
         run: |
           if [ -f debug.keystore ]; then
@@ -148,7 +153,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: app/src/main/assets/models
-          key: models-v6-piper-fixed
+          key: ${{ env.MODEL_CACHE_KEY }}
 
       - name: Download AI Models
         if: steps.cache-models.outputs.cache-hit != 'true'
@@ -156,6 +161,20 @@ jobs:
           chmod +x scripts/download-models.sh
           ./scripts/download-models.sh
         timeout-minutes: 30
+
+      - name: Cache sherpa-onnx JNI libs
+        id: cache-sherpa
+        uses: actions/cache@v4
+        with:
+          path: app/src/main/jniLibs
+          key: sherpa-onnx-jni-v2-arm64
+
+      - name: Setup sherpa-onnx JNI libs
+        if: steps.cache-sherpa.outputs.cache-hit != 'true'
+        run: |
+          chmod +x scripts/setup-sherpa-onnx.sh
+          ./scripts/setup-sherpa-onnx.sh
+        timeout-minutes: 15
 
       - name: Build Debug APK
         run: |

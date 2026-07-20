@@ -11,11 +11,17 @@ concurrency:
   group: auto-release-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true"
+  NDK_VERSION: "26.1.10909125"
+  CMAKE_VERSION: "3.22.1"
+  MODEL_CACHE_KEY: "models-v7-sherpa-v1"
+
 jobs:
   build-and-release:
     name: Build & Auto-Release Debug APK
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
 
     steps:
       - name: Checkout code
@@ -30,41 +36,43 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Cache Gradle packages
+      - name: Cache NDK & CMake
+        id: cache-ndk
         uses: actions/cache@v4
         with:
           path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            gradle-${{ runner.os }}-
+            ${{ env.ANDROID_HOME }}/ndk/${{ env.NDK_VERSION }}
+            ${{ env.ANDROID_HOME }}/cmake/${{ env.CMAKE_VERSION }}
+          key: ndk-cmake-${{ env.NDK_VERSION }}-${{ env.CMAKE_VERSION }}
 
       - name: Install NDK r26b and CMake 3.22.1
+        if: steps.cache-ndk.outputs.cache-hit != 'true'
         run: |
-          # Install NDK r26b (26.1.10909125) and CMake 3.22.1
           echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
-            "ndk;26.1.10909125" \
-            "cmake;3.22.1"
+            "ndk;${{ env.NDK_VERSION }}" \
+            "cmake;${{ env.CMAKE_VERSION }}"
           echo "✅ NDK r26b and CMake 3.22.1 installed"
-          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
 
-      - name: Decode release keystore
-        env:
-          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
-          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
-          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
-          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+      - name: Set NDK environment
         run: |
-          if [ -n "$RELEASE_KEYSTORE_BASE64" ]; then
-            echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > release.keystore.p12
-            echo "✅ PKCS12 keystore decoded"
-            echo "RELEASE_KEYSTORE_FILE=$GITHUB_WORKSPACE/release.keystore.p12" >> $GITHUB_ENV
-            echo "RELEASE_STORE_PASSWORD=$RELEASE_STORE_PASSWORD" >> $GITHUB_ENV
-            echo "RELEASE_KEY_ALIAS=$RELEASE_KEY_ALIAS" >> $GITHUB_ENV
-            echo "RELEASE_KEY_PASSWORD=$RELEASE_KEY_PASSWORD" >> $GITHUB_ENV
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${{ env.NDK_VERSION }}" >> $GITHUB_ENV
+
+      - name: Ensure debug keystore exists
+        run: |
+          if [ -f debug.keystore ]; then
+            echo "✅ Using committed debug.keystore"
           else
-            echo "⚠️  No release keystore secret — using debug keystore fallback"
+            echo "⚠️  No committed debug.keystore — generating one"
+            keytool -genkeypair -v \
+              -keystore debug.keystore \
+              -alias androiddebugkey \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass android \
+              -keypass android \
+              -dname "CN=Android Debug,O=Msaidizi,C=KE"
+            echo "✅ Debug keystore generated"
           fi
 
       - name: Cache AI models
@@ -72,7 +80,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: app/src/main/assets/models
-          key: models-v6-piper-fixed
+          key: ${{ env.MODEL_CACHE_KEY }}
 
       - name: Download AI Models
         if: steps.cache-models.outputs.cache-hit != 'true'
@@ -85,6 +93,41 @@ jobs:
         run: |
           chmod +x scripts/download-models.sh
           ./scripts/download-models.sh --verify
+
+      - name: Cache sherpa-onnx JNI libs
+        id: cache-sherpa
+        uses: actions/cache@v4
+        with:
+          path: app/src/main/jniLibs
+          key: sherpa-onnx-jni-v2-arm64
+
+      - name: Setup sherpa-onnx JNI libs
+        if: steps.cache-sherpa.outputs.cache-hit != 'true'
+        run: |
+          chmod +x scripts/setup-sherpa-onnx.sh
+          ./scripts/setup-sherpa-onnx.sh
+        timeout-minutes: 15
+
+      - name: Verify sherpa-onnx JNI libs
+        run: |
+          JNI_DIR="app/src/main/jniLibs/arm64-v8a"
+          echo "🔍 Checking sherpa-onnx JNI libs in $JNI_DIR ..."
+          REQUIRED_LIBS=("libsherpa-onnx-jni.so" "libonnxruntime.so")
+          MISSING=0
+          for lib in "${REQUIRED_LIBS[@]}"; do
+            if [ -f "$JNI_DIR/$lib" ]; then
+              SIZE=$(stat -c%s "$JNI_DIR/$lib")
+              echo "  ✅ $lib ($(( SIZE / 1024 )) KB)"
+            else
+              echo "  ❌ MISSING: $lib"
+              MISSING=$((MISSING + 1))
+            fi
+          done
+          if [ "$MISSING" -gt 0 ]; then
+            echo "::error::$MISSING required sherpa-onnx JNI lib(s) missing!"
+            exit 1
+          fi
+          echo "✅ sherpa-onnx JNI verification passed"
 
       - name: Build Release APK
         run: |
@@ -102,8 +145,8 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: build-debug-log
-          path: build-debug.log
+          name: build-release-log
+          path: build-release.log
 
       - name: Check APK size
         run: |
@@ -114,7 +157,7 @@ jobs:
             echo "📦 APK size: ${SIZE_MB}MB"
             ls -lh "$APK_PATH"
             if [ "$SIZE_MB" -lt 100 ]; then
-              echo "⚠️  WARNING: APK is only ${SIZE_MB}MB — models may not be bundled!"
+              echo "::warning::APK is only ${SIZE_MB}MB — models may not be bundled!"
             fi
           fi
 

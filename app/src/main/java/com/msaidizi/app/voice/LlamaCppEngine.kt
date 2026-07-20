@@ -1,7 +1,10 @@
 package com.msaidizi.app.voice
 
 import android.content.Context
+import com.msaidizi.app.core.util.DeviceCapability
 import dagger.hilt.android.qualifiers.ApplicationContext
+import io.sentry.Breadcrumb
+import io.sentry.Sentry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -161,12 +164,85 @@ class LlamaCppEngine @Inject constructor(
 
         if (!isNativeAvailable) {
             Timber.w(TAG, "Cannot load model: llama_jni native library not available")
+            reportSentryBreadcrumb("llama_jni_unavailable", mapOf("path" to path))
             return@withLock false
         }
 
+        // Block model loading on 32-bit (armeabi-v7a) devices.
+        // llama.cpp models (580MB+) exceed the ~1.5GB usable process address space
+        // on 32-bit Android. The app falls back to cloud-only mode via ModelRouter.
+        if (DeviceCapability.is32BitDevice()) {
+            Timber.w(TAG, "Model loading blocked: 32-bit device (armeabi-v7a). " +
+                "On-device LLM not supported. Using cloud API for inference.")
+            reportSentryBreadcrumb("model_blocked_32bit", mapOf("abi" to DeviceCapability.getPrimaryAbi()))
+            return@withLock false
+        }
+
+        // ── Validate model file BEFORE calling JNI ──
+        // Invalid/corrupt model files cause native segfaults (SIGSEGV) that
+        // bypass all JVM exception handling and crash the app immediately.
+        // We validate aggressively here to catch issues before they reach native code.
         val file = File(path)
+
         if (!file.exists()) {
             Timber.w(TAG, "Model file not found: %s", path)
+            reportSentryBreadcrumb("model_file_missing", mapOf("path" to path))
+            return@withLock false
+        }
+
+        if (!file.canRead()) {
+            Timber.e(TAG, "Model file not readable (permission denied): %s", path)
+            reportSentryBreadcrumb("model_file_not_readable", mapOf("path" to path))
+            return@withLock false
+        }
+
+        val fileSizeBytes = file.length()
+        if (fileSizeBytes == 0L) {
+            Timber.e(TAG, "Model file is empty (0 bytes): %s", path)
+            reportSentryBreadcrumb("model_file_empty", mapOf("path" to path))
+            return@withLock false
+        }
+
+        // Minimum valid GGUF file: header (magic + version + n_tensors) ≈ 32 bytes
+        // Real models are hundreds of MB. Files < 1MB are almost certainly corrupt.
+        val MIN_VALID_GGUF_BYTES = 1024 * 1024L  // 1MB
+        if (fileSizeBytes < MIN_VALID_GGUF_BYTES) {
+            Timber.e(TAG, "Model file suspiciously small (%d bytes) — likely corrupt: %s", fileSizeBytes, path)
+            reportSentryBreadcrumb("model_file_too_small", mapOf(
+                "path" to path,
+                "sizeBytes" to fileSizeBytes.toString()
+            ))
+            return@withLock false
+        }
+
+        // Check GGUF magic bytes: first 4 bytes should be "GGUF" (0x46475547)
+        try {
+            val magic = ByteArray(4)
+            file.inputStream().use { it.read(magic) }
+            val magicStr = String(magic, Charsets.US_ASCII)
+            if (magicStr != "GGUF") {
+                Timber.e(TAG, "Model file has invalid GGUF header (magic='%s'): %s", magicStr, path)
+                reportSentryBreadcrumb("model_invalid_gguf_magic", mapOf(
+                    "path" to path,
+                    "magic" to magicStr
+                ))
+                return@withLock false
+            }
+        } catch (e: Exception) {
+            Timber.w(TAG, "Could not read GGUF magic bytes (proceeding anyway): %s", e.message)
+        }
+
+        // Check available memory before loading
+        val runtime = Runtime.getRuntime()
+        val freeHeapMB = (runtime.maxMemory() - runtime.totalMemory() + runtime.freeMemory()) / (1024 * 1024)
+        val estimatedModelSizeMB = fileSizeBytes / (1024 * 1024)
+        if (freeHeapMB < estimatedModelSizeMB / 2) {
+            Timber.e(TAG, "Insufficient memory to load model: %dMB free, model is %dMB", freeHeapMB, estimatedModelSizeMB)
+            reportSentryBreadcrumb("model_insufficient_memory", mapOf(
+                "path" to path,
+                "freeHeapMB" to freeHeapMB.toString(),
+                "modelSizeMB" to estimatedModelSizeMB.toString()
+            ))
             return@withLock false
         }
 
@@ -175,8 +251,14 @@ class LlamaCppEngine @Inject constructor(
         try {
             Timber.d(
                 TAG, "Loading model: %s (size=%d MB, ctx=%d, threads=%d, kv_cache_q4=%s)",
-                file.name, file.length() / (1024 * 1024), nCtx, nThreads, useKvCacheQ4
+                file.name, fileSizeBytes / (1024 * 1024), nCtx, nThreads, useKvCacheQ4
             )
+            reportSentryBreadcrumb("model_load_start", mapOf(
+                "file" to file.name,
+                "sizeMB" to (fileSizeBytes / (1024 * 1024)).toString(),
+                "ctx" to nCtx.toString(),
+                "threads" to nThreads.toString()
+            ))
             val startTime = System.currentTimeMillis()
 
             modelHandle = withContext(Dispatchers.IO) {
@@ -185,6 +267,7 @@ class LlamaCppEngine @Inject constructor(
 
             if (modelHandle == 0L) {
                 Timber.e(TAG, "Failed to load model (nativeLoadModel returned 0)")
+                reportSentryBreadcrumb("model_load_failed_native_returned_0", mapOf("path" to path))
                 return@withLock false
             }
 
@@ -194,17 +277,27 @@ class LlamaCppEngine @Inject constructor(
                 TAG, "Model loaded in %dms (handle=%d, kv_cache=%s)",
                 elapsed, modelHandle, if (useKvCacheQ4) "Q4_0" else "F16"
             )
+            reportSentryBreadcrumb("model_load_success", mapOf(
+                "handle" to modelHandle.toString(),
+                "elapsedMs" to elapsed.toString()
+            ))
             true
         } catch (e: OutOfMemoryError) {
             Timber.e(e, "OOM loading model — unloading and freeing memory")
+            reportSentryBreadcrumb("model_load_oom", mapOf("path" to path))
             unload()
             System.gc()
             false
         } catch (e: UnsatisfiedLinkError) {
             Timber.e(e, "Native library not available")
+            reportSentryBreadcrumb("model_load_unsatisfied_link", mapOf("path" to path))
             false
         } catch (e: Exception) {
             Timber.e(e, "Model load error")
+            reportSentryBreadcrumb("model_load_exception", mapOf(
+                "path" to path,
+                "error" to (e.message ?: "unknown")
+            ))
             false
         }
     }
@@ -267,8 +360,10 @@ class LlamaCppEngine @Inject constructor(
             try {
                 nativeFreeModel(modelHandle)
                 Timber.d(TAG, "Model unloaded (freed handle=%d)", modelHandle)
+                reportSentryBreadcrumb("model_unloaded", mapOf("handle" to modelHandle.toString()))
             } catch (e: Exception) {
                 Timber.e(e, "Error freeing model")
+                reportSentryBreadcrumb("model_unload_error", mapOf("error" to (e.message ?: "unknown")))
             }
             modelHandle = 0L
         }
@@ -291,6 +386,11 @@ class LlamaCppEngine @Inject constructor(
         val modelsDir = File(context.filesDir, "models")
         val isLowTier = maxMemoryMB < 3072
 
+        reportSentryBreadcrumb("load_default_model_start", mapOf(
+            "maxMemoryMB" to maxMemoryMB.toString(),
+            "isLowTier" to isLowTier.toString()
+        ))
+
         // For LOW-tier (2GB) devices, skip Gemma 4 E2B — too large (~1.2GB).
         // Qwen 3.5 0.8B (~500MB) is primary for LOW-tier.
         if (!isLowTier) {
@@ -301,9 +401,19 @@ class LlamaCppEngine @Inject constructor(
                 File(modelsDir, "gemma-4-e2b-q3_k_m.gguf")
             }
             if (gemmaPath.exists()) {
-                val loaded = loadModel(gemmaPath.absolutePath)
-                if (loaded) return true
+                try {
+                    val loaded = loadModel(gemmaPath.absolutePath)
+                    if (loaded) return true
+                } catch (e: Exception) {
+                    Timber.e(e, "Exception loading Gemma 4 E2B")
+                    reportSentryBreadcrumb("gemma_load_exception", mapOf(
+                        "path" to gemmaPath.absolutePath,
+                        "error" to (e.message ?: "unknown")
+                    ))
+                }
                 Timber.w(TAG, "Gemma 4 E2B failed to load, falling back to Qwen")
+            } else {
+                Timber.i(TAG, "Gemma 4 E2B model file not found at %s", gemmaPath.absolutePath)
             }
         } else {
             Timber.i(TAG, "LOW-tier device (%dMB RAM) — using Qwen 3.5 0.8B as primary", maxMemoryMB)
@@ -311,7 +421,39 @@ class LlamaCppEngine @Inject constructor(
 
         // Primary for LOW-tier / Fallback for MEDIUM/HIGH: Qwen 3.5 0.8B
         val qwenPath = File(modelsDir, "Qwen3.5-0.8B-Q4_K_M.gguf")
+        if (!qwenPath.exists()) {
+            Timber.e(TAG, "Qwen model file not found: %s", qwenPath.absolutePath)
+            reportSentryBreadcrumb("qwen_model_file_missing", mapOf(
+                "path" to qwenPath.absolutePath,
+                "modelsDir" to modelsDir.absolutePath,
+                "modelsDirExists" to modelsDir.exists().toString(),
+                "modelsDirContents" to (modelsDir.listFiles()?.map { it.name }?.joinToString() ?: "null")
+            ))
+            return false
+        }
         return loadModel(qwenPath.absolutePath)
+    }
+
+    // ────────────── Sentry Breadcrumbs ──────────────
+
+    /**
+     * Report a Sentry breadcrumb for native crash detection.
+     * Breadcrumbs are lightweight — they only add context to crash reports,
+     * not create events. This helps diagnose native segfaults that bypass
+     * JVM exception handling.
+     */
+    private fun reportSentryBreadcrumb(event: String, data: Map<String, String> = emptyMap()) {
+        try {
+            val breadcrumb = io.sentry.Breadcrumb().apply {
+                category = "model_loading"
+                type = "navigation"
+                message = event
+                data.forEach { (k, v) -> setData(k, v) }
+            }
+            io.sentry.Sentry.addBreadcrumb(breadcrumb)
+        } catch (_: Exception) {
+            // Sentry may not be initialized — silently ignore
+        }
     }
 
     // ────────────── Helpers ──────────────

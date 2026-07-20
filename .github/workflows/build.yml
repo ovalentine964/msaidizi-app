@@ -18,6 +18,7 @@ env:
   GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true"
   NDK_VERSION: "26.1.10909125"
   CMAKE_VERSION: "3.22.1"
+  MODEL_CACHE_KEY: "models-v7-sherpa-v1"
 
 jobs:
   build:
@@ -37,6 +38,8 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
 
       - name: Cache NDK & CMake
         id: cache-ndk
@@ -60,10 +63,11 @@ jobs:
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${{ env.NDK_VERSION }}" >> $GITHUB_ENV
 
       # Debug keystore: use committed one if present, otherwise generate a persistent one
-      # This prevents signature mismatches that cause "App not installed: package appears to be invalid"
       - name: Ensure debug keystore exists
         run: |
-          if [ ! -f debug.keystore ]; then
+          if [ -f debug.keystore ]; then
+            echo "✅ Using committed debug.keystore"
+          else
             echo "⚠️  No committed debug.keystore — generating one (commit it to persist across CI runs)"
             keytool -genkeypair -v \
               -keystore debug.keystore \
@@ -75,8 +79,6 @@ jobs:
               -keypass android \
               -dname "CN=Android Debug,O=Msaidizi,C=KE"
             echo "✅ Debug keystore generated"
-          else
-            echo "✅ Using committed debug.keystore"
           fi
 
       - name: Cache AI models
@@ -84,7 +86,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: app/src/main/assets/models
-          key: models-v6-piper-fixed
+          key: ${{ env.MODEL_CACHE_KEY }}
 
       - name: Download AI Models
         if: steps.cache-models.outputs.cache-hit != 'true'
@@ -106,7 +108,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: app/src/main/jniLibs
-          key: sherpa-onnx-jni-v1-arm64
+          key: sherpa-onnx-jni-v2-arm64
 
       - name: Setup sherpa-onnx JNI libs
         if: steps.cache-sherpa.outputs.cache-hit != 'true'
@@ -164,7 +166,7 @@ jobs:
           echo ""
 
           set -o pipefail
-          ./gradlew assembleDebug --stacktrace --info 2>&1 | tee build-debug.log
+          ./gradlew assembleDebug --stacktrace 2>&1 | tee build-debug.log
           EXIT_CODE=${PIPESTATUS[0]}
           if [ "$EXIT_CODE" -ne 0 ]; then
             echo ""
@@ -236,6 +238,8 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
 
       - name: Cache NDK & CMake
         id: cache-ndk
@@ -284,7 +288,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: app/src/main/assets/models
-          key: models-v6-piper-fixed
+          key: ${{ env.MODEL_CACHE_KEY }}
 
       - name: Download AI Models
         if: steps.cache-models.outputs.cache-hit != 'true'
@@ -303,7 +307,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: app/src/main/jniLibs
-          key: sherpa-onnx-jni-v1-arm64
+          key: sherpa-onnx-jni-v2-arm64
 
       - name: Setup sherpa-onnx JNI libs
         if: steps.cache-sherpa.outputs.cache-hit != 'true'
@@ -353,7 +357,7 @@ jobs:
           echo ""
 
           set -o pipefail
-          ./gradlew assembleRelease --stacktrace --info 2>&1 | tee build-release.log
+          ./gradlew assembleRelease --stacktrace 2>&1 | tee build-release.log
           EXIT_CODE=${PIPESTATUS[0]}
           if [ "$EXIT_CODE" -ne 0 ]; then
             echo ""

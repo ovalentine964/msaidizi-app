@@ -109,6 +109,30 @@ class ModelVersionManager(private val context: Context) {
                 "text_generation", "vision", "function_calling",
                 "primary_text_llm", "low_ram_optimized"
             )
+        ),
+        GEMMA4_E2B_ULTRA(
+            displayName = "Gemma 4 E2B Q2_K (Ultra-Lite)",
+            modelFileName = "gemma-4-e2b-q2_k.gguf",
+            parameterCount = "2B",
+            quantizedSizeMb = 650,
+            minRamMb = 2048,
+            license = "Apache 2.0",
+            capabilities = listOf(
+                "text_generation", "vision",
+                "ultra_lite", "data_saver", "initial_download"
+            )
+        ),
+        QWEN3_5_0_8B_LITE(
+            displayName = "Qwen3.5 0.8B Q2_K (Ultra-Lite)",
+            modelFileName = "qwen3.5-0.8b-q2_k.gguf",
+            parameterCount = "0.8B",
+            quantizedSizeMb = 300,
+            minRamMb = 2048,
+            license = "Apache 2.0",
+            capabilities = listOf(
+                "text_generation", "multilingual_100+",
+                "ultra_lite", "data_saver", "initial_download"
+            )
         )
     }
 
@@ -206,15 +230,33 @@ class ModelVersionManager(private val context: Context) {
      * 2. Filter to versions that fit in RAM
      * 3. Prefer Gemma 4 E2B variants over Qwen
      * 4. Fall back to Qwen if Gemma can't fit
+     * 5. Consider Q2_K ultra-lite for data-limited scenarios
      */
-    fun getRecommendedVersion(): ModelVersion {
+    fun getRecommendedVersion(dataSaverMode: Boolean = false): ModelVersion {
         val runtime = Runtime.getRuntime()
         val maxMemoryMb = runtime.maxMemory() / (1024 * 1024)
         val availableMb = maxMemoryMb - 512  // Reserve 512MB for app
 
         val current = getCurrentVersion()
 
-        // Prefer Gemma 4 E2B variants; fall back to Qwen
+        // If data-saver mode, prefer Q2_K ultra-lite variants
+        if (dataSaverMode) {
+            val ultraLite = ModelVersion.entries.filter {
+                it.capabilities.contains("ultra_lite") && it.minRamMb <= availableMb
+            }
+            if (ultraLite.isNotEmpty()) {
+                val recommended = ultraLite.first()
+                if (recommended != current) {
+                    Timber.i(
+                        "Data-saver: recommended ultra-lite model: %s (RAM: %dMB)",
+                        recommended.displayName, availableMb
+                    )
+                }
+                return recommended
+            }
+        }
+
+        // Standard path: prefer Gemma 4 E2B variants; fall back to Qwen
         val candidates = ModelVersion.entries
             .filter { it.minRamMb <= availableMb }
             .sortedWith(compareByDescending<ModelVersion> {
@@ -237,9 +279,9 @@ class ModelVersionManager(private val context: Context) {
     /**
      * Check if an upgrade is available and recommended.
      */
-    fun isUpgradeAvailable(): Pair<Boolean, ModelVersion?> {
+    fun isUpgradeAvailable(dataSaverMode: Boolean = false): Pair<Boolean, ModelVersion?> {
         val current = getCurrentVersion()
-        val recommended = getRecommendedVersion()
+        val recommended = getRecommendedVersion(dataSaverMode)
 
         val currentIndex = ModelVersion.entries.indexOf(current)
         val recommendedIndex = ModelVersion.entries.indexOf(recommended)
@@ -314,10 +356,12 @@ class ModelVersionManager(private val context: Context) {
 
     /**
      * Get upgrade path information for display to user.
+     * Now includes data-saver ultra-lite options.
      */
-    fun getUpgradePathInfo(): Map<String, Any> {
+    fun getUpgradePathInfo(dataSaverMode: Boolean = false): Map<String, Any> {
         val current = getCurrentVersion()
-        val (hasUpgrade, recommended) = isUpgradeAvailable()
+        val (hasUpgrade, recommended) = isUpgradeAvailable(dataSaverMode)
+        val ultraLiteVersions = ModelVersion.entries.filter { it.capabilities.contains("ultra_lite") }
 
         return mapOf(
             "current_model" to current.displayName,
@@ -327,7 +371,9 @@ class ModelVersionManager(private val context: Context) {
             "recommended_model" to (recommended?.displayName ?: "None"),
             "recommended_params" to (recommended?.parameterCount ?: "N/A"),
             "recommended_size_mb" to (recommended?.quantizedSizeMb ?: 0),
-            "installed_models" to ModelVersion.entries.filter { isInstalled(it) }.map { it.displayName }
+            "installed_models" to ModelVersion.entries.filter { isInstalled(it) }.map { it.displayName },
+            "ultra_lite_available" to ultraLiteVersions.map { it.displayName },
+            "data_saver_mode" to dataSaverMode
         )
     }
 }

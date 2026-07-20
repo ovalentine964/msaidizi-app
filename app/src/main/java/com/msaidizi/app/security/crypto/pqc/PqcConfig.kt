@@ -34,14 +34,16 @@ object PqcConfig {
         PHASE_3_PQC_ONLY
     }
 
-    /** Current migration phase — set via remote config or build config */
-    var migrationPhase: MigrationPhase = MigrationPhase.PHASE_1_HYBRID
+    /** Current migration phase — set via remote config or build config
+     *  Default: PHASE_0_CLASSICAL (real threats first, quantum later)
+     *  Enable hybrid via remote config when PQC TLS is supported on Android */
+    var migrationPhase: MigrationPhase = MigrationPhase.PHASE_0_CLASSICAL
 
     /** Enable/disable hybrid key exchange for TLS connections */
-    var enableHybridKeyExchange: Boolean = true
+    var enableHybridKeyExchange: Boolean = false
 
     /** Enable/disable PQC document signing (ML-DSA) */
-    var enablePqcSigning: Boolean = true
+    var enablePqcSigning: Boolean = false
 
     /** Enable/disable crypto audit logging */
     var enableAuditLogging: Boolean = true

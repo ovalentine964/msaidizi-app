@@ -139,14 +139,85 @@ object DeviceCapability {
     fun meetsMinimumApi(): Boolean = Build.VERSION.SDK_INT >= 26
 
     /**
+     * Check if the device is running a 32-bit (armeabi-v7a) process.
+     *
+     * 32-bit Android devices are common in Africa's budget phone market:
+     * - Tecno Pop series, Infinix Smart series, Itel A series
+     * - Often have ≤2GB RAM with 32-bit-only ARMv7 CPUs
+     * - Cannot run arm64-v8a native libraries
+     *
+     * On 32-bit devices, on-device LLM inference is not feasible because:
+     * - llama.cpp models (580MB+) exceed available memory
+     * - The process address space is limited to ~2GB (32-bit pointer width)
+     * - mmap for large GGUF files is unreliable on 32-bit
+     *
+     * These devices should use cloud-only mode via the ModelRouter fallback chain.
+     */
+    fun is32BitDevice(): Boolean {
+        // Build.SUPPORTED_ABIS lists ABIs the device can run, ordered by preference.
+        // If the first ABI is armeabi-v7a (not arm64-v8a), the device is 32-bit.
+        return Build.SUPPORTED_ABIS.firstOrNull() == "armeabi-v7a"
+    }
+
+    /**
+     * Get the primary ABI for this device (e.g., "arm64-v8a" or "armeabi-v7a").
+     */
+    fun getPrimaryAbi(): String {
+        return Build.SUPPORTED_ABIS.firstOrNull() ?: "unknown"
+    }
+
+    /**
+     * Check if the device is running in a 32-bit process on a 64-bit capable device.
+     * Some devices have 64-bit hardware but run 32-bit Android (common with Android Go).
+     */
+    fun is32BitProcessOn64BitHardware(): Boolean {
+        val primaryAbi = Build.SUPPORTED_ABIS.firstOrNull() ?: return false
+        return primaryAbi == "armeabi-v7a" && Build.SUPPORTED_ABIS.contains("arm64-v8a")
+    }
+
+    /**
+     * Whether on-device LLM inference is feasible on this device.
+     * Considers both architecture (32-bit → no) and memory (too low → no).
+     */
+    fun isOnDeviceLlmSupported(context: Context): Boolean {
+        if (is32BitDevice()) return false
+        return getTotalRamMb(context) >= 1536
+    }
+
+    /**
+     * Get a user-facing message explaining why on-device AI is unavailable.
+     * Returns null if on-device AI is supported.
+     */
+    fun getUnsupportedReason(context: Context): String? {
+        if (is32BitDevice()) {
+            return "Kifaa chako kinatumia mfumo wa 32-bit. " +
+                "Msaidizi anatumia mtandao (cloud) kutoa huduma. " +
+                "Hakuna model ya ndani inayoweza kutumika.\n\n" +
+                "Your device uses a 32-bit system. " +
+                "Msaidizi uses cloud services to provide AI features. " +
+                "No on-device model can run on this device."
+        }
+        if (getTotalRamMb(context) < 1536) {
+            return "Kifaa chako kina RAM ndogo sana (${getTotalRamMb(context)}MB). " +
+                "Msaidizi anatumia mtandao (cloud) kutoa huduma.\n\n" +
+                "Your device has insufficient RAM (${getTotalRamMb(context)}MB). " +
+                "Msaidizi uses cloud services for AI features."
+        }
+        return null
+    }
+
+    /**
      * Get a human-readable device summary for logging.
+     * Enhanced to include architecture information.
      */
     fun getDeviceSummary(context: Context): String {
         val tier = getTier(context)
         val ramMb = getTotalRamMb(context)
         val isGo = isAndroidGo(context)
+        val abi = getPrimaryAbi()
+        val is32bit = is32BitDevice()
         return "Device: ${Build.MANUFACTURER} ${Build.MODEL}, " +
             "API ${Build.VERSION.SDK_INT}, RAM ${ramMb}MB, " +
-            "Tier=$tier, AndroidGo=$isGo"
+            "Tier=$tier, AndroidGo=$isGo, ABI=$abi, 32-bit=$is32bit"
     }
 }
