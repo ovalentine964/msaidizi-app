@@ -57,15 +57,25 @@ download_with_retry() {
 }
 
 # ─────────────────────────────────────────────────────────────
-# Check if libs already exist
+# Check if libs already exist for all architectures
 # ─────────────────────────────────────────────────────────────
-if [ -f "$JNI_DIR/libsherpa-onnx-jni.so" ] && [ -f "$JNI_DIR/libonnxruntime.so" ]; then
-  echo "✅ sherpa-onnx JNI libs already present"
-  ls -lh "$JNI_DIR/"*.so
+ALL_PRESENT=true
+for ARCH in "${ARCHITECTURES[@]}"; do
+  JNI_DIR="app/src/main/jniLibs/${ARCH}"
+  if [ ! -f "$JNI_DIR/libsherpa-onnx-jni.so" ] || [ ! -f "$JNI_DIR/libonnxruntime.so" ]; then
+    ALL_PRESENT=false
+    break
+  fi
+done
+
+if [ "$ALL_PRESENT" = true ]; then
+  echo "✅ sherpa-onnx JNI libs already present for all architectures"
+  for ARCH in "${ARCHITECTURES[@]}"; do
+    JNI_DIR="app/src/main/jniLibs/${ARCH}"
+    ls -lh "$JNI_DIR/"*.so
+  done
   exit 0
 fi
-
-mkdir -p "$JNI_DIR"
 
 # ─────────────────────────────────────────────────────────────
 # Download and extract for each architecture
