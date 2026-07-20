@@ -355,7 +355,7 @@ class Orchestrator(
      * Called at init and after autonomy changes.
      */
     private fun syncAutonomyLevel() {
-        val pa = progressiveAutonomy.get() ?: return
+        val pa = progressiveAutonomy.get()
         val agi = agiReadyLayer
 
         val minLevel = pa.getMinimumLevel()
@@ -375,7 +375,7 @@ class Orchestrator(
      * @see VoicePersonality for personality engine details
      */
     private fun applyPersonality(response: AgentResponse, language: String): AgentResponse {
-        val personality = voicePersonality.get() ?: return response
+        val personality = voicePersonality.get()
 
         val personalizedText = personality.wrapResponse(
             text = response.text,
@@ -556,13 +556,13 @@ class Orchestrator(
 
     // ── Crash Recovery ──
     /** Check for incomplete tasks on startup and return those that need recovery. */
-    suspend fun recoverIncompleteTasks() = taskCheckpointManager.recoverIncompleteTasks() ?: emptyList()
+    suspend fun recoverIncompleteTasks() = taskCheckpointManager.recoverIncompleteTasks()
     /** Get recovery system health stats. */
     suspend fun getRecoveryStats() = taskCheckpointManager.getStats()
     /** Get persisted traces for a task. */
-    suspend fun getRecoveryTraces(taskId: String) = taskCheckpointManager.getTracesForTask(taskId) ?: emptyList()
+    suspend fun getRecoveryTraces(taskId: String) = taskCheckpointManager.getTracesForTask(taskId)
     /** Get recent persisted traces. */
-    suspend fun getRecentRecoveryTraces(limit: Int = 50) = taskCheckpointManager.getRecentTraces(limit) ?: emptyList()
+    suspend fun getRecentRecoveryTraces(limit: Int = 50) = taskCheckpointManager.getRecentTraces(limit)
     /** Clean up old recovery data. */
     suspend fun cleanupRecoveryData() = taskCheckpointManager.cleanup()
 
