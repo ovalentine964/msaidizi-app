@@ -18,7 +18,7 @@ MAX_RETRIES=3
 RETRY_DELAY=5
 
 # sherpa-onnx version — update when upgrading
-SHERPA_VERSION="1.10.43"
+SHERPA_VERSION="1.13.4"
 
 # Download for both architectures
 # arm64-v8a: 64-bit devices (primary)
@@ -78,14 +78,46 @@ if [ "$ALL_PRESENT" = true ]; then
 fi
 
 # ─────────────────────────────────────────────────────────────
-# Download and extract for each architecture
+# Download and extract for all architectures
 # ─────────────────────────────────────────────────────────────
 
-KT_SRC_COPIED=false
+# v1.13+ ships a single archive with all architectures
+SHERPA_URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/v${SHERPA_VERSION}/sherpa-onnx-v${SHERPA_VERSION}-android.tar.bz2"
 
+# Check if all architectures already have libs
+ALL_DONE=true
 for ARCH in "${ARCHITECTURES[@]}"; do
   JNI_DIR="app/src/main/jniLibs/${ARCH}"
-  SHERPA_URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/v${SHERPA_VERSION}/sherpa-onnx-${SHERPA_VERSION}-android-${ARCH}.tar.bz2"
+  if [ ! -f "$JNI_DIR/libsherpa-onnx-jni.so" ] || [ ! -f "$JNI_DIR/libonnxruntime.so" ]; then
+    ALL_DONE=false
+    break
+  fi
+done
+
+if [ "$ALL_DONE" = true ]; then
+  echo "✅ sherpa-onnx JNI libs already present for all architectures"
+  exit 0
+fi
+
+TMPDIR=$(mktemp -d)
+trap 'rm -rf "$TMPDIR"' EXIT
+
+ARCHIVE="$TMPDIR/sherpa-onnx-android.tar.bz2"
+echo ""
+echo "  ⬇️  Downloading sherpa-onnx v${SHERPA_VERSION} (all architectures)..."
+
+if ! download_with_retry "$SHERPA_URL" "$ARCHIVE"; then
+  echo "❌ Failed to download sherpa-onnx"
+  exit 1
+fi
+
+echo "  📂 Extracting..."
+tar -xjf "$ARCHIVE" -C "$TMPDIR"
+
+# Copy .so files to each architecture
+KT_SRC_COPIED=false
+for ARCH in "${ARCHITECTURES[@]}"; do
+  JNI_DIR="app/src/main/jniLibs/${ARCH}"
 
   # Check if libs already exist for this architecture
   if [ -f "$JNI_DIR/libsherpa-onnx-jni.so" ] && [ -f "$JNI_DIR/libonnxruntime.so" ]; then
@@ -96,30 +128,21 @@ for ARCH in "${ARCHITECTURES[@]}"; do
 
   mkdir -p "$JNI_DIR"
 
-  TMPDIR=$(mktemp -d)
-  trap 'rm -rf "$TMPDIR"' EXIT
-
-  ARCHIVE="$TMPDIR/sherpa-onnx-android-${ARCH}.tar.bz2"
-  echo ""
-  echo "  ⬇️  Downloading sherpa-onnx v${SHERPA_VERSION} for ${ARCH}..."
-
-  if ! download_with_retry "$SHERPA_URL" "$ARCHIVE"; then
-    echo "❌ Failed to download sherpa-onnx for ${ARCH}"
-    exit 1
-  fi
-
-  echo "  📂 Extracting ${ARCH}..."
-  tar -xjf "$ARCHIVE" -C "$TMPDIR"
-
-  # Find and copy the .so files
-  EXTRACTED_DIR=$(find "$TMPDIR" -maxdepth 2 -type d -name "lib" | head -1)
-  if [ -z "$EXTRACTED_DIR" ]; then
-    # Try finding .so files directly
+  # Find .so files for this architecture
+  EXTRACTED_DIR=$(find "$TMPDIR" -maxdepth 3 -type d -path "*/lib/${ARCH}" | head -1)
+  if [ -n "$EXTRACTED_DIR" ]; then
+    cp "$EXTRACTED_DIR/"*.so "$JNI_DIR/" 2>/dev/null || true
+    echo "  ✅ Copied .so files for ${ARCH}"
+  else
+    # Fallback: find .so files directly and match by arch
     SO_FILES=$(find "$TMPDIR" -name "libsherpa-onnx-jni.so" -o -name "libonnxruntime.so")
     if [ -n "$SO_FILES" ]; then
       echo "$SO_FILES" | while read -r f; do
-        cp "$f" "$JNI_DIR/"
-        echo "  ✅ Copied: $(basename "$f")"
+        # Check if the path contains the architecture
+        if echo "$f" | grep -q "$ARCH"; then
+          cp "$f" "$JNI_DIR/"
+          echo "  ✅ Copied: $(basename "$f")"
+        fi
       done
     else
       echo "❌ Could not find .so files in extracted archive for ${ARCH}"
@@ -127,14 +150,6 @@ for ARCH in "${ARCHITECTURES[@]}"; do
       find "$TMPDIR" -type f | head -20
       exit 1
     fi
-  else
-    cp "$EXTRACTED_DIR"/*/*.so "$JNI_DIR/" 2>/dev/null || \
-    cp "$EXTRACTED_DIR"/*.so "$JNI_DIR/" 2>/dev/null || {
-      echo "❌ Could not copy .so files from $EXTRACTED_DIR for ${ARCH}"
-      ls -la "$EXTRACTED_DIR"/
-      exit 1
-    }
-    echo "  ✅ Copied JNI libs to $JNI_DIR"
   fi
 
   # Setup Kotlin API source files (only once — same for all architectures)
