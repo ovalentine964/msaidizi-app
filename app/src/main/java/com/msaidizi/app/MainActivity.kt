@@ -44,6 +44,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        try {
         // Safety net: redirect to onboarding if not completed
         val prefs = getSharedPreferences("worker_profile", 0)
         if (!prefs.getBoolean("onboarding_complete", false)) {
@@ -72,6 +73,28 @@ class MainActivity : AppCompatActivity() {
         handleUpdateIntent(intent)
 
         Timber.d("MainActivity: Created on ${DeviceTier.current} tier device")
+        } catch (e: Throwable) {
+            Timber.e(e, "MainActivity.onCreate() FAILED")
+            try {
+                val errorLayout = android.widget.LinearLayout(this).apply {
+                    orientation = android.widget.LinearLayout.VERTICAL
+                    setPadding(48, 48, 48, 48)
+                    gravity = android.view.Gravity.CENTER
+                }
+                val errorText = android.widget.TextView(this).apply {
+                    text = "Kuna hitilafu. Tafadhali fungua tena programu.\n\n${e.message}"
+                    textSize = 18f
+                    gravity = android.view.Gravity.CENTER
+                }
+                val retryButton = android.widget.Button(this).apply {
+                    text = "Jaribu Tena"
+                    setOnClickListener { recreate() }
+                }
+                errorLayout.addView(errorText)
+                errorLayout.addView(retryButton)
+                setContentView(errorLayout)
+            } catch (_: Throwable) { finish() }
+        }
     }
 
     /**

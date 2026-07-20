@@ -84,7 +84,28 @@ class MsaidiziApp : Application(), Configuration.Provider {
     internal val orchestrator by lazy { orchestratorProvider.get() }
 
     override fun onCreate() {
-        super.onCreate()
+
+        // Install crash logger BEFORE super.onCreate() — catches Hilt injection crashes
+        // Note: Application object is already constructed by the framework at this point
+        try {
+            com.msaidizi.app.core.util.CrashLogger.install(this)
+        } catch (_: Throwable) {}
+
+        // Wrap super.onCreate() — Hilt field injection happens here
+        // If any Hilt provider fails during injection, we catch it
+        try {
+            super.onCreate()
+        } catch (e: Throwable) {
+            // Log to crash file (CrashLogger may or may not be installed yet)
+            try {
+                com.msaidizi.app.core.util.CrashLogger.install(this)
+            } catch (_: Throwable) {}
+            // Re-throw — we can't recover from failed Application.onCreate()
+            // but at least the crash log is written
+            throw e
+        }
+
+
 
         // Initialize logging first (before any other init)
         try {

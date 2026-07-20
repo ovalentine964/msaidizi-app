@@ -121,47 +121,74 @@ class BootstrapActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        viewModel = ViewModelProvider(this)[BootstrapViewModel::class.java]
+        try {
+            viewModel = ViewModelProvider(this)[BootstrapViewModel::class.java]
 
-        // Check if onboarding already completed
-        val prefs = getSharedPreferences("worker_profile", 0)
-        if (prefs.getBoolean("onboarding_complete", false)) {
-            navigateToMain()
-            return
-        }
-
-        // Build UI programmatically (no XML layout needed)
-        setupUi()
-
-        // Observe state
-        observeState()
-
-        // Initialize voice pipeline
-        lifecycleScope.launch {
-            try {
-                voicePipeline.initialize()
-                Timber.i(TAG, "VoicePipeline initialized")
-            } catch (e: Throwable) {
-                Timber.e(e, "VoicePipeline init failed")
+            // Check if onboarding already completed
+            val prefs = getSharedPreferences("worker_profile", 0)
+            if (prefs.getBoolean("onboarding_complete", false)) {
+                navigateToMain()
+                return
             }
-        }
 
-        // Collect transcriptions from voice pipeline
-        lifecycleScope.launch {
-            voicePipeline.transcription.collect { result ->
-                if (result.success && result.text.isNotBlank()) {
-                    viewModel.onVoiceInput(result.text, result.confidence)
-                } else {
-                    viewModel.onVoiceInput("", 0f)
-                    errorText.text = result.error ?: "Sikujielewa. Jaribu tena."
-                    errorText.visibility = View.VISIBLE
+            // Build UI programmatically (no XML layout needed)
+            setupUi()
+
+            // Observe state
+            observeState()
+
+            // Initialize voice pipeline
+            lifecycleScope.launch {
+                try {
+                    voicePipeline.initialize()
+                    Timber.i(TAG, "VoicePipeline initialized")
+                } catch (e: Throwable) {
+                    Timber.e(e, "VoicePipeline init failed")
                 }
-                isVoiceListening = false
+            }
+
+            // Collect transcriptions from voice pipeline
+            lifecycleScope.launch {
+                voicePipeline.transcription.collect { result ->
+                    if (result.success && result.text.isNotBlank()) {
+                        viewModel.onVoiceInput(result.text, result.confidence)
+                    } else {
+                        viewModel.onVoiceInput("", 0f)
+                        errorText.text = result.error ?: "Sikujielewa. Jaribu tena."
+                        errorText.visibility = View.VISIBLE
+                    }
+                    isVoiceListening = false
+                }
+            }
+
+            // Check microphone permission
+            checkMicPermission()
+        } catch (e: Throwable) {
+            Timber.e(e, "BootstrapActivity.onCreate() FAILED")
+            // Show a basic error screen instead of crashing
+            try {
+                val errorLayout = android.widget.LinearLayout(this).apply {
+                    orientation = android.widget.LinearLayout.VERTICAL
+                    setPadding(48, 48, 48, 48)
+                    gravity = android.view.Gravity.CENTER
+                }
+                val errorText = android.widget.TextView(this).apply {
+                    text = "Kuna hitilafu. Tafadhali fungua tena programu.\n\n${e.message}"
+                    textSize = 18f
+                    gravity = android.view.Gravity.CENTER
+                }
+                val retryButton = android.widget.Button(this).apply {
+                    text = "Jaribu Tena"
+                    setOnClickListener { recreate() }
+                }
+                errorLayout.addView(errorText)
+                errorLayout.addView(retryButton)
+                setContentView(errorLayout)
+            } catch (_: Throwable) {
+                // Last resort — can't even show error UI
+                finish()
             }
         }
-
-        // Check microphone permission
-        checkMicPermission()
     }
 
     // ═══════════════════════════════════════════════════════════════
