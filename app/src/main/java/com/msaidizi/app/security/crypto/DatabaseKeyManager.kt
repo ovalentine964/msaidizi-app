@@ -3,6 +3,7 @@ package com.msaidizi.app.security.crypto
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Base64
+import dagger.hilt.android.qualifiers.ApplicationContext
 import timber.log.Timber
 import java.security.SecureRandom
 import javax.inject.Inject
