@@ -1,10 +1,9 @@
 package com.msaidizi.app.core.di
 
-import com.msaidizi.app.security.privacy.ConsentManager
-import com.msaidizi.app.core.network.PinnedHttpClient
-import com.msaidizi.app.security.crypto.DatabaseKeyManager
+import com.msaidizi.app.security.crypto.CryptoService
+import com.msaidizi.app.security.crypto.CryptoServiceImpl
+import dagger.Binds
 import dagger.Module
-import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
@@ -14,9 +13,9 @@ import javax.inject.Singleton
  */
 @Module
 @InstallIn(SingletonComponent::class)
-object SecurityModule {
+abstract class SecurityModule {
 
-    // DatabaseKeyManager, ConsentManager, and PinnedHttpClient
-    // are auto-provided by Hilt via their @Inject constructors.
-    // This module exists as a logical grouping for future security provisions.
+    @Binds
+    @Singleton
+    abstract fun bindCryptoService(impl: CryptoServiceImpl): CryptoService
 }
