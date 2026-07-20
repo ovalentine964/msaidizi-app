@@ -126,7 +126,7 @@ class InferenceHarness @Inject constructor(
         val callId = UUID.randomUUID().toString().take(12)
         val overallStart = System.currentTimeMillis()
         var attempts = 0
-        var lastException: Exception? = null
+        var lastException: Throwable? = null
         val todayKey = todayDateKey()
 
         for (candidate in providers) {

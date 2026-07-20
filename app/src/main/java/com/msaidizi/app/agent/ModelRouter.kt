@@ -571,7 +571,7 @@ class ModelRouter(
         } else messages
 
         // 8. Try each provider in chain
-        var lastException: Exception? = null
+        var lastException: Throwable? = null
         for (providerId in chain) {
             val provider = providers[providerId] ?: continue
             if (!provider.isAvailable) continue
