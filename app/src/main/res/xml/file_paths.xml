@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <files-path
+        name="models"
+        path="models/" />
+    <files-path
+        name="models_staging"
+        path="models_staging/" />
+    <!-- For APK update downloads -->
+    <external-files-path
+        name="downloads"
+        path="Downloads/" />
+    <!-- Receipt images -->
+    <cache-path
+        name="receipt_images"
+        path="receipt_images/" />
+</paths>

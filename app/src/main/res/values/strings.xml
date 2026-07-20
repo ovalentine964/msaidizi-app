@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Msaidizi</string>
+    <string name="api_base_url">https://api.msaidizi.app/</string>
+
+    <string name="onboarding_step_indicator">Hatua %1$d ya %2$d</string>
+    <string name="onboarding_next">Endelea →</string>
+    <string name="onboarding_back">← Rudi</string>
+    <string name="onboarding_skip">Ruka hatua hii</string>
+
+    <string name="whatsapp_prompt">Sasa ningependa kukutumia ripoti ya biashara yako kila siku kupitia WhatsApp.\n\nNamba yako ya WhatsApp ni ipi?</string>
+    <string name="whatsapp_phone_hint">Mfano: 0712345678</string>
+    <string name="whatsapp_phone_label">Namba ya WhatsApp</string>
+    <string name="whatsapp_confirm_prompt">Namba yako ni</string>
+    <string name="whatsapp_confirm_question">Sawa?</string>
+    <string name="whatsapp_confirm_yes">✅ Sawa!</string>
+    <string name="whatsapp_confirm_edit">📝 Badilisha</string>
+    <string name="whatsapp_sending">Nakutumia ujumbe wa WhatsApp sasa...</string>
+    <string name="whatsapp_waiting">Ujumbe umetumwa!\nAngalia WhatsApp yako.</string>
+    <string name="whatsapp_received">✅ Nimepokea!</string>
+    <string name="whatsapp_success_title">🎉 Umefanikiwa!</string>
+    <string name="whatsapp_success_message">Sawa %1$s! Sasa kila jioni nitakutumia muhtasari wa mauzo yako, faida, na vidokezo kupitia WhatsApp.</string>
+    <string name="whatsapp_retry">🔄 Jaribu Tena</string>
+    <string name="whatsapp_edit_phone">📝 Badilisha Namba</string>
+    <string name="whatsapp_skip">Ruka</string>
+    <string name="whatsapp_continue">Endelea →</string>
+
+    <string name="error_phone_required">Tafadhali weka namba ya simu.</string>
+    <string name="error_phone_invalid">Namba ya simu si sahihi. Tafadhali weka namba ya Kenya (mfano: 0712345678).</string>
+
+    <string name="report_daily_title">📊 Ripoti ya Leo — %1$s</string>
+    <string name="report_weekly_title">📊 Ripoti ya Wiki — %1$s</string>
+    <string name="report_sales">💰 Mauzo: KSh %1$s</string>
+    <string name="report_items">📦 Bidhaa zilizouzwa: %1$d</string>
+    <string name="report_profit">📈 Faida: KSh %1$s</string>
+    <string name="report_top_product">🏆 Bidhaa bora: %1$s (KSh %2$s)</string>
+    <string name="report_tip">💡 Kidokezo: %1$s</string>
+
+    <string name="query_report">Tuma &quot;ripoti&quot; kwa ripoti ya leo</string>
+    <string name="query_sales">Tuma &quot;mauzo&quot; kwa muhtasari wa mauzo</string>
+    <string name="query_profit">Tuma &quot;faida&quot; kwa muhtasari wa faida</string>
+    <string name="query_help">Tuma &quot;msaada&quot; kwa msaada</string>
+    <string name="query_share">Tuma &quot;shiriki&quot; kushiriki na rafiki</string>
+
+    <!-- Model Download Management -->
+    <string name="models_title">📦 Msaidizi Models</string>
+    <string name="models_storage_used">Storage used: %1$s</string>
+    <string name="models_tier1_title">🎤 Voice Models</string>
+    <string name="models_tier1_subtitle">Required for voice input/output. ~65MB download.</string>
+    <string name="models_tier2_title">🧠 AI Intelligence</string>
+    <string name="models_tier2_subtitle">Answer any question. ~300MB — WiFi only.</string>
+    <string name="models_whisper_name">Speech-to-Text (Whisper)</string>
+    <string name="models_piper_name">Swahili Text-to-Speech (Piper)</string>
+    <string name="models_qwen_name">AI Brain (Qwen LLM)</string>
+    <string name="models_download_voice">📥 Download Voice Now</string>
+    <string name="models_download_ai">📥 Download AI (WiFi only)</string>
+    <string name="models_tier1_ready">✅ Voice ready</string>
+    <string name="models_tier2_ready">✅ AI ready</string>
+    <string name="models_wifi_only_notice">📶 Download on WiFi only — too large for mobile data.</string>
+    <string name="models_share_title">📤 Share with Friend</string>
+    <string name="models_share_subtitle">Send models via Bluetooth — no data cost!</string>
+    <string name="models_send_bluetooth">📤 Send via Bluetooth</string>
+    <string name="models_scan_sdcard">💾 Load from SD Card</string>
+    <string name="models_none_ready">No models ready to share.</string>
+    <string name="models_pick_send">Choose model to send</string>
+    <string name="models_transfer_complete">✅ %1$s sent!</string>
+    <string name="models_transferring">Sending… %1$d%%</string>
+    <string name="models_receiving">Receiving… %1$d%%</string>
+    <string name="models_verifying">Verifying…</string>
+    <string name="models_sdcard_found">%1$d models found on SD card</string>
+    <string name="models_sdcard_copying">Copying from SD card… %1$d%%</string>
+    <string name="models_sdcard_complete">%1$d models copied!</string>
+    <string name="cancel">Cancel</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_record">Record</string>
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_flow">Biashara</string>
+    <string name="nav_history">History</string>
+    <string name="nav_settings">Settings</string>
+    <string name="nav_models">Models</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_header">⚙️ Settings</string>
+    <string name="settings_language">🌍 Language</string>
+    <string name="settings_voice_speed">🎤 Voice Speed</string>
+    <string name="settings_business_name">🏪 Business Name</string>
+    <string name="settings_business_name_hint">Your business name…</string>
+    <string name="settings_business_type">📋 Business Type</string>
+    <string name="settings_auto_sync">🔄 Auto Sync</string>
+    <string name="settings_wifi_only">📶 WiFi Only</string>
+    <string name="settings_sync_now">🔄 Sync Now</string>
+    <string name="settings_models">📦 Models</string>
+
+    <!-- Download error messages -->
+    <string name="error_download_not_found">Model not found on server. Please try again later.</string>
+    <string name="error_download_server">Server error. Please try again later.</string>
+    <string name="error_download_network">No internet connection. Please check your network.</string>
+    <string name="error_download_verification">Model verification failed. File removed for security.</string>
+    <string name="error_download_generic">Download failed: %1$s</string>
+
+    <!-- Adaptive ASR & Language Learning -->
+    <string name="asr_confirm_title">Je, ni sawa?</string>
+    <string name="asr_confirm_message">Niliskia: &quot;%1$s&quot;</string>
+    <string name="asr_confirm_yes">✅ Sawa!</string>
+    <string name="asr_confirm_no">❌ La, tena</string>
+    <string name="asr_reject_message">Sikuelewi vizuri. Tafadhali rudia.</string>
+    <string name="asr_correction_saved">Asante! Nimejifunza kutoka kwa marekebisho yako.</string>
+    <string name="asr_drift_detected">Mfumo umegundua mabadiliko ya usemi wako. Inaboresha…</string>
+
+    <!-- Federated Learning -->
+    <string name="federated_sync_title">🔄 Kujifunza kwa Pamoja</string>
+    <string name="federated_sync_description">Boresha utambuzi wa sauti bila kushiriki data yako</string>
+    <string name="federated_uploading">Inapakia maboresho…</string>
+    <string name="federated_downloading">Inapakua maboresho…</string>
+    <string name="federated_complete">✅ Imesasishwa!</string>
+    <string name="federated_error">Hitilafu ya usawazisho</string>
+    <string name="federated_privacy_note">Data yako inabaki kwenye kifaa chako. Mifumo tu ya maneno inashirikiwa.</string>
+
+    <!-- Dialect Settings -->
+    <string name="dialect_settings_title">Mipangilio ya Lahaja</string>
+    <string name="dialect_region">Eneo la Lahaja</string>
+    <string name="dialect_migori">Migori / Nyanza</string>
+    <string name="dialect_nairobi">Nairobi</string>
+    <string name="dialect_coast">Pwani</string>
+    <string name="dialect_standard">Kiswahili Sanifu</string>
+    <string name="dialect_auto_detect">Gundua Kiotomatiki</string>
+
+    <string name="app_subtitle">Your Business CFO</string>
+    <string name="dashboard_cash_flow">Cash Flow</string>
+    <string name="dashboard_margin">Margin</string>
+    <string name="dashboard_sales_chart">Weekly Sales</string>
+    <string name="dashboard_title">Dashboard</string>
+    <string name="dashboard_trend">Trend</string>
+    <string name="dashboard_velocity">Sales Velocity</string>
+    <string name="dialect_code_switch_detected">🔀 Mixed language detected</string>
+    <string name="dialect_migori_detected">🏘️ Migori Swahili detected</string>
+    <string name="dialect_tanzania">Tanzania — Bongo Swahili</string>
+    <string name="error_network">No network</string>
+    <string name="error_no_permission">No recording permission</string>
+    <string name="error_processing">Processing error</string>
+    <string name="error_recording">Recording error</string>
+    <string name="expense">Expense</string>
+    <string name="help_intro">Your business CFO!</string>
+    <string name="help_migori_code_switch">You can mix Swahili and Dholuo!</string>
+    <string name="help_migori_intro">Welcome! Msaidizi understands Migori Swahili.</string>
+    <string name="help_migori_sale">Say: \&quot;Nimeuza omena debe kwa mbao tatu\&quot;</string>
+    <string name="help_migori_slang">Say: \&quot;Nimenunua unga kwa finje\&quot; (= KSh 500)</string>
+    <string name="help_migori_title">Msaidizi — Migori</string>
+    <string name="help_profit">Say: \&quot;My profit\&quot;</string>
+    <string name="help_purchase">Say: \&quot;I bought flour for 200\&quot;</string>
+    <string name="help_report">Say: \&quot;Today\'s report\&quot;</string>
+    <string name="help_sale">Say: \&quot;I sold 10 mandazi for 500\&quot;</string>
+    <string name="help_title">Msaidizi</string>
+    <string name="history_purchases">Purchases</string>
+    <string name="history_sales">Sales</string>
+    <string name="history_title">History</string>
+    <string name="history_today">Today</string>
+    <string name="home_profit">Profit</string>
+    <string name="home_restock_alerts">Restock Alerts</string>
+    <string name="home_sales">Sales</string>
+    <string name="home_title">Your Business</string>
+    <string name="home_top_items">Top Items</string>
+    <string name="home_transactions">Transactions</string>
+    <string name="luo_balance">Your balance is KSh %1$s</string>
+    <string name="luo_error">Something went wrong</string>
+    <string name="luo_fine">That\'s fine</string>
+    <string name="luo_greeting">Hello!</string>
+    <string name="luo_help">I can help you understand your business</string>
+    <string name="luo_how_are_you">How are you?</string>
+    <string name="luo_listening">Listening…</string>
+    <string name="luo_no">No</string>
+    <string name="luo_processing">Processing…</string>
+    <string name="luo_profit_today">Today\'s profit is KSh %1$s</string>
+    <string name="luo_purchase_recorded">Bought %1$s for KSh %2$s</string>
+    <string name="luo_recorded">Recorded!</string>
+    <string name="luo_sale_recorded">Sold %1$s for KSh %2$s</string>
+    <string name="luo_thank_you">Thank you</string>
+    <string name="luo_yes">Yes</string>
+    <string name="migori_debe">Tin (debe)</string>
+    <string name="migori_finje">Finje (KSh 500)</string>
+    <string name="migori_fundo">Bundle (fundo)</string>
+    <string name="migori_gunia">Sack (gunia)</string>
+    <string name="migori_kibabu">Kibabu (KSh 50)</string>
+    <string name="migori_mbao">Mbao (KSh 20)</string>
+    <string name="migori_ngiri">Ngiri (KSh 1,000)</string>
+    <string name="migori_omena">Omena (silver cyprinid)</string>
+    <string name="msg_balance">Your balance is KSh %s</string>
+    <string name="msg_expense_recorded">Expense recorded: %s, KSh %s</string>
+    <string name="msg_profit_today">Your profit today is KSh %s</string>
+    <string name="msg_purchase_recorded">Purchased %s, KSh %s</string>
+    <string name="msg_sale_recorded">Sold %s, KSh %s</string>
+    <string name="purchase">Purchase</string>
+    <string name="record_error">Error</string>
+    <string name="record_hint">Speak here...</string>
+    <string name="record_listening">Listening...</string>
+    <string name="record_processing">Processing...</string>
+    <string name="record_ready">Ready</string>
+    <string name="record_speaking">Speaking...</string>
+    <string name="record_type_hint">Type here...</string>
+    <string name="sale">Sale</string>
+    <string name="settings_dialect">🌍 Swahili Region</string>
+    <string name="settings_dialect_summary">Choose your Swahili dialect</string>
+    <string name="vocab_canonical_hint">It means…</string>
+    <string name="vocab_category">Word type</string>
+    <string name="vocab_category_action">Action</string>
+    <string name="vocab_category_currency">Money</string>
+    <string name="vocab_category_product">Product</string>
+    <string name="vocab_category_unit">Unit</string>
+    <string name="vocab_confirm">✅ Confirm</string>
+    <string name="vocab_correction">📝 Correct</string>
+    <string name="vocab_heard_word">I heard: \&quot;%1$s\&quot; — what does it mean?</string>
+    <string name="vocab_learned_toast">✅ \&quot;%1$s\&quot; learned!</string>
+    <string name="vocab_no_pending">No new words right now</string>
+    <string name="vocab_pending_count">%d new words need confirmation</string>
+    <string name="vocab_skip_word">⏭️ Skip</string>
+    <string name="vocab_spoken_hint">How you say it…</string>
+    <string name="vocab_stats">Words you taught: %1$d</string>
+    <string name="vocab_teach_new">➕ Teach new word</string>
+    <string name="vocab_title">📚 New Words</string>
+
+    <!-- Pronunciation Feedback UI -->
+    <string name="pronunciation_confirm_title">Je, ni sawa?</string>
+    <string name="pronunciation_confirm_message">Niliskia \"%1$s\", sahihi?</string>
+    <string name="pronunciation_reject_title">Sikuelewi vizuri</string>
+    <string name="pronunciation_reject_message">Tafadhali andika ulisema nini.</string>
+    <string name="pronunciation_expected_label">Ulitarajia:</string>
+    <string name="pronunciation_yes_correct">✅ Sawa!</string>
+    <string name="pronunciation_no_wrong">❌ La</string>
+    <string name="pronunciation_submit_correction">📝 Tuma marekebisho</string>
+    <string name="pronunciation_try_again">🔄 Jaribu tena</string>
+    <string name="pronunciation_correction_hint">Ulisema nini?</string>
+    <string name="pronunciation_what_did_you_say">Andika ulichosema…</string>
+    <string name="pronunciation_alternatives_label">Labda ulisema:</string>
+    <string name="pronunciation_correction_saved">Asante! Nimejifunza.</string>
+    <string name="pronunciation_confirmation_saved">Sawa! Nimesikia sawa.</string>
+    <string name="pronunciation_training_ready">Mfumo unaanza kujifunza kutoka kwa marekebisho yako…</string>
+    <string name="pronunciation_lora_training">Inafundisha mfumo… (%1$d%%)</string>
+    <string name="pronunciation_lora_complete">✅ Mfumo umesasishwa!</string>
+
+    <!-- Gamification Screen -->
+    <string name="gamification_title">🏆 Mafanikio Yako</string>
+    <string name="level_max_reached">⭐ Umefika kiwango cha juu!</string>
+    <string name="xp_format">%1$d / %2$d XP</string>
+    <string name="current_perks">Vipengele vya sasa:</string>
+    <string name="next_level_title">%1$s Level ijayo: %2$s</string>
+    <string name="points_to_next">Pointi %1$d zaidi</string>
+    <string name="legend_celebration">⭐ Umeifikia Legend! Wewe ni mfano bora!</string>
+    <string name="streak_title">🔥 Streak</string>
+    <string name="longest_streak">Rekodi yako bora: siku %1$d</string>
+    <string name="streak_protection">Kinga ya Streak</string>
+    <string name="protection_count">Kinga %1$d ya %2$d wiki hii</string>
+    <string name="protection_shield">Kinga ya streak</string>
+    <string name="protection_explanation">Kinga moja ya bure kila wiki — ukikosa siku moja, streak yako haijavunjika!</string>
+    <string name="badge_gallery_title">🏅 Badges</string>
+    <string name="badge_summary">%1$d/%2$d</string>
+    <string name="category_badge_count">%1$d/%2$d</string>
+    <string name="badge_locked">Bado haijapatikana</string>
+    <string name="badge_earned">Imepatikana!</string>
+    <string name="social_proof_title">👥 Jinsi Wengine Wanavyofanya</string>
+    <string name="social_proof_privacy">Maelezo ni ya jumla — hakuna majina yanayotumika</string>
+    <string name="your_avg">Wastani wako: %1$s/siku</string>
+    <string name="peer_avg">Wastani wa wafanyabiashara: %1$s/siku</string>
+    <string name="your_avg_label">Wastani wako</string>
+    <string name="peer_avg_label">Wastani wa wafanyabiashara</string>
+<string name="appbar_scrolling_view_behavior" translatable="false">com.google.android.material.appbar.AppBarLayout\$ScrollingViewBehavior</string>
+</resources>

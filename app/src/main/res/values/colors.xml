@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary">#FF1B2A4A</color>      <!-- Deep Navy -->
+    <color name="primary_dark">#FF0D1929</color>  <!-- Midnight -->
+    <color name="primary_light">#FF2A4070</color> <!-- Light Navy -->
+    <color name="primary_variant">#FFE8853D</color> <!-- African Orange -->
+    <color name="secondary">#FFE8853D</color>     <!-- African Orange -->
+    <color name="secondary_dark">#FFD06B2A</color> <!-- Dark Orange -->
+    <color name="background">#FFFFFFFF</color>
+    <color name="background_primary">#FF1B2A4A</color>  <!-- Deep Navy (same as primary) -->
+    <color name="surface">#FFF5F5F5</color>
+    <color name="text_primary">#FF212121</color>
+    <color name="text_secondary">#FF757575</color>
+    <color name="text_hint">#FFBDBDBD</color>
+    <color name="text_on_primary">#FFFFFFFF</color>
+    <color name="success">#FF4CAF50</color>
+    <color name="error">#FFF44336</color>
+    <color name="warning">#FFFF9800</color>
+    <color name="info">#FF2196F3</color>
+    <color name="whatsapp_green">#FF25D366</color>  <!-- WhatsApp brand (kept for integration UI) -->
+    <color name="whatsapp_dark">#FF075E54</color>
+    <color name="whatsapp_teal">#FF128C7E</color>
+    <color name="divider">#FFE0E0E0</color>
+    <color name="transparent">#00000000</color>
+    <color name="accent">#FFF5A623</color>         <!-- Warm Gold -->
+    <color name="accent_dark">#FFE8853D</color>     <!-- African Orange -->
+    <color name="white">#FFFFFFFF</color>
+    <color name="profit_positive">#FF4CAF50</color>
+    <color name="profit_negative">#FFF44336</color>
+    <color name="surface_variant">#FFE8E8E8</color>
+    <color name="on_surface">#FF212121</color>
+    <color name="on_surface_variant">#FF757575</color>
+    <color name="processing">#FFFF9800</color>
+    <color name="recording_active">#FFF44336</color>
+    <color name="speaking">#FF2196F3</color>
+    <color name="holo_red_dark">#FFCC0000</color>
+
+    <!-- Gamification colors -->
+    <color name="streak_active">#FFFF6B35</color>       <!-- Vibrant Orange for streak -->
+    <color name="streak_inactive">#FFBDBDBD</color>     <!-- Gray when no streak -->
+    <color name="protection_active">#FF4CAF50</color>    <!-- Green for available shields -->
+    <color name="protection_used">#FFBDBDBD</color>      <!-- Gray for used shields -->
+    <color name="level_legend">#FFFFD700</color>          <!-- Gold for Legend level -->
+    <color name="level_perk_earned">#FF4CAF50</color>     <!-- Green checkmark -->
+    <color name="level_perk_locked">#FFBDBDBD</color>     <!-- Gray for locked perks -->
+    <color name="peer_bar">#FF9E9E9E</color>              <!-- Muted gray for peer comparison -->
+    <color name="variable_reward_points">#FFFF6B35</color> <!-- Vibrant orange for bonus points -->
+
+    <!-- Badge category colors -->
+    <color name="badge_onboarding">#FF4CAF50</color>      <!-- Green -->
+    <color name="badge_consistency">#FFFF6B35</color>     <!-- Orange -->
+    <color name="badge_growth">#FF2196F3</color>         <!-- Blue -->
+    <color name="badge_intelligence">#FF9C27B0</color>   <!-- Purple -->
+    <color name="badge_financial">#FFFFC107</color>       <!-- Gold -->
+    <color name="badge_social">#FF00BCD4</color>         <!-- Cyan -->
+    <color name="badge_loyalty">#FFE91E63</color>        <!-- Pink -->
+
+    <!-- Badge state colors -->
+    <color name="badge_locked_stroke">#FFE0E0E0</color>   <!-- Light gray border -->
+    <color name="badge_locked_bg">#FFF5F5F5</color>       <!-- Very light gray background -->
+    <color name="badge_locked_icon">#FF9E9E9E</color>     <!-- Gray lock icon -->
+    <color name="badge_earned_indicator">#FF4CAF50</color> <!-- Green checkmark -->
+
+    <!-- App Icon background (Angavu Intelligence brand Deep Blue) -->
+    <color name="icon_bg">#FF1B4965</color>
+
+    <!-- Business Flow colors -->
+    <color name="card_border">#FFE0E0E0</color>
+    <color name="flow_revenue">#FF4CAF50</color>
+    <color name="flow_expense">#FFF44336</color>
+    <color name="flow_profit">#FF2196F3</color>
+    <color name="flow_savings">#FFFFC107</color>
+    <color name="health_excellent">#FF4CAF50</color>
+    <color name="health_good">#FF8BC34A</color>
+    <color name="health_fair">#FFFF9800</color>
+    <color name="health_poor">#FFF44336</color>
+</resources>
