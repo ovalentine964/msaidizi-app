@@ -18,7 +18,7 @@ env:
   GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true"
   NDK_VERSION: "26.1.10909125"
   CMAKE_VERSION: "3.22.1"
-  MODEL_CACHE_KEY: "models-v8-lite"
+  MODEL_CACHE_KEY: "models-v9-full"
 
 jobs:
   build:
@@ -98,13 +98,13 @@ jobs:
         if: steps.cache-models.outputs.cache-hit != 'true'
         run: |
           chmod +x scripts/download-models.sh
-          ./scripts/download-models.sh --lite
-        timeout-minutes: 15
+          ./scripts/download-models.sh
+        timeout-minutes: 30
 
       - name: Verify models present
         run: |
           chmod +x scripts/download-models.sh
-          ./scripts/download-models.sh --lite --verify
+          ./scripts/download-models.sh --verify
 
       # ============================================================
       # Sherpa-ONNX JNI libs setup (ASR/TTS/VAD engine)
@@ -121,7 +121,7 @@ jobs:
         run: |
           chmod +x scripts/setup-sherpa-onnx.sh
           ./scripts/setup-sherpa-onnx.sh
-        timeout-minutes: 15
+        timeout-minutes: 30
 
       - name: Verify sherpa-onnx JNI libs
         run: |
@@ -172,11 +172,11 @@ jobs:
           echo ""
 
           set -o pipefail
-          ./gradlew assembleLiteDebug --stacktrace 2>&1 | tee build-debug.log
+          ./gradlew assembleFullDebug --stacktrace 2>&1 | tee build-debug.log
           EXIT_CODE=${PIPESTATUS[0]}
           if [ "$EXIT_CODE" -ne 0 ]; then
             echo ""
-            echo "::error::Gradle assembleLiteDebug failed with exit code $EXIT_CODE"
+            echo "::error::Gradle assembleFullDebug failed with exit code $EXIT_CODE"
             echo ""
             echo "=== Last 50 lines of build log ==="
             tail -50 build-debug.log
@@ -197,7 +197,7 @@ jobs:
 
       - name: Check APK size
         run: |
-          APK_PATH=$(find app/build/outputs/apk/lite/debug -name "*.apk" | head -1)
+          APK_PATH=$(find app/build/outputs/apk/full/debug -name "*.apk" | head -1)
           if [ -n "$APK_PATH" ]; then
             SIZE=$(stat -c%s "$APK_PATH")
             SIZE_MB=$((SIZE / 1048576))
@@ -211,7 +211,7 @@ jobs:
               exit 1
             fi
           else
-            echo "::error::No APK found at app/build/outputs/apk/lite/debug/"
+            echo "::error::No APK found at app/build/outputs/apk/full/debug/"
             exit 1
           fi
 
@@ -219,7 +219,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: msaidizi-debug-${{ github.sha }}
-          path: app/build/outputs/apk/lite/debug/*.apk
+          path: app/build/outputs/apk/full/debug/*.apk
           retention-days: 14
 
   # ============================================================
@@ -306,13 +306,13 @@ jobs:
         if: steps.cache-models.outputs.cache-hit != 'true'
         run: |
           chmod +x scripts/download-models.sh
-          ./scripts/download-models.sh --lite
-        timeout-minutes: 15
+          ./scripts/download-models.sh
+        timeout-minutes: 30
 
       - name: Verify models present
         run: |
           chmod +x scripts/download-models.sh
-          ./scripts/download-models.sh --lite --verify
+          ./scripts/download-models.sh --verify
 
       - name: Cache sherpa-onnx JNI libs
         id: cache-sherpa
@@ -326,7 +326,7 @@ jobs:
         run: |
           chmod +x scripts/setup-sherpa-onnx.sh
           ./scripts/setup-sherpa-onnx.sh
-        timeout-minutes: 15
+        timeout-minutes: 30
 
       - name: Verify sherpa-onnx JNI libs
         run: |
@@ -369,11 +369,11 @@ jobs:
           echo ""
 
           set -o pipefail
-          ./gradlew assembleLiteRelease --stacktrace 2>&1 | tee build-release.log
+          ./gradlew assembleFullRelease --stacktrace 2>&1 | tee build-release.log
           EXIT_CODE=${PIPESTATUS[0]}
           if [ "$EXIT_CODE" -ne 0 ]; then
             echo ""
-            echo "::error::Gradle assembleLiteRelease failed with exit code $EXIT_CODE"
+            echo "::error::Gradle assembleFullRelease failed with exit code $EXIT_CODE"
             echo ""
             echo "=== Last 50 lines of build log ==="
             tail -50 build-release.log
@@ -394,7 +394,7 @@ jobs:
 
       - name: Check APK size
         run: |
-          APK_PATH=$(find app/build/outputs/apk/lite/release -name "*.apk" | head -1)
+          APK_PATH=$(find app/build/outputs/apk/full/release -name "*.apk" | head -1)
           if [ -n "$APK_PATH" ]; then
             SIZE=$(stat -c%s "$APK_PATH")
             SIZE_MB=$((SIZE / 1048576))
@@ -408,13 +408,13 @@ jobs:
               exit 1
             fi
           else
-            echo "::error::No APK found at app/build/outputs/apk/lite/release/"
+            echo "::error::No APK found at app/build/outputs/apk/full/release/"
             exit 1
           fi
 
       - name: Rename release APK
         run: |
-          APK_PATH=$(find app/build/outputs/apk/lite/release -name "*.apk" | head -1)
+          APK_PATH=$(find app/build/outputs/apk/full/release -name "*.apk" | head -1)
           if [ -n "$APK_PATH" ]; then
             cp "$APK_PATH" msaidizi-release.apk
             echo "✅ Renamed to msaidizi-release.apk"

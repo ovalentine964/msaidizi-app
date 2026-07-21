@@ -180,7 +180,7 @@ jobs:
         run: |
           chmod +x scripts/setup-sherpa-onnx.sh
           ./scripts/setup-sherpa-onnx.sh
-        timeout-minutes: 15
+        timeout-minutes: 30
 
       - name: Build Debug APK
         run: |

@@ -129,7 +129,9 @@ Java_com_msaidizi_app_voice_LlamaCppEngine_nativeGenerate(
     ctx_params.n_threads = nThreads;
     ctx_params.n_threads_batch = nThreads;
     // Disable embeddings — we only need text generation
-    ctx_params.embeddings = false;
+    // In llama.cpp b4651+, the `embeddings` field was replaced by `pooling_type`.
+    // LLAMA_POOLING_TYPE_NONE (default) disables pooling/embeddings for text generation.
+    ctx_params.pooling_type = LLAMA_POOLING_TYPE_NONE;
 
     // ── KV Cache Quantization (Q4_0) ──
     // Quantize KV cache to 4-bit for 2-3x speed boost on low-memory devices.
