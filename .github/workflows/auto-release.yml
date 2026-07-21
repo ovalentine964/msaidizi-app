@@ -15,7 +15,7 @@ env:
   GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true"
   NDK_VERSION: "26.1.10909125"
   CMAKE_VERSION: "3.22.1"
-  MODEL_CACHE_KEY: "models-v7-sherpa-v1"
+  MODEL_CACHE_KEY: "models-v8-full"
 
 jobs:
   build-and-release:

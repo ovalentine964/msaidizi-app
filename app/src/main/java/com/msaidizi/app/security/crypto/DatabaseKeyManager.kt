@@ -231,7 +231,7 @@ class DatabaseKeyManager @Inject constructor(
     private fun generateDeterministicDeviceKey(): ByteArray {
         val androidId = try {
             Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
-                ?: Build.getFingerprint() // Fallback to build fingerprint
+                ?: Build.FINGERPRINT // Fallback to build fingerprint
         } catch (e: Throwable) {
             // Some devices block Settings.Secure — use build info
             "${Build.BOARD}-${Build.DEVICE}-${Build.ID}-${Build.FINGERPRINT}"
