@@ -9,6 +9,7 @@ project(llama_jni C CXX)
 if(${ANDROID_ABI} STREQUAL "armeabi-v7a")
     # Create a minimal stub library so the build doesn't fail
     add_library(llama_jni SHARED llama_jni_stub.cpp)
+    target_link_libraries(llama_jni log)
     return()
 endif()
 
