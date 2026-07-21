@@ -62,6 +62,12 @@ jobs:
         run: |
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${{ env.NDK_VERSION }}" >> $GITHUB_ENV
 
+      - name: Cache CMake FetchContent (llama.cpp)
+        uses: actions/cache@v4
+        with:
+          path: app/.cxx
+          key: cmake-cxx-llama-b4651-${{ env.NDK_VERSION }}
+
       # Debug keystore: use committed one if present, otherwise generate a persistent one
       - name: Ensure debug keystore exists
         run: |
@@ -108,7 +114,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: app/src/main/jniLibs
-          key: sherpa-onnx-jni-v2-arm64
+          key: sherpa-onnx-jni-v2-all
 
       - name: Setup sherpa-onnx JNI libs
         if: steps.cache-sherpa.outputs.cache-hit != 'true'
@@ -166,11 +172,11 @@ jobs:
           echo ""
 
           set -o pipefail
-          ./gradlew assembleDebug --stacktrace 2>&1 | tee build-debug.log
+          ./gradlew assembleFullDebug --stacktrace 2>&1 | tee build-debug.log
           EXIT_CODE=${PIPESTATUS[0]}
           if [ "$EXIT_CODE" -ne 0 ]; then
             echo ""
-            echo "::error::Gradle assembleDebug failed with exit code $EXIT_CODE"
+            echo "::error::Gradle assembleFullDebug failed with exit code $EXIT_CODE"
             echo ""
             echo "=== Last 50 lines of build log ==="
             tail -50 build-debug.log
@@ -191,7 +197,7 @@ jobs:
 
       - name: Check APK size
         run: |
-          APK_PATH=$(find app/build/outputs/apk/debug -name "*.apk" | head -1)
+          APK_PATH=$(find app/build/outputs/apk/full/debug -name "*.apk" | head -1)
           if [ -n "$APK_PATH" ]; then
             SIZE=$(stat -c%s "$APK_PATH")
             SIZE_MB=$((SIZE / 1048576))
@@ -205,7 +211,7 @@ jobs:
               exit 1
             fi
           else
-            echo "::error::No APK found at app/build/outputs/apk/debug/"
+            echo "::error::No APK found at app/build/outputs/apk/full/debug/"
             exit 1
           fi
 
@@ -213,7 +219,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: msaidizi-debug-${{ github.sha }}
-          path: app/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/full/debug/*.apk
           retention-days: 14
 
   # ============================================================
@@ -262,6 +268,12 @@ jobs:
         run: |
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${{ env.NDK_VERSION }}" >> $GITHUB_ENV
 
+      - name: Cache CMake FetchContent (llama.cpp)
+        uses: actions/cache@v4
+        with:
+          path: app/.cxx
+          key: cmake-cxx-llama-b4651-${{ env.NDK_VERSION }}
+
       - name: Decode release keystore
         env:
           RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
@@ -307,7 +319,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: app/src/main/jniLibs
-          key: sherpa-onnx-jni-v2-arm64
+          key: sherpa-onnx-jni-v2-all
 
       - name: Setup sherpa-onnx JNI libs
         if: steps.cache-sherpa.outputs.cache-hit != 'true'
@@ -357,11 +369,11 @@ jobs:
           echo ""
 
           set -o pipefail
-          ./gradlew assembleRelease --stacktrace 2>&1 | tee build-release.log
+          ./gradlew assembleFullRelease --stacktrace 2>&1 | tee build-release.log
           EXIT_CODE=${PIPESTATUS[0]}
           if [ "$EXIT_CODE" -ne 0 ]; then
             echo ""
-            echo "::error::Gradle assembleRelease failed with exit code $EXIT_CODE"
+            echo "::error::Gradle assembleFullRelease failed with exit code $EXIT_CODE"
             echo ""
             echo "=== Last 50 lines of build log ==="
             tail -50 build-release.log
@@ -382,7 +394,7 @@ jobs:
 
       - name: Check APK size
         run: |
-          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
+          APK_PATH=$(find app/build/outputs/apk/full/release -name "*.apk" | head -1)
           if [ -n "$APK_PATH" ]; then
             SIZE=$(stat -c%s "$APK_PATH")
             SIZE_MB=$((SIZE / 1048576))
@@ -396,13 +408,13 @@ jobs:
               exit 1
             fi
           else
-            echo "::error::No APK found at app/build/outputs/apk/release/"
+            echo "::error::No APK found at app/build/outputs/apk/full/release/"
             exit 1
           fi
 
       - name: Rename release APK
         run: |
-          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
+          APK_PATH=$(find app/build/outputs/apk/full/release -name "*.apk" | head -1)
           if [ -n "$APK_PATH" ]; then
             cp "$APK_PATH" msaidizi-release.apk
             echo "✅ Renamed to msaidizi-release.apk"

@@ -857,6 +857,12 @@ class ModelRouter(
 
     private suspend fun callOnDevice(provider: Provider, request: InferenceRequest): String {
         val engine = llmEngine ?: throw IllegalStateException("On-device LLM not available")
+        if (!LlmEngine.isNativeAvailable) {
+            throw IllegalStateException(
+                "On-device LLM native library not available. " +
+                "Use cloud inference instead."
+            )
+        }
         if (!engine.isModelLoaded()) throw IllegalStateException("On-device model not loaded")
 
         val prompt = buildPromptFromMessages(request.messages)

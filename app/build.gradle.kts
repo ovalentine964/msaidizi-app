@@ -66,9 +66,9 @@ android {
         buildConfigField("String", "MODEL_DIR", "\"models\"")
         buildConfigField("String", "WHISPER_MODEL", "\"ggml-tiny.en-q5_1.bin\"")
         // Decision Council (2026-07-15): Qwen 3.5 0.8B as primary LLM
-        buildConfigField("String", "LLM_MODEL", "\"qwen3.5-0.8b-q4_k_m.gguf\"")
+        buildConfigField("String", "LLM_MODEL", "\"Qwen3.5-0.8B-Q4_K_M.gguf\"")
         // Decision Council (2026-07-15): Gemma 4 E2B as alternative/benchmark LLM
-        buildConfigField("String", "LLM_MODEL_ALT", "\"gemma-4-e2b-q4_k_m.gguf\"")
+        buildConfigField("String", "LLM_MODEL_ALT", "\"gemma-4-e2b-Q4_K_M.gguf\"")
         buildConfigField("String", "TTS_MODEL", "\"piper-swahili.onnx\"")
         buildConfigField("String", "VAD_MODEL", "\"silero_vad.onnx\"")
 
@@ -184,6 +184,45 @@ android {
             isMinifyEnabled = false
             applicationIdSuffix = ".debug"
             signingConfig = signingConfigs.getByName("debug")
+        }
+    }
+
+    // ============================================================
+    // Product Flavors — APK size management
+    // ============================================================
+    // The LLM model (Qwen3.5-0.8B Q4_K_M) is ~580MB. Bundling it
+    // creates a 700MB+ APK, exceeding Google Play's 150MB limit.
+    //
+    // Flavor strategy:
+    //   full — bundles ALL models (voice + LLM) for direct APK distribution
+    //   lite — bundles only voice models; LLM downloads on first launch
+    //          Suitable for Google Play (APK stays under 150MB)
+    //   play — bundles only voice models; LLM via Play Asset Delivery
+    //          Best Play Store experience (no first-launch download wait)
+    // ============================================================
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("full") {
+            dimension = "distribution"
+            // Bundles all models: voice + LLM GGUF (~650MB total APK)
+            // For direct APK distribution (sideloading, internal testing)
+            buildConfigField("boolean", "BUNDLE_LLM_MODEL", "true")
+            buildConfigField("boolean", "USE_PLAY_ASSET_DELIVERY", "false")
+        }
+        create("lite") {
+            dimension = "distribution"
+            // Bundles only voice models (~65MB total APK)
+            // LLM downloads on first launch via ModelDownloader
+            // Suitable for Google Play Store
+            buildConfigField("boolean", "BUNDLE_LLM_MODEL", "false")
+            buildConfigField("boolean", "USE_PLAY_ASSET_DELIVERY", "false")
+        }
+        create("play") {
+            dimension = "distribution"
+            // Same as lite but uses Play Asset Delivery for LLM
+            // Large models served by Google Play, not bundled in APK
+            buildConfigField("boolean", "BUNDLE_LLM_MODEL", "false")
+            buildConfigField("boolean", "USE_PLAY_ASSET_DELIVERY", "true")
         }
     }
 
@@ -376,6 +415,12 @@ ksp {
 // Kotlin 2.0.21 — all deps are now consistent, no force hacks needed.
 // Ktor 3.0.3 pulls kotlinx-serialization 1.7.x natively.
 // Room 2.6.1 (stable), Hilt 2.52 all target Kotlin 2.0+.
+
+// sherpa-onnx JNI setup — downloads native libs before build
+tasks.register("setupSherpaOnnx", Exec::class.java) {
+    commandLine("bash", "scripts/setup-sherpa-onnx.sh")
+}
+tasks.named("preBuild") { dependsOn("setupSherpaOnnx") }
 
 // JUnit 5 platform for all test tasks
 tasks.withType<Test> {

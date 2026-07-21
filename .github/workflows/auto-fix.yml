@@ -130,6 +130,12 @@ jobs:
         run: |
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${{ env.NDK_VERSION }}" >> $GITHUB_ENV
 
+      - name: Cache CMake FetchContent (llama.cpp)
+        uses: actions/cache@v4
+        with:
+          path: app/.cxx
+          key: cmake-cxx-llama-b4651-${{ env.NDK_VERSION }}
+
       - name: Ensure debug keystore exists
         run: |
           if [ -f debug.keystore ]; then
@@ -167,7 +173,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: app/src/main/jniLibs
-          key: sherpa-onnx-jni-v2-arm64
+          key: sherpa-onnx-jni-v2-all
 
       - name: Setup sherpa-onnx JNI libs
         if: steps.cache-sherpa.outputs.cache-hit != 'true'
@@ -179,10 +185,10 @@ jobs:
       - name: Build Debug APK
         run: |
           set -o pipefail
-          ./gradlew assembleDebug --stacktrace --info 2>&1 | tee build-debug.log
+          ./gradlew assembleFullDebug --stacktrace --info 2>&1 | tee build-debug.log
           EXIT_CODE=${PIPESTATUS[0]}
           if [ "$EXIT_CODE" -ne 0 ]; then
-            echo "::error::Gradle assembleDebug failed with exit code $EXIT_CODE"
+            echo "::error::Gradle assembleFullDebug failed with exit code $EXIT_CODE"
             exit "$EXIT_CODE"
           fi
 
@@ -198,4 +204,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: msaidizi-debug
-          path: app/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/full/debug/*.apk

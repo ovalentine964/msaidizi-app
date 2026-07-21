@@ -16,22 +16,28 @@ class VoiceActivityDetector(
     private var ptr: Long
 
     init {
-        if (!SherpaOnnxLoader.checkLoaded()) {
-            throw UnsatisfiedLinkError("sherpa-onnx JNI not available")
+        SherpaOnnxLoader.ensureAvailable()
+        try {
+            ptr = newNative(
+                config.sileroVad.model,
+                config.sileroVad.threshold,
+                config.sileroVad.minSilenceDuration,
+                config.sileroVad.minSpeechDuration,
+                config.sileroVad.maxSpeechDuration,
+                config.sileroVad.speechPadLeft,
+                config.sileroVad.speechPadRight,
+                config.numThreads,
+                if (config.debug) 1 else 0,
+                config.provider,
+                bufferSizeInSeconds,
+            )
+        } catch (e: Throwable) {
+            ptr = 0L
+            throw UnsatisfiedLinkError(
+                "Failed to initialize VoiceActivityDetector (Silero VAD). " +
+                "Model files may be missing or corrupt. Error: ${e.message}"
+            )
         }
-        ptr = newNative(
-            config.sileroVad.model,
-            config.sileroVad.threshold,
-            config.sileroVad.minSilenceDuration,
-            config.sileroVad.minSpeechDuration,
-            config.sileroVad.maxSpeechDuration,
-            config.sileroVad.speechPadLeft,
-            config.sileroVad.speechPadRight,
-            config.numThreads,
-            if (config.debug) 1 else 0,
-            config.provider,
-            bufferSizeInSeconds,
-        )
     }
 
     /**

@@ -661,6 +661,10 @@ class SherpaVoiceEngine @Inject constructor(
      * @param language Language code ("sw", "en")
      */
     suspend fun speak(text: String, language: String = "sw") = withContext(Dispatchers.Default) {
+        if (!com.k2fsa.sherpa.onnx.SherpaOnnxLoader.isAvailable) {
+            Timber.w("SherpaVoiceEngine: Sherpa-ONNX JNI not available — cannot speak")
+            return@withContext
+        }
         if (!isTtsLoaded) {
             val loaded = loadTts()
             if (!loaded) {
@@ -710,6 +714,10 @@ class SherpaVoiceEngine @Inject constructor(
      */
     suspend fun synthesizeToPcm(text: String, language: String = "sw"): ShortArray =
         withContext(Dispatchers.Default) {
+            if (!com.k2fsa.sherpa.onnx.SherpaOnnxLoader.isAvailable) {
+                Timber.w("SherpaVoiceEngine: Sherpa-ONNX JNI not available — cannot synthesize")
+                return@withContext ShortArray(0)
+            }
             if (!isTtsLoaded) {
                 val loaded = loadTts()
                 if (!loaded) return@withContext ShortArray(0)
@@ -824,6 +832,7 @@ class SherpaVoiceEngine @Inject constructor(
      * @return true if speech is detected
      */
     fun processVadChunk(audioData: ShortArray): Boolean {
+        if (!com.k2fsa.sherpa.onnx.SherpaOnnxLoader.isAvailable) return false
         val detector = vadDetector ?: return false
 
         // Convert ShortArray → FloatArray

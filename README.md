@@ -53,6 +53,28 @@ Msaidizi is the on-device AI CFO for informal workers — the one team member th
 
 ---
 
+## Device Compatibility
+
+### 32-bit (armeabi-v7a) Limitations
+
+Msaidizi supports 32-bit ARM devices but with reduced on-device AI capabilities:
+
+| Feature | 64-bit (arm64-v8a) | 32-bit (armeabi-v7a) |
+|---------|-------------------|---------------------|
+| On-device LLM (llama.cpp) | ✅ Qwen 3.5 0.8B, Gemma 4 E2B | ❌ Not available (cloud fallback) |
+| Voice ASR (Whisper) | ✅ Sherpa-ONNX | ✅ Sherpa-ONNX |
+| Voice TTS (Piper/Kokoro) | ✅ Sherpa-ONNX | ✅ Sherpa-ONNX |
+| VAD (Silero) | ✅ Sherpa-ONNX | ✅ Sherpa-ONNX |
+| Cloud AI (DeepSeek, GPT) | ✅ | ✅ |
+
+**Why?** llama.cpp requires ARMv8 NEON FP16 intrinsics (`vld1q_f16`, `vld1_f16`) that don't exist on 32-bit ARM. Additionally, llama.cpp models (580MB+) exceed the ~1.5GB usable process address space on 32-bit Android.
+
+**Behavior:** On 32-bit devices, the app automatically falls back to cloud-based inference via the ModelRouter fallback chain (DeepSeek V4 Flash → GPT-5.4 nano → Claude Haiku → Backend). The stub `llama_jni` library loads safely and all JNI methods return graceful defaults.
+
+**Detection:** `DeviceCapability.is32BitDevice()` checks `Build.SUPPORTED_ABIS` at runtime. The 32-bit check is performed before any model loading attempt.
+
+---
+
 ## Tech Stack
 
 | Layer | Technology | Why |

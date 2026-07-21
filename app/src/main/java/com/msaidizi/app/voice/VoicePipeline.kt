@@ -112,21 +112,27 @@ class VoicePipeline @Inject constructor(
         Timber.d("VoicePipeline: Initializing (tier=%s)...", DeviceTier.current)
         _pipelineState.value = PipelineState.INITIALIZING
 
-        // Wire conversation learning pipeline to ASR engine
-        adaptiveAsrEngine.conversationLearningPipeline = conversationLearningPipeline
-        Timber.d("VoicePipeline: Conversation learning pipeline wired to ASR engine")
+        try {
+            // Wire conversation learning pipeline to ASR engine
+            adaptiveAsrEngine.conversationLearningPipeline = conversationLearningPipeline
+            Timber.d("VoicePipeline: Conversation learning pipeline wired to ASR engine")
 
-        // ── Try Sherpa-ONNX first (preferred) ──
-        useSherpaOnnx = tryInitSherpaOnnx()
-        if (useSherpaOnnx) {
-            Timber.i("VoicePipeline: Using Sherpa-ONNX voice engine")
+            // ── Try Sherpa-ONNX first (preferred) ──
+            useSherpaOnnx = tryInitSherpaOnnx()
+            if (useSherpaOnnx) {
+                Timber.i("VoicePipeline: Using Sherpa-ONNX voice engine")
+                _pipelineState.value = PipelineState.IDLE
+                return
+            }
+
+            // ── Fallback: Legacy ONNX Runtime pipeline ──
+            Timber.i("VoicePipeline: Sherpa-ONNX unavailable, using legacy ONNX Runtime")
+            initLegacyPipeline()
+        } catch (e: Throwable) {
+            Timber.e(e, "VoicePipeline: Initialization failed — voice features disabled")
+            _voiceInputAvailable.value = false
             _pipelineState.value = PipelineState.IDLE
-            return
         }
-
-        // ── Fallback: Legacy ONNX Runtime pipeline ──
-        Timber.i("VoicePipeline: Sherpa-ONNX unavailable, using legacy ONNX Runtime")
-        initLegacyPipeline()
     }
 
     /**

@@ -16,31 +16,62 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Fetch llama.cpp from GitHub
+# Fetch llama.cpp from GitHub (with local fallback)
+#
+# First build requires internet to download llama.cpp source. The source is
+# cached by CMake's FetchContent in the build directory (~/.gradle/caches/...)
+# so subsequent builds work offline.
+#
+# If the download fails (no internet, corporate firewall), you can:
+#   1. Place llama.cpp source in app/src/main/cpp/vendor/llama.cpp/
+#      (the CMakeLists.txt will use it automatically as fallback)
+#   2. Or run: ./scripts/setup-llama-cpp.sh  (pre-downloads the source)
 # ─────────────────────────────────────────────────────────────────────────────
 
 include(FetchContent)
 
 # Pin to a known stable tag — update manually after testing
 set(LLAMA_CPP_TAG "b4651")
-FetchContent_Declare(
-    llama_cpp
-    GIT_REPOSITORY https://github.com/ggerganov/llama.cpp.git
-    GIT_TAG        ${LLAMA_CPP_TAG}
-    GIT_SHALLOW    TRUE
-)
 
-# Disable llama.cpp features we don't need on Android
-set(LLAMA_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
-set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(LLAMA_BUILD_SERVER   OFF CACHE BOOL "" FORCE)
-set(LLAMA_BUILD_TOOLS    OFF CACHE BOOL "" FORCE)
-set(LLAMA_METAL          OFF CACHE BOOL "" FORCE)  # No Metal on Android
-set(LLAMA_CUDA           OFF CACHE BOOL "" FORCE)  # No CUDA on Android (for now)
-set(LLAMA_VULKAN         OFF CACHE BOOL "" FORCE)  # Vulkan support can be added later
-set(LLAMA_OPENMP         OFF CACHE BOOL "" FORCE)  # Avoid OpenMP dependency
+# Check for a local vendored copy first (fallback for offline builds)
+set(LLAMA_CPP_LOCAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor/llama.cpp")
+if(EXISTS "${LLAMA_CPP_LOCAL_DIR}/CMakeLists.txt")
+    message(STATUS "Using local vendored llama.cpp from ${LLAMA_CPP_LOCAL_DIR}")
+    set(llama_cpp_SOURCE_DIR "${LLAMA_CPP_LOCAL_DIR}")
+    # Disable features we don't need on Android
+    set(LLAMA_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
+    set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(LLAMA_BUILD_SERVER   OFF CACHE BOOL "" FORCE)
+    set(LLAMA_BUILD_TOOLS    OFF CACHE BOOL "" FORCE)
+    set(LLAMA_METAL          OFF CACHE BOOL "" FORCE)
+    set(LLAMA_CUDA           OFF CACHE BOOL "" FORCE)
+    set(LLAMA_VULKAN         OFF CACHE BOOL "" FORCE)
+    set(LLAMA_OPENMP         OFF CACHE BOOL "" FORCE)
+    add_subdirectory("${LLAMA_CPP_LOCAL_DIR}" llama_cpp_build)
+else()
+    message(STATUS "Downloading llama.cpp ${LLAMA_CPP_TAG} from GitHub...")
+    FetchContent_Declare(
+        llama_cpp
+        GIT_REPOSITORY https://github.com/ggerganov/llama.cpp.git
+        GIT_TAG        ${LLAMA_CPP_TAG}
+        GIT_SHALLOW    TRUE
+        # Timeout after 120s — prevents hanging CI builds
+        GIT_PROGRESS   TRUE
+        TIMEOUT        120
+    )
 
-FetchContent_MakeAvailable(llama_cpp)
+    # Disable llama.cpp features we don't need on Android
+    set(LLAMA_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
+    set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(LLAMA_BUILD_SERVER   OFF CACHE BOOL "" FORCE)
+    set(LLAMA_BUILD_TOOLS    OFF CACHE BOOL "" FORCE)
+    set(LLAMA_METAL          OFF CACHE BOOL "" FORCE)  # No Metal on Android
+    set(LLAMA_CUDA           OFF CACHE BOOL "" FORCE)  # No CUDA on Android (for now)
+    set(LLAMA_VULKAN         OFF CACHE BOOL "" FORCE)  # Vulkan support can be added later
+    set(LLAMA_OPENMP         OFF CACHE BOOL "" FORCE)  # Avoid OpenMP dependency
+
+    FetchContent_MakeAvailable(llama_cpp)
+endif()
 
 # ─────────────────────────────────────────────────────────────────────────────
 # JNI bridge library

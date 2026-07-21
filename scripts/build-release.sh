@@ -4,7 +4,7 @@
 # ============================================================
 # Usage: ./scripts/build-release.sh
 # Requires: keystore.properties OR env vars (RELEASE_KEYSTORE_FILE, etc.)
-# Output: app/build/outputs/apk/release/app-release.apk
+# Output: app/build/outputs/apk/full/release/app-full-release.apk
 # ============================================================
 
 set -euo pipefail
@@ -32,7 +32,7 @@ echo ""
 echo "🔧 Building release APK..."
 echo ""
 
-./gradlew assembleRelease --stacktrace 2>&1 | tee build-release.log
+./gradlew assembleFullRelease --stacktrace 2>&1 | tee build-release.log
 EXIT_CODE=${PIPESTATUS[0]}
 
 if [ "$EXIT_CODE" -ne 0 ]; then
@@ -46,9 +46,9 @@ echo ""
 echo "✅ Build succeeded"
 
 # Find the APK
-APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
+APK_PATH=$(find app/build/outputs/apk/full/release -name "*.apk" | head -1)
 if [ -z "$APK_PATH" ]; then
-    echo "❌ No APK found in app/build/outputs/apk/release/"
+    echo "❌ No APK found in app/build/outputs/apk/full/release/"
     exit 1
 fi
 

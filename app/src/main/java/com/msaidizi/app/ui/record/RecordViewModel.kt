@@ -51,6 +51,18 @@ class RecordViewModel @Inject constructor(
             }
         }
 
+        // Observe voice availability — degrade gracefully
+        viewModelScope.launch {
+            voicePipeline.voiceInputAvailable.collect { available ->
+                if (!available) {
+                    _uiState.value = _uiState.value.copy(
+                        statusMessage = "Voice not available — use text input",
+                        voiceInputAvailable = false
+                    )
+                }
+            }
+        }
+
         // Observe transcriptions
         viewModelScope.launch {
             voicePipeline.transcription.collect { result ->
@@ -117,8 +129,19 @@ class RecordViewModel @Inject constructor(
     fun initialize() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(statusMessage = "Initializing...")
-            voicePipeline.initialize()
-            _uiState.value = _uiState.value.copy(statusMessage = "Ready")
+            try {
+                voicePipeline.initialize()
+                _uiState.value = _uiState.value.copy(
+                    statusMessage = "Ready",
+                    voiceInputAvailable = voicePipeline.voiceInputAvailable.value
+                )
+            } catch (e: Throwable) {
+                Timber.e(e, "Voice pipeline initialization failed")
+                _uiState.value = _uiState.value.copy(
+                    statusMessage = "Voice not available — use text input",
+                    voiceInputAvailable = false
+                )
+            }
         }
     }
 
@@ -126,6 +149,12 @@ class RecordViewModel @Inject constructor(
      * Start voice recording.
      */
     fun startRecording() {
+        if (!_uiState.value.voiceInputAvailable) {
+            _uiState.value = _uiState.value.copy(
+                statusMessage = "Voice input not available — type instead"
+            )
+            return
+        }
         viewModelScope.launch {
             voicePipeline.startListening(viewModelScope)
             _uiState.value = _uiState.value.copy(
@@ -335,6 +364,7 @@ data class RecordUiState(
     val statusMessage: String = "Ready",
     val lastResponse: AgentResponse? = null,
     val conversationHistory: List<ConversationEntry> = emptyList(),
+    val voiceInputAvailable: Boolean = true,
     // Pronunciation feedback state
     val showPronunciationFeedback: Boolean = false,
     val pronunciationConfidence: CalibratedConfidence? = null,

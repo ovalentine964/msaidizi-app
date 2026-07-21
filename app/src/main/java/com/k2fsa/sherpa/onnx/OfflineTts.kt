@@ -12,20 +12,26 @@ class OfflineTts(config: TtsConfig) : AutoCloseable {
     private var ptr: Long
 
     init {
-        if (!SherpaOnnxLoader.checkLoaded()) {
-            throw UnsatisfiedLinkError("sherpa-onnx JNI not available")
+        SherpaOnnxLoader.ensureAvailable()
+        try {
+            ptr = newNative(
+                config.model.vits.model,
+                config.model.vits.tokens,
+                config.model.vits.dataDir,
+                config.model.vits.dictDir,
+                config.model.vits.lexicon,
+                config.model.numThreads,
+                if (config.model.debug) 1 else 0,
+                config.model.provider,
+                config.maxNumSentences,
+            )
+        } catch (e: Throwable) {
+            ptr = 0L
+            throw UnsatisfiedLinkError(
+                "Failed to initialize OfflineTts (Piper TTS). " +
+                "Model files may be missing or corrupt. Error: ${e.message}"
+            )
         }
-        ptr = newNative(
-            config.model.vits.model,
-            config.model.vits.tokens,
-            config.model.vits.dataDir,
-            config.model.vits.dictDir,
-            config.model.vits.lexicon,
-            config.model.numThreads,
-            if (config.model.debug) 1 else 0,
-            config.model.provider,
-            config.maxNumSentences,
-        )
     }
 
     /**

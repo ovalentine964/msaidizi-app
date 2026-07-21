@@ -13,30 +13,36 @@ class OnlineRecognizer(config: OnlineRecognizerConfig) : AutoCloseable {
     private var ptr: Long
 
     init {
-        if (!SherpaOnnxLoader.checkLoaded()) {
-            throw UnsatisfiedLinkError("sherpa-onnx JNI not available")
+        SherpaOnnxLoader.ensureAvailable()
+        try {
+            ptr = newNative(
+                config.featConfig.sampleRate,
+                config.featConfig.featureDim,
+                config.modelConfig.transducer.encoder,
+                config.modelConfig.transducer.decoder,
+                config.modelConfig.transducer.joiner,
+                config.modelConfig.tokens,
+                config.modelConfig.numThreads,
+                if (config.modelConfig.debug) 1 else 0,
+                config.modelConfig.provider,
+                config.modelConfig.modelType,
+                config.modelConfig.modelingUnit,
+                config.modelConfig.bpeVocab,
+                if (config.enableEndpoint) 1 else 0,
+                config.rule1MinTrailingSilence,
+                config.rule2MinTrailingSilence,
+                config.rule3MinUtteranceLength,
+                config.hotwordsFile,
+                config.hotwordsScore,
+                config.blankPenalty,
+            )
+        } catch (e: Throwable) {
+            ptr = 0L
+            throw UnsatisfiedLinkError(
+                "Failed to initialize OnlineRecognizer (streaming ASR). " +
+                "Model files may be missing or corrupt. Error: ${e.message}"
+            )
         }
-        ptr = newNative(
-            config.featConfig.sampleRate,
-            config.featConfig.featureDim,
-            config.modelConfig.transducer.encoder,
-            config.modelConfig.transducer.decoder,
-            config.modelConfig.transducer.joiner,
-            config.modelConfig.tokens,
-            config.modelConfig.numThreads,
-            if (config.modelConfig.debug) 1 else 0,
-            config.modelConfig.provider,
-            config.modelConfig.modelType,
-            config.modelConfig.modelingUnit,
-            config.modelConfig.bpeVocab,
-            if (config.enableEndpoint) 1 else 0,
-            config.rule1MinTrailingSilence,
-            config.rule2MinTrailingSilence,
-            config.rule3MinUtteranceLength,
-            config.hotwordsFile,
-            config.hotwordsScore,
-            config.blankPenalty,
-        )
     }
 
     /**
@@ -118,9 +124,7 @@ class OnlineRecognizer(config: OnlineRecognizerConfig) : AutoCloseable {
  */
 class OnlineStream(internal val ptr: Long) : AutoCloseable {
     init {
-        if (!SherpaOnnxLoader.checkLoaded()) {
-            throw UnsatisfiedLinkError("sherpa-onnx JNI not available")
-        }
+        SherpaOnnxLoader.ensureAvailable()
     }
 
     /**

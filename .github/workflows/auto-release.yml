@@ -57,6 +57,12 @@ jobs:
         run: |
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${{ env.NDK_VERSION }}" >> $GITHUB_ENV
 
+      - name: Cache CMake FetchContent (llama.cpp)
+        uses: actions/cache@v4
+        with:
+          path: app/.cxx
+          key: cmake-cxx-llama-b4651-${{ env.NDK_VERSION }}
+
       - name: Ensure debug keystore exists
         run: |
           if [ -f debug.keystore ]; then
@@ -99,7 +105,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: app/src/main/jniLibs
-          key: sherpa-onnx-jni-v2-arm64
+          key: sherpa-onnx-jni-v2-all
 
       - name: Setup sherpa-onnx JNI libs
         if: steps.cache-sherpa.outputs.cache-hit != 'true'
@@ -129,13 +135,31 @@ jobs:
           fi
           echo "✅ sherpa-onnx JNI verification passed"
 
+      - name: Decode release keystore
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          if [ -n "$RELEASE_KEYSTORE_BASE64" ]; then
+            echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > release.keystore.p12
+            echo "✅ PKCS12 keystore decoded from secret"
+            echo "RELEASE_KEYSTORE_FILE=$GITHUB_WORKSPACE/release.keystore.p12" >> $GITHUB_ENV
+            echo "RELEASE_STORE_PASSWORD=$RELEASE_STORE_PASSWORD" >> $GITHUB_ENV
+            echo "RELEASE_KEY_ALIAS=$RELEASE_KEY_ALIAS" >> $GITHUB_ENV
+            echo "RELEASE_KEY_PASSWORD=$RELEASE_KEY_PASSWORD" >> $GITHUB_ENV
+          else
+            echo "⚠️  No RELEASE_KEYSTORE_BASE64 secret — using debug keystore fallback"
+          fi
+
       - name: Build Release APK
         run: |
           set -o pipefail
-          ./gradlew assembleRelease --stacktrace --info 2>&1 | tee build-release.log
+          ./gradlew assembleFullRelease --stacktrace --info 2>&1 | tee build-release.log
           EXIT_CODE=${PIPESTATUS[0]}
           if [ "$EXIT_CODE" -ne 0 ]; then
-            echo "::error::Gradle assembleRelease failed with exit code $EXIT_CODE"
+            echo "::error::Gradle assembleFullRelease failed with exit code $EXIT_CODE"
             tail -50 build-release.log
             exit "$EXIT_CODE"
           fi
@@ -150,7 +174,7 @@ jobs:
 
       - name: Check APK size
         run: |
-          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
+          APK_PATH=$(find app/build/outputs/apk/full/release -name "*.apk" | head -1)
           if [ -n "$APK_PATH" ]; then
             SIZE=$(stat -c%s "$APK_PATH")
             SIZE_MB=$((SIZE / 1048576))
@@ -163,7 +187,7 @@ jobs:
 
       - name: Rename APK
         run: |
-          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
+          APK_PATH=$(find app/build/outputs/apk/full/release -name "*.apk" | head -1)
           if [ -z "$APK_PATH" ]; then
             echo "❌ No release APK found!"
             exit 1

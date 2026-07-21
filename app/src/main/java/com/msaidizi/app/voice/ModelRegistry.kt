@@ -486,7 +486,6 @@ class ModelRegistry @Inject constructor(
         private val MODEL_ID_ALIASES = mapOf(
             "qwen-0.5b-q4km" to "qwen-3.5-0.8b-q4km",
             "qwen3.5-0.8b-q4km" to "qwen-3.5-0.8b-q4km",
-            "qwen-3.5-0.8b-mini" to "qwen-3.5-0.8b-q4km",
             "qwen-3.5-0.8b-mini" to "qwen-3.5-0.8b-q2k"  // Default mini → Q2_K for data savings
         )
 

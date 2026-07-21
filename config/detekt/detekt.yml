@@ -20,7 +20,8 @@ complexity:
 
 style:
   MaxLineLength:
-    maxLineLength: 120
+    maxLineLength: 150
+    ignoreBackTickedIdentifier: true
   MagicNumber:
     active: false
   ReturnCount:
@@ -35,9 +36,6 @@ style:
     active: true
   UnusedPrivateMember:
     active: true
-  MaxLineLength:
-    maxLineLength: 150
-    ignoreBackTickedIdentifier: true
 
 naming:
   FunctionNaming:

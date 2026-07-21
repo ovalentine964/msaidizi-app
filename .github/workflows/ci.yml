@@ -119,12 +119,18 @@ jobs:
         run: |
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${{ env.NDK_VERSION }}" >> $GITHUB_ENV
 
+      - name: Cache CMake FetchContent (llama.cpp)
+        uses: actions/cache@v4
+        with:
+          path: app/.cxx
+          key: cmake-cxx-llama-b4651-${{ env.NDK_VERSION }}
+
       - name: Cache sherpa-onnx JNI libs
         id: cache-sherpa
         uses: actions/cache@v4
         with:
           path: app/src/main/jniLibs
-          key: sherpa-onnx-jni-v2-arm64
+          key: sherpa-onnx-jni-v2-all
 
       - name: Setup sherpa-onnx JNI libs
         if: steps.cache-sherpa.outputs.cache-hit != 'true'
@@ -148,7 +154,7 @@ jobs:
         timeout-minutes: 30
 
       - name: Run Unit Tests
-        run: ./gradlew testDebugUnitTest --stacktrace
+        run: ./gradlew testFullDebugUnitTest --stacktrace
         continue-on-error: true
 
       - name: Upload test results
@@ -316,7 +322,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: app/src/main/jniLibs
-          key: sherpa-onnx-jni-v2-arm64
+          key: sherpa-onnx-jni-v2-all
 
       - name: Setup sherpa-onnx JNI libs
         if: steps.cache-sherpa.outputs.cache-hit != 'true'
@@ -351,11 +357,11 @@ jobs:
           echo "🔧 Starting Gradle build..."
           echo "   NDK_HOME=$ANDROID_NDK_HOME"
           set -o pipefail
-          ./gradlew assembleDebug --stacktrace 2>&1 | tee build-debug.log
+          ./gradlew assembleFullDebug --stacktrace 2>&1 | tee build-debug.log
           EXIT_CODE=${PIPESTATUS[0]}
           if [ "$EXIT_CODE" -ne 0 ]; then
             echo ""
-            echo "::error::Gradle assembleDebug failed with exit code $EXIT_CODE"
+            echo "::error::Gradle assembleFullDebug failed with exit code $EXIT_CODE"
             echo ""
             echo "=== Last 50 lines of build log ==="
             tail -50 build-debug.log
@@ -376,7 +382,7 @@ jobs:
 
       - name: Check APK size (< 2GB)
         run: |
-          APK_PATH=$(find app/build/outputs/apk/debug/ -name "*.apk" | head -1)
+          APK_PATH=$(find app/build/outputs/apk/full/debug/ -name "*.apk" | head -1)
           if [ -n "$APK_PATH" ]; then
             APK_SIZE=$(stat -c%s "$APK_PATH")
             SIZE_MB=$((APK_SIZE / 1048576))
@@ -398,7 +404,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/full/debug/*.apk
           retention-days: 14
 
   # ──────────────────────────────────────
@@ -443,6 +449,12 @@ jobs:
             "cmake;${{ env.CMAKE_VERSION }}"
           echo "✅ NDK r26b and CMake 3.22.1 installed"
 
+      - name: Cache CMake FetchContent (llama.cpp)
+        uses: actions/cache@v4
+        with:
+          path: app/.cxx
+          key: cmake-cxx-llama-b4651-${{ env.NDK_VERSION }}
+
       - name: Cache AI models
         id: cache-models
         uses: actions/cache@v4
@@ -467,7 +479,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: app/src/main/jniLibs
-          key: sherpa-onnx-jni-v2-arm64
+          key: sherpa-onnx-jni-v2-all
 
       - name: Setup sherpa-onnx JNI libs
         if: steps.cache-sherpa.outputs.cache-hit != 'true'
@@ -499,16 +511,16 @@ jobs:
           RELEASE_KEYSTORE_FILE: /tmp/release.keystore.p12
         run: |
           set -o pipefail
-          ./gradlew assembleRelease --stacktrace 2>&1 | tee build-release.log
+          ./gradlew assembleFullRelease --stacktrace 2>&1 | tee build-release.log
           EXIT_CODE=${PIPESTATUS[0]}
           if [ "$EXIT_CODE" -ne 0 ]; then
-            echo "::error::Gradle assembleRelease failed with exit code $EXIT_CODE"
+            echo "::error::Gradle assembleFullRelease failed with exit code $EXIT_CODE"
             exit "$EXIT_CODE"
           fi
 
       - name: Verify APK signature
         run: |
-          APK_PATH=$(find app/build/outputs/apk/release/ -name "*.apk" | head -1)
+          APK_PATH=$(find app/build/outputs/apk/full/release/ -name "*.apk" | head -1)
           if [ -n "$APK_PATH" ]; then
             apksigner verify --print-certs "$APK_PATH" 2>&1 | tee signature-verify.txt
             echo "✅ APK signature verified"
@@ -516,7 +528,7 @@ jobs:
 
       - name: Check release APK size
         run: |
-          APK_PATH=$(find app/build/outputs/apk/release/ -name "*.apk" | head -1)
+          APK_PATH=$(find app/build/outputs/apk/full/release/ -name "*.apk" | head -1)
           if [ -n "$APK_PATH" ]; then
             SIZE=$(stat -c%s "$APK_PATH")
             SIZE_MB=$((SIZE / 1048576))
@@ -530,9 +542,9 @@ jobs:
       - name: Prepare release artifact
         run: |
           mkdir -p release-apk
-          APK_PATH=$(find app/build/outputs/apk/release/ -name "*.apk" | head -1)
+          APK_PATH=$(find app/build/outputs/apk/full/release/ -name "*.apk" | head -1)
           cp "$APK_PATH" release-apk/msaidizi-release.apk 2>/dev/null || \
-          cp app/build/outputs/apk/debug/*.apk release-apk/msaidizi-release.apk
+          cp app/build/outputs/apk/full/debug/*.apk release-apk/msaidizi-release.apk
           ls -lh release-apk/
 
       - name: Upload signed APK artifact

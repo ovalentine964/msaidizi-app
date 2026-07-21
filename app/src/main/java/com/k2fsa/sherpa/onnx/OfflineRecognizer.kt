@@ -13,28 +13,34 @@ class OfflineRecognizer(config: OfflineRecognizerConfig) : AutoCloseable {
     private var ptr: Long
 
     init {
-        if (!SherpaOnnxLoader.checkLoaded()) {
-            throw UnsatisfiedLinkError("sherpa-onnx JNI not available")
+        SherpaOnnxLoader.ensureAvailable()
+        try {
+            ptr = newNative(
+                config.featConfig.sampleRate,
+                config.featConfig.featureDim,
+                config.modelConfig.whisper?.encoder ?: "",
+                config.modelConfig.whisper?.decoder ?: "",
+                config.modelConfig.whisper?.language ?: "sw",
+                config.modelConfig.whisper?.task ?: "transcribe",
+                config.modelConfig.whisper?.tailPaddings ?: -1,
+                config.modelConfig.tokens,
+                config.modelConfig.numThreads,
+                if (config.modelConfig.debug) 1 else 0,
+                config.modelConfig.provider,
+                config.modelConfig.modelType,
+                config.modelConfig.modelingUnit,
+                config.modelConfig.bpeVocab,
+                config.hotwordsFile,
+                config.hotwordsScore,
+                config.blankPenalty,
+            )
+        } catch (e: Throwable) {
+            ptr = 0L
+            throw UnsatisfiedLinkError(
+                "Failed to initialize OfflineRecognizer (Whisper ASR). " +
+                "Model files may be missing or corrupt. Error: ${e.message}"
+            )
         }
-        ptr = newNative(
-            config.featConfig.sampleRate,
-            config.featConfig.featureDim,
-            config.modelConfig.whisper?.encoder ?: "",
-            config.modelConfig.whisper?.decoder ?: "",
-            config.modelConfig.whisper?.language ?: "sw",
-            config.modelConfig.whisper?.task ?: "transcribe",
-            config.modelConfig.whisper?.tailPaddings ?: -1,
-            config.modelConfig.tokens,
-            config.modelConfig.numThreads,
-            if (config.modelConfig.debug) 1 else 0,
-            config.modelConfig.provider,
-            config.modelConfig.modelType,
-            config.modelConfig.modelingUnit,
-            config.modelConfig.bpeVocab,
-            config.hotwordsFile,
-            config.hotwordsScore,
-            config.blankPenalty,
-        )
     }
 
     /**
@@ -98,9 +104,7 @@ class OfflineRecognizer(config: OfflineRecognizerConfig) : AutoCloseable {
  */
 class OfflineStream(internal val ptr: Long) : AutoCloseable {
     init {
-        if (!SherpaOnnxLoader.checkLoaded()) {
-            throw UnsatisfiedLinkError("sherpa-onnx JNI not available")
-        }
+        SherpaOnnxLoader.ensureAvailable()
     }
 
     /**

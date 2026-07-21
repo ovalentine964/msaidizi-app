@@ -3,10 +3,16 @@
 # download-models.sh — Download AI models for Msaidizi app
 # ============================================================
 # Usage:
-#   ./scripts/download-models.sh          # Download all models
-#   ./scripts/download-models.sh --verify  # Verify models exist
+#   ./scripts/download-models.sh                # Download all models (full flavor)
+#   ./scripts/download-models.sh --lite         # Download voice models only (lite flavor)
+#   ./scripts/download-models.sh --verify       # Verify all models exist
+#   ./scripts/download-models.sh --lite --verify # Verify voice models only
 #
 # Models are cached in CI via actions/cache.
+#
+# Flavor strategy:
+#   full (default): bundles all models (voice + LLM ~650MB)
+#   lite:           bundles voice models only (~65MB, LLM downloads at runtime)
 # ============================================================
 
 set -euo pipefail
@@ -18,13 +24,41 @@ RETRY_DELAY=5
 # ─────────────────────────────────────────────────────────────
 # Model definitions: name | filename | URL
 # ─────────────────────────────────────────────────────────────
-declare -A MODEL_URLS=(
+declare -A VOICE_MODELS=(
   ["ggml-tiny.en-q5_1.bin"]="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en-q5_1.bin"
   ["piper-swahili.onnx"]="https://huggingface.co/rhasspy/piper-voices/resolve/main/vi/vi_VN/vais1000/medium/vi_VN-vais1000-medium.onnx"
   ["piper-swahili.onnx.json"]="https://huggingface.co/rhasspy/piper-voices/resolve/main/vi/vi_VN/vais1000/medium/vi_VN-vais1000-medium.onnx.json"
   ["silero_vad.onnx"]="https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx"
-  ["qwen3.5-0.8b-q4_k_m.gguf"]="https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf"
 )
+
+declare -A LLM_MODELS=(
+  ["Qwen3.5-0.8B-Q4_K_M.gguf"]="https://huggingface.co/bartowski/Qwen_Qwen3.5-0.8B-GGUF/resolve/main/Qwen_Qwen3.5-0.8B-Q4_K_M.gguf"
+)
+
+# Parse flags (--lite and --verify can appear in any order)
+LITE_MODE=false
+VERIFY_MODE=false
+for arg in "$@"; do
+  case "$arg" in
+    --lite) LITE_MODE=true ;;
+    --verify) VERIFY_MODE=true ;;
+  esac
+
+done
+
+declare -A MODEL_URLS
+for key in "${!VOICE_MODELS[@]}"; do
+  MODEL_URLS["$key"]="${VOICE_MODELS[$key]}"
+done
+
+if [ "$LITE_MODE" = "false" ]; then
+  for key in "${!LLM_MODELS[@]}"; do
+    MODEL_URLS["$key"]="${LLM_MODELS[$key]}"
+  done
+  echo "📦 Downloading ALL models (voice + LLM) to $MODELS_DIR ..."
+else
+  echo "📦 Downloading VOICE models only (lite flavor) to $MODELS_DIR ..."
+fi
 
 # ─────────────────────────────────────────────────────────────
 # Helper: download with retry
@@ -58,8 +92,11 @@ download_with_retry() {
 # ─────────────────────────────────────────────────────────────
 # Verify mode: just check files exist
 # ─────────────────────────────────────────────────────────────
-if [ "${1:-}" = "--verify" ]; then
+if [ "$VERIFY_MODE" = "true" ]; then
   echo "🔍 Verifying models in $MODELS_DIR ..."
+  if [ "$LITE_MODE" = "true" ]; then
+    echo "   (lite flavor — checking voice models only)"
+  fi
   VERIFY_FAILED=0
 
   for model in "${!MODEL_URLS[@]}"; do

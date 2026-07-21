@@ -113,50 +113,48 @@
 -keep class com.msaidizi.app.security.crypto.pqc.** { *; }
 
 # ══════════════════════════════════════════════════════════════
-# SECURITY: Strip ALL logging in release builds
+# SECURITY: Strip verbose logging in release builds
 # Prevents PII, tokens, keys, and internal state from leaking via logs
+#
+# Strategy (updated 2026-07-21):
+#   - Strip ONLY Timber.v and android.util.Log.v (verbose — never needed in prod)
+#   - KEEP Timber.d, Timber.i, Timber.w, Timber.e for crash debugging
+#   - Model loading diagnostics (Timber.i), native lib loading (Timber.d),
+#     and database operations (Timber.i) are critical for production debugging
+#   - Sentry breadcrumbs use io.sentry.Sentry.addBreadcrumb() directly,
+#     NOT Timber — so they are unaffected by these rules
 # ══════════════════════════════════════════════════════════════
 
-# Strip verbose/debug/info android.util.Log calls in release builds
-# KEEP warn/error/wtf — these are needed for crash diagnostics
+# Strip ONLY verbose android.util.Log calls in release builds
+# KEEP debug/info/warn/error/wtf — needed for crash diagnostics
 -assumenosideeffects class android.util.Log {
     public static int v(...);
-    public static int d(...);
-    public static int i(...);
 }
 
-# Strip verbose/debug/info Timber calls in release builds
-# KEEP warn/error/wtf — these are needed for crash diagnostics
+# Strip ONLY verbose Timber calls in release builds
+# KEEP debug/info/warn/error — needed for model loading, native lib, and DB diagnostics
 -assumenosideeffects class timber.log.Timber {
     public static *** v(...);
-    public static *** d(...);
-    public static *** i(...);
 }
 
-# Strip verbose/debug/info on Timber.Tree subclasses
+# Strip verbose on Timber.Tree subclasses
 -assumenosideeffects class timber.log.Timber$Tree {
     protected *** v(...);
-    protected *** d(...);
-    protected *** i(...);
 }
 
-# Remove java.util.logging calls (if any library uses JUL)
+# Remove java.util.logging fine/finer/finest (low-value verbose)
+# KEEP info/warning/severe — these are meaningful diagnostic levels
 -assumenosideeffects class java.util.logging.Logger {
-    public static *** severe(...);
-    public static *** warning(...);
-    public static *** info(...);
     public static *** fine(...);
     public static *** finer(...);
     public static *** finest(...);
 }
 
-# Remove SLF4J calls (if any library uses SLF4J)
+# Remove SLF4J trace/debug calls (verbose)
+# KEEP info/warn/error — meaningful diagnostic levels
 -assumenosideeffects class org.slf4j.Logger {
-    public static *** error(...);
-    public static *** warn(...);
-    public static *** info(...);
-    public static *** debug(...);
     public static *** trace(...);
+    public static *** debug(...);
 }
 
 # SECURITY: Obfuscate stack traces in release (prevents info leakage)

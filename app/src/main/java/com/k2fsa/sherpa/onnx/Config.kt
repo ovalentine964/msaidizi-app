@@ -45,6 +45,25 @@ object SherpaOnnxLoader {
     fun checkLoaded(): Boolean {
         return isAvailable
     }
+
+    /**
+     * Ensure the native library is loaded, throwing a clear error if not.
+     * Use this in JNI wrapper constructors instead of raw checkLoaded().
+     *
+     * @throws UnsatisfiedLinkError with a user-friendly message
+     */
+    fun ensureAvailable() {
+        if (!isAvailable) {
+            throw UnsatisfiedLinkError(
+                "Sherpa-ONNX native library (libsherpa-onnx-jni.so) is not available. " +
+                "Voice features (ASR, TTS, VAD) are disabled on this device. " +
+                "This can happen if: (1) the native library was not packaged in the APK, " +
+                "(2) the device ABI is not supported, or (3) the library failed to load " +
+                "due to insufficient memory. " +
+                "Check SherpaOnnxLoader.isAvailable before creating sherpa-onnx objects."
+            )
+        }
+    }
 }
 
 /**

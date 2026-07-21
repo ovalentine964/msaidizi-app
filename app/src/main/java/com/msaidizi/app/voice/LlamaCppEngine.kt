@@ -396,9 +396,9 @@ class LlamaCppEngine @Inject constructor(
         if (!isLowTier) {
             // Try Gemma 4 E2B first on MEDIUM/HIGH tier devices
             val gemmaPath = if (maxMemoryMB >= 4096) {
-                File(modelsDir, "gemma-4-e2b-q4_k_m.gguf")
+                File(modelsDir, "gemma-4-e2b-Q4_K_M.gguf")
             } else {
-                File(modelsDir, "gemma-4-e2b-q3_k_m.gguf")
+                File(modelsDir, "gemma-4-e2b-Q3_K_M.gguf")
             }
             if (gemmaPath.exists()) {
                 try {

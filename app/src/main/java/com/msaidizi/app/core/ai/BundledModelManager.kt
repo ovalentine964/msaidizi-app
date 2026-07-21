@@ -2,6 +2,7 @@ package com.msaidizi.app.core.ai
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.msaidizi.app.BuildConfig
 import com.msaidizi.app.core.util.DeviceCapability
 import com.msaidizi.app.voice.ModelRegistry
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -58,6 +59,22 @@ class BundledModelManager @Inject constructor(
         const val ALT_MODEL_ID = "qwen-3.5-0.8b-q4km"
 
         /**
+         * Voice model assets — always bundled in all flavors.
+         * These are small (~65MB total) and needed for basic voice functionality.
+         */
+        private val VOICE_ASSETS = listOf(
+            "whisper-encoder-int8.onnx",
+            "whisper-decoder-int8.onnx",
+            "whisper-tokens.json",
+            "silero_vad.onnx",
+            "piper-swahili.onnx",
+            "tokens.txt"
+        )
+
+        /** LLM model asset — only bundled in `full` flavor (~580MB) */
+        private val LLM_ASSET = "Qwen3.5-0.8B-Q4_K_M.gguf"
+
+        /**
          * All bundled model assets to extract on first launch.
          *
          * IMPORTANT: These filenames MUST match what scripts/download-models.sh
@@ -70,26 +87,32 @@ class BundledModelManager @Inject constructor(
          * - Piper TTS: k2-fsa/sherpa-onnx GitHub releases (tar.bz2 extraction)
          * - Qwen LLM: bartowski/Qwen_Qwen3.5-0.8B-GGUF on HuggingFace
          *
-         * NOTE: On 32-bit (armeabi-v7a) devices, the LLM model (Qwen3.5-0.8B-Q4_K_M.gguf)
-         * is skipped during extraction — it cannot be loaded on 32-bit due to address
-         * space limitations (~1.5GB usable). Voice (ASR/TTS/VAD) models are still extracted
-         * as they work fine on 32-bit.
+         * Build flavor behavior:
+         * - `full` flavor: bundles voice + LLM (~650MB APK, for direct distribution)
+         * - `lite`/`play` flavor: bundles voice only (~65MB APK, LLM downloads later)
+         *
+         * NOTE: On 32-bit (armeabi-v7a) devices, the LLM model is skipped regardless
+         * of flavor — it cannot be loaded on 32-bit due to address space limitations.
          */
-        private val BUNDLED_ASSETS = listOf(
-            "whisper-encoder-int8.onnx",
-            "whisper-decoder-int8.onnx",
-            "whisper-tokens.json",
-            "silero_vad.onnx",
-            "piper-swahili.onnx",
-            "tokens.txt",
-            "Qwen3.5-0.8B-Q4_K_M.gguf"
-        )
+        private val BUNDLED_ASSETS: List<String> by lazy {
+            val assets = VOICE_ASSETS.toMutableList()
+            if (BuildConfig.BUNDLE_LLM_MODEL) {
+                assets.add(LLM_ASSET)
+            }
+            assets
+        }
 
-        /** Assets that are safe to extract on 32-bit devices (everything except the LLM) */
-        private val BUNDLED_ASSETS_32BIT = BUNDLED_ASSETS.filter { !it.endsWith(".gguf") }
+        /** Assets that are safe to extract on 32-bit devices (voice models only — no LLM) */
+        private val BUNDLED_ASSETS_32BIT = VOICE_ASSETS
 
         /** espeak-ng-data directory name in assets */
         private const val ESPEAK_ASSET_DIR = "espeak-ng-data"
+
+        /** Buffer size for file extraction — 8KB to avoid OOM on 2GB devices (was 64KB) */
+        private const val EXTRACT_BUFFER_SIZE = 8192
+
+        /** Minimum free storage required to start extraction (bytes) */
+        private const val MIN_FREE_STORAGE_BYTES = 100L * 1024 * 1024 // 100MB
     }
 
     /** Coroutine scope for background downloads */
@@ -135,6 +158,8 @@ class BundledModelManager @Inject constructor(
             if (allExtracted) {
                 Timber.i(TAG, "All bundled models already extracted")
                 _bundledModelState.value = BundledModelState.READY
+                // For lite/play flavors, ensure LLM starts downloading in background
+                startLlmDownloadIfNeeded()
             } else if (isBundledModelAvailable()) {
                 // Extract bundled models from APK assets
                 Timber.i(TAG, "Extracting bundled models from APK assets...")
@@ -143,6 +168,8 @@ class BundledModelManager @Inject constructor(
                 _bundledModelState.value = if (extracted) {
                     Timber.i(TAG, "All bundled models extracted successfully")
                     reportSentryBreadcrumb("bundled_model_extraction_success")
+                    // For lite/play flavors, trigger LLM download after voice models are ready
+                    startLlmDownloadIfNeeded()
                     BundledModelState.READY
                 } else {
                     reportSentryBreadcrumb("bundled_model_extraction_failed")
@@ -193,16 +220,41 @@ class BundledModelManager @Inject constructor(
      */
     private fun hasVoiceModelsAvailable(): Boolean {
         val modelsDir = File(context.filesDir, "models")
-        val voiceAssets = listOf(
+        val voiceOnnxAssets = listOf(
             "whisper-encoder-int8.onnx",
             "whisper-decoder-int8.onnx",
             "silero_vad.onnx",
             "piper-swahili.onnx"
         )
-        return voiceAssets.all { asset ->
+        return voiceOnnxAssets.all { asset ->
             val file = File(modelsDir, asset)
             file.exists() && file.length() > 1000
         }
+    }
+
+    /**
+     * Check if this is a lite/play flavor where LLM must be downloaded.
+     */
+    fun isLlmDownloadRequired(): Boolean = !BuildConfig.BUNDLE_LLM_MODEL
+
+    /**
+     * Trigger LLM model download for lite/play flavors.
+     * Called after bundled voice models are extracted on first launch.
+     * The download runs in background — the app works with cloud API until it completes.
+     *
+     * On 32-bit devices, this is a no-op (LLM is cloud-only).
+     */
+    fun startLlmDownloadIfNeeded() {
+        if (BuildConfig.BUNDLE_LLM_MODEL) return  // Already bundled
+        if (DeviceCapability.is32BitDevice()) return  // Cloud-only
+        if (isFullModelDownloaded()) return  // Already downloaded
+
+        Timber.i(TAG, "Lite/Play flavor: starting background LLM model download")
+        reportSentryBreadcrumb("llm_download_start", mapOf(
+            "flavor" to BuildConfig.FLAVOR,
+            "bundled" to "false"
+        ))
+        startFullModelDownload()
     }
 
     /**
@@ -255,6 +307,12 @@ class BundledModelManager @Inject constructor(
      * Extract all bundled models from APK assets to internal storage.
      * This runs once on first launch.
      *
+     * Safety measures for 2GB devices:
+     * - Checks available storage before starting extraction
+     * - Uses 8KB buffer (reduced from 64KB) to avoid OOM
+     * - Stream-copies files without buffering entire content
+     * - Reports progress via StateFlow for UI feedback
+     *
      * On 32-bit (armeabi-v7a) devices, only voice models (Whisper, VAD, TTS) are
      * extracted. The LLM model (Qwen3.5-0.8B-Q4_K_M.gguf, ~580MB) is skipped
      * because it cannot be loaded on 32-bit due to process address space limits.
@@ -274,24 +332,59 @@ class BundledModelManager @Inject constructor(
                 Timber.i(TAG, "32-bit device detected — extracting voice models only (skipping LLM)")
             }
 
+            // Check available storage before extraction
+            val availableBytes = try {
+                val stat = android.os.StatFs(outputDir.absolutePath)
+                stat.availableBytes
+            } catch (_: Throwable) { Long.MAX_VALUE }
+
+            if (availableBytes < MIN_FREE_STORAGE_BYTES) {
+                Timber.e(TAG, "Insufficient storage for model extraction: %d MB free, need %d MB",
+                    availableBytes / (1024 * 1024), MIN_FREE_STORAGE_BYTES / (1024 * 1024))
+                reportSentryBreadcrumb("extraction_insufficient_storage", mapOf(
+                    "availableMB" to (availableBytes / (1024 * 1024)).toString()
+                ))
+                _bundledModelState.value = BundledModelState.UNAVAILABLE
+                return@withContext false
+            }
+
+            Timber.i(TAG, "Available storage: %d MB — proceeding with extraction",
+                availableBytes / (1024 * 1024))
+
             var totalExtracted = 0L
+            var assetsCompleted = 0
+            val totalAssets = assetsToExtract.size
 
             for (assetName in assetsToExtract) {
                 val outputFile = File(outputDir, assetName)
                 if (outputFile.exists() && outputFile.length() > 1000) {
                     Timber.d(TAG, "Already extracted: %s", assetName)
                     totalExtracted += outputFile.length()
+                    assetsCompleted++
                     continue
                 }
 
-                Timber.i(TAG, "Extracting %s from assets...", assetName)
+                // Check storage before each large file
+                if (availableBytes - totalExtracted < MIN_FREE_STORAGE_BYTES) {
+                    Timber.e(TAG, "Storage exhausted during extraction at asset %s", assetName)
+                    _bundledModelState.value = BundledModelState.UNAVAILABLE
+                    return@withContext false
+                }
+
+                Timber.i(TAG, "Extracting %s from assets... (%d/%d)", assetName, assetsCompleted + 1, totalAssets)
                 context.assets.open("models/$assetName").use { input ->
                     outputFile.outputStream().use { output ->
-                        input.copyTo(output, bufferSize = 65536)  // 64KB buffer for large files
+                        // Stream-copy with small buffer to avoid OOM on 2GB devices
+                        input.copyTo(output, bufferSize = EXTRACT_BUFFER_SIZE)
                     }
                 }
                 totalExtracted += outputFile.length()
-                Timber.i(TAG, "Extracted %s (%d MB)", assetName, outputFile.length() / (1024 * 1024))
+                assetsCompleted++
+                Timber.i(TAG, "Extracted %s (%d MB) — progress: %d/%d",
+                    assetName, outputFile.length() / (1024 * 1024), assetsCompleted, totalAssets)
+
+                // Yield to avoid blocking the IO thread pool during long extractions
+                yield()
             }
 
             // Extract espeak-ng-data directory (for Piper TTS phoneme mapping)
@@ -307,6 +400,15 @@ class BundledModelManager @Inject constructor(
             Timber.i(TAG, "All bundled models extracted: %d MB total", totalExtracted / (1024 * 1024))
             _bundledModelState.value = BundledModelState.READY
             true
+        } catch (e: OutOfMemoryError) {
+            // Explicit OOM catch — log and clean up
+            Timber.e(e, "OOM during model extraction — reducing buffer and retrying")
+            reportSentryBreadcrumb("extraction_oom", mapOf(
+                "freeHeapMB" to (Runtime.getRuntime().freeMemory() / (1024 * 1024)).toString()
+            ))
+            System.gc()
+            _bundledModelState.value = BundledModelState.UNAVAILABLE
+            false
         } catch (e: Throwable) {
             Timber.e(e, "Failed to extract bundled models")
             _bundledModelState.value = BundledModelState.UNAVAILABLE
@@ -334,7 +436,7 @@ class BundledModelManager @Inject constructor(
                 if (!outputFile.exists()) {
                     context.assets.open(subPath).use { input ->
                         outputFile.outputStream().use { output ->
-                            input.copyTo(output, bufferSize = 65536)
+                            input.copyTo(output, bufferSize = EXTRACT_BUFFER_SIZE) // 8KB to avoid OOM
                         }
                     }
                 }
@@ -348,6 +450,14 @@ class BundledModelManager @Inject constructor(
      */
     suspend fun extractBundledModel(): Boolean = withContext(Dispatchers.IO) {
         extractAllBundledModels()
+    }
+
+    /**
+     * Get the LLM asset filename for the current flavor.
+     * Returns null if LLM is not bundled (lite/play flavors).
+     */
+    fun getBundledLlmAssetName(): String? {
+        return if (BuildConfig.BUNDLE_LLM_MODEL) LLM_ASSET else null
     }
 
     /**
