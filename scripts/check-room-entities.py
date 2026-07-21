@@ -27,10 +27,14 @@ def find_entities(src_dir):
         with open(filepath, "r") as f:
             content = f.read()
         if ENTITY_ANNOTATION in content:
-            # Extract class name
-            match = re.search(r"class\s+(\w+)", content)
-            if match:
-                entities.append((match.group(1), filepath))
+            # Find each @Entity annotation and get the class name AFTER it.
+            # This handles files where @Entity is on a data class inside a
+            # larger file (e.g. FeedbackCollector.kt containing FeedbackEntity).
+            for match in re.finditer(re.escape(ENTITY_ANNOTATION), content):
+                after_entity = content[match.end():]
+                class_match = re.search(r"(?:data\s+)?class\s+(\w+)", after_entity)
+                if class_match:
+                    entities.append((class_match.group(1), filepath))
     return entities
 
 
