@@ -16,7 +16,7 @@ env:
   JAVA_VERSION: "17"
   NDK_VERSION: "26.1.10909125"
   CMAKE_VERSION: "3.22.1"
-  MODEL_CACHE_KEY: "models-v7-sherpa-v1"
+  MODEL_CACHE_KEY: "models-v8-lite"
 
 jobs:
   # ──────────────────────────────────────
@@ -85,7 +85,7 @@ jobs:
   unit-tests:
     name: 🧪 Unit Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     needs: [secret-scan]
     steps:
       - uses: actions/checkout@v4
@@ -150,8 +150,8 @@ jobs:
         if: steps.cache-models.outputs.cache-hit != 'true'
         run: |
           chmod +x scripts/download-models.sh
-          ./scripts/download-models.sh
-        timeout-minutes: 30
+          ./scripts/download-models.sh --lite
+        timeout-minutes: 15
 
       - name: Run Unit Tests
         run: ./gradlew testFullDebugUnitTest --stacktrace
@@ -172,7 +172,7 @@ jobs:
   dependency-check:
     name: 🔍 OWASP Dependency Check
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     needs: [secret-scan]
     steps:
       - uses: actions/checkout@v4
@@ -305,13 +305,13 @@ jobs:
         if: steps.cache-models.outputs.cache-hit != 'true'
         run: |
           chmod +x scripts/download-models.sh
-          ./scripts/download-models.sh
-        timeout-minutes: 30
+          ./scripts/download-models.sh --lite
+        timeout-minutes: 15
 
       - name: Verify models present
         run: |
           chmod +x scripts/download-models.sh
-          ./scripts/download-models.sh --verify
+          ./scripts/download-models.sh --lite --verify
 
       - name: Set NDK environment
         run: |
@@ -466,13 +466,13 @@ jobs:
         if: steps.cache-models.outputs.cache-hit != 'true'
         run: |
           chmod +x scripts/download-models.sh
-          ./scripts/download-models.sh
-        timeout-minutes: 30
+          ./scripts/download-models.sh --lite
+        timeout-minutes: 15
 
       - name: Verify models present
         run: |
           chmod +x scripts/download-models.sh
-          ./scripts/download-models.sh --verify
+          ./scripts/download-models.sh --lite --verify
 
       - name: Cache sherpa-onnx JNI libs
         id: cache-sherpa

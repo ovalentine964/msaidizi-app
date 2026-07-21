@@ -18,7 +18,7 @@ env:
   GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true"
   NDK_VERSION: "26.1.10909125"
   CMAKE_VERSION: "3.22.1"
-  MODEL_CACHE_KEY: "models-v7-sherpa-v1"
+  MODEL_CACHE_KEY: "models-v8-lite"
 
 jobs:
   build:
@@ -98,13 +98,13 @@ jobs:
         if: steps.cache-models.outputs.cache-hit != 'true'
         run: |
           chmod +x scripts/download-models.sh
-          ./scripts/download-models.sh
-        timeout-minutes: 30
+          ./scripts/download-models.sh --lite
+        timeout-minutes: 15
 
       - name: Verify models present
         run: |
           chmod +x scripts/download-models.sh
-          ./scripts/download-models.sh --verify
+          ./scripts/download-models.sh --lite --verify
 
       # ============================================================
       # Sherpa-ONNX JNI libs setup (ASR/TTS/VAD engine)
@@ -306,13 +306,13 @@ jobs:
         if: steps.cache-models.outputs.cache-hit != 'true'
         run: |
           chmod +x scripts/download-models.sh
-          ./scripts/download-models.sh
-        timeout-minutes: 30
+          ./scripts/download-models.sh --lite
+        timeout-minutes: 15
 
       - name: Verify models present
         run: |
           chmod +x scripts/download-models.sh
-          ./scripts/download-models.sh --verify
+          ./scripts/download-models.sh --lite --verify
 
       - name: Cache sherpa-onnx JNI libs
         id: cache-sherpa
