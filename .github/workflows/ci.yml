@@ -154,7 +154,7 @@ jobs:
         timeout-minutes: 15
 
       - name: Run Unit Tests
-        run: ./gradlew testFullDebugUnitTest --stacktrace
+        run: ./gradlew testLiteDebugUnitTest --stacktrace
         continue-on-error: true
 
       - name: Upload test results
