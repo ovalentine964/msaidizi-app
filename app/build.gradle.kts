@@ -418,6 +418,7 @@ ksp {
 
 // sherpa-onnx JNI setup — downloads native libs before build
 tasks.register("setupSherpaOnnx", Exec::class.java) {
+    workingDir = rootProject.projectDir
     commandLine("bash", "scripts/setup-sherpa-onnx.sh")
 }
 tasks.named("preBuild") { dependsOn("setupSherpaOnnx") }
