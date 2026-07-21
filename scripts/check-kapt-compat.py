@@ -40,9 +40,13 @@ def check_build_files(root):
         if os.path.exists(filepath):
             with open(filepath, "r") as f:
                 for i, line in enumerate(f, 1):
-                    if re.search(r'\bkapt\s*\(', line):
+                    # Strip comments — only check actual code
+                    code = line.split("//")[0].strip()
+                    if not code:
+                        continue
+                    if re.search(r'\bkapt\s*\(', code):
                         issues.append((filepath, i, line.strip()))
-                    if 'id("org.jetbrains.kotlin.kapt")' in line:
+                    if 'id("org.jetbrains.kotlin.kapt")' in code:
                         issues.append((filepath, i, f"kapt plugin found: {line.strip()}"))
     return issues
 

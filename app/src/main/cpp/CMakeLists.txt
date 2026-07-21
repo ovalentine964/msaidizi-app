@@ -39,14 +39,14 @@ if(EXISTS "${LLAMA_CPP_LOCAL_DIR}/CMakeLists.txt")
     message(STATUS "Using local vendored llama.cpp from ${LLAMA_CPP_LOCAL_DIR}")
     set(llama_cpp_SOURCE_DIR "${LLAMA_CPP_LOCAL_DIR}")
     # Disable features we don't need on Android
+    # NOTE: Backend options use GGML_* prefix (not LLAMA_*) since llama.cpp b4000+
     set(LLAMA_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
     set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
     set(LLAMA_BUILD_SERVER   OFF CACHE BOOL "" FORCE)
-    set(LLAMA_BUILD_TOOLS    OFF CACHE BOOL "" FORCE)
-    set(LLAMA_METAL          OFF CACHE BOOL "" FORCE)
-    set(LLAMA_CUDA           OFF CACHE BOOL "" FORCE)
-    set(LLAMA_VULKAN         OFF CACHE BOOL "" FORCE)
-    set(LLAMA_OPENMP         OFF CACHE BOOL "" FORCE)
+    set(GGML_METAL           OFF CACHE BOOL "" FORCE)  # No Metal on Android
+    set(GGML_CUDA            OFF CACHE BOOL "" FORCE)  # No CUDA on Android
+    set(GGML_VULKAN          OFF CACHE BOOL "" FORCE)  # Vulkan can be added later
+    set(GGML_OPENMP          OFF CACHE BOOL "" FORCE)  # Avoid OpenMP dependency
     add_subdirectory("${LLAMA_CPP_LOCAL_DIR}" llama_cpp_build)
 else()
     message(STATUS "Downloading llama.cpp ${LLAMA_CPP_TAG} from GitHub...")
@@ -61,14 +61,14 @@ else()
     )
 
     # Disable llama.cpp features we don't need on Android
+    # NOTE: Backend options use GGML_* prefix (not LLAMA_*) since llama.cpp b4000+
     set(LLAMA_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
     set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
     set(LLAMA_BUILD_SERVER   OFF CACHE BOOL "" FORCE)
-    set(LLAMA_BUILD_TOOLS    OFF CACHE BOOL "" FORCE)
-    set(LLAMA_METAL          OFF CACHE BOOL "" FORCE)  # No Metal on Android
-    set(LLAMA_CUDA           OFF CACHE BOOL "" FORCE)  # No CUDA on Android (for now)
-    set(LLAMA_VULKAN         OFF CACHE BOOL "" FORCE)  # Vulkan support can be added later
-    set(LLAMA_OPENMP         OFF CACHE BOOL "" FORCE)  # Avoid OpenMP dependency
+    set(GGML_METAL           OFF CACHE BOOL "" FORCE)  # No Metal on Android
+    set(GGML_CUDA            OFF CACHE BOOL "" FORCE)  # No CUDA on Android (for now)
+    set(GGML_VULKAN          OFF CACHE BOOL "" FORCE)  # Vulkan support can be added later
+    set(GGML_OPENMP          OFF CACHE BOOL "" FORCE)  # Avoid OpenMP dependency
 
     FetchContent_MakeAvailable(llama_cpp)
 endif()
@@ -82,16 +82,16 @@ add_library(llama_jni SHARED
 )
 
 # Include llama.cpp headers
+# Note: most include paths are propagated transitively via the llama and ggml targets.
+# We only need to explicitly add paths not covered by the target dependencies.
 target_include_directories(llama_jni PRIVATE
     ${llama_cpp_SOURCE_DIR}/include
     ${llama_cpp_SOURCE_DIR}/ggml/include
-    ${llama_cpp_SOURCE_DIR}/src
 )
 
-# Link against llama.cpp and ggml
+# Link against llama.cpp (transitively brings in ggml and its backends)
 target_link_libraries(llama_jni
     llama
-    ggml
     android     # For ANativeWindow, AAssetManager, etc.
     log         # For __android_log_print
 )

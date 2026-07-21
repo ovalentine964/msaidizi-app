@@ -141,7 +141,7 @@ Java_com_msaidizi_app_voice_LlamaCppEngine_nativeGenerate(
         LOGI("KV cache quantization enabled: type_k=Q4_0, type_v=Q4_0");
     }
 
-    llama_context *ctx = llama_new_context_with_model(model, ctx_params);
+    llama_context *ctx = llama_init_from_model(model, ctx_params);
     if (!ctx) {
         LOGE("Failed to create llama context");
         return env->NewStringUTF("");
