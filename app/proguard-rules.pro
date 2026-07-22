@@ -1,9 +1,66 @@
 # Msaidizi ProGuard Rules
 # Keep model classes and serialization
 
-# Keep Room entities
+# ══════════════════════════════════════════════════════════════
+# FIX 1: COMPREHENSIVE PROGUARD RULES — Prevent crash-on-launch
+# ══════════════════════════════════════════════════════════════
+
+# Keep ALL classes with @Inject constructors (Hilt DI)
+# Without this, R8 strips constructor params → Dagger can't instantiate
+-keepclasseswithmembers class * {
+    @javax.inject.Inject <init>(...);
+}
+-keepclasseswithmembers class * {
+    @javax.inject.Inject <fields>;
+}
+
+# Keep ALL classes with @Singleton scope
+-keep @javax.inject.Singleton class * { *; }
+
+# Keep ALL classes with native methods (JNI)
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+
+# Keep ALL JNI bridge classes — sherpa-onnx, llama.cpp, SQLCipher, BouncyCastle
+# These are loaded via System.loadLibrary and called from native code
+-keep class com.k2fsa.sherpa.onnx.** { *; }
+-dontwarn com.k2fsa.sherpa.onnx.**
+-keep class com.msaidizi.app.voice.LlamaCppJNI { *; }
+-keep class com.msaidizi.app.voice.llama_jni.** { *; }
+-keep class net.zetetic.** { *; }
+-dontwarn net.zetetic.**
+-keep class org.bouncycastle.** { *; }
+-dontwarn org.bouncycastle.**
+-keep class com.msaidizi.app.security.crypto.pqc.** { *; }
+
+# Keep ALL Room @Entity and @Dao classes
+-keep @androidx.room.Entity class * { *; }
+-keep @androidx.room.Dao class * { *; }
+-keep @androidx.room.Database class * { *; }
+-keep @androidx.room.TypeConverter class * { *; }
+-keep @androidx.room.TypeDe class * { *; }
+
+# Keep ALL classes referenced by reflection (Kotlin companion, object, etc.)
 -keep class com.msaidizi.app.core.model.** { *; }
 -keep class com.msaidizi.app.core.database.** { *; }
+-keep class com.msaidizi.app.core.language.** { *; }
+-keep class com.msaidizi.app.core.dialect.** { *; }
+-keep class com.msaidizi.app.voice.** { *; }
+-keep class com.msaidizi.app.sync.** { *; }
+-keep class com.msaidizi.app.agent.** { *; }
+-keep class com.msaidizi.app.core.security.** { *; }
+
+# Keep classes with @Provides and @Module (Hilt modules)
+-keep @dagger.Module class * { *; }
+-keep @dagger.Provides class * { *; }
+-keep @dagger.Binds class * { *; }
+-keep @dagger.hilt.InstallIn class * { *; }
+
+# Keep all Hilt entry points
+-keep @dagger.hilt.android.AndroidEntryPoint class * { *; }
+-keep @dagger.hilt.android.HiltAndroidApp class * { *; }
+-keep @dagger.hilt.android.lifecycle.HiltViewModel class * { *; }
 
 # Keep Kotlin serialization
 -keepattributes *Annotation*, InnerClasses
@@ -67,7 +124,7 @@
 # zstd
 -keep class com.github.luben.zstd.** { *; }
 
-# Keep native methods
+# Keep native methods (redundant with Fix 1 block above, but kept for safety)
 -keepclasseswithmembernames class * {
     native <methods>;
 }
@@ -83,8 +140,7 @@
 -keep class com.msaidizi.app.sync.** { *; }
 
 # Sherpa-ONNX JNI bridge — CRITICAL: native methods + reflection
--keep class com.k2fsa.sherpa.onnx.** { *; }
--dontwarn com.k2fsa.sherpa.onnx.**
+# (kept in Fix 1 block above as well for redundancy)
 
 # Agent loops, AGI, and Hermes session management
 -keep class com.msaidizi.app.agent.loops.** { *; }
@@ -103,14 +159,10 @@
 -keep class com.msaidizi.app.voice.dialect.** { *; }
 
 # Keep SQLCipher
--keep class net.zetetic.** { *; }
--dontwarn net.zetetic.**
+# (kept in Fix 1 block above as well for redundancy)
 
 # Bouncy Castle — Post-Quantum Cryptography (ML-KEM, ML-DSA)
-# Must keep all PQC algorithm classes for runtime reflection and key generation
--keep class org.bouncycastle.** { *; }
--dontwarn org.bouncycastle.**
--keep class com.msaidizi.app.security.crypto.pqc.** { *; }
+# (kept in Fix 1 block above as well for redundancy)
 
 # ══════════════════════════════════════════════════════════════
 # SECURITY: Strip verbose logging in release builds
@@ -178,3 +230,166 @@
 # Keep AndroidX Startup
 -keep class androidx.startup.** { *; }
 -keep class * extends androidx.startup.Initializer { *; }
+
+# ══════════════════════════════════════════════════════════════
+# CRASH FIX: Keep ALL Hilt-injected classes and their constructors
+# R8 strips classes it thinks are unused, but Hilt uses reflection
+# to construct them at runtime. Without these rules, the app crashes
+# on launch in release builds with ClassNotFoundException.
+# ══════════════════════════════════════════════════════════════
+
+# Keep ALL classes with @Inject constructors (Hilt needs them)
+-keepclasseswithmembers class * {
+    @javax.inject.Inject <init>(...);
+}
+
+# Keep ALL classes with @Inject fields (Hilt field injection)
+-keepclasseswithmembers class * {
+    @javax.inject.Inject <fields>;
+}
+
+# Keep ALL Hilt @Module classes
+-keep @dagger.Module class * { *; }
+-keep @dagger.hilt.InstallIn class * { *; }
+
+# Keep ALL @Provides and @Binds methods
+-keepclassmembers class * {
+    @dagger.Provides <methods>;
+    @dagger.Binds <methods>;
+}
+
+# Keep ALL @Singleton classes
+-keep @javax.inject.Singleton class * { *; }
+
+# Keep ALL Hilt component references
+-keep class dagger.hilt.** { *; }
+-keep class * extends dagger.hilt.android.internal.managers.ViewComponentManager$FragmentContextWrapper { *; }
+
+# Keep ALL classes in the app's DI modules
+-keep class com.msaidizi.app.core.di.** { *; }
+-keep class com.msaidizi.app.security.di.** { *; }
+-keep class com.msaidizi.app.briefing.** { *; }
+
+# ══════════════════════════════════════════════════════════════
+# CRASH FIX: Keep ALL JNI bridge classes
+# Native libraries call into these Java/Kotlin classes via JNI.
+# If R8 strips them, the native lib throws UnsatisfiedLinkError.
+# ══════════════════════════════════════════════════════════════
+
+# llama.cpp JNI bridge
+-keep class com.msaidizi.app.voice.llama_jni.** { *; }
+-keep class com.msaidizi.app.voice.LlamaCppJNI { *; }
+-keep class com.msaidizi.app.voice.LlamaCppEngine { *; }
+
+# Sherpa-ONNX JNI (already covered above but reinforcing)
+-keep class com.k2fsa.sherpa.onnx.** { *; }
+
+# ONNX Runtime JNI
+-keep class ai.onnxruntime.** { *; }
+-keep class ai.onnxruntime OrtEnvironment { *; }
+-keep class ai.onnxruntime OrtSession { *; }
+
+# SQLCipher JNI
+-keep class net.sqlcipher.** { *; }
+-keep class net.zetetic.** { *; }
+
+# BouncyCastle JNI and PQC
+-keep class org.bouncycastle.** { *; }
+-keep class org.bouncycastle.jcajce.provider.** { *; }
+-keep class org.bouncycastle.pqc.** { *; }
+
+# ══════════════════════════════════════════════════════════════
+# CRASH FIX: Keep ALL agent and voice classes
+# These are constructed via Hilt and used at runtime.
+# ══════════════════════════════════════════════════════════════
+
+# All agent classes
+-keep class com.msaidizi.app.agent.** { *; }
+
+# All voice classes
+-keep class com.msaidizi.app.voice.** { *; }
+
+# All core classes
+-keep class com.msaidizi.app.core.** { *; }
+
+# All finance classes
+-keep class com.msaidizi.app.finance.** { *; }
+
+# All gamification classes
+-keep class com.msaidizi.app.gamification.** { *; }
+
+# All mindset classes
+-keep class com.msaidizi.app.mindset.** { *; }
+
+# All CFO classes
+-keep class com.msaidizi.app.cfo.** { *; }
+
+# All loop classes
+-keep class com.msaidizi.app.loops.** { *; }
+
+# All evolution classes
+-keep class com.msaidizi.app.evolution.** { *; }
+
+# All social classes
+-keep class com.msaidizi.app.social.** { *; }
+
+# All security classes
+-keep class com.msaidizi.app.security.** { *; }
+
+# All onboarding classes
+-keep class com.msaidizi.app.onboarding.** { *; }
+
+# All data classes
+-keep class com.msaidizi.app.data.** { *; }
+
+# All UI classes
+-keep class com.msaidizi.app.ui.** { *; }
+
+# All update classes
+-keep class com.msaidizi.app.update.** { *; }
+
+# ══════════════════════════════════════════════════════════════
+# CRASH FIX: Keep DatabaseKeyManager and crypto classes
+# These use EncryptedSharedPreferences which uses reflection.
+# ══════════════════════════════════════════════════════════════
+
+-keep class com.msaidizi.app.security.crypto.DatabaseKeyManager { *; }
+-keep class com.msaidizi.app.security.crypto.** { *; }
+-keep class androidx.security.crypto.** { *; }
+
+# Keep EncryptedSharedPreferences reflection targets
+-keep class com.google.crypto.tink.** { *; }
+-dontwarn com.google.crypto.tink.**
+
+# ══════════════════════════════════════════════════════════════
+# CRASH FIX: Keep Retrofit and Gson (used by MsaidiziApi)
+# ══════════════════════════════════════════════════════════════
+
+-keep class retrofit2.** { *; }
+-dontwarn retrofit2.**
+-keep class com.google.gson.** { *; }
+-keepattributes Signature
+-keepattributes *Annotation*
+
+# Keep API response classes
+-keep class com.msaidizi.app.data.api.** { *; }
+
+# ══════════════════════════════════════════════════════════════
+# CRASH FIX: Keep Gradle BuildConfig
+# R8 can strip BuildConfig fields used at runtime.
+# ══════════════════════════════════════════════════════════════
+
+-keep class com.msaidizi.app.BuildConfig { *; }
+
+# ══════════════════════════════════════════════════════════════
+# CRASH FIX: Keep R class references
+# Resource shrinking can strip R fields used in code.
+# ══════════════════════════════════════════════════════════════
+
+-keepclassmembers class **.R$* {
+    public static <fields>;
+}
+
+# Keep R class itself
+-keep class **.R { *; }
+-keep class **.R$* { *; }

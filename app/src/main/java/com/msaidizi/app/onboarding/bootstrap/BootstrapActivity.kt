@@ -94,7 +94,16 @@ class BootstrapActivity : AppCompatActivity() {
 
     @Inject
     lateinit var voicePipelineProvider: dagger.Lazy<VoicePipeline>
-    private val voicePipeline by lazy { voicePipelineProvider.get() }
+    // CRASH FIX: Make VoicePipeline nullable — if Hilt injection fails or native
+    // libs are missing, the app still launches in text-only mode instead of crashing.
+    private val voicePipeline: VoicePipeline? by lazy {
+        try {
+            voicePipelineProvider.get()
+        } catch (e: Throwable) {
+            Timber.e(e, "VoicePipeline unavailable — running in text-only mode")
+            null
+        }
+    }
 
     private lateinit var viewModel: BootstrapViewModel
     private var isVoiceListening = false
@@ -137,19 +146,23 @@ class BootstrapActivity : AppCompatActivity() {
             // Observe state
             observeState()
 
-            // Initialize voice pipeline
+            // Initialize voice pipeline (nullable — safe mode if unavailable)
             lifecycleScope.launch {
                 try {
-                    voicePipeline.initialize()
-                    Timber.i(TAG, "VoicePipeline initialized")
+                    voicePipeline?.initialize()
+                    if (voicePipeline != null) {
+                        Timber.i(TAG, "VoicePipeline initialized")
+                    } else {
+                        Timber.w(TAG, "VoicePipeline null — text-only mode")
+                    }
                 } catch (e: Throwable) {
                     Timber.e(e, "VoicePipeline init failed")
                 }
             }
 
-            // Collect transcriptions from voice pipeline
+            // Collect transcriptions from voice pipeline (skip if unavailable)
             lifecycleScope.launch {
-                voicePipeline.transcription.collect { result ->
+                voicePipeline?.transcription?.collect { result ->
                     if (result.success && result.text.isNotBlank()) {
                         viewModel.onVoiceInput(result.text, result.confidence)
                     } else {
@@ -536,7 +549,7 @@ class BootstrapActivity : AppCompatActivity() {
             isVoiceListening = false
             lifecycleScope.launch {
                 try {
-                    voicePipeline.stopListening()
+                    voicePipeline?.stopListening()
                 } catch (e: Throwable) {
                     Timber.e(e, "Error stopping voice")
                     viewModel.onVoiceInput("", 0f)
@@ -548,7 +561,7 @@ class BootstrapActivity : AppCompatActivity() {
             viewModel.retry() // Clear any previous errors
             lifecycleScope.launch {
                 try {
-                    voicePipeline.startListening(this)
+                    voicePipeline?.startListening(this)
                 } catch (e: Throwable) {
                     Timber.e(e, "Error starting voice")
                     isVoiceListening = false
@@ -624,7 +637,7 @@ class BootstrapActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 viewModel.onTtsStarted()
-                voicePipeline.speakAndWait(text, "sw")
+                voicePipeline?.speakAndWait(text, "sw")
                 viewModel.onTtsFinished()
             } catch (e: Throwable) {
                 Timber.e(e, "TTS error")
@@ -635,7 +648,7 @@ class BootstrapActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        voicePipeline.stopSpeaking()
+        voicePipeline?.stopSpeaking()
     }
 
     private fun navigateToMain() {

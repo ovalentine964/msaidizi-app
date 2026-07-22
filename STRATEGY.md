@@ -47,7 +47,7 @@ Msaidizi occupies empty space. There is no substitute for an AI CFO that:
 ┌─────────────────────────────────────────────┐
 │  Layer 4: Msaidizi Worker App               │
 │  ├── On-device inference (llama.cpp NDK)    │
-│  ├── Qwen 0.5B for lightweight tasks        │
+│  ├── Qwen 3.5 0.8B for lightweight tasks     │
 │  └── Federated learning client              │
 ├─────────────────────────────────────────────┤
 │  Layer 3: Custom Models (Next)              │

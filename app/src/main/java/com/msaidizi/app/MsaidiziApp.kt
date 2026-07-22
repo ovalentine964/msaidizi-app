@@ -72,16 +72,86 @@ class MsaidiziApp : Application(), Configuration.Provider {
     @Inject
     lateinit var orchestratorProvider: javax.inject.Provider<com.msaidizi.app.agent.Orchestrator>
 
+    /** Flag: app is running in safe mode (degraded functionality). */
+    @Volatile
+    var safeMode: Boolean = false
+        private set
+
+    /** Human-readable reason for safe mode. */
+    @Volatile
+    var safeModeReason: String = ""
+        private set
+
     // Lazy accessors — deferred construction until first access
-    internal val modelRegistry by lazy { modelRegistryProvider.get() }
-    internal val networkMonitor by lazy { networkMonitorProvider.get() }
-    internal val federatedLearningClient by lazy { federatedLearningClientProvider.get() }
-    internal val syncManager by lazy { syncManagerProvider.get() }
-    internal val briefingDelivery by lazy { briefingDeliveryProvider.get() }
-    internal val audioBriefingDelivery by lazy { audioBriefingDeliveryProvider.get() }
-    internal val bundledModelManager by lazy { bundledModelManagerProvider.get() }
-    internal val memoryManager by lazy { memoryManagerProvider.get() }
-    internal val orchestrator by lazy { orchestratorProvider.get() }
+    // Each wrapped in try/catch so failure of one doesn't crash the app
+    internal val modelRegistry: ModelRegistry? by lazy {
+        try { modelRegistryProvider.get() } catch (e: Throwable) {
+            Timber.e(e, "ModelRegistry unavailable — safe mode")
+            enterSafeMode("ModelRegistry failed: ${e.message}")
+            null
+        }
+    }
+    internal val networkMonitor: NetworkMonitor? by lazy {
+        try { networkMonitorProvider.get() } catch (e: Throwable) {
+            Timber.e(e, "NetworkMonitor unavailable")
+            null
+        }
+    }
+    internal val federatedLearningClient: com.msaidizi.app.core.language.FederatedLearningClient? by lazy {
+        try { federatedLearningClientProvider.get() } catch (e: Throwable) {
+            Timber.e(e, "FederatedLearningClient unavailable")
+            null
+        }
+    }
+    internal val syncManager: com.msaidizi.app.sync.SyncManager? by lazy {
+        try { syncManagerProvider.get() } catch (e: Throwable) {
+            Timber.e(e, "SyncManager unavailable")
+            null
+        }
+    }
+    internal val briefingDelivery: BriefingDelivery? by lazy {
+        try { briefingDeliveryProvider.get() } catch (e: Throwable) {
+            Timber.e(e, "BriefingDelivery unavailable")
+            null
+        }
+    }
+    internal val audioBriefingDelivery: com.msaidizi.app.voice.briefing.AudioBriefingDelivery? by lazy {
+        try { audioBriefingDeliveryProvider.get() } catch (e: Throwable) {
+            Timber.e(e, "AudioBriefingDelivery unavailable")
+            null
+        }
+    }
+    internal val bundledModelManager: com.msaidizi.app.core.ai.BundledModelManager? by lazy {
+        try { bundledModelManagerProvider.get() } catch (e: Throwable) {
+            Timber.e(e, "BundledModelManager unavailable")
+            null
+        }
+    }
+    internal val memoryManager: com.msaidizi.app.core.MemoryManager? by lazy {
+        try { memoryManagerProvider.get() } catch (e: Throwable) {
+            Timber.e(e, "MemoryManager unavailable")
+            null
+        }
+    }
+    internal val orchestrator: com.msaidizi.app.agent.Orchestrator? by lazy {
+        try { orchestratorProvider.get() } catch (e: Throwable) {
+            Timber.e(e, "Orchestrator unavailable")
+            null
+        }
+    }
+
+    /**
+     * Enter safe mode — text-only input, no encryption, cloud-only LLM.
+     * Safe to call multiple times; only the first reason is recorded.
+     */
+    fun enterSafeMode(reason: String) {
+        if (!safeMode) {
+            safeMode = true
+            safeModeReason = reason
+            Timber.w("Entering SAFE MODE: $reason")
+            try { io.sentry.Sentry.captureMessage("Safe mode: $reason") } catch (_: Throwable) {}
+        }
+    }
 
     override fun onCreate() {
 
@@ -92,17 +162,17 @@ class MsaidiziApp : Application(), Configuration.Provider {
         } catch (_: Throwable) {}
 
         // Wrap super.onCreate() — Hilt field injection happens here
-        // If any Hilt provider fails during injection, we catch it
+        // If any Hilt provider fails during injection, enter safe mode instead of crashing
         try {
             super.onCreate()
         } catch (e: Throwable) {
-            // Log to crash file (CrashLogger may or may not be installed yet)
+            // Hilt injection failed — enter safe mode
+            Timber.e(e, "Hilt injection FAILED — entering safe mode")
             try {
                 com.msaidizi.app.core.util.CrashLogger.install(this)
             } catch (_: Throwable) {}
-            // Re-throw — we can't recover from failed Application.onCreate()
-            // but at least the crash log is written
-            throw e
+            enterSafeMode("Hilt injection failed: ${e.message}")
+            // Don't re-throw — continue in safe mode
         }
 
 
@@ -116,11 +186,12 @@ class MsaidiziApp : Application(), Configuration.Provider {
 
         // Wrap entire initialization in Throwable catch so OOM, StackOverflow,
         // and other Error subclasses don't crash the app before UI renders.
-        // App starts in degraded mode if init fails.
+        // App starts in degraded/safe mode if init fails.
         try {
             initializeApp()
         } catch (e: Throwable) {
-            Timber.e(e, "initializeApp() FAILED — app running in degraded mode")
+            Timber.e(e, "initializeApp() FAILED — entering safe mode")
+            enterSafeMode("Initialization failed: ${e.message}")
             try {
                 io.sentry.Sentry.captureException(e)
             } catch (_: Throwable) {}
@@ -209,7 +280,7 @@ class MsaidiziApp : Application(), Configuration.Provider {
         // Step 4: Start network monitoring
         Timber.d("Init step: Network monitoring")
         try {
-            networkMonitor.startMonitoring()
+            networkMonitor?.startMonitoring()
         } catch (e: Throwable) {
             Timber.e(e, "Init step FAILED: Network monitoring")
         }
@@ -217,7 +288,7 @@ class MsaidiziApp : Application(), Configuration.Provider {
         // Step 4b: Explicit Orchestrator initialization (deferred from constructor)
         Timber.d("Init step: Orchestrator initialization")
         try {
-            orchestrator.initialize()
+            orchestrator?.initialize()
         } catch (e: Throwable) {
             Timber.e(e, "Init step FAILED: Orchestrator initialization")
         }
@@ -231,13 +302,18 @@ class MsaidiziApp : Application(), Configuration.Provider {
     }
 
     override val workManagerConfiguration: Configuration
-        get() = Configuration.Builder()
-            .setWorkerFactory(workerFactory)
-            .setMinimumLoggingLevel(
-                if (BuildConfig.DEBUG) android.util.Log.DEBUG
-                else android.util.Log.ERROR
-            )
-            .build()
+        get() = try {
+            Configuration.Builder()
+                .setWorkerFactory(workerFactory)
+                .setMinimumLoggingLevel(
+                    if (BuildConfig.DEBUG) android.util.Log.DEBUG
+                    else android.util.Log.ERROR
+                )
+                .build()
+        } catch (e: Throwable) {
+            Timber.e(e, "WorkManager config failed — using default")
+            Configuration.Builder().build()
+        }
 
     /**
      * Handle memory pressure by releasing non-critical resources.
@@ -245,7 +321,7 @@ class MsaidiziApp : Application(), Configuration.Provider {
      */
     private fun handleMemoryPressure(level: Int) {
         // Delegate to MemoryManager for systematic cleanup
-        memoryManager.onTrimMemory(level)
+        memoryManager?.onTrimMemory(level)
 
         when (level) {
             android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN -> {
@@ -273,7 +349,7 @@ class MsaidiziApp : Application(), Configuration.Provider {
      */
     private fun scheduleModelDownloads() {
         // Check if Tier 1 models need downloading
-        if (!modelRegistry.isTierReady(ModelTier.FIRST_LAUNCH)) {
+        if (modelRegistry != null && !modelRegistry!!.isTierReady(ModelTier.FIRST_LAUNCH)) {
             Timber.i("MsaidiziApp: Scheduling Tier 1 download")
             WorkManager.getInstance(this).enqueueUniqueWork(
                 ModelDownloadWorker.WORK_NAME_TIER1,
@@ -283,7 +359,7 @@ class MsaidiziApp : Application(), Configuration.Provider {
         }
 
         // Schedule Tier 2 download (WiFi-only, will retry until WiFi available)
-        if (!modelRegistry.isTierReady(ModelTier.ON_DEMAND)) {
+        if (modelRegistry != null && !modelRegistry!!.isTierReady(ModelTier.ON_DEMAND)) {
             Timber.i("MsaidiziApp: Scheduling Tier 2 download (WiFi-only)")
             WorkManager.getInstance(this).enqueueUniqueWork(
                 ModelDownloadWorker.WORK_NAME_TIER2,
@@ -318,7 +394,7 @@ class MsaidiziApp : Application(), Configuration.Provider {
             val deviceId = android.provider.Settings.Secure.getString(
                 contentResolver, android.provider.Settings.Secure.ANDROID_ID
             ) ?: "unknown"
-            federatedLearningClient.initialize(deviceId)
+            federatedLearningClient?.initialize(deviceId)
         } catch (e: Throwable) {
             Timber.e(e, "Init step FAILED: Federated learning")
         }
@@ -335,7 +411,7 @@ class MsaidiziApp : Application(), Configuration.Provider {
         Timber.d("Init step: Bundled model initialization")
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                bundledModelManager.initialize()
+                bundledModelManager?.initialize()
                 Timber.i("Bundled models initialized")
             } catch (e: Throwable) {
                 Timber.e(e, "Init step FAILED: Bundled model initialization")
@@ -365,7 +441,7 @@ class MsaidiziApp : Application(), Configuration.Provider {
         Timber.d("Init step: Crash recovery")
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val recoveryTasks = orchestrator.recoverIncompleteTasks()
+                val recoveryTasks = orchestrator?.recoverIncompleteTasks() ?: emptyList()
                 if (recoveryTasks.isNotEmpty()) {
                     Timber.i("Crash recovery: found %d incomplete tasks", recoveryTasks.size)
                     for (rt in recoveryTasks) {
@@ -380,7 +456,7 @@ class MsaidiziApp : Application(), Configuration.Provider {
                             val text = input?.get("text") as? String
                             val language = input?.get("language") as? String ?: "sw"
                             if (text != null) {
-                                orchestrator.processInput(text, language)
+                                orchestrator?.processInput(text, language)
                                 Timber.i("Recovered task %s successfully", rt.checkpoint.taskId)
                             } else {
                                 Timber.w("Cannot recover task %s: input text is null", rt.checkpoint.taskId)
@@ -391,7 +467,7 @@ class MsaidiziApp : Application(), Configuration.Provider {
                     }
                 }
                 // Cleanup old recovery data
-                orchestrator.cleanupRecoveryData()
+                orchestrator?.cleanupRecoveryData()
             } catch (e: Throwable) {
                 Timber.e(e, "Init step FAILED: Crash recovery")
             }

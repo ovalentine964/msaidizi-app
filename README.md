@@ -33,7 +33,7 @@ Msaidizi is the on-device AI CFO for informal workers — the one team member th
 📱 Msaidizi App (Android)
 ├── Voice-first (14 African dialects)
 ├── Offline-first
-├── On-Device AI (Qwen 0.5B via llama.cpp NDK)
+├── On-Device AI (Qwen 3.5 0.8B via llama.cpp NDK)
 ├── Multi-Agent System (7 agents, 6 focused handlers)
 ├── Federated Learning
 ├── Smart Onboarding (voice conversation)
@@ -80,7 +80,7 @@ Msaidizi supports 32-bit ARM devices but with reduced on-device AI capabilities:
 | Layer | Technology | Why |
 |-------|-----------|-----|
 | **Mobile** | Kotlin 2.1.0, Jetpack Compose, Room 2.7.1, Hilt | Native Android, modern UI, offline storage |
-| **On-Device AI** | llama.cpp NDK, Qwen 0.5B, Whisper, Piper TTS | $0 inference, works offline, ARM-optimized |
+| **On-Device AI** | llama.cpp NDK, Qwen 3.5 0.8B, Whisper, Piper TTS | $0 inference, works offline, ARM-optimized |
 | **Backend** | Python 3.12, FastAPI, Gunicorn (4 workers) | Async-first, ML ecosystem, rapid development |
 | **Database** | PostgreSQL 16, Redis 7, ClickHouse | OLTP, caching, analytics |
 | **Infrastructure** | Docker, Oracle Cloud, Nginx | One-command deploy, $0 Free Tier |
