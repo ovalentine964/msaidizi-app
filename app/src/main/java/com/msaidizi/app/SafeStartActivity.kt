@@ -188,13 +188,25 @@ class SafeStartActivity : AppCompatActivity() {
             setPadding(dp(16), dp(12), dp(16), dp(12))
             setBackgroundColor(Color.parseColor("#FFF3E0"))
             setTextColor(Color.parseColor("#E65100"))
-            setTypeface(null, Typeface.MONOSPACE)
+            setTypeface(Typeface.MONOSPACE)
         }
         layout.addView(errorText)
 
         // ── Stack trace (collapsible) ──
         if (stackTrace.isNotBlank()) {
             var stackVisible = false
+            val stackText = TextView(this).apply {
+                text = stackTrace.take(4000) // Limit to prevent OOM on 2GB devices
+                textSize = 10f
+                setPadding(dp(8), dp(8), dp(8), dp(8))
+                setBackgroundColor(Color.parseColor("#F5F5F5"))
+                setTextColor(Color.DKGRAY)
+                setTypeface(Typeface.MONOSPACE)
+                visibility = android.view.View.GONE
+                isVerticalScrollBarEnabled = true
+            }
+            layout.addView(stackText)
+
             val stackToggle = TextView(this).apply {
                 text = "▼ Onyesha maelezo ya hitilafu"
                 textSize = 12f
@@ -207,18 +219,6 @@ class SafeStartActivity : AppCompatActivity() {
                 }
             }
             layout.addView(stackToggle)
-
-            val stackText = TextView(this).apply {
-                text = stackTrace.take(4000) // Limit to prevent OOM on 2GB devices
-                textSize = 10f
-                setPadding(dp(8), dp(8), dp(8), dp(8))
-                setBackgroundColor(Color.parseColor("#F5F5F5"))
-                setTextColor(Color.DKGRAY)
-                setTypeface(null, Typeface.MONOSPACE)
-                visibility = android.view.View.GONE
-                isVerticalScrollBarEnabled = true
-            }
-            layout.addView(stackText)
         }
 
         // ── Device info ──
