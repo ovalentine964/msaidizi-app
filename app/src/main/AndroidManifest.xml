@@ -87,14 +87,30 @@
         <!-- SMS receiver removed — triggers Play Protect block on sideloaded APKs.
              M-Pesa integration uses statement import instead of SMS capture. -->
 
-        <!-- WorkManager initializer -->
+        <!-- WorkManager + other auto-initializers -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"
             android:exported="false"
             tools:node="merge">
+            <!-- Remove WorkManager auto-init (we initialize manually in MsaidiziApp) -->
             <meta-data
                 android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+            <!-- CRASH FIX: Remove EmojiCompat auto-init (not needed at startup) -->
+            <meta-data
+                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+            <!-- CRASH FIX: Remove ProcessLifecycleInitializer auto-init -->
+            <meta-data
+                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+            <!-- CRASH FIX: Remove ProfileInstallerInitializer auto-init -->
+            <meta-data
+                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
                 android:value="androidx.startup"
                 tools:node="remove" />
         </provider>
@@ -125,6 +141,29 @@
 
         <!-- SMS receiver fully removed — even disabled receivers trigger Play Protect.
              M-Pesa integration uses statement import instead of SMS capture. -->
+
+        <!-- CRASH FIX: Disable Sentry auto-initialization ContentProviders.
+             Sentry's SentryInitProvider and SentryPerformanceProvider run BEFORE
+             any Activity. If they crash (empty DSN, class loading issue), the
+             entire app dies before our safety wrappers can catch it.
+             We initialize Sentry manually in MsaidiziApp.initializeApp(). -->
+        <provider
+            android:name="io.sentry.android.core.SentryInitProvider"
+            android:authorities="${applicationId}.SentryInitProvider"
+            tools:node="remove" />
+        <provider
+            android:name="io.sentry.android.core.SentryPerformanceProvider"
+            android:authorities="${applicationId}.SentryPerformanceProvider"
+            tools:node="remove" />
+
+        <!-- CRASH FIX: Disable ML Kit auto-initialization.
+             MlKitInitProvider runs before any Activity. If ML Kit models are
+             missing or corrupted, it crashes the app.
+             We initialize ML Kit manually when needed (receipt scanning). -->
+        <provider
+            android:name="com.google.mlkit.common.internal.MlKitInitProvider"
+            android:authorities="${applicationId}.mlkitinitprovider"
+            tools:node="remove" />
 
     </application>
 </manifest>
