@@ -286,8 +286,6 @@
 
 # ONNX Runtime JNI
 -keep class ai.onnxruntime.** { *; }
--keep class ai.onnxruntime OrtEnvironment { *; }
--keep class ai.onnxruntime OrtSession { *; }
 
 # SQLCipher JNI
 -keep class net.sqlcipher.** { *; }
