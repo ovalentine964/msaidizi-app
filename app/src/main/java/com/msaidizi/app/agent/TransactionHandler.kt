@@ -187,7 +187,24 @@ class TransactionHandler(
      * **ECO 101 §1.4:** Expenses are fixed or variable costs that reduce profit.
      */
     suspend fun handleExpense(intentResult: IntentResult, language: String): AgentResponse {
-        val category = intentResult.extractedData["category"] ?: "other"
+        val rawCategory = intentResult.extractedData["category"] ?: "other"
+
+        // F3: Auto-detect "mixed" category for business/personal edge cases
+        // Keywords that indicate personal use even in a business context
+        val personalKeywords = setOf(
+            "personal", "family", "home", "school", "medical",
+            "health", "funeral", "wedding", "church", "posho",
+            "bima", "kodi", "nyumba", "shule", "hospitali"
+        )
+        val businessKeywords = setOf(
+            "stock", "supplier", "transport", "delivery", "rent",
+            "mali", "gharama", "usafiri", "pikipiki", "bodaboda"
+        )
+        val categoryLower = rawCategory.lowercase()
+        val isPersonal = personalKeywords.any { categoryLower.contains(it) }
+        val isBusiness = businessKeywords.any { categoryLower.contains(it) }
+        val category = if (isPersonal && isBusiness) "mixed" else rawCategory
+
         val amount = intentResult.extractedData["amount"]?.toDoubleOrNull() ?: return AgentResponse(
             text = if (language == "sw") "Ni pesa ngapi?" else "How much?",
             type = ResponseType.CLARIFICATION

@@ -116,14 +116,20 @@ object SyncConflictResolver {
         local: T,
         remote: T
     ): Resolution<T> {
-        // For merge strategy, we keep the newer entity but log the conflict
-        // In a full CRDT implementation, fields would be merged individually
-        val winner = if (local.lastModifiedAt >= remote.lastModifiedAt) local else remote
+        // Timestamp-based merge: keep the newer entity, but fill in blanks
+        // from the older one (non-empty strings, non-zero values).
+        // This prevents data loss when two devices update different fields.
+        @Suppress("UNCHECKED_CAST")
+        val merged: T = if (local.lastModifiedAt >= remote.lastModifiedAt) {
+            (local.mergeFrom(remote) as? T) ?: local
+        } else {
+            (remote.mergeFrom(local) as? T) ?: remote
+        }
         return Resolution(
-            winner = winner,
+            winner = merged,
             conflict = ConflictRecord.from(local, remote),
             action = ResolutionAction.MERGED,
-            reason = "Merge strategy: kept newer entity, conflict logged for review"
+            reason = "Timestamp-based merge: kept newer entity, filled blanks from older"
         )
     }
 
@@ -160,6 +166,14 @@ interface SyncableEntity {
 
     /** Globally unique entity ID (stable across devices). */
     val entityId: String
+
+    /**
+     * Merge fields from [other] into this entity.
+     * Default implementation returns `this` (caller should override).
+     * Implementations should keep non-empty/non-zero fields from the older
+     * entity when the newer entity has blanks — true timestamp-based merge.
+     */
+    fun mergeFrom(other: SyncableEntity): SyncableEntity = this
 }
 
 

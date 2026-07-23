@@ -74,6 +74,23 @@ data class SyncableTransaction(
             lastModifiedAt = System.currentTimeMillis()
         )
     }
+
+    /**
+     * Timestamp-based merge: keep this (newer) entity but fill blank fields
+     * from [other]. Prevents data loss when two devices update different fields.
+     */
+    override fun mergeFrom(other: SyncableEntity): SyncableEntity {
+        if (other !is SyncableTransaction) return this
+        return copy(
+            amount = if (this.amount != 0.0) this.amount else other.amount,
+            item = this.item.ifEmpty { other.item },
+            category = this.category.ifEmpty { other.category },
+            notes = this.notes.ifEmpty { other.notes },
+            paymentMethod = this.paymentMethod.ifEmpty { other.paymentMethod },
+            syncVersion = maxOf(this.syncVersion, other.syncVersion) + 1,
+            lastModifiedAt = maxOf(this.lastModifiedAt, other.lastModifiedAt)
+        )
+    }
 }
 
 
@@ -127,6 +144,18 @@ data class SyncableGoal(
             lastModifiedAt = System.currentTimeMillis()
         )
     }
+
+    override fun mergeFrom(other: SyncableEntity): SyncableEntity {
+        if (other !is SyncableGoal) return this
+        return copy(
+            goalName = this.goalName.ifEmpty { other.goalName },
+            targetAmount = if (this.targetAmount != 0.0) this.targetAmount else other.targetAmount,
+            currentAmount = maxOf(this.currentAmount, other.currentAmount),
+            status = if (this.status == "active" && other.status != "active") other.status else this.status,
+            syncVersion = maxOf(this.syncVersion, other.syncVersion) + 1,
+            lastModifiedAt = maxOf(this.lastModifiedAt, other.lastModifiedAt)
+        )
+    }
 }
 
 
@@ -177,6 +206,19 @@ data class SyncableInventory(
             syncVersion = this.syncVersion + 1,
             deviceId = deviceId,
             lastModifiedAt = System.currentTimeMillis()
+        )
+    }
+
+    override fun mergeFrom(other: SyncableEntity): SyncableEntity {
+        if (other !is SyncableInventory) return this
+        return copy(
+            itemName = this.itemName.ifEmpty { other.itemName },
+            quantity = maxOf(this.quantity, other.quantity),
+            unitCost = if (this.unitCost != 0.0) this.unitCost else other.unitCost,
+            sellingPrice = if (this.sellingPrice != 0.0) this.sellingPrice else other.sellingPrice,
+            reorderLevel = if (this.reorderLevel != 0) this.reorderLevel else other.reorderLevel,
+            syncVersion = maxOf(this.syncVersion, other.syncVersion) + 1,
+            lastModifiedAt = maxOf(this.lastModifiedAt, other.lastModifiedAt)
         )
     }
 }

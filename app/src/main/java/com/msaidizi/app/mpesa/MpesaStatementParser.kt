@@ -412,6 +412,14 @@ class MpesaSmsParser {
             RegexOption.IGNORE_CASE
         )
 
+        // STK Push / Buy Goods pattern:
+        // "Confirmed. Ksh350.00 paid to SUPERMARKET. on 24/7/26 at 10:30 AM..."
+        // Note: STK Push SMS may omit the receipt code prefix.
+        private val STK_PUSH_PATTERN = Regex(
+            """(?:\w+\s+)?Confirmed\.\s+Ksh([\d,]+\.?\d*)\s+paid\s+to\s+(.+?)\.\s+on\s+(.+?)\.""",
+            RegexOption.IGNORE_CASE
+        )
+
         // Balance extraction
         private val BALANCE_PATTERN = Regex(
             """balance\s+is\s+Ksh([\d,]+\.?\d*)""",
@@ -478,6 +486,20 @@ class MpesaSmsParser {
                 isCredit = false,
                 transactionType = TransactionType.WITHDRAWAL,
                 timestamp = null,
+                balance = extractBalance(smsText)
+            )
+        }
+
+        // Try STK Push / Buy Goods pattern (fallback — receipt may not be at start)
+        STK_PUSH_PATTERN.find(smsText)?.let { match ->
+            return MpesaSmsTransaction(
+                receipt = "STK-${System.currentTimeMillis()}",
+                amount = parseAmount(match.groupValues[1]),
+                counterparty = match.groupValues[2].trim(),
+                phone = null,
+                isCredit = false,
+                transactionType = TransactionType.EXPENSE,
+                timestamp = parseSmsDate(match.groupValues[3]),
                 balance = extractBalance(smsText)
             )
         }

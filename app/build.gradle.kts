@@ -64,7 +64,7 @@ android {
 
         // Build config fields for model paths
         buildConfigField("String", "MODEL_DIR", "\"models\"")
-        buildConfigField("String", "WHISPER_MODEL", "\"ggml-tiny.en-q5_1.bin\"")
+        buildConfigField("String", "WHISPER_MODEL", "\"whisper-encoder-int8.onnx\"")
         // Decision Council (2026-07-15): Qwen 3.5 0.8B as primary LLM
         buildConfigField("String", "LLM_MODEL", "\"Qwen3.5-0.8B-Q4_K_M.gguf\"")
         // Decision Council (2026-07-15): Gemma 4 E2B as alternative/benchmark LLM
