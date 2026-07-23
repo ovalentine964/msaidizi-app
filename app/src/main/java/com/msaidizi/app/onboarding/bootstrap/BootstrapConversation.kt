@@ -12,57 +12,34 @@ import timber.log.Timber
  *
  * This is NOT data collection. This is UNDERSTANDING.
  *
- * Like a new friend learning about your life, Msaidizi listens deeply
- * to every response and builds a mental model of who this worker is,
- * what she needs, and how to help her specifically.
+ * ## The OpenClaw Philosophy
  *
- * Each response is analyzed on multiple dimensions:
- * - WHAT she said (the data)
- * - HOW she said it (communication style, sophistication)
- * - WHAT IT REVEALS (business maturity, tech comfort, emotional state)
- * - HOW TO HELP HER (feature priorities, report types, advice style)
+ * Like OpenClaw's bootstrap, the agent introduces ITSELF first.
+ * It's not a form asking for data — it's a conversation between
+ * two people getting to know each other.
  *
- * By the end of 9 turns, Msaidizi doesn't just know Mary sells mboga.
- * She knows Mary is a confident mama mboga who uses M-Pesa, worries about
- * stockouts, wants to save for school fees, and responds best to
- * casual Swahili with a warm, encouraging tone.
+ * ## Conversation Flow (10 Turns, ~3-5 min)
  *
- * ## The OpenClaw Naming Pattern
+ * 1. **Agent introduces itself** — "Mimi ni Msaidizi — CFO wako wa biashara..."
+ *    → Learns worker name, analyzes communication style
  *
- * Step 2: "Unataka kuniita nani?" — worker names their AI.
- * This creates ownership before the real conversation begins.
+ * 2. **Agent responds with personality** — Uses name warmly, offers naming
+ *    → "Mama Amina! Sawa. Sasa unaweza kuniita jina lolote..."
+ *    → Learns what relationship the worker wants
  *
- * ## Conversation Flow (9 Turns, ~3-5 min)
+ * 3. **Ask about business — ADAPTIVELY** — Not generic, responds to specifics
+ *    → "Mboga gani haswa? Nyanya? Vitunguu? Kwa sababu soko la nyanya..."
+ *    → Learns business type, classifies with Bayesian inference
  *
- * 1. Greeting → learns name, analyzes communication style
- * 2. Agent Naming → THE OPENCLAW MOMENT, analyzes creativity/culture
- * 3. Business Type → classifies business, analyzes sophistication
- * 4. Products → learns inventory, analyzes business specificity
- * 5. Location → learns market context, analyzes urban/rural
- * 6. Working Hours → learns schedule, analyzes work ethic
- * 7. Customers + Payment → learns market access, analyzes tech comfort
- * 8. Challenges → learns pain points, analyzes emotional state
- * 9. Summary + First Insight → delivers personalized understanding
+ * 4-8. **Adaptive conversation** — Each response shows understanding in real-time
+ *    → Follows up on specifics mentioned
+ *    → Demonstrates knowledge of their market
  *
- * ## Academic Foundations
+ * 9. **Summary with SPECIFIC insights** — Not generic, shows real understanding
+ *    → "Ukizungumza nyanya 3 kwa siku, na bei ya soko ni KSh 50..."
+ *    → Uses WorkerUnderstanding.toHumanSummary() for personalized output
  *
- * ### PSY 101 — Behavioral Psychology
- * Naming creates ownership (Kahneman's endowment effect).
- * Challenge description reveals emotional state and priorities.
- *
- * ### STA 142 — Bayesian Inference
- * Each answer updates posterior probability of business type
- * AND worker archetype (new, growing, established, struggling).
- *
- * ### ECO 201 — Producer Theory
- * Business description → production function
- * Products → output type
- * Customers → market access
- * Challenges → cost structure constraints
- *
- * ### BCB 108 — Communication
- * Speech patterns reveal education level, cultural context,
- * and preferred communication style.
+ * 10. **PIN setup** — Voice-based, simple
  *
  * @see WorkerUnderstanding for the derived intelligence model
  * @see BootstrapViewModel for state management
@@ -87,7 +64,7 @@ class BootstrapConversation {
     // Accumulated raw data from conversation
     private val accumulated = AccumulatedData()
 
-    /** Public accessor for PIN (set during voice onboarding) — needed by ViewModel to save to app_lock prefs */
+    /** Public accessor for PIN (set during voice onboarding) */
     val pin: String get() = accumulated.pin
 
     // Derived understanding — this is what makes it a CONVERSATION, not a form
@@ -97,12 +74,15 @@ class BootstrapConversation {
     private var language = "sw"
 
     /**
-     * Get the first prompt — the greeting.
-     * Msaidizi introduces herself and asks the worker's name.
+     * Get the first prompt — the agent introduces ITSELF first.
+     *
+     * Turn 1: Agent introduces itself, then asks the worker's name.
+     * This follows the OpenClaw pattern: the agent speaks first.
      */
     fun getGreetingPrompt(): String {
-        return "Karibu! Mimi ni Msaidizi wako — nitakusaidia kufuatilia biashara yako.\n\n" +
-            "Unaitwa nani?"
+        return "Mimi ni Msaidizi — CFO wako wa biashara. Niko hapa kukusaidia " +
+            "kufuatilia pesa yako, kuelewa biashara yako, na kukupa ushauri.\n\n" +
+            "Sasa, nieleze — jina lako ni nani?"
     }
 
     /**
@@ -111,6 +91,9 @@ class BootstrapConversation {
      * Every response is processed in TWO ways:
      * 1. DATA extraction — what fields to fill
      * 2. UNDERSTANDING analysis — what this reveals about the worker
+     *
+     * Every prompt is ADAPTIVE — it references what the worker already said,
+     * demonstrating understanding in real-time.
      */
     fun processResponse(currentStep: BootstrapStep, response: String): BootstrapStep {
         Timber.d(TAG, "Step %s → response: '%s'", currentStep::class.simpleName, response.take(60))
@@ -173,85 +156,84 @@ class BootstrapConversation {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // STEP HANDLERS — Each handler does TWO things:
-    //   1. Extract data (what she said)
-    //   2. Analyze understanding (what it reveals)
+    // STEP HANDLERS — Adaptive, personality-driven conversation
     // ═══════════════════════════════════════════════════════════════
 
     /**
-     * Step 1: Worker tells us their name.
+     * Turn 1: Worker tells us their name.
      *
-     * DATA: extracts worker name
-     * UNDERSTANDING: analyzes communication style from how they introduce themselves
+     * Agent responds with WARMTH and personality — not a flat "OK".
+     * Shows the worker this is a real conversation, not a form.
+     *
+     * ANALYZE: Communication style from self-introduction
      *   - "Naitwa Mary" → standard Swahili, moderate comfort
      *   - "Mary" → confident, direct, possibly tech-savvy
      *   - "Mimi ni Mary Wanjiku" → formal, provides full name
-     *   - "Wacha nikuambie..." → casual, storytelling style
      */
     private fun handleGreeting(response: String): BootstrapStep {
         accumulated.workerName = extractName(response)
-
-        // ANALYZE: Communication style from self-introduction
         analyzeIntroductionStyle(response)
 
         val name = accumulated.workerName
+        understanding.businessContext = "Worker name: $name"
+
+        // Turn 2: Agent responds with personality, offers naming
         val prompt = if (language == "sw") {
-            "$name, nzuri sana!\n\n" +
-                "Sasa — unataka kuniita nani? Jina lolote unalopenda.\n" +
-                "Kwa mfano: Rafiki, Mshauri, Biashara Yangu, au jina lako mwenyewe."
+            "Mama $name! Sawa. Sasa unaweza kuniita jina lolote unalotaka — " +
+                "au kuniaita Msaidizi. Jina lako lina nguvu!\n\n" +
+                "Ungependa uniite nani?"
         } else {
-            "$name, great!\n\n" +
-                "Now — what do you want to call me? Any name you like.\n" +
-                "For example: Rafiki, Mshauri, Biashara Yangu, or your own name."
+            "Mama $name! Great. Now you can call me any name you want — " +
+                "or just call me Msaidizi. Your name has strength!\n\n" +
+                "What would you like to call me?"
         }
 
         return BootstrapStep.AskAgentNaming(prompt = prompt)
     }
 
     /**
-     * Step 2: Worker names their Msaidizi. THE OPENCLAW MOMENT.
+     * Turn 2: Worker names their Msaidizi. THE OPENCLAW MOMENT.
      *
-     * DATA: extracts agent name
-     * UNDERSTANDING: analyzes the CHOICE to understand the relationship the worker wants
+     * Agent responds with DELIGHT — not just "OK". Shows the name
+     * has emotional significance.
+     *
+     * ANALYZE: What the naming choice reveals about relationship expectations
      *   - "Rafiki" (friend) → wants warmth, personal connection
      *   - "Mshauri" (advisor) → wants professional guidance
-     *   - "Biashara Yangu" (my business) → ownership-focused, business-minded
-     *   - "Mwalimu" (teacher) → wants to learn, growth mindset
-     *   - Creative/funny name → playful personality, likely younger
-     *   - Skips naming → prefers simplicity, doesn't want complexity
+     *   - Creative/funny → playful personality
      */
     private fun handleAgentNaming(response: String): BootstrapStep {
         val agentName = extractAgentName(response)
         accumulated.msaidiziName = agentName
-
-        // ANALYZE: What the naming choice reveals about relationship expectations
+        understanding.agentName = agentName
         analyzeNamingChoice(response, agentName)
 
         Timber.d(TAG, "Agent named: '%s' by %s", agentName, accumulated.workerName)
 
-        val delight = if (language == "sw") "$agentName! Napenda jina hilo."
+        // Agent responds with genuine delight
+        val delight = if (language == "sw") "$agentName! Napenda jina hilo sana."
         else "$agentName! I love that name."
 
+        val name = accumulated.workerName
         val prompt = if (language == "sw") {
-            "$delight\n\nSasa $agentName anataka kukujua zaidi — unafanya biashara gani?"
+            "$delight $name, sasa $agentName anataka kukujua zaidi — unafanya biashara gani? " +
+                "Elezea kwa undani."
         } else {
-            "$delight\n\nNow $agentName wants to know more — what business do you do?"
+            "$delight $name, now $agentName wants to know more — what business do you do? " +
+                "Describe it in detail."
         }
 
         return BootstrapStep.AskBusinessType(prompt = prompt)
     }
 
     /**
-     * Step 3: Worker describes their business.
+     * Turn 3: Worker describes their business — ADAPTIVELY.
      *
-     * DATA: Bayesian classification, business description
-     * UNDERSTANDING: analyzes business sophistication and specificity
-     *   - "Nauza mboga" → simple, direct (beginner)
-     *   - "Mama mboga, nauza nyanya, sukuma, vitunguu sokoni" → specific, experienced
-     *   - "Biashara yangu ni dukani" → uses formal language (educated)
-     *   - "Hii kazi yangu..." → sees it as work, not business (mindset signal)
-     *   - Mentions "mpango" or "kukua" → growth mindset
-     *   - Mentions employees/team → established business
+     * Instead of a generic "Great!", the agent responds to SPECIFIC details.
+     * If they say "mboga", ask follow-up: "Mboga gani haswa? Nyanya? Vitunguu?"
+     * This shows the agent is LISTENING, not just collecting data.
+     *
+     * ANALYZE: Business sophistication, maturity, self-identity
      */
     private fun handleBusinessType(response: String): BootstrapStep {
         val classification = classifyFromResponse(response)
@@ -259,84 +241,220 @@ class BootstrapConversation {
         accumulated.businessType = classification.type
         accumulated.classificationConfidence = classification.confidence
 
-        // ANALYZE: Business sophistication and worker archetype
+        // ANALYZE: Business sophistication
         analyzeBusinessDescription(response, classification.type)
 
+        // Build ADAPTIVE response based on what they said
+        val lower = response.lowercase()
+        val adaptivePrefix = buildAdaptiveBusinessResponse(lower, classification.type)
+
         val prompt = if (language == "sw") {
-            "${getEncouragement()}! Niuzia nini haswa? Vitu gani unauza zaidi?"
+            "$adaptivePrefix\n\n" +
+                "Niuzia nini haswa? Vitu gani unauza zaidi?"
         } else {
-            "${getEncouragement()}! What exactly do you sell? What are your main products?"
+            "$adaptivePrefix\n\n" +
+                "What exactly do you sell? What are your main products?"
         }
 
-        return BootstrapStep.AskProducts(prompt = prompt, hint = getFollowUpHint(classification.type))
+        return BootstrapStep.AskProducts(
+            prompt = prompt,
+            hint = getFollowUpHint(classification.type)
+        )
     }
 
     /**
-     * Step 4: Worker lists their products/services.
-     *
-     * DATA: product list
-     * UNDERSTANDING: analyzes business specificity and inventory management needs
-     *   - Single product → simple operation, focus on volume
-     *   - Many products → complex inventory, needs stock tracking
-     *   - Specific names ("Nyanya ya Kibiti") → experienced, knows suppliers
-     *   - Generic ("mboga tu") → may need help identifying product mix
-     *   - Perishable items → needs waste tracking, timing insights
-     *   - High-value items → needs margin tracking
+     * Build an adaptive response to business description.
+     * References SPECIFIC things the worker mentioned.
+     */
+    private fun buildAdaptiveBusinessResponse(lower: String, type: WorkerType?): String {
+        val name = accumulated.workerName
+
+        // Extract specific mentions for follow-up
+        val mentionedItems = extractSpecificItems(lower)
+        if (mentionedItems.isNotEmpty()) {
+            understanding.mentionedProducts = mentionedItems
+        }
+
+        return when {
+            // Trader mentions specific products
+            type == WorkerType.TRADER && mentionedItems.isNotEmpty() -> {
+                val items = mentionedItems.take(2).joinToString(" na ")
+                if (language == "sw") {
+                    "$name, $items — nzuri sana! Bidhaa hizi zina soko kubwa."
+                } else {
+                    "$name, $items — great! These products have a big market."
+                }
+            }
+            // Trader mentions mboga — follow up specifically
+            type == WorkerType.TRADER && lower.contains("mboga") -> {
+                if (language == "sw") {
+                    "Mboga! Soko la mboga linaabadilika sana. $name, " +
+                        "mboga gani haswa? Nyanya? Sukuma? Vitunguu?"
+                } else {
+                    "Vegetables! The vegetable market changes a lot. $name, " +
+                        "which vegetables exactly? Tomatoes? Kale? Onions?"
+                }
+            }
+            // Transport
+            type == WorkerType.TRANSPORT -> {
+                if (language == "sw") {
+                    "$name, biashara ya usafiri — ni kazi ngumu lakini ina faida nzuri!"
+                } else {
+                    "$name, transport business — hard work but good returns!"
+                }
+            }
+            // Farmer
+            type == WorkerType.FARMER -> {
+                if (language == "sw") {
+                    "$name, kilimo — msingi wa uchumi! Mazao yako yanategemea mvua?"
+                } else {
+                    "$name, farming — the backbone of the economy! Do your crops depend on rain?"
+                }
+            }
+            // Service
+            type == WorkerType.SERVICE -> {
+                if (language == "sw") {
+                    "$name, huduma — biashara inayotegemea ujuzi wako!"
+                } else {
+                    "$name, services — a business that depends on your skills!"
+                }
+            }
+            // Manufacturing
+            type == WorkerType.MANUFACTURING -> {
+                if (language == "sw") {
+                    "$name, utengenezaji — unatengeneza mwenyewe? Hiyo ni ujuzi mkubwa!"
+                } else {
+                    "$name, manufacturing — you make things yourself? That's real skill!"
+                }
+            }
+            // Digital
+            type == WorkerType.DIGITAL -> {
+                if (language == "sw") {
+                    "$name, biashara ya kidijitali — wakati ujao uko hapa!"
+                } else {
+                    "$name, digital business — the future is here!"
+                }
+            }
+            // Generic
+            else -> {
+                if (language == "sw") {
+                    "${getEncouragement()}! Biashara yako inaonekana nzuri."
+                } else {
+                    "${getEncouragement()}! Your business looks good."
+                }
+            }
+        }
+    }
+
+    /**
+     * Extract specific items/products mentioned in the response.
+     */
+    private fun extractSpecificItems(lower: String): List<String> {
+        val productKeywords = listOf(
+            "nyanya", "sukuma", "vitunguu", "mboga", "matunda", "ndizi", "embe",
+            "machungwa", "maembe", "nanasi", "mihogo", "viazi", "maharagwe",
+            "mahindi", "ngano", "mchele", "unga", "mafuta", "chumvi",
+            "nguo", "viatu", "simu", "betri", "mavazi", "kofia",
+            "mandazi", "chapati", "maandazi", "chipsi", "nyama", "samaki",
+            "maziwa", "mayai", "mkate", "kahawa", "chai", "juice"
+        )
+        return productKeywords.filter { lower.contains(it) }
+            .map { it.replaceFirstChar { c -> c.uppercase() } }
+    }
+
+    /**
+     * Turn 4: Products — adaptive to what they listed.
      */
     private fun handleProducts(response: String): BootstrapStep {
         accumulated.products = extractProducts(response)
+        understanding.mentionedProducts = accumulated.products
 
-        // ANALYZE: What products reveal about business complexity
+        // ANALYZE: Product mix
         analyzeProductMix(response, accumulated.products)
 
-        val prompt = if (language == "sw") {
-            "Sawa! Unauzia wapi? Sokoni, barabarani, nyumbani, au unatembea?"
+        // Adaptive: reference their products
+        val productRef = if (accumulated.products.size >= 3) {
+            accumulated.products.take(2).joinToString(" na ") + " na mengine"
+        } else if (accumulated.products.isNotEmpty()) {
+            accumulated.products.joinToString(" na ")
         } else {
-            "Okay! Where do you sell? At the market, roadside, home, or do you move around?"
+            ""
+        }
+
+        val prompt = if (language == "sw") {
+            if (productRef.isNotEmpty()) {
+                "$productRef — bidhaa nzuri! Unauzia wapi? Sokoni, barabarani, nyumbani, au unatembea?"
+            } else {
+                "Sawa! Unauzia wapi? Sokoni, barabarani, nyumbani, au unatembea?"
+            }
+        } else {
+            if (productRef.isNotEmpty()) {
+                "$productRef — good products! Where do you sell? At the market, roadside, home, or mobile?"
+            } else {
+                "Okay! Where do you sell? At the market, roadside, home, or mobile?"
+            }
         }
 
         return BootstrapStep.AskLocation(prompt = prompt)
     }
 
     /**
-     * Step 5: Worker tells us where they work.
-     *
-     * DATA: location type, market name
-     * UNDERSTANDING: analyzes market context and business environment
-     *   - Named market → established location, regular customer base
-     *   - Roadside → higher visibility, but weather-dependent
-     *   - Home → lower overhead, but limited walk-in traffic
-     *   - Mobile → highest effort, but flexible pricing
-     *   - Urban area → more competition, more customers, M-Pesa common
-     *   - Rural area → less competition, less foot traffic, cash-heavy
+     * Turn 5: Location — adaptive to market vs roadside vs home.
      */
     private fun handleLocation(response: String): BootstrapStep {
         accumulated.location = extractLocation(response)
         accumulated.marketName = extractMarketName(response)
+        understanding.mentionedLocation = accumulated.location
 
         // ANALYZE: Market context
         analyzeLocationContext(response, accumulated.location)
 
+        // Adaptive: respond differently for market vs roadside vs home
+        val locationResponse = buildAdaptiveLocationResponse()
+
         val prompt = if (language == "sw") {
-            "Unafanya kazi masaa gani? Unaanza lini, unaisha lini?"
+            "$locationResponse\n\nUnafanya kazi masaa gani? Unaanza lini, unaisha lini?"
         } else {
-            "What hours do you work? When do you start, when do you finish?"
+            "$locationResponse\n\nWhat hours do you work? When do you start, when do you finish?"
         }
 
         return BootstrapStep.AskWorkingHours(prompt = prompt)
     }
 
+    private fun buildAdaptiveLocationResponse(): String {
+        val loc = accumulated.location
+        val market = accumulated.marketName
+
+        return when {
+            loc == "market" && market.isNotBlank() -> {
+                if (language == "sw") "Soko la $market — mahali pazuri! Una wateja wengi huko?"
+                else "Market $market — great location! Do you have many customers there?"
+            }
+            loc == "market" -> {
+                if (language == "sw") "Sokoni — mahali pazuri pa biashara!"
+                else "At the market — great place for business!"
+            }
+            loc == "roadside" -> {
+                if (language == "sw") "Barabarani — unaona wateja wengi kupita!"
+                else "Roadside — you see many customers passing!"
+            }
+            loc == "home" -> {
+                if (language == "sw") "Nyumbani — gharama ndogo, wateja wanajua kukupata!"
+                else "At home — low costs, customers know where to find you!"
+            }
+            loc == "mobile" -> {
+                if (language == "sw") "Unatembea — kazi ngumu lakini una uhuru!"
+                else "You're mobile — hard work but you have freedom!"
+            }
+            else -> {
+                if (language == "sw") "Sawa!"
+                else "Okay!"
+            }
+        }
+    }
+
     /**
-     * Step 6: Worker tells us their working hours.
-     *
-     * DATA: working hours, schedule
-     * UNDERSTANDING: analyzes work patterns and time management
-     *   - Long hours (6am-8pm) → hard worker, may need efficiency tips
-     *   - Short hours → part-time, may have other income sources
-     *   - "Kila siku" → dedicated, full-time
-     *   - "Wakati mwingine" → inconsistent, may need schedule optimization
-     *   - Peak hours awareness → already thinks about timing (sophisticated)
-     *   - Early morning → likely fresh produce (perishable)
+     * Turn 6: Working hours — adaptive to work intensity.
      */
     private fun handleWorkingHours(response: String): BootstrapStep {
         accumulated.workingHours = parseWorkingHours(response)
@@ -344,58 +462,192 @@ class BootstrapConversation {
         // ANALYZE: Work patterns
         analyzeWorkPatterns(response, accumulated.workingHours)
 
+        // Adaptive: comment on their hours
+        val hoursComment = buildHoursComment()
+
         val prompt = if (language == "sw") {
-            "Sasa nieleze — wateja wako wanakujaje? Wanakutaje kupitia nini? Na wanalipaje — M-Pesa, pesa taslimu, au zote mbili?"
+            "$hoursComment\n\nSasa nieleze — wateja wako wanakujaje? " +
+                "Wanalipaje — M-Pesa, pesa taslimu, au zote mbili?"
         } else {
-            "How do your customers find you? And how do they pay — M-Pesa, cash, or both?"
+            "$hoursComment\n\nHow do your customers find you? " +
+                "How do they pay — M-Pesa, cash, or both?"
         }
 
         return BootstrapStep.AskCustomersAndPayment(prompt = prompt)
     }
 
+    private fun buildHoursComment(): String {
+        val hours = accumulated.workingHours
+        val total = if (hours.endHour > hours.startHour) hours.endHour - hours.startHour
+        else (24 - hours.startHour) + hours.endHour
+
+        return when {
+            total >= 14 -> if (language == "sw") "Masaa mengi! $total saa — ni kazi ngumu."
+            else "Long hours! $total hours — that's hard work."
+            total >= 10 -> if (language == "sw") "Masaa mazuri — $total saa za kazi."
+            else "Good hours — $total hours of work."
+            else -> if (language == "sw") "Sawa."
+            else "Okay."
+        }
+    }
+
     /**
-     * Step 7: Worker tells us about customers and payment.
-     *
-     * DATA: customer method, payment method
-     * UNDERSTANDING: analyzes tech comfort and market access
-     *   - M-Pesa only → tech-comfortable, digital trail exists
-     *   - Cash only → traditional, may need M-Pesa guidance
-     *   - Both → adaptable, most common
-     *   - Walk-in customers → location-dependent, predictable
-     *   - Phone/WhatsApp orders → tech-savvy, delivery capability
-     *   - Regulars mentioned → customer relationship management potential
-     *   - "Wanakuja mwenyewe" → passive customer acquisition
+     * Turn 7: Customers and payment — adaptive to tech comfort.
      */
     private fun handleCustomersAndPayment(response: String): BootstrapStep {
         accumulated.customerFindMethod = extractCustomerMethod(response)
         accumulated.paymentMethod = parsePaymentMethod(response)
 
-        // ANALYZE: Tech comfort and market sophistication
+        // ANALYZE: Tech comfort
         analyzeCustomerAndPaymentPatterns(response)
 
+        // Adaptive: respond based on payment method
+        val paymentComment = buildPaymentComment()
+
         val prompt = if (language == "sw") {
-            "Sasa — changamoto kubwa zaidi ya biashara yako ni ipi? Ni kitu gani kinakusumbua zaidi?"
+            "$paymentComment\n\nSasa — changamoto kubwa zaidi ya biashara yako ni ipi? " +
+                "Ni kitu gani kinakusumbua zaidi?"
         } else {
-            "Now — what's the biggest challenge in your business? What bothers you most?"
+            "$paymentComment\n\nNow — what's the biggest challenge in your business? " +
+                "What bothers you most?"
         }
 
         return BootstrapStep.AskChallenges(prompt = prompt)
     }
 
+    private fun buildPaymentComment(): String {
+        return when (accumulated.paymentMethod) {
+            PaymentType.MOBILE -> if (language == "sw") "M-Pesa — nzuri! Rahisi na salama."
+            else "M-Pesa — great! Easy and safe."
+            PaymentType.BOTH -> if (language == "sw") "M-Pesa na pesa taslimu — una uhuru wa kuchagua!"
+            else "M-Pesa and cash — you have the freedom to choose!"
+            PaymentType.BANK -> if (language == "sw") "Benki — una mfumo mzuri wa malipo!"
+            else "Bank — you have a good payment system!"
+            PaymentType.CASH -> if (language == "sw") "Pesa taslimu — rahisi na ya moja kwa moja."
+            else "Cash — simple and direct."
+        }
+    }
+
     /**
-     * Step 8: Worker tells us their biggest challenge.
-     *
-     * DATA: challenge description
-     * UNDERSTANDING: analyzes pain points, emotional state, and help priorities
-     *   - "Stock haifiki" → supply chain problem → restock alerts
-     *   - "Bei ni ngumu" → pricing challenge → market price insights
-     *   - "Wateja wachache" → customer acquisition → marketing tips
-     *   - "Pesa inaisha" → cash flow crisis → savings guidance, urgent
-     *   - "Sijui faida" → doesn't know profit → daily P&L report, critical
-     *   - "Maviboko" → external shock → resilience planning
-     *   - Emotional language → stress, needs encouragement
-     *   - Practical language → problem-solver, wants actionable advice
+     * Turn 8: Challenges — the most revealing response.
+     * Adaptive to their specific pain points.
      */
+    private fun handleChallenges(response: String): BootstrapStep {
+        accumulated.biggestChallenge = response
+
+        // ANALYZE: Pain points, emotional state, priorities
+        analyzeChallengeDescription(response)
+
+        // Build adaptive response to their challenge
+        val challengeResponse = buildAdaptiveChallengeResponse()
+
+        // Derive the final understanding
+        deriveFinalUnderstanding()
+
+        // Generate summary using WorkerUnderstanding
+        val summary = understanding.toHumanSummary(
+            accumulated.workerName, accumulated.msaidiziName, language
+        )
+
+        // Generate SPECIFIC insight — not generic
+        val insight = understanding.generateSpecificInsight(
+            accumulated.workerName, accumulated.msaidiziName, language
+        )
+
+        val agentName = accumulated.msaidiziName
+        val workerName = accumulated.workerName
+
+        val prompt = if (language == "sw") {
+            "$challengeResponse\n\n" +
+                "Nimekuelewa, $workerName!\n\n" +
+                "$summary\n\n" +
+                "───\n\n" +
+                "$insight\n\n" +
+                "Tayari kuanza! Sema chochote kuhusu biashara yako — $agentName atakusikiliza."
+        } else {
+            "$challengeResponse\n\n" +
+                "I understand you, $workerName!\n\n" +
+                "$summary\n\n" +
+                "───\n\n" +
+                "$insight\n\n" +
+                "Ready to start! Say anything about your business — $agentName will listen."
+        }
+
+        return BootstrapStep.Summary(prompt = prompt)
+    }
+
+    /**
+     * Build adaptive response to their challenge.
+     * Shows the agent UNDERSTANDS their specific problem.
+     */
+    private fun buildAdaptiveChallengeResponse(): String {
+        val lower = accumulated.biggestChallenge.lowercase()
+        val name = accumulated.workerName
+        val agentName = accumulated.msaidiziName
+
+        // Stock problems
+        if (lower.contains("stock") || lower.contains("isha") || lower.contains("hakuna")) {
+            return if (language == "sw") {
+                "$name, nimesikia — stock inaisha. Hii ni changamoto kubwa! " +
+                    "$agentName atakusaidia kufuatilia stock yako na kukuarifu kabla haijaisha."
+            } else {
+                "$name, I hear you — stock runs out. This is a big challenge! " +
+                    "$agentName will track your stock and alert you before it runs out."
+            }
+        }
+
+        // Pricing/margin problems
+        if (lower.contains("bei") || lower.contains("faida") || lower.contains("hasara")) {
+            return if (language == "sw") {
+                "$name, bei na faida — ndio msingi wa biashara! " +
+                    "$agentName atakokokotea faida yako ya kila siku ili ujue unapata kiasi gani."
+            } else {
+                "$name, prices and profit — that's the foundation of business! " +
+                    "$agentName will calculate your daily profit so you know exactly what you earn."
+            }
+        }
+
+        // Customer problems
+        if (lower.contains("wateja") || lower.contains("hawana") || lower.contains("wachache")) {
+            return if (language == "sw") {
+                "$name, wateja wachache — $agentName atakusaidia kuelewa ni wakati gani " +
+                    "wateja wengi wanakuja na bidhaa gani wanapenda zaidi."
+            } else {
+                "$name, few customers — $agentName will help you understand when " +
+                    "most customers come and which products they prefer."
+            }
+        }
+
+        // Cash flow
+        if (lower.contains("pesa") || lower.contains("inaisha") || lower.contains("mkopo") || lower.contains("deni")) {
+            return if (language == "sw") {
+                "$name, pesa inaisha — $agentName atakusaidia kufuatilia kila shilingi " +
+                    "inayoingia na kutoka. Utajua wapi pesa yako inaenda."
+            } else {
+                "$name, money runs out — $agentName will track every shilling " +
+                    "in and out. You'll know where your money goes."
+            }
+        }
+
+        // Knowledge gap
+        if (lower.contains("sijui") || lower.contains("ngumu") || lower.contains("kuelewa")) {
+            return if (language == "sw") {
+                "$name, kujua ni ngumu — lakini $agentName iko hapa kukusaidia. " +
+                    "Tutafanya pamoja, hatua kwa hatua."
+            } else {
+                "$name, not knowing is hard — but $agentName is here to help. " +
+                    "We'll do it together, step by step."
+            }
+        }
+
+        // Generic response
+        return if (language == "sw") {
+            "$name, nimesikia changamoto yako. $agentName atakusaidia."
+        } else {
+            "$name, I hear your challenge. $agentName will help."
+        }
+    }
+
     /**
      * Summary is display-only. When user taps continue, ask for PIN.
      */
@@ -413,14 +665,11 @@ class BootstrapConversation {
 
     /**
      * Process PIN input from voice.
-     * Expects 4 digits spoken in Swahili or English.
      */
     private fun handlePin(response: String): BootstrapStep {
-        // Extract digits from voice input
         val digits = extractDigits(response)
 
         if (digits.length < 4) {
-            // Not enough digits — ask again
             val prompt = if (language == "sw") {
                 "PIN inahitaji tarakimu 4. Jaribu tena. Sema tarakimu nne."
             } else {
@@ -429,11 +678,9 @@ class BootstrapConversation {
             return BootstrapStep.AskPin(prompt = prompt)
         }
 
-        // PIN is valid — save it and complete onboarding
         val pin = digits.take(4)
         accumulated.pin = pin
 
-        // Generate completion message
         val agentName = accumulated.msaidiziName
         val workerName = accumulated.workerName
 
@@ -455,110 +702,26 @@ class BootstrapConversation {
         )
     }
 
-    /**
-     * Extract digits from spoken text.
-     * Handles Swahili numbers (moja, mbili, tatu...) and English (one, two, three...)
-     */
-    private fun extractDigits(text: String): String {
-        val swahiliDigits = mapOf(
-            "moja" to "1", "mbili" to "2", "tatu" to "3", "nne" to "4",
-            "tano" to "5", "sita" to "6", "saba" to "7", "nane" to "8", "tisa" to "9", "sifuri" to "0"
-        )
-        val englishDigits = mapOf(
-            "one" to "1", "two" to "2", "three" to "3", "four" to "4",
-            "five" to "5", "six" to "6", "seven" to "7", "eight" to "8", "nine" to "9", "zero" to "0"
-        )
-        val allDigits = swahiliDigits + englishDigits
-
-        var result = ""
-        val words = text.lowercase().split(Regex("\\s+"))
-        for (word in words) {
-            // Direct digit match
-            if (word in allDigits) {
-                result += allDigits[word]
-            }
-            // Numeric digit (e.g., "1", "2")
-            else if (word.length == 1 && word[0].isDigit()) {
-                result += word
-            }
-            // Multiple digits together (e.g., "1234")
-            else if (word.all { it.isDigit() }) {
-                result += word
-            }
-        }
-        return result
-    }
-
-    private fun handleChallenges(response: String): BootstrapStep {
-        accumulated.biggestChallenge = response
-
-        // ANALYZE: Pain points, emotional state, help priorities
-        analyzeChallengeDescription(response)
-
-        // Now derive the final understanding — what Msaidizi will actually DO
-        deriveFinalUnderstanding()
-
-        val summary = generateSummary()
-        val insight = generateFirstInsight()
-        val agentName = accumulated.msaidiziName
-        val workerName = accumulated.workerName
-
-        val prompt = if (language == "sw") {
-            "Nimekuelewa, $workerName!\n\n" +
-                "Hapa kile $agentName amejifunza:\n\n" +
-                "$summary\n\n" +
-                "───\n\n" +
-                "$insight\n\n" +
-                "Tayari kuanza! Sema chochote kuhusu biashara yako — $agentName atakusikiliza."
-        } else {
-            "I understand you, $workerName!\n\n" +
-                "Here's what $agentName learned:\n\n" +
-                "$summary\n\n" +
-                "───\n\n" +
-                "$insight\n\n" +
-                "Ready to start! Say anything about your business — $agentName will listen."
-        }
-
-        return BootstrapStep.Summary(prompt = prompt)
-    }
-
     // ═══════════════════════════════════════════════════════════════
-    // UNDERSTANDING ANALYSIS — The brain behind the conversation
-    //
-    // Each function analyzes a response on MULTIPLE dimensions:
-    // - What the worker SAID (data)
-    // - HOW they said it (style, sophistication)
-    // - What it REVEALS (needs, capabilities, mindset)
-    // - How to HELP them (features, reports, advice style)
+    // UNDERSTANDING ANALYSIS
     // ═══════════════════════════════════════════════════════════════
 
-    /**
-     * Analyze how the worker introduces themselves.
-     *
-     * The WAY someone says their name reveals:
-     * - Communication comfort level
-     * - Formality preference
-     * - Cultural context
-     * - Tech comfort (short = phone-typing habit, long = storytelling)
-     */
     private fun analyzeIntroductionStyle(response: String) {
         val lower = response.lowercase().trim()
         val wordCount = lower.split("\\s+".toRegex()).size
 
-        // Formality detection
         val formality = when {
             lower.contains("mimi ni") || lower.contains("jina langu") -> Formality.FORMAL
             lower.contains("naitwa") -> Formality.STANDARD
-            wordCount <= 2 -> Formality.CASUAL // Just the name — direct, confident
+            wordCount <= 2 -> Formality.CASUAL
             lower.contains("habari") || lower.contains("shikamoo") -> Formality.FORMAL
             else -> Formality.STANDARD
         }
 
-        // Communication comfort
         val comfort = when {
-            wordCount >= 5 -> CommunicationComfort.VERBOSE // Storyteller, comfortable
+            wordCount >= 5 -> CommunicationComfort.VERBOSE
             wordCount >= 3 -> CommunicationComfort.MODERATE
-            wordCount <= 1 -> CommunicationComfort.MINIMAL // May be shy or just direct
+            wordCount <= 1 -> CommunicationComfort.MINIMAL
             else -> CommunicationComfort.MODERATE
         }
 
@@ -567,27 +730,12 @@ class BootstrapConversation {
             verbosity = comfort,
             primaryLanguage = language
         )
-
-        Timber.d(TAG, "Introduction analysis: formality=%s, verbosity=%s", formality, comfort)
     }
 
-    /**
-     * Analyze the naming choice — what the worker wants from this relationship.
-     *
-     * The name someone gives their AI reveals their expectations:
-     * - "Rafiki" (friend) → wants warmth, personal connection, encouragement
-     * - "Mshauri" (advisor) → wants professional advice, data-driven
-     * - "Biashara Yangu" (my business) → ownership-focused, results-oriented
-     * - "Mwalimu" (teacher) → wants to learn, growth mindset
-     * - "Mama" / "Dada" → family-like trust, comfort
-     * - Creative/funny → playful, younger, likely Sheng speaker
-     * - Skips → pragmatic, doesn't want fluff, just help
-     */
     private fun analyzeNamingChoice(response: String, agentName: String) {
         val lower = response.lowercase().trim()
         val nameLower = agentName.lowercase()
 
-        // Relationship expectation
         val relationship = when {
             nameLower.contains("rafiki") || nameLower.contains("friend") -> RelationshipType.FRIEND
             nameLower.contains("mshauri") || nameLower.contains("advisor") || nameLower.contains("mwalimu") -> RelationshipType.ADVISOR
@@ -598,7 +746,6 @@ class BootstrapConversation {
             else -> RelationshipType.FRIEND
         }
 
-        // Communication style implications
         val tone = when (relationship) {
             RelationshipType.FRIEND -> Tone.WARM_CASUAL
             RelationshipType.ADVISOR -> Tone.PROFESSIONAL
@@ -608,7 +755,6 @@ class BootstrapConversation {
             RelationshipType.CREATIVE -> Tone.PLAYFUL
         }
 
-        // Sheng likelihood from naming creativity
         val shengLikelihood = when {
             relationship == RelationshipType.CREATIVE -> ShengLikelihood.HIGH
             relationship == RelationshipType.FRIEND && language == "sw" -> ShengLikelihood.MODERATE
@@ -621,30 +767,18 @@ class BootstrapConversation {
             preferredTone = tone,
             shengLikelihood = shengLikelihood
         )
-
-        Timber.d(TAG, "Naming analysis: relationship=%s, tone=%s, sheng=%s", relationship, tone, shengLikelihood)
     }
 
-    /**
-     * Analyze the business description for sophistication and mindset.
-     *
-     * WHAT the worker says about their business reveals:
-     * - Business maturity (new vs established)
-     * - Sophistication level (simple vs complex operations)
-     * - Growth mindset (stuck vs aspiring)
-     * - Self-identity (hustler vs business owner vs worker)
-     */
     private fun analyzeBusinessDescription(response: String, businessType: WorkerType?) {
         val lower = response.lowercase()
+        val wordCount = lower.split("\\s+".toRegex()).size
 
-        // Business specificity (how well they know their business)
         val specificity = when {
-            lower.split("\\s+".toRegex()).size >= 8 -> BusinessSpecificity.DETAILED
-            lower.split("\\s+".toRegex()).size >= 4 -> BusinessSpecificity.MODERATE
+            wordCount >= 8 -> BusinessSpecificity.DETAILED
+            wordCount >= 4 -> BusinessSpecificity.MODERATE
             else -> BusinessSpecificity.VAGUE
         }
 
-        // Business maturity signals
         val maturity = when {
             lower.contains("mpango") || lower.contains("kukua") || lower.contains("grow") -> BusinessMaturity.GROWING
             lower.contains("mpya") || lower.contains("new") || lower.contains("anza") -> BusinessMaturity.NEW
@@ -653,7 +787,6 @@ class BootstrapConversation {
             else -> BusinessMaturity.STABLE
         }
 
-        // Self-identity: how does she see herself?
         val identity = when {
             lower.contains("mama mboga") || lower.contains("mama") -> WorkerIdentity.MAMA
             lower.contains("fundi") || lower.contains("fundii") -> WorkerIdentity.FUNDI
@@ -669,7 +802,9 @@ class BootstrapConversation {
             selfIdentity = identity
         )
 
-        // Infer help priorities from maturity
+        // Store business context for summary
+        understanding.businessContext = response.take(100)
+
         when (maturity) {
             BusinessMaturity.NEW -> {
                 understanding.helpPriority = understanding.helpPriority.copy(
@@ -697,37 +832,23 @@ class BootstrapConversation {
             }
             else -> {}
         }
-
-        Timber.d(TAG, "Business analysis: specificity=%s, maturity=%s, identity=%s", specificity, maturity, identity)
     }
 
-    /**
-     * Analyze product mix for business complexity and help needs.
-     *
-     * Products reveal:
-     * - Inventory complexity (1 item vs 20)
-     * - Perishability (fresh produce vs durable goods)
-     * - Price range (high-value tracking needed?)
-     * - Seasonality (predictable vs variable demand)
-     */
     private fun analyzeProductMix(response: String, products: List<String>) {
         val lower = response.lowercase()
 
-        // Perishable detection
         val perishableKeywords = listOf(
             "mboga", "matunda", "nyanya", "sukuma", "vitunguu", "nyama", "samaki",
             "maziwa", "mayai", "mkate", "chipsi", "mchuzi", "ugali", "chapo"
         )
         val isPerishable = perishableKeywords.any { lower.contains(it) }
 
-        // High-value detection
         val highValueKeywords = listOf(
             "simu", "phone", "nguo", "shoes", "viatu", "furniture", "meza", "viti",
             "kompyuta", "laptop", "televisheni", "radio", "betri", "solar"
         )
         val isHighValue = highValueKeywords.any { lower.contains(it) }
 
-        // Service vs product
         val serviceKeywords = listOf(
             "kunyolewa", "kusuka", "massage", "kupiga picha", "kufundisha", "kutengeneza",
             "kupaka rangi", "kushona", "kukata nywele", "salon", "barber"
@@ -741,7 +862,13 @@ class BootstrapConversation {
             isService = isService
         )
 
-        // Adjust help priorities based on product type
+        // Extract prices if mentioned
+        val pricePattern = Regex("(?:ksh|kes|shilingi|bob)?\\s*(\\d+)\\s*(?:ksh|kes|bob)?")
+        val prices = pricePattern.findAll(lower).map { "KSh ${it.groupValues[1]}" }.toList()
+        if (prices.isNotEmpty()) {
+            understanding.mentionedPrices = prices
+        }
+
         if (isPerishable) {
             understanding.helpPriority = understanding.helpPriority.copy(
                 featurePriorities = understanding.helpPriority.featurePriorities + "waste_tracking" + "daily_sales"
@@ -757,30 +884,16 @@ class BootstrapConversation {
                 featurePriorities = understanding.helpPriority.featurePriorities + "inventory_management"
             )
         }
-
-        Timber.d(TAG, "Product analysis: count=%d, perishable=%s, highValue=%s, service=%s",
-            products.size, isPerishable, isHighValue, isService)
     }
 
-    /**
-     * Analyze location for market context and infrastructure.
-     *
-     * Location reveals:
-     * - Market type (formal market vs informal)
-     * - Competition level (busy market vs solo roadside)
-     * - Infrastructure access (electricity, M-Pesa coverage)
-     * - Customer type (shoppers vs passersby)
-     */
     private fun analyzeLocationContext(response: String, locationType: String) {
         val lower = response.lowercase()
 
-        // Urban vs rural signals
         val urbanKeywords = listOf("nairobi", "mombasa", "kisumu", "nakuru", "eldoret", "thika", "town", "cbd", "downtown")
         val ruralKeywords = listOf("shamba", "kijiji", "village", "nyumbani", "home", "rural", "mbali")
         val isUrban = urbanKeywords.any { lower.contains(it) }
         val isRural = ruralKeywords.any { lower.contains(it) }
 
-        // Named market = established location
         val hasNamedLocation = accumulated.marketName.isNotBlank()
 
         understanding.marketContext = understanding.marketContext.copy(
@@ -791,43 +904,25 @@ class BootstrapConversation {
             isMobile = locationType == "mobile"
         )
 
-        // Mobile workers need different features
         if (locationType == "mobile") {
             understanding.helpPriority = understanding.helpPriority.copy(
                 featurePriorities = understanding.helpPriority.featurePriorities + "route_optimization" + "customer_location_tracking"
             )
         }
-
-        Timber.d(TAG, "Location analysis: type=%s, urban=%s, rural=%s, named=%s",
-            locationType, isUrban, isRural, hasNamedLocation)
     }
 
-    /**
-     * Analyze work patterns for time management insights.
-     *
-     * Working hours reveal:
-     * - Work ethic (long hours = dedicated)
-     * - Time awareness (knows peak hours = sophisticated)
-     * - Schedule flexibility (consistent vs variable)
-     * - Life balance (overwork risk)
-     */
     private fun analyzeWorkPatterns(response: String, hours: WorkingHours) {
         val lower = response.lowercase()
-        val totalHours = if (hours.endHour > hours.startHour) {
-            hours.endHour - hours.startHour
-        } else {
-            (24 - hours.startHour) + hours.endHour
-        }
+        val totalHours = if (hours.endHour > hours.startHour) hours.endHour - hours.startHour
+        else (24 - hours.startHour) + hours.endHour
 
-        // Work intensity
         val intensity = when {
-            totalHours >= 14 -> WorkIntensity.EXTREME // 5am-7pm or similar
+            totalHours >= 14 -> WorkIntensity.EXTREME
             totalHours >= 10 -> WorkIntensity.HIGH
             totalHours >= 6 -> WorkIntensity.NORMAL
             else -> WorkIntensity.LOW
         }
 
-        // Peak hour awareness (sophistication signal)
         val peakAware = lower.contains("peak") || lower.contains("msongamano") ||
             lower.contains("asubuhi") && lower.contains("mchana") ||
             lower.contains("morning") && lower.contains("afternoon")
@@ -840,30 +935,16 @@ class BootstrapConversation {
             daysPerWeek = hours.daysPerWeek
         )
 
-        // Long hours → efficiency tips
         if (intensity == WorkIntensity.EXTREME) {
             understanding.helpPriority = understanding.helpPriority.copy(
                 featurePriorities = understanding.helpPriority.featurePriorities + "efficiency_tips" + "rest_reminders"
             )
         }
-
-        Timber.d(TAG, "Work pattern analysis: %dh/day, intensity=%s, peakAware=%s",
-            totalHours, intensity, peakAware)
     }
 
-    /**
-     * Analyze customer and payment patterns for tech comfort and market access.
-     *
-     * Customer/payment reveals:
-     * - Tech comfort (M-Pesa = digital-ready)
-     * - Market sophistication (regulars = relationship builder)
-     * - Growth potential (referral-based = word-of-mouth works)
-     * - Infrastructure needs (WhatsApp = can receive digital reports)
-     */
     private fun analyzeCustomerAndPaymentPatterns(response: String) {
         val lower = response.lowercase()
 
-        // Tech comfort from payment method
         val techComfort = when (accumulated.paymentMethod) {
             PaymentType.MOBILE -> TechComfort.HIGH
             PaymentType.BOTH -> TechComfort.MODERATE
@@ -871,15 +952,12 @@ class BootstrapConversation {
             PaymentType.BANK -> TechComfort.HIGH
         }
 
-        // WhatsApp detection
         val usesWhatsApp = lower.contains("whatsapp") || lower.contains("wa") || lower.contains("status")
 
-        // Regulars detection (relationship builder)
         val hasRegulars = lower.contains("regular") || lower.contains("mteja wangu") ||
             lower.contains("wateja wangu") || lower.contains("marafiki") ||
             lower.contains("wanakuja") || lower.contains("wanarudi")
 
-        // Customer acquisition sophistication
         val acquisition = when {
             lower.contains("whatsapp") || lower.contains("instagram") || lower.contains("social") -> CustomerAcquisition.DIGITAL
             lower.contains("delivery") || lower.contains("natuma") -> CustomerAcquisition.DELIVERY
@@ -901,7 +979,6 @@ class BootstrapConversation {
             paymentMethod = accumulated.paymentMethod
         )
 
-        // WhatsApp users can receive digital reports
         if (usesWhatsApp) {
             understanding.helpPriority = understanding.helpPriority.copy(
                 reportDelivery = ReportDeliveryMethod.WHATSAPP
@@ -911,63 +988,38 @@ class BootstrapConversation {
                 reportDelivery = ReportDeliveryMethod.IN_APP
             )
         }
-
-        Timber.d(TAG, "Customer analysis: tech=%s, whatsapp=%s, regulars=%s, acquisition=%s",
-            techComfort, usesWhatsApp, hasRegulars, acquisition)
     }
 
-    /**
-     * Analyze challenge description for pain points, emotional state, and priorities.
-     *
-     * This is the MOST revealing response. The way someone describes their
-     * problems tells you:
-     * - What to prioritize (the first thing mentioned = biggest pain)
-     * - Emotional state (stressed? calm? frustrated?)
-     * - Problem-solving ability (vague vs specific)
-     * - What kind of help they need (data? advice? encouragement?)
-     */
     private fun analyzeChallengeDescription(response: String) {
         val lower = response.lowercase()
         val wordCount = lower.split("\\s+".toRegex()).size
 
-        // Pain point classification
         val painPoints = mutableListOf<PainPoint>()
 
-        // Stock/inventory problems
         if (lower.contains("stock") || lower.contains("bidhaa") || lower.contains("hakuna") ||
             lower.contains("isha") || lower.contains("stockout") || lower.contains("haifiki")) {
             painPoints.add(PainPoint.STOCKOUT)
         }
-
-        // Pricing/margin problems
         if (lower.contains("bei") || lower.contains("price") || lower.contains("gharama") ||
             lower.contains("cost") || lower.contains("faida") || lower.contains("profit") ||
             lower.contains("hasara") || lower.contains("loss")) {
             painPoints.add(PainPoint.PRICING)
         }
-
-        // Customer problems
         if (lower.contains("wateja") || lower.contains("customer") || lower.contains("hawana") ||
             lower.contains("wachache") || lower.contains("few") || lower.contains("competition") ||
             lower.contains("mpinzani") || lower.contains("ushindani")) {
             painPoints.add(PainPoint.CUSTOMER_SHORTAGE)
         }
-
-        // Cash flow problems
         if (lower.contains("pesa") || lower.contains("money") || lower.contains("cash") ||
             lower.contains("inaisha") || lower.contains("hela") || lower.contains("mkopo") ||
             lower.contains("loan") || lower.contains("deni") || lower.contains("debt")) {
             painPoints.add(PainPoint.CASH_FLOW)
         }
-
-        // Knowledge problems
         if (lower.contains("sijui") || lower.contains("don't know") || lower.contains("sielevi") ||
             lower.contains("confus") || lower.contains("ngumu") || lower.contains("difficult") ||
             lower.contains("kujua") || lower.contains("kuelewa")) {
             painPoints.add(PainPoint.KNOWLEDGE_GAP)
         }
-
-        // External shocks
         if (lower.contains("mvua") || lower.contains("rain") || lower.contains("jua") ||
             lower.contains("sun") || lower.contains("polisi") || lower.contains("kanjo") ||
             lower.contains("county") || lower.contains("viboko") || lower.contains("mara")) {
@@ -978,7 +1030,6 @@ class BootstrapConversation {
             painPoints.add(PainPoint.GENERAL)
         }
 
-        // Emotional state from language intensity
         val stressIndicators = listOf("sana", "sana sana", "very", "really", "biggest", "kubwa",
             "mbaya", "bad", "ngumu", "hard", "inaniumiza", "hurts", "nateseka", "suffering")
         val stressLevel = stressIndicators.count { lower.contains(it) }
@@ -986,12 +1037,11 @@ class BootstrapConversation {
         val emotionalState = when {
             stressLevel >= 3 -> EmotionalState.HIGH_STRESS
             stressLevel >= 1 -> EmotionalState.MODERATE_STRESS
-            wordCount >= 15 -> EmotionalState.REFLECTIVE // Long answer = thoughtful
-            wordCount <= 3 -> EmotionalState.RESIGNED // Short answer = accepted it
+            wordCount >= 15 -> EmotionalState.REFLECTIVE
+            wordCount <= 3 -> EmotionalState.RESIGNED
             else -> EmotionalState.CALM
         }
 
-        // Problem-solving sophistication
         val problemSolving = when {
             lower.contains("because") || lower.contains("kwa sababu") || lower.contains("maana") -> ProblemSolving.ANALYTICAL
             lower.contains("try") || lower.contains("jaribu") || lower.contains("nimejaribu") -> ProblemSolving.ACTIVE
@@ -1004,7 +1054,6 @@ class BootstrapConversation {
         understanding.emotionalState = emotionalState
         understanding.problemSolvingStyle = problemSolving
 
-        // Adjust help priorities based on biggest pain point
         when (painPoints.firstOrNull()) {
             PainPoint.STOCKOUT -> {
                 understanding.helpPriority = understanding.helpPriority.copy(
@@ -1039,46 +1088,29 @@ class BootstrapConversation {
             else -> {}
         }
 
-        // Stressed workers need encouragement first, data second
         if (emotionalState == EmotionalState.HIGH_STRESS) {
             understanding.communicationStyle = understanding.communicationStyle.copy(
                 preferredTone = Tone.ENCOURAGING
             )
         }
-
-        Timber.d(TAG, "Challenge analysis: painPoints=%s, emotional=%s, problemSolving=%s",
-            painPoints, emotionalState, problemSolving)
     }
 
-    /**
-     * Final synthesis — combine all understanding into actionable intelligence.
-     * This runs AFTER all responses are collected.
-     */
     private fun deriveFinalUnderstanding() {
-        // Determine worker archetype
         understanding.archetype = when {
             understanding.businessSophistication.maturity == BusinessMaturity.NEW &&
                 understanding.techProfile.comfortLevel == TechComfort.LOW -> WorkerArchetype.NEW_TRADITIONAL
-
             understanding.businessSophistication.maturity == BusinessMaturity.NEW &&
                 understanding.techProfile.comfortLevel >= TechComfort.MODERATE -> WorkerArchetype.NEW_DIGITAL
-
             understanding.businessSophistication.maturity == BusinessMaturity.GROWING &&
                 understanding.businessSophistication.specificity == BusinessSpecificity.DETAILED -> WorkerArchetype.GROWING_SOPHISTICATED
-
             understanding.businessSophistication.maturity == BusinessMaturity.GROWING -> WorkerArchetype.GROWING_BASIC
-
             understanding.businessSophistication.maturity == BusinessMaturity.STRUGGLING &&
                 understanding.emotionalState == EmotionalState.HIGH_STRESS -> WorkerArchetype.STRUGGLING_STRESSED
-
             understanding.businessSophistication.maturity == BusinessMaturity.STRUGGLING -> WorkerArchetype.STRUGGLING_RESILIENT
-
             understanding.businessSophistication.maturity == BusinessMaturity.ESTABLISHED -> WorkerArchetype.ESTABLISHED
-
             else -> WorkerArchetype.UNKNOWN
         }
 
-        // Determine report type
         understanding.helpPriority = understanding.helpPriority.copy(
             reportType = when (understanding.archetype) {
                 WorkerArchetype.NEW_TRADITIONAL -> ReportType.SIMPLE_DAILY
@@ -1092,19 +1124,14 @@ class BootstrapConversation {
             }
         )
 
-        // Determine greeting style
         understanding.greetingStyle = when (understanding.relationshipType) {
             RelationshipType.FRIEND -> "Habari ${accumulated.workerName}! ${accumulated.msaidiziName} hapa."
             RelationshipType.ADVISOR -> "Habari ${accumulated.workerName}. Ripoti yako ya leo:"
             RelationshipType.BUSINESS_PARTNER -> "${accumulated.workerName}, hapa kile kilichotokea leo:"
             RelationshipType.FAMILY -> "Habari ${accumulated.workerName}! Leo imekuwaje?"
             RelationshipType.PRAGMATIC -> "Ripoti ya leo:"
-            RelationshipType.CREATIVE -> "Heeey ${accumulated.workerName}! ${accumulated.msaidiziName} ana update! 🎉"
+            RelationshipType.CREATIVE -> "Heeey ${accumulated.workerName}! ${accumulated.msaidiziName} ana update! "
         }
-
-        Timber.i(TAG, "Final understanding: archetype=%s, primaryHelp=%s, reportType=%s, tone=%s",
-            understanding.archetype, understanding.helpPriority.primary,
-            understanding.helpPriority.reportType, understanding.communicationStyle.preferredTone)
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -1258,110 +1285,6 @@ class BootstrapConversation {
         return if (sw.count { lower.contains(it) } > en.count { lower.contains(it) }) "sw" else "en"
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // SUMMARY & INSIGHT GENERATION — Uses UNDERSTANDING, not just data
-    // ═══════════════════════════════════════════════════════════════
-
-    private fun generateSummary(): String {
-        val parts = mutableListOf<String>()
-        val name = accumulated.workerName
-        val agentName = accumulated.msaidiziName
-
-        if (language == "sw") {
-            parts.add("• Jina lako: $name")
-            parts.add("• Biashara: ${accumulated.businessDescription.take(60)}")
-            if (accumulated.products.isNotEmpty()) parts.add("• Bidhaa: ${accumulated.products.take(3).joinToString(", ")}")
-            parts.add("• Mahali: ${accumulated.location}")
-            parts.add("• Masaa: ${accumulated.workingHours.description.take(40)}")
-            if (accumulated.biggestChallenge.isNotBlank()) parts.add("• Changamoto: ${accumulated.biggestChallenge.take(60)}")
-
-            // Understanding-based additions
-            if (understanding.techProfile.usesWhatsApp) parts.add("• Mawasiliano: WhatsApp ✓")
-            if (understanding.techProfile.usesMPesa) parts.add("• Malipo: M-Pesa ✓")
-            if (understanding.customerProfile.hasRegulars) parts.add("• Wateja wa kudumu ✓")
-        } else {
-            parts.add("• Your name: $name")
-            parts.add("• Business: ${accumulated.businessDescription.take(60)}")
-            if (accumulated.products.isNotEmpty()) parts.add("• Products: ${accumulated.products.take(3).joinToString(", ")}")
-            parts.add("• Location: ${accumulated.location}")
-            parts.add("• Hours: ${accumulated.workingHours.description.take(40)}")
-            if (accumulated.biggestChallenge.isNotBlank()) parts.add("• Challenge: ${accumulated.biggestChallenge.take(60)}")
-        }
-
-        return parts.joinToString("\n")
-    }
-
-    /**
-     * Generate the first insight — powered by UNDERSTANDING, not just data.
-     *
-     * This isn't generic advice. It's specific to THIS worker's situation,
-     * based on what we UNDERSTOOD from the conversation.
-     */
-    private fun generateFirstInsight(): String {
-        val agentName = accumulated.msaidiziName
-        val name = accumulated.workerName
-        val u = understanding
-
-        // Start with the primary help focus
-        val primaryHelp = when (u.helpPriority.primary) {
-            HelpFocus.TRACK_SALES -> if (language == "sw") {
-                "Kuanzia leo, $agentName atakusaidia kufuatilia kila mauzo — utajua faida yako ya kila siku."
-            } else {
-                "From today, $agentName will track every sale — you'll know your daily profit."
-            }
-
-            HelpFocus.MANAGE_STOCK -> if (language == "sw") {
-                "$agentName atakufuatilia stock yako — atakuambia bidhaa gani inaisha na lini unapaswa kununua zaidi."
-            } else {
-                "$agentName will track your stock — tell you what's running low and when to restock."
-            }
-
-            HelpFocus.UNDERSTAND_PROFIT -> if (language == "sw") {
-                "Sijui faida yako? $agentName atakokokotoa kila siku — utajua pesa unayopata na unayopoteza."
-            } else {
-                "Don't know your profit? $agentName will calculate it daily — you'll know what you earn and lose."
-            }
-
-            HelpFocus.MANAGE_CASH -> if (language == "sw") {
-                "$agentName atakusaidia kufuatilia pesa inayoingia na kutoka — utajua wapi pesa yako inaenda."
-            } else {
-                "$agentName will track money in and out — you'll know where your money goes."
-            }
-
-            HelpFocus.GROW_BUSINESS -> if (language == "sw") {
-                "$agentName atakusaidia kuona fursa za kukua — bidhaa gani uuze zaidi, na wakati gani."
-            } else {
-                "$agentName will help you spot growth opportunities — what to sell more, and when."
-            }
-
-            HelpFocus.OPTIMIZE_OPERATIONS -> if (language == "sw") {
-                "$agentName atakusaidia kuboresha biashara yako — masaa bora, bei nzuri, na wateja wazuri."
-            } else {
-                "$agentName will help optimize your business — best hours, best prices, best customers."
-            }
-        }
-
-        // Add emotional context if stressed
-        val emotionalSupport = if (u.emotionalState == EmotionalState.HIGH_STRESS) {
-            if (language == "sw") {
-                "\n\n$name, usijali — changamoto zote zina suluhisho. $agentName atakuwa nawe kila siku."
-            } else {
-                "\n\n$name, don't worry — every challenge has a solution. $agentName will be with you every day."
-            }
-        } else ""
-
-        // Add tech-specific guidance
-        val techGuidance = if (u.techProfile.usesWhatsApp && u.helpPriority.reportDelivery == ReportDeliveryMethod.WHATSAPP) {
-            if (language == "sw") {
-                "\n\n$agentName atakutumia ripoti kupitia WhatsApp kila siku."
-            } else {
-                "\n\n$agentName will send you reports via WhatsApp every day."
-            }
-        } else ""
-
-        return primaryHelp + emotionalSupport + techGuidance
-    }
-
     private fun getEncouragement(): String {
         return if (language == "sw") "Nzuri sana" else "That's great"
     }
@@ -1376,6 +1299,35 @@ class BootstrapConversation {
             WorkerType.DIGITAL -> if (language == "sw") "Kwa mfano: M-Pesa float, airtime, simu..." else "For example: M-Pesa float, airtime..."
             WorkerType.UNKNOWN -> ""
         }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // PIN & DIGIT EXTRACTION
+    // ═══════════════════════════════════════════════════════════════
+
+    private fun extractDigits(text: String): String {
+        val swahiliDigits = mapOf(
+            "moja" to "1", "mbili" to "2", "tatu" to "3", "nne" to "4",
+            "tano" to "5", "sita" to "6", "saba" to "7", "nane" to "8", "tisa" to "9", "sifuri" to "0"
+        )
+        val englishDigits = mapOf(
+            "one" to "1", "two" to "2", "three" to "3", "four" to "4",
+            "five" to "5", "six" to "6", "seven" to "7", "eight" to "8", "nine" to "9", "zero" to "0"
+        )
+        val allDigits = swahiliDigits + englishDigits
+
+        var result = ""
+        val words = text.lowercase().split(Regex("\\s+"))
+        for (word in words) {
+            if (word in allDigits) {
+                result += allDigits[word]
+            } else if (word.length == 1 && word[0].isDigit()) {
+                result += word
+            } else if (word.all { it.isDigit() }) {
+                result += word
+            }
+        }
+        return result
     }
 
     // ═══════════════════════════════════════════════════════════════

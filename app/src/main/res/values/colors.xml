@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#FF1B2A4A</color>      <!-- Deep Navy -->
-    <color name="primary_dark">#FF0D1929</color>  <!-- Midnight -->
-    <color name="primary_light">#FF2A4070</color> <!-- Light Navy -->
-    <color name="primary_variant">#FFE8853D</color> <!-- African Orange -->
-    <color name="secondary">#FFE8853D</color>     <!-- African Orange -->
-    <color name="secondary_dark">#FFD06B2A</color> <!-- Dark Orange -->
+    <color name="primary">#FF1B4965</color>      <!-- Dark Teal (brand primary) -->
+    <color name="primary_dark">#FF0F2D42</color>  <!-- Darker Teal -->
+    <color name="primary_light">#FF2A6B8A</color> <!-- Light Teal -->
+    <color name="primary_variant">#FFD09030</color> <!-- Deep Gold -->
+    <color name="secondary">#FFF59E0B</color>     <!-- Gold (brand accent) -->
+    <color name="secondary_dark">#FFE8A838</color> <!-- Warm Gold -->
     <color name="background">#FFFFFFFF</color>
-    <color name="background_primary">#FF1B2A4A</color>  <!-- Deep Navy (same as primary) -->
+    <color name="background_primary">#FF1B4965</color>  <!-- Dark Teal (brand primary) -->
     <color name="surface">#FFF5F5F5</color>
     <color name="text_primary">#FF212121</color>
     <color name="text_secondary">#FF757575</color>
@@ -22,8 +22,8 @@
     <color name="whatsapp_teal">#FF128C7E</color>
     <color name="divider">#FFE0E0E0</color>
     <color name="transparent">#00000000</color>
-    <color name="accent">#FFF5A623</color>         <!-- Warm Gold -->
-    <color name="accent_dark">#FFE8853D</color>     <!-- African Orange -->
+    <color name="accent">#FFF59E0B</color>         <!-- Gold (brand accent) -->
+    <color name="accent_dark">#FFE8A838</color>     <!-- Warm Gold -->
     <color name="white">#FFFFFFFF</color>
     <color name="profit_positive">#FF4CAF50</color>
     <color name="profit_negative">#FFF44336</color>

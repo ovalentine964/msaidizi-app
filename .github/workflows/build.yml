@@ -95,16 +95,16 @@ jobs:
           key: ${{ env.MODEL_CACHE_KEY }}
 
       - name: Download AI Models
-        if: steps.cache-models.outputs.cache-hit != 'true'
+        
         run: |
           chmod +x scripts/download-models.sh
-          ./scripts/download-models.sh
+          ./scripts/download-models.sh --lite
         timeout-minutes: 30
 
       - name: Verify models present
         run: |
           chmod +x scripts/download-models.sh
-          ./scripts/download-models.sh --verify
+          ./scripts/download-models.sh --lite --verify
 
       # ============================================================
       # Sherpa-ONNX JNI libs setup (ASR/TTS/VAD engine)
@@ -117,7 +117,7 @@ jobs:
           key: sherpa-onnx-jni-v2-all
 
       - name: Setup sherpa-onnx JNI libs
-        if: steps.cache-sherpa.outputs.cache-hit != 'true'
+        
         run: |
           chmod +x scripts/setup-sherpa-onnx.sh
           ./scripts/setup-sherpa-onnx.sh
@@ -303,16 +303,16 @@ jobs:
           key: ${{ env.MODEL_CACHE_KEY }}
 
       - name: Download AI Models
-        if: steps.cache-models.outputs.cache-hit != 'true'
+        
         run: |
           chmod +x scripts/download-models.sh
-          ./scripts/download-models.sh
+          ./scripts/download-models.sh --lite
         timeout-minutes: 30
 
       - name: Verify models present
         run: |
           chmod +x scripts/download-models.sh
-          ./scripts/download-models.sh --verify
+          ./scripts/download-models.sh --lite --verify
 
       - name: Cache sherpa-onnx JNI libs
         id: cache-sherpa
@@ -322,7 +322,7 @@ jobs:
           key: sherpa-onnx-jni-v2-all
 
       - name: Setup sherpa-onnx JNI libs
-        if: steps.cache-sherpa.outputs.cache-hit != 'true'
+        
         run: |
           chmod +x scripts/setup-sherpa-onnx.sh
           ./scripts/setup-sherpa-onnx.sh

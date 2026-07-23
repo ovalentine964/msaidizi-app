@@ -25,11 +25,15 @@ RETRY_DELAY=5
 # Model definitions: name | filename | URL
 # ─────────────────────────────────────────────────────────────
 declare -A VOICE_MODELS=(
-  ["ggml-tiny.en-q5_1.bin"]="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en-q5_1.bin"
-  ["piper-swahili.onnx"]="https://huggingface.co/rhasspy/piper-voices/resolve/main/vi/vi_VN/vais1000/medium/vi_VN-vais1000-medium.onnx"
-  ["piper-swahili.onnx.json"]="https://huggingface.co/rhasspy/piper-voices/resolve/main/vi/vi_VN/vais1000/medium/vi_VN-vais1000-medium.onnx.json"
+  ["whisper-encoder-int8.onnx"]="https://huggingface.co/Xenova/whisper-tiny/resolve/main/onnx/encoder_model_quantized.onnx"
+  ["whisper-decoder-int8.onnx"]="https://huggingface.co/Xenova/whisper-tiny/resolve/main/onnx/decoder_model_merged_quantized.onnx"
+  ["whisper-tokens.json"]="https://huggingface.co/Xenova/whisper-tiny/resolve/main/tokenizer.json"
   ["silero_vad.onnx"]="https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx"
 )
+
+# Piper Swahili is distributed as a tar.bz2 archive and must be extracted.
+PIPER_ARCHIVE_URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-sw_CD-lanfrica-medium.tar.bz2"
+PIPER_ARCHIVE_NAME="vits-piper-sw_CD-lanfrica-medium.tar.bz2"
 
 declare -A LLM_MODELS=(
   ["Qwen3.5-0.8B-Q4_K_M.gguf"]="https://huggingface.co/bartowski/Qwen_Qwen3.5-0.8B-GGUF/resolve/main/Qwen_Qwen3.5-0.8B-Q4_K_M.gguf"
@@ -141,9 +145,73 @@ for model in "${!MODEL_URLS[@]}"; do
   fi
 done
 
+# ─────────────────────────────────────────────────────────────
+# Piper Swahili: download tar.bz2 archive and extract ONNX model
+# ─────────────────────────────────────────────────────────────
+PIPER_ONNX="$MODELS_DIR/piper-swahili.onnx"
+if [ ! -f "$PIPER_ONNX" ] || [ ! -s "$PIPER_ONNX" ]; then
+  PIPER_ARCHIVE="$MODELS_DIR/$PIPER_ARCHIVE_NAME"
+  echo "  📦 Piper Swahili: downloading archive..."
+  if download_with_retry "$PIPER_ARCHIVE_URL" "$PIPER_ARCHIVE"; then
+    echo "  📦 Extracting Piper Swahili model..."
+    EXTRACT_DIR="$MODELS_DIR/_piper_extract"
+    mkdir -p "$EXTRACT_DIR"
+    if tar xjf "$PIPER_ARCHIVE" -C "$EXTRACT_DIR" 2>&1; then
+      # Find the .onnx model file in the extracted contents
+      ONNX_SRC=$(find "$EXTRACT_DIR" -name '*.onnx' -type f | head -1)
+      if [ -n "$ONNX_SRC" ]; then
+        cp "$ONNX_SRC" "$PIPER_ONNX"
+        echo "  ✅ Extracted: piper-swahili.onnx ($(du -h "$PIPER_ONNX" | cut -f1))"
+      else
+        echo "  ❌ No .onnx file found in Piper archive"
+        FAILED=$((FAILED + 1))
+      fi
+      # Also extract tokens.txt and espeak-ng-data if present
+      TOKENS_SRC=$(find "$EXTRACT_DIR" -name 'tokens.txt' -type f | head -1)
+      if [ -n "$TOKENS_SRC" ]; then
+        cp "$TOKENS_SRC" "$MODELS_DIR/piper-tokens.txt"
+      fi
+      ESPEAK_SRC=$(find "$EXTRACT_DIR" -name 'espeak-ng-data' -type d | head -1)
+      if [ -n "$ESPEAK_SRC" ]; then
+        cp -r "$ESPEAK_SRC" "$MODELS_DIR/espeak-ng-data"
+      fi
+    else
+      echo "  ❌ Failed to extract Piper archive"
+      FAILED=$((FAILED + 1))
+    fi
+    rm -rf "$EXTRACT_DIR" "$PIPER_ARCHIVE"
+  else
+    echo "  ❌ Failed to download Piper Swahili archive"
+    FAILED=$((FAILED + 1))
+  fi
+else
+  echo "  ⏭️  Already exists: piper-swahili.onnx ($(du -h "$PIPER_ONNX" | cut -f1))"
+fi
+
 if [ "$FAILED" -gt 0 ]; then
   echo "❌ $FAILED model(s) failed to download"
   exit 1
+fi
+
+# ─────────────────────────────────────────────────────────────
+# Post-download: Copy LLM models to app's filesDir location
+# ─────────────────────────────────────────────────────────────
+# Models are downloaded to assets/models/ for APK bundling (full flavor),
+# but at runtime the app loads them from context.filesDir/models/.
+# For development/testing, we also copy to the expected runtime location.
+FILES_DIR_MODELS="app/src/main/files/models"
+if [ "$LITE_MODE" = "false" ]; then
+  mkdir -p "$FILES_DIR_MODELS"
+  for model in "${!LLM_MODELS[@]}"; do
+    src="$MODELS_DIR/$model"
+    dst="$FILES_DIR_MODELS/$model"
+    if [ -f "$src" ] && [ -s "$src" ]; then
+      if [ ! -f "$dst" ] || [ ! -s "$dst" ]; then
+        echo "📋 Copying $model to runtime location..."
+        cp "$src" "$dst"
+      fi
+    fi
+  done
 fi
 
 echo ""
