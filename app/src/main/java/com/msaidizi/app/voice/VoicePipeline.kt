@@ -1,6 +1,9 @@
 package com.msaidizi.app.voice
 
 import android.content.Context
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import com.msaidizi.app.core.MemoryManager
 import com.msaidizi.app.core.util.DeviceTier
 import com.msaidizi.app.core.language.AdaptiveAsrEngine
@@ -89,6 +92,46 @@ class VoicePipeline @Inject constructor(
     // Whether Kokoro was loaded successfully during initialization
     private var kokoroLoadAttempted = false
     private var kokoroLoadSucceeded = false
+
+    // ── Audio Focus ──
+    private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    private var audioFocusRequest: AudioFocusRequest? = null
+    private var hadAudioFocus = false
+    private var ttsWasInterrupted = false
+
+    private val audioFocusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
+        when (focusChange) {
+            AudioManager.AUDIOFOCUS_LOSS -> {
+                // Permanent loss (e.g., another app took focus) — stop TTS
+                Timber.d("VoicePipeline: Audio focus LOST — stopping TTS")
+                stopSpeaking()
+                hadAudioFocus = false
+            }
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                // Temporary loss (e.g., phone call) — pause TTS
+                Timber.d("VoicePipeline: Audio focus LOSS_TRANSIENT — pausing TTS")
+                ttsWasInterrupted = isAnyTtsSpeaking()
+                stopSpeaking()
+                hadAudioFocus = false
+            }
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+                // Temporary loss but can duck volume
+                Timber.d("VoicePipeline: Audio focus LOSS_TRANSIENT_CAN_DUCK — ducking")
+                // Duck volume to 20% — handled by AudioTrack ducking
+            }
+            AudioManager.AUDIOFOCUS_GAIN -> {
+                // Regained focus — resume if was interrupted
+                Timber.d("VoicePipeline: Audio focus GAIN — resuming if interrupted")
+                hadAudioFocus = true
+                if (ttsWasInterrupted) {
+                    ttsWasInterrupted = false
+                    // Note: We don't auto-resume TTS after interruption.
+                    // The pipeline state is already IDLE from stopSpeaking().
+                    // User can trigger new voice interaction.
+                }
+            }
+        }
+    }
 
     // ── Sherpa-ONNX integration flag ──
     // When true, uses SherpaVoiceEngine for ASR/TTS/VAD instead of raw ONNX Runtime.
@@ -511,8 +554,15 @@ class VoicePipeline @Inject constructor(
      * - STANDARD+: Kokoro (90MB) → Piper (25MB) → MMS
      *
      * MUTUAL EXCLUSION: Unloads Whisper before loading Kokoro on 2GB devices.
+     * AUDIO FOCUS: Requests focus before playback, handles interruptions.
      */
     suspend fun speak(text: String, language: String = "sw") {
+        // Request audio focus before TTS playback
+        if (!requestAudioFocus()) {
+            Timber.w("VoicePipeline: Cannot speak — audio focus denied")
+            return
+        }
+
         _pipelineState.value = PipelineState.SPEAKING
 
         try {
@@ -572,6 +622,8 @@ class VoicePipeline @Inject constructor(
             }
             _response.emit(text)
             _pipelineState.value = PipelineState.IDLE
+            // Release audio focus after TTS completes
+            abandonAudioFocus()
         }
     }
 
@@ -731,6 +783,7 @@ class VoicePipeline @Inject constructor(
      * Release all resources.
      */
     fun release() {
+        abandonAudioFocus()
         audioRecorder.release()
         speechRecognizer.unloadModel()
         kokoroTts.unloadModel()
@@ -790,6 +843,47 @@ class VoicePipeline @Inject constructor(
         kokoroTts.isModelReady() -> "Kokoro"
         piperTts.isModelReady() -> "Piper"
         else -> "none"
+    }
+
+    // ────────────────────── Audio Focus ──────────────────────
+
+    /**
+     * Request audio focus for TTS playback.
+     * Returns true if focus was granted.
+     */
+    private fun requestAudioFocus(): Boolean {
+        if (hadAudioFocus) return true
+
+        val focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ASSISTANT)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build()
+            )
+            .setOnAudioFocusChangeListener(audioFocusChangeListener)
+            .setAcceptsDelayedFocusGain(true)
+            .build()
+
+        audioFocusRequest = focusRequest
+        val result = audioManager.requestAudioFocus(focusRequest)
+        hadAudioFocus = result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+        if (!hadAudioFocus) {
+            Timber.w("VoicePipeline: Audio focus request denied (result=%d)", result)
+        }
+        return hadAudioFocus
+    }
+
+    /**
+     * Abandon audio focus after TTS playback completes.
+     */
+    private fun abandonAudioFocus() {
+        audioFocusRequest?.let {
+            audioManager.abandonAudioFocusRequest(it)
+        }
+        audioFocusRequest = null
+        hadAudioFocus = false
+        ttsWasInterrupted = false
     }
 }
 

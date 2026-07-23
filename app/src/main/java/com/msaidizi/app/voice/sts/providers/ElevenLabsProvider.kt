@@ -110,10 +110,9 @@ class ElevenLabsProvider @Inject constructor() : StsProvider {
             return
         }
 
-        val url = "$WS_URL?xi-api-key=$apiKey"
-
         val request = Request.Builder()
-            .url(url)
+            .url(WS_URL)
+            .header("xi-api-key", apiKey)
             .build()
 
         return suspendCancellableCoroutine { continuation ->

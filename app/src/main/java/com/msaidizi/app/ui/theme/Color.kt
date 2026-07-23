@@ -10,14 +10,14 @@ import android.graphics.Color
  */
 object AppColors {
 
-    // Primary colors — warm, inviting (not corporate)
-    val primary = Color.parseColor("#2E7D32")        // Green — growth, money
-    val primaryDark = Color.parseColor("#1B5E20")
-    val primaryLight = Color.parseColor("#4CAF50")
+    // Primary colors — Deep Navy brand palette (matches colors.xml)
+    val primary = Color.parseColor("#1B2A4A")        // Deep Navy — professional, trustworthy
+    val primaryDark = Color.parseColor("#0D1929")    // Midnight
+    val primaryLight = Color.parseColor("#2A4070")   // Light Navy
 
-    // Accent — for CTAs and highlights
-    val accent = Color.parseColor("#FF6F00")          // Amber — energy, action
-    val accentDark = Color.parseColor("#E65100")
+    // Accent — African Orange for CTAs and highlights (matches colors.xml)
+    val accent = Color.parseColor("#E8853D")          // African Orange — energy, warmth
+    val accentDark = Color.parseColor("#D06B2A")      // Dark Orange
 
     // Backgrounds
     val background = Color.parseColor("#FAFAFA")
@@ -30,14 +30,14 @@ object AppColors {
     val textOnPrimary = Color.parseColor("#FFFFFF")
 
     // Semantic colors
-    val profitPositive = Color.parseColor("#2E7D32")  // Green
-    val profitNegative = Color.parseColor("#C62828")  // Red
-    val warning = Color.parseColor("#F9A825")         // Yellow
-    val info = Color.parseColor("#1565C0")            // Blue
+    val profitPositive = Color.parseColor("#4CAF50")  // Green — positive values
+    val profitNegative = Color.parseColor("#F44336")  // Red — negative values
+    val warning = Color.parseColor("#FF9800")         // Orange — warnings
+    val info = Color.parseColor("#2196F3")            // Blue — info
 
     // Recording states
-    val recordingActive = Color.parseColor("#D32F2F") // Red — recording
-    val recordingIdle = Color.parseColor("#2E7D32")   // Green — ready
+    val recordingActive = Color.parseColor("#F44336") // Red — recording
+    val recordingIdle = Color.parseColor("#1B2A4A")   // Navy — ready (matches primary)
 
     // Card shadows and borders
     val cardBorder = Color.parseColor("#E0E0E0")

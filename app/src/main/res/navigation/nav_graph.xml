@@ -21,7 +21,24 @@
         android:id="@+id/dashboardFragment"
         android:name="com.msaidizi.app.ui.dashboard.DashboardFragment"
         android:label="Dashboard"
-        tools:layout="@layout/fragment_dashboard" />
+        tools:layout="@layout/fragment_dashboard">
+        <!-- U1: Navigation actions to previously unreachable screens -->
+        <action
+            android:id="@+id/action_dashboard_to_gamification"
+            app:destination="@id/gamificationFragment" />
+        <action
+            android:id="@+id/action_dashboard_to_goals"
+            app:destination="@id/goalFragment" />
+        <action
+            android:id="@+id/action_dashboard_to_loans"
+            app:destination="@id/loanFragment" />
+        <action
+            android:id="@+id/action_dashboard_to_tithe"
+            app:destination="@id/titheFragment" />
+        <action
+            android:id="@+id/action_dashboard_to_mindset"
+            app:destination="@id/mindsetFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/historyFragment"
@@ -56,6 +73,37 @@
         android:name="com.msaidizi.app.ui.vision.CameraCaptureFragment"
         android:label="Piga Picha"
         tools:layout="@layout/fragment_camera_capture" />
+
+    <!-- U1 Fix: Added missing navigation destinations for 5 unreachable screens -->
+    <fragment
+        android:id="@+id/gamificationFragment"
+        android:name="com.msaidizi.app.ui.gamification.GamificationScreen"
+        android:label="Gamification"
+        tools:layout="@layout/fragment_gamification" />
+
+    <fragment
+        android:id="@+id/goalFragment"
+        android:name="com.msaidizi.app.ui.goals.GoalFragment"
+        android:label="Malengo"
+        tools:layout="@layout/fragment_goals" />
+
+    <fragment
+        android:id="@+id/loanFragment"
+        android:name="com.msaidizi.app.ui.loans.LoanFragment"
+        android:label="Mikopo"
+        tools:layout="@layout/fragment_loan" />
+
+    <fragment
+        android:id="@+id/titheFragment"
+        android:name="com.msaidizi.app.ui.tithe.TitheFragment"
+        android:label="Zakat"
+        tools:layout="@layout/fragment_tithe" />
+
+    <fragment
+        android:id="@+id/mindsetFragment"
+        android:name="com.msaidizi.app.ui.mindset.MindsetFragment"
+        android:label="Mindset"
+        tools:layout="@layout/fragment_mindset" />
 
     <fragment
         android:id="@+id/languageSelectionFragment"

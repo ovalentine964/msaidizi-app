@@ -25,9 +25,13 @@ RETRY_DELAY=5
 # Model definitions: name | filename | URL
 # ─────────────────────────────────────────────────────────────
 declare -A VOICE_MODELS=(
-  ["ggml-tiny.en-q5_1.bin"]="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en-q5_1.bin"
-  ["piper-swahili.onnx"]="https://huggingface.co/rhasspy/piper-voices/resolve/main/vi/vi_VN/vais1000/medium/vi_VN-vais1000-medium.onnx"
-  ["piper-swahili.onnx.json"]="https://huggingface.co/rhasspy/piper-voices/resolve/main/vi/vi_VN/vais1000/medium/vi_VN-vais1000-medium.onnx.json"
+  # Whisper Tiny INT4 ONNX — multilingual (not English-only), ONNX format (not GGML)
+  ["whisper-encoder-int8.onnx"]="https://huggingface.co/Xenova/whisper-tiny/resolve/main/onnx/encoder_model_quantized.onnx"
+  ["whisper-decoder-int8.onnx"]="https://huggingface.co/Xenova/whisper-tiny/resolve/main/onnx/decoder_model_merged_quantized.onnx"
+  ["whisper-tokens.json"]="https://huggingface.co/Xenova/whisper-tiny/resolve/main/tokenizer.json"
+  # Piper Swahili (sw_CD, lanfrica medium) — actual Swahili voice
+  ["piper-swahili.onnx"]="https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/sw/sw_CD/lanfrica/medium/sw_CD-lanfrica-medium.onnx"
+  ["piper-swahili.onnx.json"]="https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/sw/sw_CD/lanfrica/medium/sw_CD-lanfrica-medium.onnx.json"
   ["silero_vad.onnx"]="https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx"
 )
 

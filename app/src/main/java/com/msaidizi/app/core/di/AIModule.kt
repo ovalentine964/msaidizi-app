@@ -376,7 +376,8 @@ object AIModule {
         a2aProtocol: dagger.Lazy<A2AProtocol>,
         knowledgeGraph: dagger.Lazy<com.msaidizi.app.agent.knowledge.CrossDomainKnowledgeGraph>,
         socialHandler: dagger.Lazy<SocialHandler>,
-        inferenceHarness: dagger.Lazy<InferenceHarness>
+        inferenceHarness: dagger.Lazy<InferenceHarness>,
+        episodicMemory: dagger.Lazy<com.msaidizi.app.memory.EpisodicMemory>
     ): Orchestrator = Orchestrator(
         intentRouter = intentRouter,
         businessAgent = businessAgent,
@@ -421,8 +422,17 @@ object AIModule {
         a2aProtocol = a2aProtocol,
         knowledgeGraph = knowledgeGraph,
         socialHandler = socialHandler,
-        inferenceHarness = inferenceHarness
+        inferenceHarness = inferenceHarness,
+        episodicMemory = episodicMemory
     )
+
+    // ── Episodic Memory (L2) — SQLite FTS5 cross-session memory ──
+
+    @Provides
+    @Singleton
+    fun provideEpisodicMemory(
+        @ApplicationContext context: Context
+    ): com.msaidizi.app.memory.EpisodicMemory = com.msaidizi.app.memory.EpisodicMemory(context)
 
     // ── Dialect & Adaptive Vocabulary ──
 

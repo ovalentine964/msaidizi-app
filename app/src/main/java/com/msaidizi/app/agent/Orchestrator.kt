@@ -128,7 +128,9 @@ class Orchestrator(
     // ── Social Layer ──
     private val socialHandler: Lazy<SocialHandler>,
     // ── Inference Harness — wraps all model calls with monitoring/fallback/retry ──
-    private val inferenceHarness: Lazy<InferenceHarness>
+    private val inferenceHarness: Lazy<InferenceHarness>,
+    // ── Episodic Memory (L2) — cross-session memory layer ──
+    private val episodicMemory: Lazy<com.msaidizi.app.memory.EpisodicMemory>
 ) {
     private val _responses = MutableSharedFlow<AgentResponse>(extraBufferCapacity = 8)
     val responses: SharedFlow<AgentResponse> = _responses
@@ -176,6 +178,48 @@ class Orchestrator(
         ) ?: conversationManager.enhanceText(text)
         reActLoop.observe(trace, "Applied vocabulary enhancement: \"${enhancedText.take(50)}\"")
         checkpointId?.let { taskCheckpointManager.updateCheckpoint(it, "OBSERVE") }
+
+        // ── L2 Episodic Memory: query for relevant past episodes ──
+        val l2Episodes = try {
+            val workerId = conversationManager.currentWorkerId
+            val episodes = episodicMemory.get().search(enhancedText, workerId, limit = 3)
+            if (episodes.isNotEmpty()) {
+                // Boost relevance of accessed episodes (recency signal)
+                episodes.forEach { episodicMemory.get().boostRelevance(it.id, 0.05) }
+                reActLoop.observe(trace, "L2 episodic memory: found ${episodes.size} relevant episodes")
+            }
+            episodes
+        } catch (e: Throwable) {
+            Timber.w(e, "L2 episodic memory query failed — continuing without L2 context")
+            emptyList()
+        }
+
+        // Inject L2 episodes into L1 ConversationMemory as context turns
+        if (l2Episodes.isNotEmpty()) {
+            val memory = conversationManager.conversationMemory
+            l2Episodes.forEach { ep ->
+                memory.addTurn(
+                    speaker = "l2_memory",
+                    text = "[Past episode] Q: ${ep.query.take(100)} A: ${ep.response.take(100)}",
+                    intent = null,
+                    extractedData = mapOf("source" to "episodic_memory", "outcome" to ep.outcome)
+                )
+            }
+            // Update L3 WorkerProfile with L2 patterns (frequent topics)
+            try {
+                val workerId = conversationManager.currentWorkerId
+                if (workerId != null) {
+                    val topics = l2Episodes.mapNotNull { ep ->
+                        ep.contextJson.takeIf { it.length > 2 }?.let { ep.query.split(" ").firstOrNull() }
+                    }.distinct().take(5)
+                    conversationManager.hermesSession?.getWorkerProfile(workerId)?.let { profile ->
+                        profile.frequentTopics = (profile.frequentTopics + topics).distinct().take(20)
+                    }
+                }
+            } catch (e: Throwable) {
+                Timber.w(e, "L3 WorkerProfile update from L2 failed")
+            }
+        }
 
         // Step 0: Check for corrections
         val correctionResponse = conversationManager.checkForCorrection(
@@ -265,6 +309,29 @@ class Orchestrator(
         // Step 11: Record autonomy outcome and generate cross-domain insights
         recordAutonomyOutcome(intentResult, response)
         generateCrossDomainInsights()
+
+        // ── L2 Episodic Memory: store this interaction as a new episode ──
+        try {
+            val workerId = conversationManager.currentWorkerId ?: "anonymous"
+            val outcome = if (finalResponse.type != ResponseType.ERROR) "success" else "failure"
+            val lessons = if (critiqueScore < 0.7) "Low reflexion score: ${String.format("%.2f", critiqueScore)}" else ""
+            episodicMemory.get().storeEpisode(
+                workerId = workerId,
+                query = enhancedText,
+                response = finalResponse.text.take(500),
+                outcome = outcome,
+                lessons = lessons,
+                dialect = language,
+                context = mapOf(
+                    "intent" to intentResult.intent.name,
+                    "confidence" to String.format("%.2f", intentResult.confidence),
+                    "critiqueScore" to String.format("%.2f", critiqueScore)
+                )
+            )
+            reActLoop.observe(trace, "L2 episodic memory: stored episode (outcome=$outcome)")
+        } catch (e: Throwable) {
+            Timber.w(e, "L2 episodic memory store failed")
+        }
 
         return finalResponse
     }

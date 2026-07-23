@@ -42,8 +42,8 @@ class IntentPatternLoader @Inject constructor(
 
     @Serializable
     data class IntentPatternConfig(
-        val _metadata: PatternMetadata? = null,
-        val sheng_mappings: Map<String, String> = emptyMap(),
+        val _meta: PatternMetadata? = null,
+        val shengVocabulary: Map<String, Map<String, Any>> = emptyMap(),
         val intents: Map<String, IntentPatterns> = emptyMap()
     )
 
@@ -99,7 +99,7 @@ class IntentPatternLoader @Inject constructor(
         activeSource = effectiveSource
 
         Timber.i(TAG, "Loaded patterns: source=%s, intents=%d, version=%s",
-            effectiveSource, config.intents.size, config._metadata?.version ?: "unknown")
+            effectiveSource, config.intents.size, config._meta?.version ?: "unknown")
 
         config
     }
@@ -129,7 +129,7 @@ class IntentPatternLoader @Inject constructor(
             activeSource = PatternSource.REMOTE
 
             Timber.i(TAG, "Updated patterns from remote: version=%s, intents=%d",
-                config._metadata?.version, config.intents.size)
+                config._meta?.version, config.intents.size)
             true
         } catch (e: Throwable) {
             Timber.e(e, "Failed to update patterns from remote")
@@ -148,7 +148,7 @@ class IntentPatternLoader @Inject constructor(
             File(cacheDir, AB_TEST_CACHE_FILE).writeText(patternsJson)
             cachedConfig = config
             activeSource = PatternSource.AB_TEST
-            Timber.i(TAG, "Set A/B test variant: version=%s", config._metadata?.version)
+            Timber.i(TAG, "Set A/B test variant: version=%s", config._meta?.version)
             true
         } catch (e: Throwable) {
             Timber.e(e, "Failed to set A/B test variant")
@@ -172,9 +172,9 @@ class IntentPatternLoader @Inject constructor(
         val config = cachedConfig
         return mapOf(
             "source" to activeSource.name,
-            "version" to (config?._metadata?.version ?: "not loaded"),
+            "version" to (config?._meta?.version ?: "not loaded"),
             "intentCount" to (config?.intents?.size ?: 0),
-            "shengMappingCount" to (config?.sheng_mappings?.size ?: 0)
+            "shengVocabularySize" to (config?.shengVocabulary?.size ?: 0)
         )
     }
 

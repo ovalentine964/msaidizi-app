@@ -863,7 +863,12 @@ class ModelRouter(
                 "Use cloud inference instead."
             )
         }
-        if (!engine.isModelLoaded()) throw IllegalStateException("On-device model not loaded")
+        // Auto-load model if not yet loaded (LlmEngine.generate also auto-loads,
+        // but calling loadModel() here avoids a wasted generate() call on failure)
+        if (!engine.isModelLoaded()) {
+            val loaded = engine.loadModel()
+            if (!loaded) throw IllegalStateException("On-device model failed to load")
+        }
 
         val prompt = buildPromptFromMessages(request.messages)
 
@@ -895,6 +900,8 @@ class ModelRouter(
         val prompt = buildPromptFromMessages(request.messages)
 
         try {
+            // Cloud LLM providers: direct model call with provider-specific model ID.
+            // Uses the provider's primary model and standard chat endpoint.
             val response = api.aiChat(
                 com.msaidizi.app.data.model.AiChatRequest(
                     message = prompt,
@@ -918,9 +925,22 @@ class ModelRouter(
         val prompt = buildPromptFromMessages(request.messages)
 
         try {
+            // Backend (Angavu Intelligence): agent-aware endpoint with session context.
+            // Includes userId for per-user agent state, task type for routing to
+            // domain experts, and conversation history for multi-step reasoning.
+            val sessionContext = buildString {
+                request.userId?.let { append("[user:$it] ") }
+                append("[task:${request.taskType.name}] ")
+                append("[model:${provider.models.first()}] ")
+                if (request.messages.size > 1) {
+                    append("[history:${request.messages.size - 1} turns] ")
+                }
+            }
+            val backendPrompt = "$sessionContext$prompt"
+
             val response = api.aiChat(
                 com.msaidizi.app.data.model.AiChatRequest(
-                    message = prompt,
+                    message = backendPrompt,
                     model = provider.models.first(),
                     maxTokens = request.maxTokens,
                     temperature = request.temperature

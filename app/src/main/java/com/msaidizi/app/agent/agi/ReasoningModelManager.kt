@@ -1,6 +1,7 @@
 package com.msaidizi.app.agent.agi
 
 import android.content.Context
+import com.msaidizi.app.voice.LlmEngine
 import timber.log.Timber
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
@@ -20,7 +21,10 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * The goal: 95% of tasks handled on-device, cloud only for the hard 5%.
  */
-class ReasoningModelManager(private val context: Context) {
+class ReasoningModelManager(
+    private val context: Context,
+    private val llmEngine: LlmEngine? = null
+) {
 
     companion object {
         private const val TAG = "ReasoningModel"
@@ -156,17 +160,24 @@ class ReasoningModelManager(private val context: Context) {
     /**
      * Load the on-device model. Call this during app startup.
      */
-    fun loadModel(): Boolean {
+    suspend fun loadModel(): Boolean {
         if (isModelLoaded) return true
 
         val startTime = System.currentTimeMillis()
         try {
-            // The actual model loading happens in LlmEngine (JNI bridge)
-            // This manager just tracks state and routes
-            isModelLoaded = true
+            val engine = llmEngine
+            if (engine != null) {
+                isModelLoaded = engine.loadModel()
+            } else {
+                // No engine available — cannot load
+                Timber.tag(TAG).w("LlmEngine not available, cannot load model")
+                isModelLoaded = false
+            }
             modelLoadTimeMs = System.currentTimeMillis() - startTime
-            Timber.tag(TAG).i("Model loaded in ${modelLoadTimeMs}ms")
-            return true
+            if (isModelLoaded) {
+                Timber.tag(TAG).i("Model loaded in ${modelLoadTimeMs}ms")
+            }
+            return isModelLoaded
         } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Failed to load model")
             return false
@@ -204,10 +215,18 @@ class ReasoningModelManager(private val context: Context) {
         val startTime = System.currentTimeMillis()
 
         // Delegate to LlmEngine (JNI bridge to llama.cpp)
-        // The actual inference happens in native code
         val response = try {
-            // LlmEngine.getInstance().infer(prompt, systemPrompt, maxTokens)
-            "[ON_DEVICE_INFERENCE]" // Placeholder — actual LlmEngine call
+            val engine = llmEngine ?: throw IllegalStateException("LlmEngine not available")
+            if (!engine.isModelLoaded()) {
+                val loaded = engine.loadModel()
+                if (!loaded) throw IllegalStateException("Model failed to load")
+                isModelLoaded = true
+            }
+            engine.generate(
+                prompt = "$systemPrompt\n\n$prompt",
+                maxTokens = maxTokens,
+                temperature = 0.3f
+            )
         } catch (e: Throwable) {
             Timber.tag(TAG).w(e, "On-device inference failed, falling back to cloud")
             return inferCloud(prompt, systemPrompt, maxTokens)
@@ -234,8 +253,18 @@ class ReasoningModelManager(private val context: Context) {
 
         // Call backend API
         val response = try {
-            // BackendClient.infer(prompt, systemPrompt, maxTokens)
-            "[CLOUD_INFERENCE]" // Placeholder — actual API call
+            // Cloud API not wired in this manager — use LlmEngine as fallback
+            val engine = llmEngine ?: throw IllegalStateException("No inference backend available")
+            if (!engine.isModelLoaded()) {
+                val loaded = engine.loadModel()
+                if (!loaded) throw IllegalStateException("Model failed to load")
+                isModelLoaded = true
+            }
+            engine.generate(
+                prompt = "$systemPrompt\n\n$prompt",
+                maxTokens = maxTokens,
+                temperature = 0.3f
+            )
         } catch (e: Throwable) {
             Timber.tag(TAG).e(e, "Cloud inference failed")
             return InferenceResult(

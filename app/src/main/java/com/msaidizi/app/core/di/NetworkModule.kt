@@ -4,7 +4,6 @@ import com.msaidizi.app.data.api.MsaidiziApi
 import com.msaidizi.app.sync.NetworkMonitor
 import com.msaidizi.app.sync.SyncManager
 import com.msaidizi.app.sync.SyncQueue
-import com.msaidizi.app.core.network.PinnedHttpClient
 import com.msaidizi.app.core.database.PatternDao
 import com.msaidizi.app.core.database.TransactionDao
 import android.content.Context
@@ -33,9 +32,11 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideMsaidiziApi(): MsaidiziApi {
+    fun provideMsaidiziApi(tlsConfig: com.msaidizi.app.security.crypto.TlsConfig): MsaidiziApi {
+        val secureClient = tlsConfig.createSecureClient()
         val retrofit = Retrofit.Builder()
             .baseUrl("https://api.angavu.io/")
+            .callFactory(secureClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
         return retrofit.create(MsaidiziApi::class.java)

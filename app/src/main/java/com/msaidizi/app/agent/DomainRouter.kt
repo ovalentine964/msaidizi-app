@@ -38,7 +38,14 @@ class DomainRouter(
                     val item = intentResult.extractedData["item"] ?: "service"
                     val amount = intentResult.extractedData["amount"]?.toDoubleOrNull() ?: 0.0
                     if (amount > 0) {
-                        businessAgent.recordSale(item, 1.0, amount, language)
+                        // FARMING_INPUT and TRANSPORT_EXPENSE are costs, not income
+                        val isExpense = intentResult.intent == IntentType.FARMING_INPUT ||
+                                intentResult.intent == IntentType.TRANSPORT_EXPENSE
+                        if (isExpense) {
+                            businessAgent.recordExpense(item, amount, language)
+                        } else {
+                            businessAgent.recordSale(item, 1.0, amount, language)
+                        }
                         AgentResponse(
                             text = if (language == "sw") "✅ Umerekodi: $item, KSh ${"%.0f".format(amount)}"
                             else "✅ Recorded: $item, KSh ${"%.0f".format(amount)}",

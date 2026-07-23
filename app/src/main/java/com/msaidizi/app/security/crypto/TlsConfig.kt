@@ -58,7 +58,8 @@ class TlsConfig @Inject constructor(
         //     | base64
         private val API_PINS = listOf(
             "sha256/C/5hW8MVw+3h8YoFOUoRz2OgNFNPTq3MwGE/2siEpx0=",  // ISRG Root X1 (Let's Encrypt)
-            "sha256/jQJTbIh0grw0/1TkHSumWb+Fs0Ggogr621gT3PvPKG0="   // Let's Encrypt Authority X3 cross-signed
+            "sha256/jQJTbIh0grw0/1TkHSumWb+Fs0Ggogr621gT3PvPKG0=",  // Let's Encrypt Authority X3 cross-signed
+            "sha256/hxqRlPTu1bMS/0DITB1SSu0vd4u/8l8TjPgfaAgCGQA="   // GTS Root R1 (Google Trust Services — backup CA)
         )
 
         private const val CONNECT_TIMEOUT_SEC = 30L

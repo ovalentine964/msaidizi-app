@@ -8,6 +8,7 @@ import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
+import android.speech.tts.TextToSpeech as AndroidTts
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import timber.log.Timber
@@ -81,6 +82,10 @@ class TextToSpeech @Inject constructor(
     private var phonemeMap: Map<String, Int> = emptyMap()
     private var isPhonemeMapLoaded = false
 
+    // ────────────── Android TTS Fallback ──────────────
+    private var androidTtsFallback: AndroidTts? = null
+    private var androidTtsReady = false
+
 
     // ────────────────────── Model Lifecycle ──────────────────────
 
@@ -137,6 +142,7 @@ class TextToSpeech @Inject constructor(
         ortSession = null
         ortEnvironment = null
         isModelLoaded = false
+        // Don't unload Android TTS fallback — it's lightweight (~2MB)
         Timber.d("Piper TTS model unloaded")
     }
 
@@ -154,7 +160,8 @@ class TextToSpeech @Inject constructor(
         if (!isModelLoaded) {
             val loaded = loadModel()
             if (!loaded) {
-                Timber.w("Cannot speak — model not loaded")
+                Timber.w("Piper model not loaded — falling back to Android TTS")
+                speakWithAndroidTts(text, language)
                 return@withContext
             }
         }
@@ -428,32 +435,49 @@ class TextToSpeech @Inject constructor(
     }
 
     /**
-     * Try to phonemize text using espeak-ng.
-     * Returns list of IPA phoneme strings, or null if espeak-ng unavailable.
+     * Phonemize text — espeak-ng is not available on Android.
+     * Return null to use the character-level fallback in textToPhonemes().
+     * Swahili is a phonetic language, so character-level mapping works well.
      */
     private fun tryEspeakPhonemize(text: String, language: String): List<String>? {
-        return try {
-            val langCode = when (language) {
-                "sw" -> "sw"    // Swahili
-                "en" -> "en"    // English
-                "sheng" -> "sw" // Sheng → use Swahili phonemizer
-                else -> "sw"
+        // espeak-ng is not available on Android.
+        // Return null to use the character-level fallback in textToPhonemes().
+        return null
+    }
+
+    /**
+     * Initialize Android's built-in TTS as a last-resort fallback.
+     * Used when the ONNX Piper model fails to load or synthesize.
+     */
+    private fun ensureAndroidTtsFallback() {
+        if (androidTtsFallback != null) return
+        androidTtsFallback = AndroidTts(context) { status ->
+            androidTtsReady = status == AndroidTts.SUCCESS
+            if (androidTtsReady) {
+                androidTtsFallback?.language = java.util.Locale("sw", "CD")
             }
-
-            val process = Runtime.getRuntime().exec(
-                arrayOf("espeak-ng", "-v", langCode, "-q", "--ipa", text)
-            )
-            val output = process.inputStream.bufferedReader().readText().trim()
-            process.waitFor()
-
-            if (output.isNotEmpty()) {
-                // Split IPA output into individual phonemes
-                output.split(Regex("\\s+")).filter { it.isNotEmpty() }
-            } else null
-        } catch (e: Throwable) {
-            // espeak-ng not available on this device
-            null
+            Timber.d("Piper: Android TTS fallback initialized, status=%d", status)
         }
+    }
+
+    /**
+     * Speak using Android's built-in TTS as last-resort fallback.
+     * Called when Piper ONNX model fails to load or synthesize.
+     */
+    private fun speakWithAndroidTts(text: String, language: String) {
+        ensureAndroidTtsFallback()
+        if (!androidTtsReady) {
+            Timber.w("Piper: Android TTS fallback not ready")
+            return
+        }
+        val locale = when (language) {
+            "sw", "sheng" -> java.util.Locale("sw", "CD")
+            "en" -> java.util.Locale.US
+            else -> java.util.Locale("sw", "CD")
+        }
+        androidTtsFallback?.language = locale
+        androidTtsFallback?.speak(text, AndroidTts.QUEUE_FLUSH, null, "piper-fallback")
+        Timber.i("Piper: Speaking via Android TTS fallback")
     }
 
     /**

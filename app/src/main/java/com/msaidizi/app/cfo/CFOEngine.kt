@@ -85,6 +85,21 @@ class CFOEngine {
         yesterdayTransactions: List<Transaction>,
         recentTransactions: List<Transaction>
     ): DailyBriefing {
+        // Guard: return safe defaults when all data is empty
+        if (todayTransactions.isEmpty() && yesterdayTransactions.isEmpty() && recentTransactions.isEmpty()) {
+            return DailyBriefing(
+                message = "Habari $workerName! $assistantName wako hapa. Bado hakuna data ya mauzo. Anza kurekodi leo!",
+                todaySales = 0.0,
+                todayExpenses = 0.0,
+                todayProfit = 0.0,
+                yesterdaySales = 0.0,
+                yesterdayProfit = 0.0,
+                salesTrendPercent = 0,
+                topSellingItem = null,
+                savingsRecommendation = 0.0
+            )
+        }
+
         val todaySales = todayTransactions
             .filter { it.type == TransactionType.SALE }
             .sumOf { it.totalAmount }
@@ -101,9 +116,10 @@ class CFOEngine {
             .sumOf { it.totalAmount }
 
         // Trend comparison (STA 244: time series)
+        // Guard: avoid division by zero when yesterday had no sales
         val salesTrend = if (yesterdaySales > 0) {
             ((todaySales - yesterdaySales) / yesterdaySales * 100).roundToInt()
-        } else 0
+        } else if (todaySales > 0) 100 else 0
 
         // Top selling item today
         val topItem = todayTransactions
@@ -188,11 +204,13 @@ class CFOEngine {
         dailyRevenue: Double
     ): CashFlowForecast {
         val netDailyBurn = dailyExpenses - dailyRevenue
-        val daysRemaining = if (netDailyBurn > 0) {
-            (currentCash / netDailyBurn).toInt()
-        } else {
-            // Revenue exceeds expenses — cash is growing
-            Int.MAX_VALUE
+        // Guard: handle zero/NaN inputs and zero burn rate
+        val safeCurrentCash = if (currentCash.isNaN() || currentCash.isInfinite()) 0.0 else currentCash
+        val safeBurn = if (netDailyBurn.isNaN() || netDailyBurn.isInfinite()) 0.0 else netDailyBurn
+        val daysRemaining = when {
+            safeBurn > 0 && safeCurrentCash > 0 -> (safeCurrentCash / safeBurn).toInt()
+            safeBurn <= 0 -> Int.MAX_VALUE  // Revenue >= expenses — cash growing
+            else -> 0  // No cash and burning — already out
         }
 
         val message = when {
@@ -234,6 +252,14 @@ class CFOEngine {
         recentSales: List<Transaction>,
         currentStock: Map<String, Double>
     ): RestockAdvice {
+        // Guard: empty sales data — nothing to restock
+        if (recentSales.isEmpty()) {
+            return RestockAdvice(
+                message = "Hakuna data ya mauzo bado. Rekodi mauzo yako ili uone ushauri wa kununua bidhaa.",
+                items = emptyList()
+            )
+        }
+
         // Calculate daily sales velocity per item (STA 341)
         val salesByItem = recentSales
             .filter { it.type == TransactionType.SALE }
@@ -252,7 +278,10 @@ class CFOEngine {
             if (daysOfStock <= LOW_STOCK_DAYS_THRESHOLD) {
                 // Need to restock
                 val suggestedQuantity = (dailyVelocity * 7).roundToInt()  // 1 week supply
-                val avgCost = sales.map { it.unitPrice }.average()
+                // Guard: avoid NaN from average() on empty unit prices
+                val avgCost = sales.map { it.unitPrice }.filter { it > 0 }.average().let {
+                    if (it.isNaN()) 0.0 else it
+                }
 
                 recommendations.add(
                     RestockItem(
@@ -377,6 +406,22 @@ class CFOEngine {
         transactions: List<Transaction>,
         totalSaved: Double
     ): CreditReadiness {
+        // Guard: no transactions — return minimal credit profile
+        if (transactions.isEmpty()) {
+            return CreditReadiness(
+                message = "Bado hakuna data ya kutosha kukadiria alama yako ya mkopo. Anza kurekodi mauzo yako kila siku!",
+                score = 0,
+                isReady = false,
+                estimatedLoanAmount = 0,
+                breakdown = mapOf(
+                    "Usahihi wa mauzo" to 0,
+                    "Rekodi za biashara" to 0,
+                    "Faida ya biashara" to 0,
+                    "Tabia ya kuhifadhi" to 0
+                )
+            )
+        }
+
         // Factor 1: Transaction consistency (0-25 points)
         val activeDays = transactions
             .groupBy { it.createdAt / 86400 }
@@ -394,11 +439,12 @@ class CFOEngine {
         }
 
         // Factor 3: Profit margin (0-25 points)
+        // Guard: safe division — avoid NaN/Infinity from zero sales
         val sales = transactions.filter { it.type == TransactionType.SALE }.sumOf { it.totalAmount }
         val costs = transactions.filter {
             it.type == TransactionType.EXPENSE || it.type == TransactionType.PURCHASE
         }.sumOf { it.totalAmount }
-        val margin = if (sales > 0) (sales - costs) / sales else 0.0
+        val margin = if (sales > 0) ((sales - costs) / sales).coerceIn(-1.0, 1.0) else 0.0
         val marginScore = when {
             margin >= 0.30 -> 25
             margin >= 0.20 -> 20
@@ -472,6 +518,19 @@ class CFOEngine {
         thisWeek: List<Transaction>,
         lastWeek: List<Transaction>
     ): WeeklyReport {
+        // Guard: empty week — return safe defaults
+        if (thisWeek.isEmpty() && lastWeek.isEmpty()) {
+            return WeeklyReport(
+                message = "📋 Ripoti ya Wiki — $workerName\nKutoka $assistantName wako\n\nBado hakuna data ya wiki hii. Anza kurekodi!",
+                totalSales = 0.0,
+                totalExpenses = 0.0,
+                totalProfit = 0.0,
+                salesGrowthPercent = 0,
+                topProduct = null,
+                transactionCount = 0
+            )
+        }
+
         val weekSales = thisWeek.filter { it.type == TransactionType.SALE }.sumOf { it.totalAmount }
         val weekExpenses = thisWeek.filter {
             it.type == TransactionType.EXPENSE || it.type == TransactionType.PURCHASE
@@ -483,9 +542,10 @@ class CFOEngine {
             it.type == TransactionType.EXPENSE || it.type == TransactionType.PURCHASE
         }.sumOf { it.totalAmount }
 
+        // Guard: avoid division by zero when last week had no sales
         val salesGrowth = if (lastWeekSales > 0) {
             ((weekSales - lastWeekSales) / lastWeekSales * 100).roundToInt()
-        } else 0
+        } else if (weekSales > 0) 100 else 0
 
         val bestDay = thisWeek
             .filter { it.type == TransactionType.SALE }
@@ -557,6 +617,18 @@ class CFOEngine {
     ): List<RiskAlert> {
         val alerts = mutableListOf<RiskAlert>()
 
+        // Guard: no data at all — return safe no-risk message
+        if (recentTransactions.isEmpty() && olderTransactions.isEmpty()) {
+            return listOf(
+                RiskAlert(
+                    type = RiskType.NONE,
+                    severity = RiskSeverity.NONE,
+                    message = "Biashara yako iko salama! Hakuna hatari zilizogunduliwa.",
+                    recommendation = "Endelea kurekodi mauzo yako kila siku."
+                )
+            )
+        }
+
         // Check for declining revenue trend (STA 244)
         val recentSales = recentTransactions.filter { it.type == TransactionType.SALE }.sumOf { it.totalAmount }
         val olderSales = olderTransactions.filter { it.type == TransactionType.SALE }.sumOf { it.totalAmount }
@@ -582,8 +654,9 @@ class CFOEngine {
             .filter { it.type == TransactionType.EXPENSE || it.type == TransactionType.PURCHASE }
             .sumOf { it.totalAmount }
 
-        val recentMargin = if (recentSales > 0) recentProfit / recentSales else 0.0
-        val olderMargin = if (olderSales > 0) olderProfit / olderSales else 0.0
+        // Guard: safe division for margin calculations
+        val recentMargin = if (recentSales > 0) (recentProfit / recentSales).coerceIn(-1.0, 1.0) else 0.0
+        val olderMargin = if (olderSales > 0) (olderProfit / olderSales).coerceIn(-1.0, 1.0) else 0.0
 
         if (recentMargin < olderMargin * 0.8 && olderMargin > 0) {
             alerts.add(
@@ -601,9 +674,12 @@ class CFOEngine {
             .filter { it.type == TransactionType.SALE }
             .groupBy { it.item }
         val totalSalesAmount = salesByItem.values.sumOf { it.sumOf { t -> t.totalAmount } }
-        val topItemShare = salesByItem.values.maxOfOrNull { it.sumOf { t -> t.totalAmount } }?.let {
-            it / totalSalesAmount
-        } ?: 0.0
+        // Guard: avoid division by zero when total sales amount is 0
+        val topItemShare = if (totalSalesAmount > 0) {
+            salesByItem.values.maxOfOrNull { it.sumOf { t -> t.totalAmount } }?.let {
+                it / totalSalesAmount
+            } ?: 0.0
+        } else 0.0
 
         if (topItemShare > 0.6 && salesByItem.size > 1) {
             alerts.add(

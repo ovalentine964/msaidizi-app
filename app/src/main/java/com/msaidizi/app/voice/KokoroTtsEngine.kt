@@ -8,6 +8,7 @@ import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
+import android.speech.tts.TextToSpeech as AndroidTts
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import timber.log.Timber
@@ -115,6 +116,10 @@ class KokoroTtsEngine @Inject constructor(
     private var speed: Float = DEFAULT_SPEED
     private var currentVoiceId: Int = VOICE_DEFAULT
 
+    // ────────────── Android TTS Fallback ──────────────
+    private var androidTtsFallback: AndroidTts? = null
+    private var androidTtsReady = false
+
     // ────────────────────── Model Lifecycle ──────────────────────
 
     /**
@@ -202,6 +207,7 @@ class KokoroTtsEngine @Inject constructor(
         isModelLoaded = false
         voiceStyles = emptyArray()
         isVoiceStylesLoaded = false
+        // Don't unload Android TTS fallback — it's lightweight (~2MB)
         Timber.d("Kokoro TTS model unloaded")
     }
 
@@ -244,7 +250,8 @@ class KokoroTtsEngine @Inject constructor(
         if (!isModelLoaded) {
             val loaded = loadModel()
             if (!loaded) {
-                Timber.w("Cannot speak — Kokoro model not loaded")
+                Timber.w("Kokoro model not loaded — falling back to Android TTS")
+                speakWithAndroidTts(text, language)
                 return@withContext
             }
         }
@@ -464,36 +471,53 @@ class KokoroTtsEngine @Inject constructor(
         return phonemes
     }
 
+    /**
+     * Phonemize text using a rule-based approach for Swahili.
+     * espeak-ng is not available on Android — use character-level mapping instead.
+     * Swahili is largely phonetic, so character-level mapping works well.
+     *
+     * @return null to signal caller to use character-level fallback
+     */
     private fun tryEspeakPhonemize(text: String, language: String): List<String>? {
-        return try {
-            val langCode = when (language) {
-                "sw" -> "sw"
-                "en" -> "en"
-                "sheng" -> "sw"
-                else -> "sw"
+        // espeak-ng is not available on Android.
+        // Return null to use the character-level fallback in textToPhonemes().
+        // Swahili is a phonetic language — character-level mapping is accurate.
+        return null
+    }
+
+    /**
+     * Initialize Android's built-in TTS as a last-resort fallback.
+     * Used when the ONNX Kokoro model fails to load or synthesize.
+     */
+    private fun ensureAndroidTtsFallback() {
+        if (androidTtsFallback != null) return
+        androidTtsFallback = AndroidTts(context) { status ->
+            androidTtsReady = status == AndroidTts.SUCCESS
+            if (androidTtsReady) {
+                androidTtsFallback?.language = java.util.Locale("sw", "CD")
             }
-            val process = Runtime.getRuntime().exec(
-                arrayOf("espeak-ng", "-v", langCode, "-q", "--ipa", text)
-            )
-            val output = process.inputStream.bufferedReader().readText().trim()
-            val completed = process.waitFor(5, java.util.concurrent.TimeUnit.SECONDS)
-            if (!completed) {
-                Timber.w("espeak-ng process timed out after 5s, destroying")
-                process.destroyForcibly()
-                return null
-            }
-            val exitCode = process.exitValue()
-            if (exitCode != 0) {
-                Timber.w("espeak-ng exited with code %d", exitCode)
-                return null
-            }
-            if (output.isNotEmpty()) {
-                output.split(Regex("\\s+")).filter { it.isNotEmpty() }
-            } else null
-        } catch (e: Throwable) {
-            Timber.w(e, "espeak-ng phonemization failed")
-            null
+            Timber.d("Kokoro: Android TTS fallback initialized, status=%d", status)
         }
+    }
+
+    /**
+     * Speak using Android's built-in TTS as last-resort fallback.
+     * Called when Kokoro ONNX model fails to load or synthesize.
+     */
+    private fun speakWithAndroidTts(text: String, language: String) {
+        ensureAndroidTtsFallback()
+        if (!androidTtsReady) {
+            Timber.w("Kokoro: Android TTS fallback not ready")
+            return
+        }
+        val locale = when (language) {
+            "sw", "sheng" -> java.util.Locale("sw", "CD")
+            "en" -> java.util.Locale.US
+            else -> java.util.Locale("sw", "CD")
+        }
+        androidTtsFallback?.language = locale
+        androidTtsFallback?.speak(text, AndroidTts.QUEUE_FLUSH, null, "kokoro-fallback")
+        Timber.i("Kokoro: Speaking via Android TTS fallback")
     }
 
     private fun loadPhonemeMap(modelDir: File) {

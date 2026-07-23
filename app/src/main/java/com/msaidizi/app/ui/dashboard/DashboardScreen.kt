@@ -17,6 +17,7 @@ import com.github.mikephil.charting.data.*
 import com.msaidizi.app.R
 import com.msaidizi.app.core.model.Trend
 import com.msaidizi.app.ui.accessibility.AccessibilityTtsHelper
+import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -84,6 +85,23 @@ class DashboardFragment : Fragment() {
                 setOnClickListener { speakDashboardSummary() }
             }
         listenButton.setOnClickListener { speakDashboardSummary() }
+
+        // U1 Fix: Wire navigation to 5 previously unreachable screens
+        view.findViewById<View>(R.id.card_gamification)?.setOnClickListener {
+            findNavController().navigate(R.id.action_dashboard_to_gamification)
+        }
+        view.findViewById<View>(R.id.card_goals)?.setOnClickListener {
+            findNavController().navigate(R.id.action_dashboard_to_goals)
+        }
+        view.findViewById<View>(R.id.card_loans)?.setOnClickListener {
+            findNavController().navigate(R.id.action_dashboard_to_loans)
+        }
+        view.findViewById<View>(R.id.card_tithe)?.setOnClickListener {
+            findNavController().navigate(R.id.action_dashboard_to_tithe)
+        }
+        view.findViewById<View>(R.id.card_mindset)?.setOnClickListener {
+            findNavController().navigate(R.id.action_dashboard_to_mindset)
+        }
 
         // ── Accessibility: Content descriptions ──
         cashFlowValue.contentDescription = "Mtaji wa wiki"

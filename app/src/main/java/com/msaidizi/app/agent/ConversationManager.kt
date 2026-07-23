@@ -185,7 +185,12 @@ class ConversationManager(
         language: String
     ): AgentResponse? {
         val engine = llmEngine ?: return null
-        if (!engine.isModelLoaded()) return null
+        // Try to auto-load the model if not yet loaded.
+        // Previously this silently returned null, preventing escalation.
+        if (!engine.isModelLoaded()) {
+            val loaded = engine.loadModel()
+            if (!loaded) return null
+        }
 
         // Build LLM context
         val context = buildString {
