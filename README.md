@@ -2,9 +2,11 @@
 
 # 📱 Msaidizi
 
-### AI Business Assistant for Kenya's Entrepreneurs
+### AI-Powered CFO for Informal Workers
 
-**Your phone, your business partner.** A fully offline AI assistant that runs on budget Android phones (2GB+ RAM), understands Kiswahili and English, and helps small businesses thrive — no internet required.
+**Your CFO in your pocket.** Msaidizi is your Chief Financial Officer — tracks revenue, expenses, profit, and cash flow. Runs fully offline on budget Android phones (2GB+ RAM), understands Kiswahili and English, and delivers CFO-level financial intelligence to workers who never had one — no internet required.
+
+> **Free CFO for 600 million informal workers.**
 
 [![Android](https://img.shields.io/badge/Android-8.0%2B-brightgreen.svg)](https://developer.android.com/about/versions/oreo)
 [![Kotlin](https://img.shields.io/badge/Kotlin-1.9%2B-purple.svg)](https://kotlinlang.org)
@@ -27,7 +29,7 @@
 │       │                                                     │
 │       ▼                                                     │
 │  ┌─────────────────────────────────────────────────────┐    │
-│  │           SuperagentHarness (Single Brain)           │    │
+│  │           SuperagentHarness (CFO Brain)              │    │
 │  │                                                      │    │
 │  │  IntentRouter → ContextAssembler → GuardrailsEngine  │    │
 │  │       │              │                   │           │    │
@@ -53,13 +55,13 @@
 
 | Component | Role | Tech |
 |-----------|------|------|
-| **SuperagentHarness** | Unified orchestration brain | Kotlin, Coroutines |
+| **SuperagentHarness** | CFO brain — unified financial orchestration | Kotlin, Coroutines |
 | **LlmEngine** | On-device LLM reasoning | llama.cpp JNI → Qwen 0.8B GGUF |
 | **IntentRouter** | Classifies user intent | Rule-based + LLM fallback |
 | **ContextAssembler** | Gathers context from all memory layers | Room DB, Knowledge base |
 | **ToolRegistry** | Executes business tools (sales, stock, etc.) | Kotlin |
 | **GuardrailsEngine** | Safety & output filtering | Rule-based |
-| **FlywheelEngine** | Learning from interactions | Pattern extraction |
+| **FlywheelEngine** | Learns your business patterns over time | Pattern extraction |
 | **Voice Pipeline** | Speech-to-text / text-to-speech | Whisper (ONNX), Piper (ONNX) |
 | **Database** | Encrypted local storage | Room + SQLCipher |
 
@@ -253,10 +255,10 @@ test: add unit tests for IntentRouter
 
 ### Areas We Need Help
 
-- 🌍 **Translations** — Better Kiswahili coverage
-- 🧠 **Tool implementations** — Real business logic in tools
-- 🎨 **UI/UX** — Material 3 design improvements
-- 📊 **Analytics** — Business insights and reports
+- 🌍 **Translations** — Better Kiswahili coverage for CFO briefings
+- 🧠 **Tool implementations** — Real CFO logic in tools (cash flow, credit, savings)
+- 🎨 **UI/UX** — Material 3 design for financial dashboards
+- 📊 **Analytics** — CFO-grade business insights and reports
 - 🧪 **Testing** — Coverage for superagent modules
 - 📱 **Device testing** — Budget phone optimization
 
@@ -288,6 +290,6 @@ Please see [SECURITY.md](SECURITY.md) for our security policy and vulnerability 
 
 **Built with ❤️ for Kenya's small business owners**
 
-*Every dukawalla deserves an AI assistant.*
+*Every dukawalla deserves a CFO.*
 
 </div>
