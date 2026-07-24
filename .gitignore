@@ -15,6 +15,9 @@
 *.pyc
 __pycache__/
 
+# Python files (should not be in Android project)
+*.py
+
 # Generated files
 bin/
 gen/
@@ -96,6 +99,7 @@ app/src/main/jniLibs/
 # AI Models (too large for git, downloaded by CI/scripts/download-models.sh)
 app/src/main/assets/models/*.onnx
 app/src/main/assets/models/*.gguf
+app/src/main/assets/models/*.bin
 app/src/main/assets/models/*.json
 app/src/main/assets/models/*.txt
 app/src/main/assets/models/espeak-ng-data/
