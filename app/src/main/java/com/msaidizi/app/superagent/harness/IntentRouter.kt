@@ -195,6 +195,16 @@ class IntentRouter @Inject constructor(
             )
         }
 
+        // Service transaction (fundi, salon, barber, etc.)
+        if (matchesServicePattern(input)) {
+            return UserIntent(
+                type = IntentType.RECORD_SERVICE,
+                confidence = 0.85f,
+                requiredTools = listOf("record_service"),
+                toolParams = mapOf("record_service" to extractServiceParams(input))
+            )
+        }
+
         return null
     }
 
@@ -279,6 +289,38 @@ class IntentRouter @Inject constructor(
             "mteja anadaiwa", "walinidai", "wana deni"
         )
         return keywords.any { input.contains(it) }
+    }
+
+    private fun matchesServicePattern(input: String): Boolean {
+        val serviceKeywords = listOf(
+            // Repair
+            "repair", "kurepair", "kufix", "kutengeneza", "nimefix",
+            // Beauty
+            "kata nywele", "kukata nywele", "braid", "kubraid", "manicure", "pedicure",
+            "nimekata", "nimemkata",
+            // Cleaning
+            "osha gari", "kuosha gari", "car wash", "nimeosha",
+            // Construction
+            "nimefanya", "nimemfanyia", "nimejenga", "nimechimba",
+            // General service
+            "nimemfanyia", "nimefanyia kazi"
+        )
+        return serviceKeywords.any { input.contains(it) }
+    }
+
+    private fun extractServiceParams(input: String): Map<String, String> {
+        val params = mutableMapOf<String, String>()
+        val amount = numberPattern.find(input)?.value
+        if (amount != null) params["amount"] = amount
+        // Detect service type
+        params["service_type"] = when {
+            input.contains("repair") || input.contains("fix") || input.contains("tengeneza") -> "repair"
+            input.contains("kata") || input.contains("nywele") || input.contains("braid") -> "beauty"
+            input.contains("osha") || input.contains("gari") || input.contains("car wash") -> "cleaning"
+            input.contains("jenga") || input.contains("chimba") || input.contains("fanya") -> "construction"
+            else -> "general"
+        }
+        return params
     }
 
     private fun matchesGreetingPattern(input: String): Boolean {

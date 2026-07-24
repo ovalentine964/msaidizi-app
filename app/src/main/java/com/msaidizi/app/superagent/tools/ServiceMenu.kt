@@ -22,7 +22,21 @@ data class ServiceTransaction(
     val timestamp: Long
 )
 
-class ServiceMenu @Inject constructor() {
+class ServiceMenu @Inject constructor() : Tool {
+    override val name = "record_service"
+    override val description = "Record service transactions (fundi, salon, barber, etc.)"
+
+    override suspend fun execute(args: Map<String, String>): ToolResult {
+        val serviceName = args["service_name"] ?: "Service"
+        val amount = args["amount"]?.toDoubleOrNull() ?: return ToolResult.error("Missing amount")
+        val labourCost = args["labour_cost"]?.toDoubleOrNull() ?: amount * 0.7
+        val materialsCost = args["materials_cost"]?.toDoubleOrNull() ?: amount * 0.3
+        val customer = args["customer_name"]
+        val result = recordService(serviceName, labourCost, materialsCost, customer)
+        return ToolResult.success("Service recorded: ${result.serviceName} — KES ${result.totalCharged} (Labour: ${result.labourCost}, Materials: ${result.materialsCost})")
+    }
+
+    // Existing implementation below
     private val services = mutableMapOf<String, MutableList<ServiceItem>>()
     private val transactions = mutableListOf<ServiceTransaction>()
 
