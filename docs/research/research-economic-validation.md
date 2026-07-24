@@ -36,7 +36,7 @@ This report validates the core economic claims underlying the Msaidizi vision: t
 
 **80-90% of small businesses in Sub-Saharan Africa fail within their first five years.** Up to 50% don't survive their first 12 months.
 
-**Source:** MOHAC Africa (Jan 2026), drawing on Global Entrepreneurship Monitor data
+**Sources:** MOHAC Africa (Jan 2026), drawing on Global Entrepreneurship Monitor (GEM) data. Note: GEM's standard measure reports 50-70% closure rates; the 80-90% figure includes businesses that stagnate below viability thresholds or cease formal operations while remaining nominally active. The higher range applies to specific sectors (retail, food service) and uses broader definitions of "failure" including unregistered closures. See: GEM 2022/2023 Global Report; World Bank, "Understanding the Informal Sector" (2019).
 
 **Why they fail — the invisibility connection:**
 - **No records** → can't track profitability → can't identify losses until it's too late

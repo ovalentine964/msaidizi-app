@@ -37,7 +37,20 @@ class DifferentialPrivacy @Inject constructor() {
 
     companion object {
         /** Privacy budget — ε = 0.1 for strong privacy on financial data */
-        const val DEFAULT_EPSILON = 0.1
+        var DEFAULT_EPSILON: Double = 0.1
+            private set
+
+        /**
+         * Update the default epsilon from configuration (remote config, BuildConfig, etc.).
+         * Call this at app startup or when remote config changes.
+         *
+         * @param epsilon New epsilon value (must be > 0)
+         */
+        fun configure(epsilon: Double) {
+            require(epsilon > 0) { "Epsilon must be positive, got $epsilon" }
+            DEFAULT_EPSILON = epsilon
+            Timber.d("DP epsilon configured: %.4f", epsilon)
+        }
 
         /** Sensitivity for monetary amounts (max KES change one person can cause) */
         const val AMOUNT_SENSITIVITY = 100_000.0  // KES 100,000

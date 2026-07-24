@@ -652,6 +652,8 @@ Achievements:
 
 **Goal:** 50 dialects total, major West African languages online
 
+**Current Status (July 2026):** Dialect adapters for Hausa, Yoruba, Igbo, Zulu, and Xhosa are **implemented with substantial data** (markers, business terms, pronunciation variations, dialect-to-Swahili mappings). These adapters handle dialect detection and text processing today. However, **ASR (speech recognition) models for these languages are not yet trained** — the adapters work for text-based interactions but voice recognition requires additional training data (target: 100+ hours per language). The adapters are production-ready for text; voice support is Phase 3.
+
 | Dialect | Family | Data Status | Parent Adapter | Est. WER |
 |---|---|---|---|---|
 | Yoruba | Volta-Niger | 5 hrs (external datasets) | (new family root) | 20% |

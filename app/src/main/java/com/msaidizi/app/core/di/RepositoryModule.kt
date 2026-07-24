@@ -5,8 +5,6 @@ import com.msaidizi.app.agent.knowledge.CrossDomainKnowledgeGraph
 import com.msaidizi.app.agent.recovery.TaskCheckpointManager
 import com.msaidizi.app.agent.recovery.TaskCheckpointDao
 import com.msaidizi.app.agent.recovery.AgentTraceDao
-import com.msaidizi.app.agent.hermes.HermesSessionManager
-import com.msaidizi.app.agent.AgentEventBus
 import com.msaidizi.app.agent.AdaptiveLearningEngine
 import com.msaidizi.app.core.database.PatternDao
 import com.msaidizi.app.core.database.KnowledgeDao
@@ -62,22 +60,9 @@ object RepositoryModule {
     fun provideCrossDomainKnowledgeGraph(
         patternDao: PatternDao,
         patternTracker: BusinessPatternTracker,
-        knowledgeDao: KnowledgeDao,
-        eventBus: AgentEventBus
+        knowledgeDao: KnowledgeDao
     ): CrossDomainKnowledgeGraph = CrossDomainKnowledgeGraph(
-        patternDao, patternTracker, knowledgeDao, eventBus
-    )
-
-    @Provides
-    @Singleton
-    fun provideHermesSessionManager(
-        eventBus: AgentEventBus,
-        adaptiveLearning: AdaptiveLearningEngine,
-        sessionDao: SessionDao
-    ): HermesSessionManager = HermesSessionManager(
-        eventBus = eventBus,
-        adaptiveLearning = adaptiveLearning,
-        sessionDao = sessionDao
+        patternDao, patternTracker, knowledgeDao
     )
 
     // ── Receipt Scanning ──

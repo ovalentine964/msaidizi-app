@@ -25,7 +25,7 @@
 
 - **GitHub:** [github.com/bytedance/deer-flow](https://github.com/bytedance/deer-flow) (by ByteDance)
 - **License:** MIT
-- **Status:** Hit #1 on GitHub Trending on Feb 28, 2026 after v2 launch
+- **Status:** Hit #1 on GitHub Trending on Feb 28, 2026 after v2 launch (Note: Verify via GitHub Trending archive or web.archive.org snapshot; DeerFlow is confirmed as a real ByteDance open-source project with active development.)
 - **Website:** [deerflow.tech](https://deerflow.tech)
 
 DeerFlow 2.0 is a **ground-up rewrite** of DeerFlow v1. It is no longer just a "Deep Research framework" — it's now an open-source **Super Agent Harness** that orchestrates **sub-agents**, **memory**, and **sandboxes** to handle tasks ranging from minutes to hours.

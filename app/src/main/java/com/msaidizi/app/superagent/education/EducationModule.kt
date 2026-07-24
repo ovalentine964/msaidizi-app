@@ -1,6 +1,7 @@
 package com.msaidizi.app.superagent.education
 
 import timber.log.Timber
+import com.msaidizi.app.mindset.VoiceLesson
 
 /**
  * Education Module — unified entry point for financial literacy, wealth habits,
@@ -28,7 +29,7 @@ import timber.log.Timber
  * @param businessTips Community business tips
  */
 class EducationModule(
-    private val mindsetAcademy: MindsetAcademy,
+    private val mindsetAcademy: com.msaidizi.app.mindset.MindsetAcademy,
     private val wealthHabits: WealthHabits,
     private val businessTips: BusinessTips
 ) {

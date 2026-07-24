@@ -26,10 +26,25 @@ import kotlin.random.Random
  * With ε=0.1, the noise is 10x the sensitivity — strong privacy.
  */
 class DifferentialPrivacy(
-    private val epsilon: Double = 0.1,
+    epsilon: Double = DEFAULT_EPSILON,
     private val delta: Double = 1e-5
 ) {
     private val random = Random.Default
+    private val epsilon: Double = epsilon.coerceAtLeast(0.01)  // Floor to prevent zero/negative
+
+    companion object {
+        /** Default epsilon — configurable via environment or remote config */
+        var DEFAULT_EPSILON: Double = 0.1
+
+        /**
+         * Configure the default epsilon value.
+         * Call from settings or remote config.
+         */
+        fun configureDefault(epsilon: Double) {
+            require(epsilon > 0) { "Epsilon must be positive" }
+            DEFAULT_EPSILON = epsilon
+        }
+    }
 
     /**
      * Add Laplacian noise to a numerical value.

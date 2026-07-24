@@ -75,6 +75,10 @@ android {
         // Sentry crash reporting DSN (set via environment or local.properties)
         val sentryDsn = project.findProperty("SENTRY_DSN") as? String ?: ""
         buildConfigField("String", "SENTRY_DSN", "\"${sentryDsn}\"")
+
+        // Differential Privacy epsilon (configurable via env or local.properties)
+        val dpEpsilon = project.findProperty("DP_EPSILON") as? String ?: "0.1"
+        buildConfigField("double", "DP_EPSILON", dpEpsilon)
     }
 
     // ============================================================
