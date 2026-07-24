@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Msaidizi</string>
+    <string name="app_tagline">Your AI Business Partner</string>
+
+    <!-- Bootstrap -->
+    <string name="bootstrap_welcome">Karibu! Let\'s set up your Msaidizi.</string>
+    <string name="bootstrap_name_prompt">What should I call your Msaidizi?</string>
+    <string name="bootstrap_name_hint">e.g., Rafiki, Biashara, Helper…</string>
+    <string name="bootstrap_business_type">What type of business do you run?</string>
+    <string name="bootstrap_business_options">Mama Mboga\nBoda Boda\nM-Pesa Shop\nDuka la Vifaa\nSalon/Barber\nMama Ntilie\nJua Kali\nOther</string>
+    <string name="bootstrap_location">Where is your business located?</string>
+    <string name="bootstrap_location_hint">e.g., Gikomba Market, Nairobi</string>
+    <string name="bootstrap_products">What do you sell or what services do you offer?</string>
+    <string name="bootstrap_products_hint">e.g., Tomatoes, onions, sukuma wiki…</string>
+    <string name="bootstrap_language">Which language do you prefer?</string>
+    <string name="bootstrap_voice_setup">Let me learn your voice…</string>
+    <string name="bootstrap_voice_prompt">Please say: \"Habari yako, Msaidizi wangu\"</string>
+    <string name="bootstrap_complete">Tayari! Your Msaidizi is ready to help.</string>
+    <string name="bootstrap_next">Next</string>
+    <string name="bootstrap_skip">Skip</string>
+    <string name="bootstrap_finish">Start Using Msaidizi</string>
+
+    <!-- Main -->
+    <string name="greeting_morning">Habari za asubuhi!</string>
+    <string name="greeting_afternoon">Habari za mchana!</string>
+    <string name="greeting_evening">Habari za jioni!</string>
+    <string name="voice_prompt">Tap to speak</string>
+    <string name="listening">Listening…</string>
+    <string name="thinking">Thinking…</string>
+    <string name="speaking">Speaking…</string>
+    <string name="type_hint">Type a message…</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_sales">Sales</string>
+    <string name="nav_stock">Stock</string>
+    <string name="nav_reports">Reports</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Common actions -->
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+    <string name="confirm">Confirm</string>
+    <string name="retry">Retry</string>
+    <string name="error_generic">Something went wrong. Please try again.</string>
+    <string name="error_network">No internet connection. Working offline.</string>
+    <string name="error_permission_microphone">Microphone permission is needed for voice features.</string>
+</resources>
