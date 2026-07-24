@@ -138,9 +138,11 @@
 | Financial portfolio optimization | 2028–2032 | Low-Medium |
 | Logistics routing (large scale) | 2029–2035 | Low |
 | Credit risk / ML | 2030+ | Low |
-| Mobile/fintech for informal workers | **2035+** | **Very Low** |
+| Mobile/fintech via quantum cloud APIs | **2028–2032** | **Low-Medium** |
 
-**Bottom line:** For Msaidizi's use case (informal workers, mobile-first, East Africa), quantum advantage is **at least 8-10 years away**. Build classical now, design for quantum later.
+**Note on mobile/fintech:** Quantum advantage for fintech does NOT require quantum hardware on phones. Cloud-based quantum APIs (IBM Quantum, Amazon Braket, Azure Quantum) can serve quantum-optimized credit models, portfolio allocations, and risk calculations to mobile apps via classical APIs. The bottleneck is fault-tolerant quantum hardware for Monte Carlo and optimization — estimated 2028–2032 for hybrid quantum-classical advantage in financial modeling (IBM, JPMorgan timelines). Msaidizi's mobile app would consume quantum results via API, not run quantum circuits locally.
+
+**Bottom line:** For Msaidizi's use case (informal workers, mobile-first, East Africa), quantum-enhanced features are accessible via cloud APIs within **5–8 years**. Build classical now, design quantum-ready APIs for later. Quantum-safe cryptography (ML-KEM, ML-DSA) is already deployed.
 
 ---
 

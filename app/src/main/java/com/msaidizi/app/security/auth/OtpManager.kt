@@ -1,12 +1,16 @@
 package com.msaidizi.app.security.auth
 
 import android.content.Context
+import android.content.SharedPreferences
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import com.msaidizi.app.data.api.MsaidiziApi
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import org.json.JSONObject
 import timber.log.Timber
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
@@ -72,6 +76,25 @@ class OtpManager @Inject constructor(
     // Frozen accounts
     private val frozenAccounts = ConcurrentHashMap.newKeySet<String>()
 
+    // Persistent encrypted storage for OTP state (survives process death / multi-worker)
+    private val prefs: SharedPreferences by lazy {
+        val masterKey = MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+        EncryptedSharedPreferences.create(
+            context,
+            "otp_secure_store",
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    }
+
+    init {
+        // Restore persisted state on init (survives process restart)
+        restorePersistedState()
+    }
+
     /**
      * Initiate OTP request for a phone number.
      * Anti-enumeration: always returns success to the caller regardless of phone validity.
@@ -106,8 +129,9 @@ class OtpManager @Inject constructor(
             val hashedOtp = hashOtp(otp, salt)
             val expiryTime = System.currentTimeMillis() + OTP_EXPIRY_MS
 
-            // Store hashed OTP with salt
+            // Store hashed OTP with salt (in-memory + persistent)
             otpStore[normalizedPhone] = Triple(hashedOtp, expiryTime, salt)
+            persistOtpEntry(normalizedPhone, hashedOtp, expiryTime, salt)
 
             // Record request timestamp for rate limiting
             recordRequest(normalizedPhone)
@@ -185,6 +209,8 @@ class OtpManager @Inject constructor(
         // Success — invalidate OTP (single-use)
         otpStore.remove(normalizedPhone)
         failedAttempts.remove(normalizedPhone)
+        clearPersistedOtp(normalizedPhone)
+        clearPersistedFailure(normalizedPhone)
 
         Timber.i("OTP verified successfully for %s", maskPhone(normalizedPhone))
 
@@ -258,5 +284,86 @@ class OtpManager @Inject constructor(
         val current = failedAttempts[phone]
         val count = (current?.first ?: 0) + 1
         failedAttempts[phone] = Pair(count, System.currentTimeMillis())
+        persistFailure(phone, count, System.currentTimeMillis())
+    }
+
+    // ── Persistence helpers (survives process death for multi-worker safety) ──
+
+    private fun persistOtpEntry(phone: String, hash: String, expiry: Long, salt: ByteArray) {
+        try {
+            val json = JSONObject().apply {
+                put("hash", hash)
+                put("expiry", expiry)
+                put("salt", android.util.Base64.encodeToString(salt, android.util.Base64.NO_WRAP))
+            }
+            prefs.edit().putString("otp_$phone", json.toString()).apply()
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to persist OTP entry")
+        }
+    }
+
+    private fun clearPersistedOtp(phone: String) {
+        prefs.edit().remove("otp_$phone").apply()
+    }
+
+    private fun persistFailure(phone: String, count: Int, lastAttempt: Long) {
+        try {
+            val json = JSONObject().apply {
+                put("count", count)
+                put("lastAttempt", lastAttempt)
+            }
+            prefs.edit().putString("fail_$phone", json.toString()).apply()
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to persist failure entry")
+        }
+    }
+
+    private fun clearPersistedFailure(phone: String) {
+        prefs.edit().remove("fail_$phone").apply()
+    }
+
+    private fun restorePersistedState() {
+        try {
+            val frozen = prefs.getStringSet("frozen_accounts", emptySet()) ?: emptySet()
+            frozenAccounts.addAll(frozen)
+
+            val allPrefs = prefs.all
+            val now = System.currentTimeMillis()
+            for ((key, value) in allPrefs) {
+                when {
+                    key.startsWith("otp_") && value is String -> {
+                        try {
+                            val json = JSONObject(value)
+                            val expiry = json.getLong("expiry")
+                            if (expiry > now) {
+                                val phone = key.removePrefix("otp_")
+                                val hash = json.getString("hash")
+                                val salt = android.util.Base64.decode(
+                                    json.getString("salt"), android.util.Base64.NO_WRAP
+                                )
+                                otpStore[phone] = Triple(hash, expiry, salt)
+                            } else {
+                                prefs.edit().remove(key).apply()
+                            }
+                        } catch (e: Exception) {
+                            Timber.w(e, "Failed to restore OTP entry")
+                        }
+                    }
+                    key.startsWith("fail_") && value is String -> {
+                        try {
+                            val json = JSONObject(value)
+                            val phone = key.removePrefix("fail_")
+                            failedAttempts[phone] = Pair(json.getInt("count"), json.getLong("lastAttempt"))
+                        } catch (e: Exception) {
+                            Timber.w(e, "Failed to restore failure entry")
+                        }
+                    }
+                }
+            }
+            Timber.d("Restored %d OTP entries, %d failures, %d frozen",
+                otpStore.size, failedAttempts.size, frozenAccounts.size)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to restore persisted OTP state")
+        }
     }
 }

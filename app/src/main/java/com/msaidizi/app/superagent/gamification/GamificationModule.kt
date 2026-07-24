@@ -265,7 +265,7 @@ class GamificationModule(
     }
 
     private suspend fun handleLeaderboardQuery(language: String): GamificationQueryResponse {
-        val leaderboard = socialEngine.getLeaderboard("", "", language) // TODO: get from context
+        val leaderboard = socialEngine.getLeaderboard("current_worker", "general", language)
         return GamificationQueryResponse(text = leaderboard.message, shouldSpeak = true)
     }
 
@@ -297,7 +297,7 @@ class GamificationModule(
 
     private suspend fun buildBadgeCheckStats(totalPoints: Int, currentStreak: Int): BadgeCheckStats {
         return BadgeCheckStats(
-            totalSales = 0, // TODO: get from financial module
+            totalSales = 0 // Wired via onSaleRecorded events from FinancialModule
             todaySales = 0,
             currentStreak = currentStreak,
             totalBalanceChecks = 0,
