@@ -229,6 +229,7 @@ enum class IntentType {
     RECORD_SALE,
     RECORD_EXPENSE,
     RECORD_PURCHASE,
+    RECORD_SERVICE,
     CHECK_STOCK,
     ADD_PRODUCT,
     UPDATE_STOCK,
@@ -239,6 +240,7 @@ enum class IntentType {
     ASK_EXPENSES,
     ASK_STOCK,
     ASK_DEBTORS,
+    ASK_SERVICES_TODAY,
     ASK_ADVICE,
 
     // Customer management

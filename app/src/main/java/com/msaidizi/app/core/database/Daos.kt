@@ -169,6 +169,83 @@ interface StockMovementDao {
 }
 
 // ──────────────────────────────────────────────
+// Service Transaction DAO
+// ──────────────────────────────────────────────
+
+@Dao
+interface ServiceTransactionDao {
+    @Insert
+    suspend fun insert(transaction: ServiceTransactionEntity): Long
+
+    @Query("SELECT * FROM service_transactions WHERE timestamp BETWEEN :start AND :end ORDER BY timestamp DESC")
+    fun getTransactionsBetween(start: Long, end: Long): Flow<List<ServiceTransactionEntity>>
+
+    @Query("SELECT * FROM service_transactions ORDER BY timestamp DESC LIMIT :limit")
+    fun getRecentTransactions(limit: Int = 20): Flow<List<ServiceTransactionEntity>>
+
+    @Query("SELECT SUM(totalCharged) FROM service_transactions WHERE timestamp BETWEEN :start AND :end")
+    fun getTotalRevenueBetween(start: Long, end: Long): Flow<Double?>
+
+    @Query("SELECT SUM(labourCost) FROM service_transactions WHERE timestamp BETWEEN :start AND :end")
+    fun getTotalLabourBetween(start: Long, end: Long): Flow<Double?>
+
+    @Query("SELECT SUM(materialsCost) FROM service_transactions WHERE timestamp BETWEEN :start AND :end")
+    fun getTotalMaterialsBetween(start: Long, end: Long): Flow<Double?>
+
+    @Query("SELECT COUNT(*) FROM service_transactions WHERE timestamp BETWEEN :start AND :end")
+    fun getTransactionCountBetween(start: Long, end: Long): Flow<Int>
+
+    @Query("SELECT serviceName, COUNT(*) as count, SUM(totalCharged) as totalRevenue FROM service_transactions WHERE timestamp BETWEEN :start AND :end GROUP BY serviceName ORDER BY totalRevenue DESC LIMIT :limit")
+    fun getTopServices(start: Long, end: Long, limit: Int = 5): Flow<List<ServiceSalesSummary>>
+
+    @Query("SELECT SUM(totalCharged) FROM service_transactions WHERE paymentMethod = 'mpesa' AND timestamp BETWEEN :start AND :end")
+    fun getMpesaRevenueBetween(start: Long, end: Long): Flow<Double?>
+
+    @Query("SELECT SUM(totalCharged) FROM service_transactions WHERE paymentMethod = 'credit' AND timestamp BETWEEN :start AND :end")
+    fun getCreditRevenueBetween(start: Long, end: Long): Flow<Double?>
+
+    @Delete
+    suspend fun delete(transaction: ServiceTransactionEntity)
+}
+
+data class ServiceSalesSummary(
+    val serviceName: String,
+    val count: Int,
+    val totalRevenue: Double
+)
+
+// ──────────────────────────────────────────────
+// Service Menu DAO
+// ──────────────────────────────────────────────
+
+@Dao
+interface ServiceMenuDao {
+    @Insert
+    suspend fun insert(service: ServiceMenuEntity): Long
+
+    @Update
+    suspend fun update(service: ServiceMenuEntity)
+
+    @Query("SELECT * FROM service_menu WHERE isActive = 1 ORDER BY name ASC")
+    fun getAllActive(): Flow<List<ServiceMenuEntity>>
+
+    @Query("SELECT * FROM service_menu WHERE id = :id")
+    suspend fun getById(id: Long): ServiceMenuEntity?
+
+    @Query("SELECT * FROM service_menu WHERE name LIKE '%' || :query || '%' AND isActive = 1")
+    fun search(query: String): Flow<List<ServiceMenuEntity>>
+
+    @Query("SELECT * FROM service_menu WHERE category = :category AND isActive = 1")
+    fun getByCategory(category: String): Flow<List<ServiceMenuEntity>>
+
+    @Query("UPDATE service_menu SET usageCount = usageCount + 1 WHERE id = :id")
+    suspend fun incrementUsage(id: Long)
+
+    @Delete
+    suspend fun delete(service: ServiceMenuEntity)
+}
+
+// ──────────────────────────────────────────────
 // Conversation DAO
 // ──────────────────────────────────────────────
 

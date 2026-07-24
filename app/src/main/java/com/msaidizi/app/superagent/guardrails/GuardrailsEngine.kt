@@ -57,8 +57,7 @@ class GuardrailsEngine @Inject constructor(
             "your bank account",
             "transfer money",
             "send to",
-            "loan application",
-            "credit score"
+            "loan application"
         )
         for (pattern in suspiciousPatterns) {
             if (output.lowercase().contains(pattern)) {

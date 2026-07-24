@@ -66,7 +66,8 @@ object AppModule {
         anomalyDetector: com.msaidizi.app.superagent.tools.AnomalyDetector,
         mpesaParser: com.msaidizi.app.superagent.tools.MpesaParser,
         pricingAdvisor: com.msaidizi.app.superagent.tools.PricingAdvisor,
-        restockPredictor: com.msaidizi.app.superagent.tools.RestockPredictor
+        restockPredictor: com.msaidizi.app.superagent.tools.RestockPredictor,
+        alamaScore: com.msaidizi.app.superagent.tools.AlamaScore
     ): com.msaidizi.app.superagent.tools.ToolRegistry {
         val registry = com.msaidizi.app.superagent.tools.ToolRegistry()
         registry.register(transactionRecorder)
@@ -87,5 +88,6 @@ object AppModule {
         registry.register(mpesaParser)
         registry.register(pricingAdvisor)
         registry.register(restockPredictor)
+        registry.register(alamaScore)
         return registry
     }
