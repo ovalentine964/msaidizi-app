@@ -1,6 +1,23 @@
-# Msaidizi — AI Business Assistant for Kenya
+<div align="center">
 
-**Your phone, your business partner.** Msaidizi is a fully offline AI assistant that runs on budget Android phones (2GB+ RAM). It understands voice and text in Kiswahili and English, records sales, tracks inventory, manages debts, and gives business advice — all without an internet connection.
+# 📱 Msaidizi
+
+### AI Business Assistant for Kenya's Entrepreneurs
+
+**Your phone, your business partner.** A fully offline AI assistant that runs on budget Android phones (2GB+ RAM), understands Kiswahili and English, and helps small businesses thrive — no internet required.
+
+[![Android](https://img.shields.io/badge/Android-8.0%2B-brightgreen.svg)](https://developer.android.com/about/versions/oreo)
+[![Kotlin](https://img.shields.io/badge/Kotlin-1.9%2B-purple.svg)](https://kotlinlang.org)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Build](https://img.shields.io/badge/Build-Passing-brightgreen.svg)](#build-from-source)
+[![Offline](https://img.shields.io/badge/Offline-First-orange.svg)](#architecture)
+[![AI](https://img.shields.io/badge/AI-On--Device-red.svg)](#key-components)
+
+[Download APK](../../releases/latest/download/msaidizi-release.apk) · [Report Bug](../../issues/new?template=bug_report.md) · [Request Feature](../../issues/new?template=feature_request.md)
+
+</div>
+
+---
 
 ## 🏗️ Architecture
 
@@ -247,6 +264,16 @@ test: add unit tests for IntentRouter
 
 [Apache License 2.0](LICENSE)
 
+## 🔒 Security
+
+Please see [SECURITY.md](SECURITY.md) for our security policy and vulnerability reporting process.
+
+## 📬 Contact
+
+- **GitHub**: [@ovalentine964](https://github.com/ovalentine964)
+- **Issues**: [GitHub Issues](../../issues)
+- **Discussions**: [GitHub Discussions](../../discussions)
+
 ## 🙏 Acknowledgments
 
 - [llama.cpp](https://github.com/ggerganov/llama.cpp) — On-device LLM inference
@@ -254,3 +281,13 @@ test: add unit tests for IntentRouter
 - [Qwen](https://github.com/QwenLM/Qwen) — Language model
 - [Whisper](https://github.com/openai/whisper) — Speech-to-text
 - [Piper](https://github.com/rhasspy/piper) — Text-to-speech
+
+---
+
+<div align="center">
+
+**Built with ❤️ for Kenya's small business owners**
+
+*Every dukawalla deserves an AI assistant.*
+
+</div>
