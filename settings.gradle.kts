@@ -17,3 +17,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "msaidizi"
 include(":app")
+include(":superagent:financial")
+include(":superagent:credit")
+include(":superagent:goals")
