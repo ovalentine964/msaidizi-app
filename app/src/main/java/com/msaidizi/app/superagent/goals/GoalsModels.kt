@@ -1,4 +1,4 @@
-package com.msaidizi.superagent.goals
+package com.msaidizi.app.superagent.goals
 
 // ═══════════════════════════════════════════════════════════════
 // GOALS MODULE — Data Models

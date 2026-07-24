@@ -1,4 +1,4 @@
-package com.msaidizi.superagent.credit
+package com.msaidizi.app.superagent.credit
 
 // ═══════════════════════════════════════════════════════════════
 // CREDIT MODULE — Data Models

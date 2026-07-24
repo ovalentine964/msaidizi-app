@@ -1,4 +1,4 @@
-package com.msaidizi.superagent.financial
+package com.msaidizi.app.superagent.financial
 
 import timber.log.Timber
 

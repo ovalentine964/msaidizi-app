@@ -1,4 +1,4 @@
-package com.msaidizi.superagent.goals
+package com.msaidizi.app.superagent.goals
 
 import timber.log.Timber
 

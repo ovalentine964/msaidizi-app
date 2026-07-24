@@ -1,7 +1,6 @@
 package com.msaidizi.app.core.di
 
 import android.content.Context
-import com.msaidizi.app.agent.AgentEventBus
 import com.msaidizi.app.agent.IntentPatternConfig
 import com.msaidizi.app.agent.IntentRouter
 import com.msaidizi.app.agent.ContextManager
@@ -14,21 +13,15 @@ import com.msaidizi.app.agent.LearningAgent
 import com.msaidizi.app.agent.AdaptiveLearningEngine
 import com.msaidizi.app.agent.BusinessPatternTracker
 import com.msaidizi.app.agent.ModelRouter
-import com.msaidizi.app.agent.TransactionHandler
-import com.msaidizi.app.agent.QueryHandler
-import com.msaidizi.app.agent.AdviceHandler
-import com.msaidizi.app.agent.GamificationHandler
-import com.msaidizi.app.agent.DomainRouter
-import com.msaidizi.app.agent.ConversationManager
 import com.msaidizi.app.agent.VoicePersonality
 import com.msaidizi.app.agent.PreferenceLearner
-import com.msaidizi.app.agent.Orchestrator
 import com.msaidizi.app.agent.proactive.ProactiveAnomalyDetector
 import com.msaidizi.app.agent.proactive.StockOutPredictor
 import com.msaidizi.app.agent.proactive.CashFlowPredictor
 import com.msaidizi.app.agent.proactive.ProactiveAlertEngine
 import com.msaidizi.app.agent.harness.InferenceHarness
 import com.msaidizi.app.agent.agi.AGIReadyLayer
+import com.msaidizi.app.agent.autonomy.ProgressiveAutonomy
 import com.msaidizi.app.core.database.PatternDao
 import com.msaidizi.app.core.database.TransactionDao
 import com.msaidizi.app.core.database.InventoryDao
@@ -40,6 +33,8 @@ import com.msaidizi.app.finance.TitheTracker
 import com.msaidizi.app.finance.GoalPlanner
 import com.msaidizi.app.finance.LoanManager
 import com.msaidizi.app.gamification.GamificationEngine
+import com.msaidizi.app.gamification.InsightRewards
+import com.msaidizi.app.gamification.MicroRewards
 import com.msaidizi.app.mindset.MindsetAcademy
 import com.msaidizi.app.mindset.RichHabitsScore
 import com.msaidizi.app.onboarding.AhaMomentFlow
@@ -48,12 +43,6 @@ import com.msaidizi.app.cfo.CFOEngine
 import com.msaidizi.app.loops.MorningBriefingLoop
 import com.msaidizi.app.loops.StreakProtectionLoop
 import com.msaidizi.app.loops.VariableRewardsLoop
-import com.msaidizi.app.loops.ReActLoop
-import com.msaidizi.app.loops.ReflexionLoop
-import com.msaidizi.app.loops.PlanExecuteLoop
-import com.msaidizi.app.agent.autonomy.ProgressiveAutonomy
-import com.msaidizi.app.agent.a2a.A2AProtocol
-import com.msaidizi.app.evolution.SelfEvolutionManager
 import com.msaidizi.app.core.database.GamificationDao
 import com.msaidizi.app.core.database.RichHabitsDao
 import com.msaidizi.app.core.database.MindsetLessonDao
@@ -72,8 +61,6 @@ import com.msaidizi.app.core.language.ConversationLearningPipeline
 import com.msaidizi.app.security.privacy.ConsentManager
 import com.msaidizi.app.core.network.PinnedHttpClient
 import com.msaidizi.app.voice.SpeechRecognizer
-import com.msaidizi.app.gamification.InsightRewards
-import com.msaidizi.app.gamification.MicroRewards
 import com.msaidizi.app.agent.cost.InferenceCostTracker
 import com.msaidizi.app.social.*
 import dagger.Module
@@ -85,31 +72,31 @@ import javax.inject.Singleton
 
 /**
  * AI, agent, and language-related dependencies.
- * Covers agents, model routing, ASR, language learning, proactive predictors.
+ *
+ * This module provides the OLD agent infrastructure that is still referenced
+ * by ViewModels, CFO, gamification, and other subsystems. The main entry
+ * point (Orchestrator) has been replaced by [com.msaidizi.app.superagent.engine.ReasoningEngine]
+ * which is wired in [SuperagentModule].
  */
 @Module
 @InstallIn(SingletonComponent::class)
 object AIModule {
 
-    // ── 12-Factor Agent Infrastructure ──
+    // ── 12-Factor Agent Infrastructure (still used by some subsystems) ──
 
     @Provides
     @Singleton
-    fun provideContextManager(): ContextManager = ContextManager(agentName = "orchestrator")
+    fun provideContextManager(): ContextManager = ContextManager(agentName = "superagent")
 
     @Provides
     @Singleton
-    fun provideErrorCompactor(): ErrorCompactor = ErrorCompactor(agentName = "orchestrator")
+    fun provideErrorCompactor(): ErrorCompactor = ErrorCompactor(agentName = "superagent")
 
     @Provides
     @Singleton
-    fun provideUnifiedStateManager(): UnifiedStateManager = UnifiedStateManager(agentName = "orchestrator")
+    fun provideUnifiedStateManager(): UnifiedStateManager = UnifiedStateManager(agentName = "superagent")
 
-    // ── Core Agents ──
-
-    @Provides
-    @Singleton
-    fun provideAgentEventBus(): AgentEventBus = AgentEventBus.getInstance()
+    // ── Intent Classification (used by SuperagentModule's IntentClassifierAdapter) ──
 
     @Provides
     @Singleton
@@ -118,6 +105,8 @@ object AIModule {
     @Provides
     @Singleton
     fun provideIntentRouter(config: IntentPatternConfig): IntentRouter = IntentRouter(config)
+
+    // ── Core Agents (still referenced by ViewModels, CFO, Social, etc.) ──
 
     @Provides
     @Singleton
@@ -169,91 +158,15 @@ object AIModule {
         patternTracker, learningAgent, learningHarness
     )
 
-    // ── Decomposed Handlers ──
+    // ── Voice & Preference ──
 
     @Provides
     @Singleton
-    fun provideTransactionHandler(
-        businessAgent: BusinessAgent,
-        adaptiveLearning: AdaptiveLearningEngine,
-        learningAgent: LearningAgent,
-        gamificationEngine: GamificationEngine,
-        ahaMomentFlow: AhaMomentFlow,
-        richHabitsScore: RichHabitsScore,
-        morningBriefingLoop: MorningBriefingLoop,
-        streakProtectionLoop: StreakProtectionLoop,
-        variableRewardsLoop: VariableRewardsLoop,
-        briefingDelivery: BriefingDelivery,
-        selfEvolution: SelfEvolutionManager
-    ): TransactionHandler = TransactionHandler(
-        businessAgent, adaptiveLearning, learningAgent,
-        gamificationEngine, ahaMomentFlow, richHabitsScore,
-        morningBriefingLoop, streakProtectionLoop, variableRewardsLoop,
-        briefingDelivery, selfEvolution
-    )
+    fun provideVoicePersonality(): VoicePersonality = VoicePersonality()
 
     @Provides
     @Singleton
-    fun provideQueryHandler(
-        businessAgent: BusinessAgent,
-        analysisAgent: AnalysisAgent,
-        advisorAgent: AdvisorAgent,
-        gamificationEngine: GamificationEngine,
-        richHabitsScore: RichHabitsScore
-    ): QueryHandler = QueryHandler(
-        businessAgent, analysisAgent, advisorAgent,
-        gamificationEngine, richHabitsScore
-    )
-
-    @Provides
-    @Singleton
-    fun provideAdviceHandler(
-        advisorAgent: AdvisorAgent,
-        adaptiveLearning: AdaptiveLearningEngine,
-        selfEvolution: SelfEvolutionManager,
-        preferenceLearner: PreferenceLearner
-    ): AdviceHandler = AdviceHandler(
-        advisorAgent, adaptiveLearning, selfEvolution, preferenceLearner
-    )
-
-    @Provides
-    @Singleton
-    fun provideGamificationHandler(
-        titheTracker: TitheTracker,
-        goalPlanner: GoalPlanner,
-        loanManager: LoanManager,
-        gamificationEngine: GamificationEngine,
-        richHabitsScore: RichHabitsScore
-    ): GamificationHandler = GamificationHandler(
-        titheTracker, goalPlanner, loanManager, gamificationEngine, richHabitsScore
-    )
-
-    @Provides
-    @Singleton
-    fun provideDomainRouter(
-        businessAgent: BusinessAgent,
-        advisorAgent: AdvisorAgent
-    ): DomainRouter = DomainRouter(businessAgent, advisorAgent)
-
-    @Provides
-    @Singleton
-    fun provideConversationManager(
-        adaptiveLearning: AdaptiveLearningEngine,
-        learningAgent: LearningAgent,
-        selfEvolution: SelfEvolutionManager,
-        preferenceLearner: PreferenceLearner,
-        llmEngine: LlmEngine,
-        inferenceHarness: InferenceHarness,
-        hermesSessionManager: com.msaidizi.app.agent.hermes.HermesSessionManager
-    ): ConversationManager = ConversationManager(
-        llmEngine = llmEngine,
-        selfEvolution = selfEvolution,
-        adaptiveLearning = adaptiveLearning,
-        learningAgent = learningAgent,
-        preferenceLearner = preferenceLearner,
-        inferenceHarness = inferenceHarness,
-        hermesSession = hermesSessionManager
-    )
+    fun providePreferenceLearner(): PreferenceLearner = PreferenceLearner()
 
     // ── On-Device AI Predictors ──
 
@@ -284,11 +197,10 @@ object AIModule {
         stockOutPredictor: StockOutPredictor,
         cashFlowPredictor: CashFlowPredictor,
         transactionDao: TransactionDao,
-        inventoryDao: InventoryDao,
-        eventBus: AgentEventBus
+        inventoryDao: InventoryDao
     ): ProactiveAlertEngine = ProactiveAlertEngine(
         patternTracker, anomalyDetector, stockOutPredictor, cashFlowPredictor,
-        transactionDao, inventoryDao, eventBus
+        transactionDao, inventoryDao
     )
 
     // ── Model Router ──
@@ -302,129 +214,13 @@ object AIModule {
         inferenceHarness: InferenceHarness
     ): ModelRouter = ModelRouter(context, llmEngine = llmEngine, apiClient = api, inferenceHarness = inferenceHarness)
 
-    // ── Orchestrator ──
-
-    @Provides
-    @Singleton
-    fun provideReActLoop(): ReActLoop = ReActLoop()
-
-    @Provides
-    @Singleton
-    fun provideReflexionLoop(): ReflexionLoop = ReflexionLoop()
-
-    @Provides
-    @Singleton
-    fun providePlanExecuteLoop(): PlanExecuteLoop = PlanExecuteLoop()
+    // ── Autonomy ──
 
     @Provides
     @Singleton
     fun provideProgressiveAutonomy(
-        patternDao: PatternDao,
-        eventBus: AgentEventBus
-    ): ProgressiveAutonomy = ProgressiveAutonomy(patternDao, eventBus)
-
-    @Provides
-    @Singleton
-    fun provideA2AProtocol(
-        eventBus: AgentEventBus
-    ): A2AProtocol = A2AProtocol(eventBus)
-
-    @Provides
-    @Singleton
-    @JvmSuppressWildcards
-    fun provideOrchestrator(
-        intentRouter: IntentRouter,
-        businessAgent: BusinessAgent,
-        analysisAgent: AnalysisAgent,
-        advisorAgent: AdvisorAgent,
-        learningAgent: LearningAgent,
-        adaptiveLearning: AdaptiveLearningEngine,
-        transactionHandler: TransactionHandler,
-        queryHandler: QueryHandler,
-        adviceHandler: AdviceHandler,
-        gamificationHandler: GamificationHandler,
-        domainRouter: DomainRouter,
-        conversationManager: ConversationManager,
-        reActLoop: ReActLoop,
-        reflexionLoop: ReflexionLoop,
-        planExecuteLoop: PlanExecuteLoop,
-        llmEngine: LlmEngine,
-        agiReadyLayer: AGIReadyLayer,
-        taskCheckpointManager: com.msaidizi.app.agent.recovery.TaskCheckpointManager,
-        gamificationEngine: dagger.Lazy<GamificationEngine>,
-        ahaMomentFlow: dagger.Lazy<AhaMomentFlow>,
-        richHabitsScore: dagger.Lazy<RichHabitsScore>,
-        mindsetAcademy: dagger.Lazy<MindsetAcademy>,
-        titheTracker: dagger.Lazy<TitheTracker>,
-        goalPlanner: dagger.Lazy<GoalPlanner>,
-        loanManager: dagger.Lazy<LoanManager>,
-        titheDao: dagger.Lazy<TitheDao>,
-        goalDao: dagger.Lazy<GoalDao>,
-        loanDao: dagger.Lazy<LoanDao>,
-        briefingDelivery: dagger.Lazy<BriefingDelivery>,
-        morningBriefingLoop: dagger.Lazy<MorningBriefingLoop>,
-        streakProtectionLoop: dagger.Lazy<StreakProtectionLoop>,
-        variableRewardsLoop: dagger.Lazy<VariableRewardsLoop>,
-        selfEvolution: dagger.Lazy<SelfEvolutionManager>,
-        preferenceLearner: dagger.Lazy<PreferenceLearner>,
-        adaptiveVocabulary: dagger.Lazy<AdaptiveVocabulary>,
-        conversationLearningPipeline: dagger.Lazy<ConversationLearningPipeline>,
-        eventBus: dagger.Lazy<AgentEventBus>,
-        voicePersonality: dagger.Lazy<VoicePersonality>,
-        progressiveAutonomy: dagger.Lazy<ProgressiveAutonomy>,
-        proactiveAlertEngine: dagger.Lazy<ProactiveAlertEngine>,
-        a2aProtocol: dagger.Lazy<A2AProtocol>,
-        knowledgeGraph: dagger.Lazy<com.msaidizi.app.agent.knowledge.CrossDomainKnowledgeGraph>,
-        socialHandler: dagger.Lazy<SocialHandler>,
-        inferenceHarness: dagger.Lazy<InferenceHarness>,
-        episodicMemory: dagger.Lazy<com.msaidizi.app.memory.EpisodicMemory>
-    ): Orchestrator = Orchestrator(
-        intentRouter = intentRouter,
-        businessAgent = businessAgent,
-        analysisAgent = analysisAgent,
-        advisorAgent = advisorAgent,
-        learningAgent = learningAgent,
-        adaptiveLearning = adaptiveLearning,
-        transactionHandler = transactionHandler,
-        queryHandler = queryHandler,
-        adviceHandler = adviceHandler,
-        gamificationHandler = gamificationHandler,
-        domainRouter = domainRouter,
-        conversationManager = conversationManager,
-        reActLoop = reActLoop,
-        reflexionLoop = reflexionLoop,
-        planExecuteLoop = planExecuteLoop,
-        llmEngine = llmEngine,
-        agiReadyLayer = agiReadyLayer,
-        taskCheckpointManager = taskCheckpointManager,
-        gamificationEngine = gamificationEngine,
-        ahaMomentFlow = ahaMomentFlow,
-        richHabitsScore = richHabitsScore,
-        mindsetAcademy = mindsetAcademy,
-        titheTracker = titheTracker,
-        goalPlanner = goalPlanner,
-        loanManager = loanManager,
-        titheDao = titheDao,
-        goalDao = goalDao,
-        loanDao = loanDao,
-        briefingDelivery = briefingDelivery,
-        morningBriefingLoop = morningBriefingLoop,
-        streakProtectionLoop = streakProtectionLoop,
-        variableRewardsLoop = variableRewardsLoop,
-        selfEvolution = selfEvolution,
-        preferenceLearner = preferenceLearner,
-        adaptiveVocabulary = adaptiveVocabulary,
-        conversationLearningPipeline = conversationLearningPipeline,
-        eventBus = eventBus,
-        voicePersonality = voicePersonality,
-        progressiveAutonomy = progressiveAutonomy,
-        proactiveAlertEngine = proactiveAlertEngine,
-        a2aProtocol = a2aProtocol,
-        knowledgeGraph = knowledgeGraph,
-        socialHandler = socialHandler,
-        inferenceHarness = inferenceHarness,
-        episodicMemory = episodicMemory
-    )
+        patternDao: PatternDao
+    ): ProgressiveAutonomy = ProgressiveAutonomy(patternDao)
 
     // ── Episodic Memory (L2) — SQLite FTS5 cross-session memory ──
 
