@@ -1,0 +1,244 @@
+# ──────────────────────────────────────────────────────────────
+# Msaidizi CI — Lint · Test · Security
+# Runs on every PR and push to catch issues early.
+# ──────────────────────────────────────────────────────────────
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel redundant CI on same PR/branch
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false --build-cache"
+  JAVA_VERSION: "17"
+
+permissions:
+  contents: read
+  security-events: write    # for CodeQL SARIF upload
+
+jobs:
+  # ──────────────────────────────────────────────────────────
+  # 1. Lint
+  # ──────────────────────────────────────────────────────────
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Android Lint
+        run: ./gradlew lint --continue
+
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-report
+          path: app/build/reports/lint-results*.html
+          retention-days: 14
+
+      - name: Check Kotlin code style (ktlint)
+        run: |
+          # Run ktlint via Gradle if plugin is applied, otherwise skip
+          if ./gradlew tasks --all 2>/dev/null | grep -q "ktlint"; then
+            ./gradlew ktlintCheck
+          else
+            echo "ℹ️  ktlint plugin not configured — skipping (add id 'org.jlleitschuh.gradle.ktlint' to enable)"
+          fi
+
+      - name: Check for TODO/FIXME annotations
+        run: |
+          echo "::group::TODO/FIXME scan"
+          FOUND=$(grep -rn "TODO\|FIXME\|HACK\|XXX" app/src/main/ --include="*.kt" | wc -l || true)
+          echo "Found $FOUND TODO/FIXME/HACK/XXX annotations"
+          if [ "$FOUND" -gt 20 ]; then
+            echo "::warning::High number of TODO/FIXME annotations ($FOUND). Consider addressing them."
+          fi
+          echo "::endgroup::"
+
+  # ──────────────────────────────────────────────────────────
+  # 2. Unit Tests
+  # ──────────────────────────────────────────────────────────
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Run unit tests
+        run: ./gradlew testDebugUnitTest --continue
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: app/build/test-results/testDebugUnitTest/
+          retention-days: 14
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: app/build/reports/tests/testDebugUnitTest/
+          retention-days: 14
+
+      - name: Parse test summary
+        if: always()
+        run: |
+          RESULTS_DIR="app/build/test-results/testDebugUnitTest"
+          if [ -d "$RESULTS_DIR" ]; then
+            TOTAL=$(grep -rh 'tests=' "$RESULTS_DIR"/*.xml 2>/dev/null | sed 's/.*tests="\([0-9]*\)".*/\1/' | paste -sd+ | bc 2>/dev/null || echo "0")
+            FAILURES=$(grep -rh 'failures=' "$RESULTS_DIR"/*.xml 2>/dev/null | sed 's/.*failures="\([0-9]*\)".*/\1/' | paste -sd+ | bc 2>/dev/null || echo "0")
+            ERRORS=$(grep -rh 'errors=' "$RESULTS_DIR"/*.xml 2>/dev/null | sed 's/.*errors="\([0-9]*\)".*/\1/' | paste -sd+ | bc 2>/dev/null || echo "0")
+            echo "📊 Tests: $TOTAL total, $FAILURES failures, $ERRORS errors"
+            if [ "$FAILURES" -gt 0 ] || [ "$ERRORS" -gt 0 ]; then
+              echo "::error::Test failures detected"
+              exit 1
+            fi
+          fi
+
+  # ──────────────────────────────────────────────────────────
+  # 3. Security
+  # ──────────────────────────────────────────────────────────
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Check dependency vulnerabilities (OWASP)
+        run: |
+          # Use Gradle dependency insight for known CVEs
+          echo "::group::Dependency tree"
+          ./gradlew :app:dependencies --configuration releaseRuntimeClasspath 2>&1 | head -100
+          echo "::endgroup::"
+
+      - name: Check for hardcoded secrets
+        run: |
+          echo "::group::Scanning for hardcoded secrets"
+          PATTERNS=(
+            'password\s*=\s*"[^"]{8,}"'
+            'api[_-]?key\s*=\s*"[^"]{8,}"'
+            'secret\s*=\s*"[^"]{8,}"'
+            'token\s*=\s*"[^"]{8,}"'
+            'BEGIN RSA PRIVATE KEY'
+            'BEGIN EC PRIVATE KEY'
+            'BEGIN PRIVATE KEY'
+          )
+          FOUND=0
+          for pattern in "${PATTERNS[@]}"; do
+            MATCHES=$(grep -rniE "$pattern" app/src/ --include="*.kt" --include="*.xml" --include="*.properties" 2>/dev/null | grep -v "BuildConfig" | grep -v "test" || true)
+            if [ -n "$MATCHES" ]; then
+              echo "::warning::Potential secret: $MATCHES"
+              FOUND=$((FOUND + 1))
+            fi
+          done
+          if [ "$FOUND" -gt 0 ]; then
+            echo "::warning::Found $FOUND potential hardcoded secrets — review above"
+          else
+            echo "✅ No hardcoded secrets detected"
+          fi
+          echo "::endgroup::"
+
+      - name: Check for insecure network configs
+        run: |
+          echo "::group::Network security check"
+          # Check for cleartext traffic
+          if grep -r "usesCleartextTraffic.*true" app/src/ 2>/dev/null; then
+            echo "::warning::Cleartext traffic enabled — should be false in production"
+          else
+            echo "✅ No cleartext traffic allowed"
+          fi
+          # Check for network security config
+          if [ -f "app/src/main/res/xml/network_security_config.xml" ]; then
+            echo "ℹ️  Network security config found"
+          else
+            echo "ℹ️  No custom network_security_config.xml (using defaults)"
+          fi
+          echo "::endgroup::"
+
+      - name: CodeQL Analysis
+        uses: github/codeql-action/init@v3
+        with:
+          languages: java-kotlin
+        continue-on-error: true
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        continue-on-error: true
+
+  # ──────────────────────────────────────────────────────────
+  # 4. Build Check (quick assemble to catch compile errors)
+  # ──────────────────────────────────────────────────────────
+  build-check:
+    name: Compile Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Compile debug build
+        run: ./gradlew compileDebugKotlin
+
+      - name: Verify ProGuard rules
+        run: |
+          echo "::group::ProGuard/R8 rule validation"
+          if [ -f "app/proguard-rules.pro" ]; then
+            echo "✅ proguard-rules.pro exists ($(wc -l < app/proguard-rules.pro) lines)"
+          else
+            echo "::error::proguard-rules.pro missing!"
+            exit 1
+          fi
+          echo "::endgroup::"

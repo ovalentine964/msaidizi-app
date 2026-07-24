@@ -1,0 +1,31 @@
+# ── Build ─────────────────────────────────────────────────────
+*.iml
+.gradle/
+/local.properties
+/.idea/
+build/
+/captures
+.externalNativeBuild/
+.cxx/
+
+# ── Signing ───────────────────────────────────────────────────
+keystore.properties
+*.jks
+*.keystore
+
+# ── Model Assets (too large for git) ─────────────────────────
+app/src/main/assets/models/gguf/*.gguf
+app/src/main/assets/models/onnx-whisper/*.onnx
+app/src/main/assets/models/onnx-piper/*.onnx
+app/src/main/assets/models/**/*.bin
+# Keep the directories
+!app/src/main/assets/models/**/
+!.gitkeep
+
+# ── OS ────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Environment ───────────────────────────────────────────────
+.env
+.env.local

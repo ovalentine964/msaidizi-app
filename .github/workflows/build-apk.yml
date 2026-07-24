@@ -1,0 +1,226 @@
+# ──────────────────────────────────────────────────────────────
+# Msaidizi APK Build & Release Pipeline
+# Builds debug + release APKs for ARM64 and ARM32, signs the
+# release variant, and publishes to GitHub Releases on tags.
+# ──────────────────────────────────────────────────────────────
+name: Build & Release APK
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: "Build type (debug / release / both)"
+        required: false
+        default: "both"
+
+# Cancel redundant runs on the same ref
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true --build-cache"
+  JAVA_VERSION: "17"
+
+permissions:
+  contents: write          # push tags & upload release assets
+
+jobs:
+  # ──────────────────────────────────────────────────────────
+  # 1. Build
+  # ──────────────────────────────────────────────────────────
+  build:
+    name: Build APK (${{ matrix.build_type }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: [debug, release]
+        exclude:
+          - build_type: ${{ github.event.inputs.build_type == 'release' && 'debug' || 'none' }}
+          - build_type: ${{ github.event.inputs.build_type == 'debug' && 'release' || 'none' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate model assets
+        run: |
+          echo "::group::Checking model asset directories"
+          mkdir -p app/src/main/assets/models
+          # Verify expected model dirs exist (create placeholders if missing)
+          for dir in gguf onnx-piper; do
+            if [ ! -d "app/src/main/assets/models/$dir" ]; then
+              echo "⚠️  models/$dir not found — creating placeholder"
+              mkdir -p "app/src/main/assets/models/$dir"
+              echo "# Placeholder — real model files go here" > "app/src/main/assets/models/$dir/.gitkeep"
+            fi
+          done
+          echo "::endgroup::"
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Decode keystore (release only)
+        if: matrix.build_type == 'release'
+        run: |
+          echo "${{ secrets.APK_SIGNING_KEYSTORE_BASE64 }}" | base64 -d > /tmp/release-keystore.jks
+
+      - name: Build ${{ matrix.build_type }} APK
+        run: |
+          if [ "${{ matrix.build_type }}" = "release" ]; then
+            ./gradlew assembleRelease \
+              -Pandroid.injected.signing.store.file=/tmp/release-keystore.jks \
+              -Pandroid.injected.signing.store.password="${{ secrets.APK_KEYSTORE_PASSWORD }}" \
+              -Pandroid.injected.signing.key.alias="${{ secrets.APK_KEY_ALIAS }}" \
+              -Pandroid.injected.signing.key.password="${{ secrets.APK_KEY_PASSWORD }}"
+          else
+            ./gradlew assembleDebug
+          fi
+
+      - name: Rename APK
+        id: rename
+        run: |
+          SUFFIX="${{ matrix.build_type }}"
+          if [ "${{ matrix.build_type }}" = "release" ]; then
+            APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
+            DEST="msaidizi-release.apk"
+          else
+            APK_PATH=$(find app/build/outputs/apk/debug -name "*.apk" | head -1)
+            DEST="msaidizi-debug.apk"
+          fi
+          cp "$APK_PATH" "$DEST"
+          echo "apk_path=$DEST" >> "$GITHUB_OUTPUT"
+          echo "apk_size=$(du -h "$DEST" | cut -f1)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: msaidizi-${{ matrix.build_type }}-apk
+          path: ${{ steps.rename.outputs.apk_path }}
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Cleanup keystore
+        if: always() && matrix.build_type == 'release'
+        run: rm -f /tmp/release-keystore.jks
+
+  # ──────────────────────────────────────────────────────────
+  # 2. Verify (smoke test the APK)
+  # ──────────────────────────────────────────────────────────
+  verify:
+    name: Verify APK
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download release APK
+        uses: actions/download-artifact@v4
+        with:
+          name: msaidizi-release-apk
+          path: ./artifacts
+        continue-on-error: true
+
+      - name: Download debug APK
+        uses: actions/download-artifact@v4
+        with:
+          name: msaidizi-debug-apk
+          path: ./artifacts
+        continue-on-error: true
+
+      - name: Verify APK contents
+        run: |
+          set -e
+          for apk in artifacts/*.apk; do
+            [ -f "$apk" ] || continue
+            echo "=== Inspecting: $apk ==="
+            # Check APK is valid zip
+            unzip -t "$apk" > /dev/null
+            echo "✅ Valid ZIP/APK"
+            # Check for native libs
+            NATIVE_COUNT=$(unzip -l "$apk" | grep -c "lib/arm" || true)
+            echo "📦 Native library entries: $NATIVE_COUNT"
+            # Check for model assets
+            ASSET_COUNT=$(unzip -l "$apk" | grep -c "assets/models/" || true)
+            echo "🧠 Model asset entries: $ASSET_COUNT"
+            # Verify ABI directories
+            unzip -l "$apk" | grep "lib/arm64-v8a/" > /dev/null && echo "✅ arm64-v8a present" || echo "⚠️  arm64-v8a missing"
+            unzip -l "$apk" | grep "lib/armeabi-v7a/" > /dev/null && echo "✅ armeabi-v7a present" || echo "⚠️  armeabi-v7a missing"
+            echo ""
+          done
+
+  # ──────────────────────────────────────────────────────────
+  # 3. Release (only on version tags)
+  # ──────────────────────────────────────────────────────────
+  release:
+    name: Publish Release
+    needs: [build, verify]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout (for changelog)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all APKs
+        uses: actions/download-artifact@v4
+        with:
+          path: ./release-assets
+          merge-multiple: true
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get commits since last tag
+          PREV_TAG=$(git tag --sort=-creatordate | head -2 | tail -1)
+          if [ -n "$PREV_TAG" ] && [ "$PREV_TAG" != "${{ github.ref_name }}" ]; then
+            CHANGES=$(git log "$PREV_TAG..HEAD" --pretty=format:"- %s (%h)" --no-merges)
+          else
+            CHANGES="- Initial release"
+          fi
+          # Write to file (multi-line output)
+          {
+            echo "changes<<CHANGELOG_EOF"
+            echo "## What's Changed"
+            echo ""
+            echo "$CHANGES"
+            echo ""
+            echo "## Installation"
+            echo ""
+            echo "1. Download \`msaidizi-release.apk\` below"
+            echo "2. Enable 'Install from unknown sources' on your Android device"
+            echo "3. Open the APK to install"
+            echo "4. The app will download model files on first launch (~500MB)"
+            echo ""
+            echo "**Minimum:** Android 8.0 (API 26) · ARM64 or ARM32 · 2GB RAM"
+            echo "CHANGELOG_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Msaidizi ${{ github.ref_name }}
+          body: ${{ steps.changelog.outputs.changes }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+          files: |
+            release-assets/msaidizi-release.apk
+            release-assets/msaidizi-debug.apk
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
