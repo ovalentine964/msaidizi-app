@@ -9,6 +9,7 @@ import com.msaidizi.app.model.DailySummaryEntity
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
+import com.msaidizi.app.superagent.flywheel.FlywheelEngine
 import java.util.Calendar
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -20,6 +21,8 @@ import javax.inject.Singleton
  * - Generates morning/evening briefings
  * - Predicts cash flow based on historical patterns
  * - Provides savings and growth advice
+ *
+ * Enhanced with flywheel learned patterns for better predictions.
  */
 @Singleton
 class CFOEngine @Inject constructor(
@@ -27,6 +30,7 @@ class CFOEngine @Inject constructor(
     private val expenseDao: ExpenseDao,
     private val productDao: ProductDao,
     private val dailySummaryDao: DailySummaryDao,
+    private val flywheelEngine: FlywheelEngine,
     private val gson: Gson
 ) : Tool {
 
@@ -183,6 +187,17 @@ class CFOEngine @Inject constructor(
                 )
             }
 
+            // Enrich with flywheel hourly patterns if available
+            val hourlyPatterns = try {
+                flywheelEngine.getHourlyPatterns()
+            } catch (e: Exception) {
+                emptyMap()
+            }
+            val peakHours = hourlyPatterns.entries
+                .sortedByDescending { it.value }
+                .take(3)
+                .map { it.key }
+
             val weeklySales = predictions.sumOf { it["predicted_sales"] as Double }
             val weeklyProfit = predictions.sumOf { it["predicted_profit"] as Double }
 
@@ -191,6 +206,9 @@ class CFOEngine @Inject constructor(
                 appendLine()
                 appendLine("Average daily: Ksh ${"%,.0f".format(avgDailySales)} sales, Ksh ${"%,.0f".format(avgDailyProfit)} profit")
                 appendLine("Predicted weekly: Ksh ${"%,.0f".format(weeklySales)} sales, Ksh ${"%,.0f".format(weeklyProfit)} profit")
+                if (peakHours.isNotEmpty()) {
+                    appendLine("Peak business hours: ${peakHours.joinToString(", ") { "${it}:00" }}")
+                }
                 appendLine()
                 predictions.forEach { p ->
                     appendLine("  ${p["date"]}: Ksh ${"%,.0f".format(p["predicted_sales"])} sales")

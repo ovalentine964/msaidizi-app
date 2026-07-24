@@ -149,4 +149,107 @@ class FlywheelEngine @Inject constructor(
             )
         }
     }
+
+    // ── Read-back methods ──────────────────────
+
+    /**
+     * Get learned vocabulary — words the worker has used that aren't in the base dictionary.
+     * Returns a map of word → confidence score (higher = seen more often).
+     */
+    suspend fun getLearnedVocabulary(): Map<String, Float> {
+        return try {
+            knowledgeDao.getByCategory("vocab").first()
+                .sortedByDescending { it.usageCount }
+                .associate { it.key to it.confidence }
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to read learned vocabulary")
+            emptyMap()
+        }
+    }
+
+    /**
+     * Get learned business patterns — hourly patterns, intent success rates, etc.
+     * Returns a list of pattern entries with their metadata.
+     */
+    suspend fun getLearnedPatterns(): List<LearnedPattern> {
+        return try {
+            knowledgeDao.getByCategory("business_pattern").first()
+                .sortedByDescending { it.confidence }
+                .map { entry ->
+                    val data = try {
+                        gson.fromJson(entry.value, Map::class.java) as? Map<*, *> ?: emptyMap<String, Any>()
+                    } catch (e: Exception) {
+                        emptyMap<String, Any>()
+                    }
+                    LearnedPattern(
+                        key = entry.key,
+                        data = data.mapKeys { it.key.toString() }.mapValues { it.value?.toString() ?: "" },
+                        confidence = entry.confidence,
+                        usageCount = entry.usageCount
+                    )
+                }
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to read learned patterns")
+            emptyList()
+        }
+    }
+
+    /**
+     * Get advice confidence — which advice/intent patterns have worked before.
+     * Returns a map of intent_type → confidence score.
+     */
+    suspend fun getAdviceConfidence(): Map<String, Float> {
+        return try {
+            knowledgeDao.getByCategory("intent_pattern").first()
+                .groupBy { entry ->
+                    // Extract intent type from key: "intent_sale_recording_xxx" → "SALE"
+                    entry.key.removePrefix("intent_").substringBefore("_")
+                }
+                .mapValues { (_, entries) ->
+                    entries.maxOf { it.confidence }
+                }
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to read advice confidence")
+            emptyMap()
+        }
+    }
+
+    /**
+     * Get vocabulary words as a flat set for quick lookup.
+     */
+    suspend fun getVocabularyWords(): Set<String> {
+        return try {
+            knowledgeDao.getByCategory("vocab").first()
+                .map { it.key.lowercase() }
+                .toSet()
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to read vocabulary words")
+            emptySet()
+        }
+    }
+
+    /**
+     * Get hourly business activity pattern.
+     * Returns hour (0-23) → activity score based on recorded transactions.
+     */
+    suspend fun getHourlyPatterns(): Map<Int, Float> {
+        return try {
+            knowledgeDao.getByCategory("business_pattern").first()
+                .filter { it.key.startsWith("hourly_pattern_") }
+                .associate { entry ->
+                    val hour = entry.key.removePrefix("hourly_pattern_").toIntOrNull() ?: 0
+                    hour to entry.confidence
+                }
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to read hourly patterns")
+            emptyMap()
+        }
+    }
 }
+
+data class LearnedPattern(
+    val key: String,
+    val data: Map<String, String>,
+    val confidence: Float,
+    val usageCount: Int
+)

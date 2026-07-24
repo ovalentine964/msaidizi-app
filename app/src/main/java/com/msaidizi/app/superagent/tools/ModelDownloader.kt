@@ -16,7 +16,7 @@ class ModelDownloader @Inject constructor() : Tool {
     override val description = "Download and manage on-device AI models (LLM, STT, TTS)"
 
     private val models = mapOf(
-        "qwen-0.8b" to ModelInfo("Qwen 0.8B", "v1.0", 580_000_000L, "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf", ""),
+        "qwen3-0.6b" to ModelInfo("Qwen3 0.6B", "v3.0", 700_000_000L, "https://huggingface.co/Qwen/Qwen3-0.6B-Instruct-GGUF/resolve/main/qwen3-0.6b-instruct-q4_k_m.gguf", ""),
         "whisper-small" to ModelInfo("Whisper Small", "v1.0", 140_000_000L, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin", ""),
         "piper-swahili" to ModelInfo("Piper Swahili", "v1.0", 15_000_000L, "https://huggingface.co/rhasspy/piper/resolve/main/swahili/medium.onnx", "")
     )

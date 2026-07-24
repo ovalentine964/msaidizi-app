@@ -5,6 +5,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
+import com.msaidizi.app.superagent.flywheel.FlywheelEngine
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -14,14 +15,20 @@ import javax.inject.Singleton
  * Uses pattern matching + LLM fallback to classify user intent.
  * Optimized for low-resource devices: pattern matching first (zero cost),
  * LLM only for ambiguous inputs.
+ *
+ * Enhanced with flywheel learned vocabulary for better classification.
  */
 @Singleton
 class IntentRouter @Inject constructor(
     private val knowledgeDao: KnowledgeDao,
+    private val flywheelEngine: FlywheelEngine,
     private val gson: Gson
 ) {
     // Intent patterns loaded from assets/knowledge/intent_patterns.json
     private var intentPatterns: Map<IntentType, List<Regex>> = emptyMap()
+
+    // Learned vocabulary cache (refreshed on each route call)
+    private var learnedVocab: Set<String> = emptySet()
 
     // Entity extraction patterns
     private val numberPattern = Regex("""\d+\.?\d*""")
@@ -35,12 +42,29 @@ class IntentRouter @Inject constructor(
     /**
      * Route user input to an intent.
      * Tries pattern matching first (fast), falls back to LLM classification.
+     * Uses flywheel learned vocabulary to improve matching over time.
      */
     suspend fun route(input: String): UserIntent {
         val normalized = input.trim().lowercase()
 
+        // Refresh learned vocabulary from flywheel
+        try {
+            learnedVocab = flywheelEngine.getVocabularyWords()
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to load learned vocabulary")
+        }
+
         // 1. Try pattern matching (zero cost, instant)
-        val patternResult = matchPatterns(normalized)
+        var patternResult = matchPatterns(normalized)
+
+        // 2. If no strong match, try matching against learned vocabulary
+        if (patternResult == null || patternResult.confidence <= 0.8f) {
+            val vocabBoosted = matchWithLearnedVocab(normalized, patternResult)
+            if (vocabBoosted != null) {
+                patternResult = vocabBoosted
+            }
+        }
+
         if (patternResult != null && patternResult.confidence > 0.8f) {
             return patternResult.copy(
                 entities = extractEntities(input),
@@ -48,7 +72,7 @@ class IntentRouter @Inject constructor(
             )
         }
 
-        // 2. Use LLM for classification (only when patterns are ambiguous)
+        // 3. Use LLM for classification (only when patterns are ambiguous)
         // For now, return best pattern match or UNKNOWN
         return patternResult?.copy(entities = extractEntities(input), rawText = input)
             ?: UserIntent(
@@ -172,6 +196,27 @@ class IntentRouter @Inject constructor(
         }
 
         return null
+    }
+
+    /**
+     * Boost classification using learned vocabulary from the flywheel.
+     * If the user uses words the system has learned from past interactions,
+     * we can infer the intent with higher confidence.
+     */
+    private fun matchWithLearnedVocab(input: String, existing: UserIntent?): UserIntent? {
+        val words = input.split(Regex("\\s+")).map { it.lowercase() }
+        val matchedLearned = words.filter { it in learnedVocab }
+
+        if (matchedLearned.isEmpty()) return existing
+
+        // If we already have a partial match, boost its confidence
+        if (existing != null && existing.confidence > 0.5f) {
+            val boost = (matchedLearned.size * 0.05f).coerceAtMost(0.2f)
+            return existing.copy(confidence = (existing.confidence + boost).coerceAtMost(1.0f))
+        }
+
+        // Learned vocab alone isn't enough to classify — return existing
+        return existing
     }
 
     // ── Pattern matchers ──────────────────────
