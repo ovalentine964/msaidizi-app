@@ -98,7 +98,23 @@ object AppModule {
         customerInsights: com.msaidizi.app.superagent.tools.CustomerInsights,
         marketPooling: com.msaidizi.app.superagent.tools.MarketPooling,
         rideShare: com.msaidizi.app.superagent.tools.RideShare,
-        receiptScannerCV: com.msaidizi.app.superagent.tools.ReceiptScannerCV
+        receiptScannerCV: com.msaidizi.app.superagent.tools.ReceiptScannerCV,
+        autoRestock: com.msaidizi.app.superagent.tools.AutoRestock,
+        bulkOrderCoordinator: com.msaidizi.app.superagent.tools.BulkOrderCoordinator,
+        businessHealthDashboard: com.msaidizi.app.superagent.tools.BusinessHealthDashboard,
+        competitorTracker: com.msaidizi.app.superagent.tools.CompetitorTracker,
+        creditReadiness: com.msaidizi.app.superagent.tools.CreditReadiness,
+        insuranceMatcher: com.msaidizi.app.superagent.tools.InsuranceMatcher,
+        loanComparison: com.msaidizi.app.superagent.tools.LoanComparison,
+        marketDayPlanner: com.msaidizi.app.superagent.tools.MarketDayPlanner,
+        marketPriceBroadcaster: com.msaidizi.app.superagent.tools.MarketPriceBroadcaster,
+        mpesaAutoLogger: com.msaidizi.app.superagent.tools.MpesaAutoLogger,
+        priceNegotiator: com.msaidizi.app.superagent.tools.PriceNegotiator,
+        profitByProduct: com.msaidizi.app.superagent.tools.ProfitByProduct,
+        proofOfIncome: com.msaidizi.app.superagent.tools.ProofOfIncome,
+        quickSale: com.msaidizi.app.superagent.tools.QuickSale,
+        supplierMatcher: com.msaidizi.app.superagent.tools.SupplierMatcher,
+        wasteReducer: com.msaidizi.app.superagent.tools.WasteReducer
     ): com.msaidizi.app.superagent.tools.ToolRegistry {
         val registry = com.msaidizi.app.superagent.tools.ToolRegistry()
         registry.register(transactionRecorder)
@@ -130,6 +146,22 @@ object AppModule {
         registry.register(marketPooling)
         registry.register(rideShare)
         registry.register(receiptScannerCV)
+        registry.register(autoRestock)
+        registry.register(bulkOrderCoordinator)
+        registry.register(businessHealthDashboard)
+        registry.register(competitorTracker)
+        registry.register(creditReadiness)
+        registry.register(insuranceMatcher)
+        registry.register(loanComparison)
+        registry.register(marketDayPlanner)
+        registry.register(marketPriceBroadcaster)
+        registry.register(mpesaAutoLogger)
+        registry.register(priceNegotiator)
+        registry.register(profitByProduct)
+        registry.register(proofOfIncome)
+        registry.register(quickSale)
+        registry.register(supplierMatcher)
+        registry.register(wasteReducer)
         return registry
     }
 }

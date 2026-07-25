@@ -105,3 +105,9 @@
     public static int d(...);
     public static int v(...);
 }
+
+# ── CameraX ─────────────────────────────────────────────────
+-keep class androidx.camera.** { *; }
+
+# ── ML Kit ──────────────────────────────────────────────────
+-keep class com.google.mlkit.** { *; }

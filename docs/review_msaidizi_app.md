@@ -12,7 +12,9 @@
 
 Msaidizi is an extraordinarily ambitious project: an AI-powered, voice-first, offline-first business assistant for Africa's 600M+ informal workers. The **documentation is world-class** — SECURITY.md, ARCHITECTURE.md, and the onboarding design docs show deep thinking. However, the gap between what's documented and what's actually implemented is the project's biggest risk. This review found that the app is in a **pre-alpha state** with many claimed features either non-functional, stubbed out, or existing only as documentation.
 
-### Overall Score: 4.5/10
+### Overall Score: 4.5/10 (pre-fixes baseline)
+
+> **⚠️ NOTE (2026-07-26):** This score reflects the state at review time. Since then, significant fixes have been applied including: AndroidManifest crash fixes (wrong activity name, phantom service), CI/CD pipeline improvements, expanded test coverage, dashboard/security enhancements, and registration of 44+ superagent tools in the DI container. The actual state of the app is likely better than this score suggests. A re-review is recommended.
 
 | Category | Score | Notes |
 |----------|-------|-------|

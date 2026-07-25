@@ -305,7 +305,7 @@ MSAIDIZI SUPERAGENT (On-Device)
 │         SuperagentHarness                    │
 │  Intent → Context → Tools → Response → Guard │
 ├─────────────────────────────────────────────┤
-│  20 TOOLS (activated as needed):            │
+│  44+ TOOLS (activated as needed):           │
 │  TransactionRecorder  InventoryTracker      │
 │  CFOEngine           VoicePipeline          │
 │  LanguageDetector    CodeSwitchHandler       │
@@ -316,6 +316,14 @@ MSAIDIZI SUPERAGENT (On-Device)
 │  MemoryManager       GuardrailsEngine       │
 │  AnomalyDetector     MpesaParser            │
 │  PricingAdvisor      RestockPredictor       │
+│  AutoRestock         BulkOrderCoordinator   │
+│  BusinessHealth      CompetitorTracker      │
+│  CreditReadiness     InsuranceMatcher       │
+│  LoanComparison      MarketDayPlanner       │
+│  MarketPriceBcast    MpesaAutoLogger        │
+│  PriceNegotiator     ProfitByProduct        │
+│  ProofOfIncome       QuickSale              │
+│  SupplierMatcher     WasteReducer           │
 ├─────────────────────────────────────────────┤
 │  5-LAYER MEMORY                             │
 │  Working → Conversation → Daily →           │
@@ -362,7 +370,7 @@ ANGAVU BACKEND SUPERAGENT (Cloud)
 | **Angavu Backend** (cloud) | 20 tools | Transform worker data into economic intelligence | Collective intelligence loop |
 | **Together** | 40 tools | Make informal economy visible | Dual flywheel (device ↔ backend) |
 
-**ONE BRAIN. 20 TOOLS. ONE JOB.** That's the superagent per Jensen Huang's vision.
+**ONE BRAIN. 44+ TOOLS. ONE JOB.** That's the superagent per Jensen Huang's vision.
 
 ---
 

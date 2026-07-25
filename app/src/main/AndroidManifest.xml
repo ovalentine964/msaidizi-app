@@ -37,16 +37,10 @@
 
         <!-- Main App -->
         <activity
-            android:name=".ui.MainActivity"
+            android:name=".MainActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize"
             android:screenOrientation="portrait" />
-
-        <!-- Voice Service (foreground) -->
-        <service
-            android:name=".voice.VoiceForegroundService"
-            android:foregroundServiceType="microphone"
-            android:exported="false" />
 
     </application>
 
