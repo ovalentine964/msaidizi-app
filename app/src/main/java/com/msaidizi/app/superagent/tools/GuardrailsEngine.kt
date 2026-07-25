@@ -40,7 +40,7 @@ class GuardrailsEngine @Inject constructor() : Tool {
         number("amount", "Transaction amount", required = false)
         string("product", "Product name", required = false)
         string("advice", "Advice text to validate", required = false)
-        bool("is_aggregated", "Whether output contains aggregated data (triggers DP noise)", required = false)
+        boolean("is_aggregated", "Whether output contains aggregated data (triggers DP noise)", required = false)
         number("cohort_size", "Cohort size for k-anonymity check", required = false)
     }
 

@@ -287,6 +287,267 @@ data class UserProfileEntity(
 )
 
 // ──────────────────────────────────────────────
+// Debt Tracking Models
+// ──────────────────────────────────────────────
+
+/**
+ * A debt record: someone owes the user money.
+ * Tracks the original amount, outstanding balance, product/service sold,
+ * and due date for aging analysis.
+ */
+@Entity(tableName = "debts")
+data class DebtEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val customerName: String,
+    val customerPhone: String? = null,
+    val amount: Double,              // Original debt amount
+    val outstandingBalance: Double,   // Remaining balance
+    val product: String,             // What was sold (product or service name)
+    val notes: String? = null,
+    val status: String = "active",   // active, settled, written_off
+    val dueDate: Long? = null,       // When payment was expected
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis()
+)
+
+/**
+ * A repayment against a debt.
+ * Supports partial payments — multiple repayments per debt.
+ */
+@Entity(
+    tableName = "debt_repayments",
+    foreignKeys = [
+        androidx.room.ForeignKey(
+            entity = DebtEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["debtId"],
+            onDelete = androidx.room.ForeignKey.CASCADE
+        )
+    ]
+)
+data class DebtRepaymentEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val debtId: Long,
+    val amount: Double,
+    val paymentMethod: String = "cash", // cash, mpesa, other
+    val notes: String? = null,
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+/**
+ * Aging bucket summary for debt analysis.
+ */
+data class AgingBucket(
+    val bucket: String,      // "current", "30_days", "60_days", "90_plus"
+    val debtCount: Int,
+    val totalAmount: Double
+)
+
+/**
+ * Customer debt summary for credit decisions.
+ */
+data class CustomerDebtSummary(
+    val customerName: String,
+    val totalDebts: Int,
+    val totalAmount: Double,
+    val totalOutstanding: Double,
+    val totalRepaid: Double,
+    val onTimePayments: Int,
+    val latePayments: Int,
+    val averageRepaymentDays: Double?
+)
+
+// ──────────────────────────────────────────────
+// Bulk Order Models
+// For coordinating group buying among workers
+// ──────────────────────────────────────────────
+
+enum class BulkOrderStatus {
+    OPEN,           // Accepting commitments
+    MINIMUM_MET,    // Enough quantity to negotiate
+    NEGOTIATING,    // Talking to supplier
+    CONFIRMED,      // Price agreed, ready to pay
+    DISTRIBUTING,   // Bulk delivery being split
+    COMPLETED,      // All delivered and paid
+    CANCELLED,      // Cancelled by creator
+    EXPIRED         // Deadline passed without minimum
+}
+
+enum class PaymentStatus {
+    PENDING,        // Not yet paid
+    IN_ESCROW,      // Paid into M-Pesa escrow
+    RELEASED,       // Released to supplier after delivery
+    REFUNDED        // Refunded (order cancelled)
+}
+
+enum class EscrowType {
+    DEPOSIT,        // Worker pays in
+    RELEASE,        // Paid to supplier
+    REFUND          // Returned to worker
+}
+
+@Entity(tableName = "bulk_orders")
+data class BulkOrderEntity(
+    @PrimaryKey val orderId: String,
+    val product: String,
+    val unit: String,
+    val targetPricePerUnit: Double,
+    val totalQuantityNeeded: Double,
+    val totalQuantityCommitted: Double = 0.0,
+    val minimumQuantity: Double,
+    val area: String,
+    val creatorWorkerId: String,
+    val creatorName: String,
+    val creatorPhone: String,
+    val status: String,
+    val deadline: Long,
+    val supplierName: String?,
+    val agreedPricePerUnit: Double?,
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis(),
+    val needsSync: Boolean = true
+)
+
+@Entity(tableName = "bulk_commitments",
+    foreignKeys = [ForeignKey(
+        entity = BulkOrderEntity::class,
+        parentColumns = ["orderId"],
+        childColumns = ["orderId"],
+        onDelete = ForeignKey.CASCADE
+    )],
+    indices = [Index(value = ["orderId"]), Index(value = ["workerId"])]
+)
+data class BulkCommitmentEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val orderId: String,
+    val workerId: String,
+    val workerName: String,
+    val phone: String,
+    val quantity: Double,
+    val amountPaid: Double = 0.0,
+    val paymentStatus: String,
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis(),
+    val needsSync: Boolean = true
+)
+
+@Entity(tableName = "bulk_escrow",
+    foreignKeys = [ForeignKey(
+        entity = BulkOrderEntity::class,
+        parentColumns = ["orderId"],
+        childColumns = ["orderId"],
+        onDelete = ForeignKey.CASCADE
+    )],
+    indices = [Index(value = ["orderId"])]
+)
+data class BulkEscrowEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val orderId: String,
+    val workerId: String,
+    val amount: Double,
+    val type: String,           // deposit, release, refund
+    val mpesaReference: String?,
+    val createdAt: Long = System.currentTimeMillis(),
+    val needsSync: Boolean = true
+)
+
+// ──────────────────────────────────────────────
+// Chama (Savings Group) Models
+// ──────────────────────────────────────────────
+
+/**
+ * A chama — informal savings group, the #1 financial vehicle for
+ * informal workers in Kenya (KES 300B+ annually).
+ * Members contribute a fixed amount on a weekly or monthly basis
+ * and take turns receiving the pooled pot.
+ */
+@Entity(tableName = "chamas")
+data class ChamaEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val contributionAmount: Double,       // KES per cycle
+    val frequency: String = "monthly",     // weekly or monthly
+    val savingsTarget: Double = 0.0,       // optional group goal
+    val isActive: Boolean = true,
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis()
+)
+
+/**
+ * A member of a chama.
+ * [rotationOrder] determines when they receive the pot (1-based).
+ */
+@Entity(
+    tableName = "chama_members",
+    foreignKeys = [ForeignKey(
+        entity = ChamaEntity::class,
+        parentColumns = ["id"],
+        childColumns = ["chamaId"],
+        onDelete = ForeignKey.CASCADE
+    )],
+    indices = [Index(value = ["chamaId"])]
+)
+data class ChamaMemberEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val chamaId: Long,
+    val name: String,
+    val phone: String,
+    val rotationOrder: Int,          // 1-based position in payout rotation
+    val isActive: Boolean = true,
+    val joinedAt: Long = System.currentTimeMillis()
+)
+
+/**
+ * A single contribution made by a chama member.
+ * Tracks M-Pesa reference and any penalty for late payment.
+ */
+@Entity(
+    tableName = "chama_contributions",
+    foreignKeys = [ForeignKey(
+        entity = ChamaEntity::class,
+        parentColumns = ["id"],
+        childColumns = ["chamaId"],
+        onDelete = ForeignKey.CASCADE
+    )],
+    indices = [Index(value = ["chamaId"])]
+)
+data class ChamaContributionEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val chamaId: Long,
+    val memberId: Long,
+    val memberName: String,
+    val amount: Double,
+    val mpesaRef: String? = null,     // M-Pesa transaction reference
+    val penalty: Double = 0.0,       // late payment penalty
+    val date: String,                // YYYY-MM-DD
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+/**
+ * A payout from the chama pot to a member.
+ * Represents one cycle of the rotation.
+ */
+@Entity(
+    tableName = "chama_payouts",
+    foreignKeys = [ForeignKey(
+        entity = ChamaEntity::class,
+        parentColumns = ["id"],
+        childColumns = ["chamaId"],
+        onDelete = ForeignKey.CASCADE
+    )],
+    indices = [Index(value = ["chamaId"])]
+)
+data class ChamaPayoutEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val chamaId: Long,
+    val recipientId: Long,
+    val recipientName: String,
+    val amount: Double,
+    val cycleNumber: Int,
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+// ──────────────────────────────────────────────
 // UI State Models
 // ──────────────────────────────────────────────
 

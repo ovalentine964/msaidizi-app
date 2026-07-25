@@ -18,9 +18,15 @@ import com.msaidizi.app.model.*
         AnomalyHistoryEntity::class,
         LearnedVocabularyEntity::class,
         BusinessPatternEntity::class,
-        SyncStateEntity::class
+        SyncStateEntity::class,
+        DebtEntity::class,
+        DebtRepaymentEntity::class,
+        ChamaEntity::class,
+        ChamaMemberEntity::class,
+        ChamaContributionEntity::class,
+        ChamaPayoutEntity::class
     ],
-    version = 2,
+    version = 4,
     exportSchema = true
 )
 abstract class MsaidiziDatabase : RoomDatabase() {
@@ -37,4 +43,10 @@ abstract class MsaidiziDatabase : RoomDatabase() {
     abstract fun learnedVocabularyDao(): LearnedVocabularyDao
     abstract fun businessPatternDao(): BusinessPatternDao
     abstract fun syncStateDao(): SyncStateDao
+    abstract fun debtDao(): DebtDao
+    abstract fun debtRepaymentDao(): DebtRepaymentDao
+    abstract fun chamaDao(): ChamaDao
+    abstract fun chamaMemberDao(): ChamaMemberDao
+    abstract fun chamaContributionDao(): ChamaContributionDao
+    abstract fun chamaPayoutDao(): ChamaPayoutDao
 }

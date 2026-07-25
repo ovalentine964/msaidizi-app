@@ -47,9 +47,12 @@ class SyncEngine @Inject constructor(
     override val argsSchema = argSchema {
         enum("action", "Sync action to perform",
             listOf("add", "sync", "status", "clear"), required = false)
-        string("transaction", "Transaction data to add to batch", required = false)
-        boolean("wifi", "Whether WiFi is available", required = false)
-        integer("battery", "Battery percentage", required = false)
+        number("amount", "Transaction amount", required = false)
+        string("category", "Transaction category (e.g. sale, expense, purchase)", required = false)
+        string("payment_method", "Payment method (e.g. cash, m-pesa, bank)", required = false)
+        boolean("is_service", "Whether the transaction is a service (not a product)", required = false)
+        string("location", "Location string for ward-level generalization", required = false)
+        string("phone", "Phone number (will be anonymized with SHA-256 hash)", required = false)
     }
 
     // In-memory pending batch (flushed on sync)

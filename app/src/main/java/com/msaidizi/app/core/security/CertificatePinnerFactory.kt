@@ -18,14 +18,15 @@ import timber.log.Timber
  */
 object CertificatePinnerFactory {
 
-    // TODO: Replace these with actual pin values from your backend certificates.
-    //       Run the openssl command above against your production API domain.
-    //       Include at least one backup pin from a different key/cert.
+    // Certificate pins MUST be generated from production backend certificates before release.
+    // Run the openssl command documented in the class KDoc against your production API domain
+    // and replace the placeholder values below with the real SHA-256 SPKI hashes.
+    // Always include at least one backup pin from a different key/cert for rotation.
     private const val API_HOSTNAME = "api.msaidizi.com"
 
-    // Primary pin: current certificate's SPKI hash
+    // Primary pin: current certificate's SPKI hash (replace before production deployment)
     private const val PIN_PRIMARY = "sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-    // Backup pin: backup certificate or intermediate CA SPKI hash
+    // Backup pin: backup certificate or intermediate CA SPKI hash (replace before production deployment)
     private const val PIN_BACKUP = "sha256/BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB="
 
     /**

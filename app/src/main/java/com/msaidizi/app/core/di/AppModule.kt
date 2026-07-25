@@ -50,6 +50,12 @@ object AppModule {
     @Provides fun provideLearnedVocabularyDao(db: MsaidiziDatabase): LearnedVocabularyDao = db.learnedVocabularyDao()
     @Provides fun provideBusinessPatternDao(db: MsaidiziDatabase): BusinessPatternDao = db.businessPatternDao()
     @Provides fun provideSyncStateDao(db: MsaidiziDatabase): SyncStateDao = db.syncStateDao()
+    @Provides fun provideDebtDao(db: MsaidiziDatabase): DebtDao = db.debtDao()
+    @Provides fun provideDebtRepaymentDao(db: MsaidiziDatabase): DebtRepaymentDao = db.debtRepaymentDao()
+    @Provides fun provideChamaDao(db: MsaidiziDatabase): ChamaDao = db.chamaDao()
+    @Provides fun provideChamaMemberDao(db: MsaidiziDatabase): ChamaMemberDao = db.chamaMemberDao()
+    @Provides fun provideChamaContributionDao(db: MsaidiziDatabase): ChamaContributionDao = db.chamaContributionDao()
+    @Provides fun provideChamaPayoutDao(db: MsaidiziDatabase): ChamaPayoutDao = db.chamaPayoutDao()
 
     @Provides
     @Singleton
@@ -76,7 +82,9 @@ object AppModule {
         restockPredictor: com.msaidizi.app.superagent.tools.RestockPredictor,
         alamaScore: com.msaidizi.app.superagent.tools.AlamaScore,
         serviceMenu: com.msaidizi.app.superagent.tools.ServiceMenu,
-        serviceVoiceCommands: com.msaidizi.app.superagent.tools.ServiceVoiceCommands
+        serviceVoiceCommands: com.msaidizi.app.superagent.tools.ServiceVoiceCommands,
+        debtTracker: com.msaidizi.app.superagent.tools.DebtTracker,
+        chamaManager: com.msaidizi.app.superagent.tools.ChamaManager
     ): com.msaidizi.app.superagent.tools.ToolRegistry {
         val registry = com.msaidizi.app.superagent.tools.ToolRegistry()
         registry.register(transactionRecorder)
@@ -102,6 +110,8 @@ object AppModule {
         registry.register(alamaScore)
         registry.register(serviceMenu)
         registry.register(serviceVoiceCommands)
+        registry.register(debtTracker)
+        registry.register(chamaManager)
         return registry
     }
 }
