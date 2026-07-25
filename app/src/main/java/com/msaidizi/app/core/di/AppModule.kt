@@ -97,7 +97,8 @@ object AppModule {
         chamaManager: com.msaidizi.app.superagent.tools.ChamaManager,
         customerInsights: com.msaidizi.app.superagent.tools.CustomerInsights,
         marketPooling: com.msaidizi.app.superagent.tools.MarketPooling,
-        rideShare: com.msaidizi.app.superagent.tools.RideShare
+        rideShare: com.msaidizi.app.superagent.tools.RideShare,
+        receiptScannerCV: com.msaidizi.app.superagent.tools.ReceiptScannerCV
     ): com.msaidizi.app.superagent.tools.ToolRegistry {
         val registry = com.msaidizi.app.superagent.tools.ToolRegistry()
         registry.register(transactionRecorder)
@@ -128,6 +129,7 @@ object AppModule {
         registry.register(customerInsights)
         registry.register(marketPooling)
         registry.register(rideShare)
+        registry.register(receiptScannerCV)
         return registry
     }
 }
