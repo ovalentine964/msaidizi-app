@@ -260,7 +260,7 @@ class DebtTracker @Inject constructor(
                     appendLine()
                     appendLine("👤 ${debt.customerName} has fully paid!")
                     appendLine("💰 Total paid: KES ${"%,.0f".format(debt.amount)}")
-                    appendLine("📊 Payments: $paymentCount")
+                    appendLine("📊 Payments: $repaymentCount")
                 } else {
                     appendLine("💵 *Repayment Recorded*")
                     appendLine()
