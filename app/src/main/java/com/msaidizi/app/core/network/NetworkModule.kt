@@ -1,6 +1,7 @@
 package com.msaidizi.app.core.network
 
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
+import com.msaidizi.app.BuildConfig
 import com.msaidizi.app.core.security.CertificatePinnerFactory
 import dagger.Module
 import dagger.Provides
@@ -41,10 +42,16 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideOkHttpClient(certificatePinner: CertificatePinner): OkHttpClient {
+        val loggingLevel = if (BuildConfig.DEBUG) {
+            HttpLoggingInterceptor.Level.BODY
+        } else {
+            HttpLoggingInterceptor.Level.NONE
+        }
+
         val logging = HttpLoggingInterceptor { message ->
             Timber.tag("SyncHTTP").d(message)
         }.apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = loggingLevel
         }
 
         return OkHttpClient.Builder()

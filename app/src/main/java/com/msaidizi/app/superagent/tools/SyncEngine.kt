@@ -10,6 +10,7 @@ import com.msaidizi.app.core.database.LearnedVocabularyDao
 import com.msaidizi.app.core.database.SyncStateDao
 import com.msaidizi.app.core.network.SyncApi
 import com.msaidizi.app.core.network.SyncPayload
+import com.msaidizi.app.core.security.EncryptionManager
 import com.msaidizi.app.core.network.AnonymizedTransaction
 import com.msaidizi.app.core.network.AnonymizedPattern
 import com.msaidizi.app.core.network.AnomalyStats
@@ -38,7 +39,8 @@ class SyncEngine @Inject constructor(
     private val syncStateDao: SyncStateDao,
     private val anomalyHistoryDao: AnomalyHistoryDao,
     private val learnedVocabularyDao: LearnedVocabularyDao,
-    private val businessPatternDao: BusinessPatternDao
+    private val businessPatternDao: BusinessPatternDao,
+    private val encryptionManager: EncryptionManager
 ) : Tool {
 
     override val name = "sync_engine"
@@ -58,8 +60,19 @@ class SyncEngine @Inject constructor(
     // In-memory pending batch (flushed on sync)
     private val pendingTransactions = mutableListOf<PendingTransaction>()
 
-    // Anonymization salt — in production, inject from EncryptedSharedPreferences
-    private val phoneHashSalt = "msaidizi_salt_v1"
+    // Anonymization salt — per-installation random salt stored in EncryptedSharedPreferences
+    private val phoneHashSalt: String by lazy {
+        val prefs = encryptionManager.getEncryptedPrefs()
+        val existing = prefs.getString(KEY_PHONE_HASH_SALT, null)
+        if (existing != null) {
+            existing
+        } else {
+            val randomSalt = java.util.UUID.randomUUID().toString() +
+                java.util.UUID.randomUUID().toString()
+            prefs.edit().putString(KEY_PHONE_HASH_SALT, randomSalt).apply()
+            randomSalt
+        }
+    }
 
     // Retry configuration
     companion object {
@@ -68,6 +81,7 @@ class SyncEngine @Inject constructor(
         private const val BACKOFF_MULTIPLIER = 2.0
         private const val BATTERY_THRESHOLD = 20
         private const val SYNC_PROTOCOL_VERSION = 1
+        private const val KEY_PHONE_HASH_SALT = "phone_hash_salt"
     }
 
     data class PendingTransaction(
