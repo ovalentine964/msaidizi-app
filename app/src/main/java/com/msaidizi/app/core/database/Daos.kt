@@ -166,6 +166,31 @@ interface StockMovementDao {
 
     @Query("SELECT * FROM stock_movements WHERE timestamp BETWEEN :start AND :end ORDER BY timestamp DESC")
     fun getMovementsBetween(start: Long, end: Long): Flow<List<StockMovementEntity>>
+
+    @Query("SELECT * FROM stock_movements WHERE productId = :productId AND type = 'sale' AND timestamp >= :since ORDER BY timestamp ASC")
+    fun getSalesSince(productId: Long, since: Long): Flow<List<StockMovementEntity>>
+}
+
+// ──────────────────────────────────────────────
+// Restock Threshold DAO
+// ──────────────────────────────────────────────
+
+@Dao
+interface RestockThresholdDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(threshold: RestockThresholdEntity): Long
+
+    @Update
+    suspend fun update(threshold: RestockThresholdEntity)
+
+    @Query("SELECT * FROM restock_thresholds WHERE productId = :productId LIMIT 1")
+    suspend fun get(productId: Long): RestockThresholdEntity?
+
+    @Query("SELECT * FROM restock_thresholds")
+    fun getAll(): Flow<List<RestockThresholdEntity>>
+
+    @Delete
+    suspend fun delete(threshold: RestockThresholdEntity)
 }
 
 // ──────────────────────────────────────────────
@@ -669,4 +694,117 @@ interface ChamaPayoutDao {
 
     @Query("SELECT SUM(amount) FROM chama_payouts WHERE chamaId = :chamaId")
     suspend fun getTotalPaidOut(chamaId: Long): Double?
+}
+
+// ──────────────────────────────────────────────
+// Customer Profile DAO
+// ──────────────────────────────────────────────
+
+@Dao
+interface CustomerProfileDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOrUpdate(profile: CustomerProfileEntity): Long
+
+    @Update
+    suspend fun update(profile: CustomerProfileEntity)
+
+    @Query("SELECT * FROM customer_profiles WHERE workerId = :workerId ORDER BY totalSpend DESC")
+    fun getByWorker(workerId: String): Flow<List<CustomerProfileEntity>>
+
+    @Query("SELECT * FROM customer_profiles WHERE workerId = :workerId AND customerKey = :customerKey")
+    suspend fun getByKey(workerId: String, customerKey: String): CustomerProfileEntity?
+
+    @Query("SELECT * FROM customer_profiles WHERE workerId = :workerId AND customerKey = :customerKey")
+    fun getByKeyFlow(workerId: String, customerKey: String): Flow<CustomerProfileEntity?>
+
+    @Query("SELECT * FROM customer_profiles WHERE workerId = :workerId AND segment = :segment ORDER BY totalSpend DESC")
+    fun getBySegment(workerId: String, segment: String): Flow<List<CustomerProfileEntity>>
+
+    @Query("SELECT * FROM customer_profiles WHERE workerId = :workerId ORDER BY totalSpend DESC LIMIT :limit")
+    fun getTopCustomers(workerId: String, limit: Int = 10): Flow<List<CustomerProfileEntity>>
+
+    @Query("SELECT * FROM customer_profiles WHERE workerId = :workerId ORDER BY daysSinceLastVisit DESC LIMIT :limit")
+    fun getByRecency(workerId: String, limit: Int = 20): Flow<List<CustomerProfileEntity>>
+
+    @Query("SELECT * FROM customer_profiles WHERE workerId = :workerId AND creditOutstanding > 0 ORDER BY creditOutstanding DESC")
+    fun getWithCredit(workerId: String): Flow<List<CustomerProfileEntity>>
+
+    @Query("SELECT * FROM customer_profiles WHERE workerId = :workerId AND daysSinceLastVisit >= :threshold ORDER BY daysSinceLastVisit DESC")
+    fun getChurnRisk(workerId: String, threshold: Int = 14): Flow<List<CustomerProfileEntity>>
+
+    @Query("SELECT COUNT(*) FROM customer_profiles WHERE workerId = :workerId")
+    suspend fun getCustomerCount(workerId: String): Int
+
+    @Query("SELECT COUNT(*) FROM customer_profiles WHERE workerId = :workerId AND segment != 'new'")
+    suspend fun getRepeatCustomerCount(workerId: String): Int
+
+    @Query("SELECT SUM(totalSpend) FROM customer_profiles WHERE workerId = :workerId")
+    suspend fun getTotalRevenue(workerId: String): Double?
+
+    @Query("SELECT segment, COUNT(*) as count, SUM(totalSpend) as totalSpend, AVG(totalSpend) as avgSpend FROM customer_profiles WHERE workerId = :workerId GROUP BY segment")
+    suspend fun getSegmentSummary(workerId: String): List<CustomerSegmentSummary>
+
+    @Query("SELECT * FROM customer_profiles WHERE workerId = :workerId ORDER BY totalSpend DESC LIMIT :limit")
+    suspend fun getTopCustomersOnce(workerId: String, limit: Int = 10): List<CustomerProfileEntity>
+
+    @Query("SELECT * FROM customer_profiles WHERE workerId = :workerId AND daysSinceLastVisit >= :threshold ORDER BY daysSinceLastVisit DESC")
+    suspend fun getChurnRiskOnce(workerId: String, threshold: Int = 14): List<CustomerProfileEntity>
+
+    @Query("SELECT SUM(creditOutstanding) FROM customer_profiles WHERE workerId = :workerId")
+    suspend fun getTotalCreditOutstanding(workerId: String): Double?
+
+    @Query("SELECT * FROM customer_profiles WHERE workerId = :workerId AND creditOutstanding > 0 ORDER BY creditOutstanding DESC")
+    suspend fun getWithCreditOnce(workerId: String): List<CustomerProfileEntity>
+
+    @Query("DELETE FROM customer_profiles WHERE workerId = :workerId")
+    suspend fun deleteAllForWorker(workerId: String)
+}
+
+// ──────────────────────────────────────────────
+// Customer Visit DAO
+// ──────────────────────────────────────────────
+
+@Dao
+interface CustomerVisitDao {
+    @Insert
+    suspend fun insert(visit: CustomerVisitEntity): Long
+
+    @Query("SELECT * FROM customer_visits WHERE workerId = :workerId AND customerKey = :customerKey ORDER BY visitDate DESC")
+    fun getByCustomer(workerId: String, customerKey: String): Flow<List<CustomerVisitEntity>>
+
+    @Query("SELECT * FROM customer_visits WHERE workerId = :workerId AND customerKey = :customerKey ORDER BY visitDate DESC")
+    suspend fun getByCustomerOnce(workerId: String, customerKey: String): List<CustomerVisitEntity>
+
+    @Query("SELECT * FROM customer_visits WHERE workerId = :workerId AND customerKey = :customerKey ORDER BY visitDate DESC LIMIT :limit")
+    suspend fun getRecentByCustomer(workerId: String, customerKey: String, limit: Int = 10): List<CustomerVisitEntity>
+
+    @Query("SELECT * FROM customer_visits WHERE workerId = :workerId AND visitDate BETWEEN :startDate AND :endDate ORDER BY visitDate DESC")
+    fun getVisitsBetween(workerId: String, startDate: String, endDate: String): Flow<List<CustomerVisitEntity>>
+
+    @Query("SELECT * FROM customer_visits WHERE workerId = :workerId AND visitDate = :date")
+    suspend fun getByDate(workerId: String, date: String): List<CustomerVisitEntity>
+
+    @Query("SELECT COUNT(*) FROM customer_visits WHERE workerId = :workerId AND customerKey = :customerKey")
+    suspend fun getVisitCount(workerId: String, customerKey: String): Int
+
+    @Query("SELECT SUM(amount) FROM customer_visits WHERE workerId = :workerId AND customerKey = :customerKey")
+    suspend fun getTotalSpend(workerId: String, customerKey: String): Double?
+
+    @Query("SELECT COUNT(DISTINCT customerKey) FROM customer_visits WHERE workerId = :workerId AND visitDate BETWEEN :startDate AND :endDate")
+    suspend fun getUniqueCustomersBetween(workerId: String, startDate: String, endDate: String): Int
+
+    @Query("SELECT DISTINCT customerKey FROM customer_visits WHERE workerId = :workerId")
+    suspend fun getAllCustomerKeys(workerId: String): List<String>
+
+    @Query("SELECT MAX(visitDate) FROM customer_visits WHERE workerId = :workerId AND customerKey = :customerKey")
+    suspend fun getLastVisitDate(workerId: String, customerKey: String): String?
+
+    @Query("SELECT COUNT(*) FROM customer_visits WHERE workerId = :workerId AND customerKey = :customerKey AND visitDate BETWEEN :startDate AND :endDate")
+    suspend fun getVisitCountBetween(workerId: String, customerKey: String, startDate: String, endDate: String): Int
+
+    @Query("SELECT SUM(amount) FROM customer_visits WHERE workerId = :workerId AND customerKey = :customerKey AND visitDate BETWEEN :startDate AND :endDate")
+    suspend fun getSpendBetween(workerId: String, customerKey: String, startDate: String, endDate: String): Double?
+
+    @Query("DELETE FROM customer_visits WHERE workerId = :workerId")
+    suspend fun deleteAllForWorker(workerId: String)
 }

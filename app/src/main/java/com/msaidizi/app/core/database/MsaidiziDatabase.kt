@@ -24,9 +24,12 @@ import com.msaidizi.app.model.*
         ChamaEntity::class,
         ChamaMemberEntity::class,
         ChamaContributionEntity::class,
-        ChamaPayoutEntity::class
+        ChamaPayoutEntity::class,
+        RestockThresholdEntity::class,
+        CustomerProfileEntity::class,
+        CustomerVisitEntity::class
     ],
-    version = 4,
+    version = 6,
     exportSchema = true
 )
 abstract class MsaidiziDatabase : RoomDatabase() {
@@ -49,4 +52,7 @@ abstract class MsaidiziDatabase : RoomDatabase() {
     abstract fun chamaMemberDao(): ChamaMemberDao
     abstract fun chamaContributionDao(): ChamaContributionDao
     abstract fun chamaPayoutDao(): ChamaPayoutDao
+    abstract fun restockThresholdDao(): RestockThresholdDao
+    abstract fun customerProfileDao(): CustomerProfileDao
+    abstract fun customerVisitDao(): CustomerVisitDao
 }

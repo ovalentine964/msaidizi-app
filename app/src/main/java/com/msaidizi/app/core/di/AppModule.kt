@@ -84,7 +84,8 @@ object AppModule {
         serviceMenu: com.msaidizi.app.superagent.tools.ServiceMenu,
         serviceVoiceCommands: com.msaidizi.app.superagent.tools.ServiceVoiceCommands,
         debtTracker: com.msaidizi.app.superagent.tools.DebtTracker,
-        chamaManager: com.msaidizi.app.superagent.tools.ChamaManager
+        chamaManager: com.msaidizi.app.superagent.tools.ChamaManager,
+        customerInsights: com.msaidizi.app.superagent.tools.CustomerInsights
     ): com.msaidizi.app.superagent.tools.ToolRegistry {
         val registry = com.msaidizi.app.superagent.tools.ToolRegistry()
         registry.register(transactionRecorder)
@@ -112,6 +113,7 @@ object AppModule {
         registry.register(serviceVoiceCommands)
         registry.register(debtTracker)
         registry.register(chamaManager)
+        registry.register(customerInsights)
         return registry
     }
 }

@@ -358,6 +358,120 @@ data class CustomerDebtSummary(
 )
 
 // ──────────────────────────────────────────────
+// Customer Insights Models
+// ──────────────────────────────────────────────
+
+@Entity(tableName = "customer_profiles")
+data class CustomerProfileEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val workerId: String,
+    val customerKey: String,            // phone number or normalized name
+    val customerName: String? = null,   // display name
+
+    // Visit metrics
+    val totalVisits: Int = 0,
+    val visitsThisMonth: Int = 0,
+    val avgVisitsPerMonth: Double = 0.0,
+
+    // Spend metrics
+    val totalSpend: Double = 0.0,
+    val spendThisMonth: Double = 0.0,
+    val avgSpendPerVisit: Double = 0.0,
+
+    // Recency
+    val firstVisit: String? = null,     // YYYY-MM-DD
+    val lastVisit: String? = null,      // YYYY-MM-DD
+    val daysSinceLastVisit: Int = 0,
+
+    // Segmentation
+    val segment: String = "new",        // vip, regular, occasional, lapsed, new
+    val segmentSince: String? = null,
+
+    // Credit
+    val creditOutstanding: Double = 0.0,
+    val creditLimit: Double = 0.0,
+    val creditReliability: Double = 1.0, // 0.0 to 1.0
+
+    // Preferences (top 3 products by frequency, JSON array)
+    val topProductsJson: String = "[]",
+
+    // Revenue contribution
+    val revenuePct: Double = 0.0,
+    val revenueRank: Int = 0,
+
+    val updatedAt: Long = System.currentTimeMillis()
+)
+
+// ──────────────────────────────────────────────
+// Restock Threshold Models
+// ──────────────────────────────────────────────
+
+/**
+ * Custom restock threshold per product.
+ * Used by AutoRestock to trigger alerts at a user-defined stock level
+ * rather than relying solely on the product's minStock.
+ */
+@Entity(
+    tableName = "restock_thresholds",
+    foreignKeys = [
+        androidx.room.ForeignKey(
+            entity = ProductEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["productId"],
+            onDelete = androidx.room.ForeignKey.CASCADE
+        )
+    ],
+    indices = [androidx.room.Index(value = ["productId"], unique = true)]
+)
+data class RestockThresholdEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val productId: Long,
+    val threshold: Double,
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis()
+)
+
+@Entity(
+    tableName = "customer_visits",
+    foreignKeys = [
+        androidx.room.ForeignKey(
+            entity = CustomerProfileEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["profileId"],
+            onDelete = androidx.room.ForeignKey.CASCADE
+        )
+    ]
+)
+data class CustomerVisitEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val workerId: String,
+    val customerKey: String,
+    val profileId: Long = 0,
+    val visitDate: String,              // YYYY-MM-DD
+    val txnId: Long? = null,            // link to SaleEntity
+    val amount: Double = 0.0,
+    val productsJson: String = "[]",    // [{name, qty, price}]
+    val paymentMethod: String? = null,  // cash, mpesa, credit
+    val createdAt: Long = System.currentTimeMillis()
+)
+
+data class CustomerSegmentSummary(
+    val segment: String,
+    val count: Int,
+    val totalSpend: Double,
+    val avgSpend: Double
+)
+
+data class CustomerChurnRisk(
+    val customerKey: String,
+    val customerName: String?,
+    val segment: String,
+    val daysSinceLastVisit: Int,
+    val avgVisitsPerMonth: Double,
+    val totalSpend: Double
+)
+
+// ──────────────────────────────────────────────
 // Bulk Order Models
 // For coordinating group buying among workers
 // ──────────────────────────────────────────────
