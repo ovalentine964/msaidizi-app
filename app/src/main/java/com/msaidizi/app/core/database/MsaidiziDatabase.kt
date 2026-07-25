@@ -3,6 +3,7 @@ package com.msaidizi.app.core.database
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.msaidizi.app.model.*
+import com.msaidizi.app.superagent.tools.*
 
 @Database(
     entities = [
@@ -27,9 +28,18 @@ import com.msaidizi.app.model.*
         ChamaPayoutEntity::class,
         RestockThresholdEntity::class,
         CustomerProfileEntity::class,
-        CustomerVisitEntity::class
+        CustomerVisitEntity::class,
+        MarketPoolEntity::class,
+        MarketPoolMemberEntity::class,
+        MarketPoolOrderEntity::class,
+        MarketPoolContributionEntity::class,
+        RideUserEntity::class,
+        RideOfferEntity::class,
+        RideRequestEntity::class,
+        RideTripEntity::class,
+        RideRatingEntity::class
     ],
-    version = 6,
+    version = 8,
     exportSchema = true
 )
 abstract class MsaidiziDatabase : RoomDatabase() {
@@ -55,4 +65,14 @@ abstract class MsaidiziDatabase : RoomDatabase() {
     abstract fun restockThresholdDao(): RestockThresholdDao
     abstract fun customerProfileDao(): CustomerProfileDao
     abstract fun customerVisitDao(): CustomerVisitDao
+    abstract fun marketPoolDao(): MarketPoolDao
+    abstract fun marketPoolMemberDao(): MarketPoolMemberDao
+    abstract fun marketPoolTripDao(): MarketPoolTripDao
+    abstract fun marketPoolOrderDao(): MarketPoolOrderDao
+    abstract fun marketPoolContributionDao(): MarketPoolContributionDao
+    abstract fun rideUserDao(): RideUserDao
+    abstract fun rideOfferDao(): RideOfferDao
+    abstract fun rideRequestDao(): RideRequestDao
+    abstract fun rideTripDao(): RideTripDao
+    abstract fun rideRatingDao(): RideRatingDao
 }

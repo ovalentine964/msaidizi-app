@@ -56,6 +56,16 @@ object AppModule {
     @Provides fun provideChamaMemberDao(db: MsaidiziDatabase): ChamaMemberDao = db.chamaMemberDao()
     @Provides fun provideChamaContributionDao(db: MsaidiziDatabase): ChamaContributionDao = db.chamaContributionDao()
     @Provides fun provideChamaPayoutDao(db: MsaidiziDatabase): ChamaPayoutDao = db.chamaPayoutDao()
+    @Provides fun provideMarketPoolDao(db: MsaidiziDatabase): MarketPoolDao = db.marketPoolDao()
+    @Provides fun provideMarketPoolMemberDao(db: MsaidiziDatabase): MarketPoolMemberDao = db.marketPoolMemberDao()
+    @Provides fun provideMarketPoolTripDao(db: MsaidiziDatabase): MarketPoolTripDao = db.marketPoolTripDao()
+    @Provides fun provideMarketPoolOrderDao(db: MsaidiziDatabase): MarketPoolOrderDao = db.marketPoolOrderDao()
+    @Provides fun provideMarketPoolContributionDao(db: MsaidiziDatabase): MarketPoolContributionDao = db.marketPoolContributionDao()
+    @Provides fun provideRideUserDao(db: MsaidiziDatabase): RideUserDao = db.rideUserDao()
+    @Provides fun provideRideOfferDao(db: MsaidiziDatabase): RideOfferDao = db.rideOfferDao()
+    @Provides fun provideRideRequestDao(db: MsaidiziDatabase): RideRequestDao = db.rideRequestDao()
+    @Provides fun provideRideTripDao(db: MsaidiziDatabase): RideTripDao = db.rideTripDao()
+    @Provides fun provideRideRatingDao(db: MsaidiziDatabase): RideRatingDao = db.rideRatingDao()
 
     @Provides
     @Singleton
@@ -85,7 +95,9 @@ object AppModule {
         serviceVoiceCommands: com.msaidizi.app.superagent.tools.ServiceVoiceCommands,
         debtTracker: com.msaidizi.app.superagent.tools.DebtTracker,
         chamaManager: com.msaidizi.app.superagent.tools.ChamaManager,
-        customerInsights: com.msaidizi.app.superagent.tools.CustomerInsights
+        customerInsights: com.msaidizi.app.superagent.tools.CustomerInsights,
+        marketPooling: com.msaidizi.app.superagent.tools.MarketPooling,
+        rideShare: com.msaidizi.app.superagent.tools.RideShare
     ): com.msaidizi.app.superagent.tools.ToolRegistry {
         val registry = com.msaidizi.app.superagent.tools.ToolRegistry()
         registry.register(transactionRecorder)
@@ -114,6 +126,8 @@ object AppModule {
         registry.register(debtTracker)
         registry.register(chamaManager)
         registry.register(customerInsights)
+        registry.register(marketPooling)
+        registry.register(rideShare)
         return registry
     }
 }

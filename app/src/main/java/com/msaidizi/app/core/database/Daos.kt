@@ -697,6 +697,112 @@ interface ChamaPayoutDao {
 }
 
 // ──────────────────────────────────────────────
+// Market Pooling DAO
+// ──────────────────────────────────────────────
+
+@Dao
+interface MarketPoolDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(pool: MarketPoolEntity): Long
+
+    @Query("SELECT * FROM market_pools WHERE poolId = :poolId")
+    suspend fun getByPoolId(poolId: String): MarketPoolEntity?
+
+    @Query("SELECT * FROM market_pools WHERE status = 'OPEN' ORDER BY tripDate ASC")
+    fun getOpenPools(): Flow<List<MarketPoolEntity>>
+
+    @Query("SELECT * FROM market_pools WHERE marketDestination LIKE '%' || :market || '%' ORDER BY tripDate DESC")
+    fun getByMarket(market: String): Flow<List<MarketPoolEntity>>
+
+    @Query("SELECT * FROM market_pools ORDER BY createdAt DESC")
+    fun getAll(): Flow<List<MarketPoolEntity>>
+
+    @Query("SELECT * FROM market_pools WHERE tripDate = :date AND status = 'OPEN'")
+    fun getByDate(date: String): Flow<List<MarketPoolEntity>>
+
+    @Query("UPDATE market_pools SET status = :status, updatedAt = :now WHERE poolId = :poolId")
+    suspend fun updateStatus(poolId: String, status: String, now: Long = System.currentTimeMillis())
+
+    @Query("SELECT * FROM market_pools WHERE updatedAt < :before AND needsSync = 1")
+    suspend fun getPendingSync(before: Long): List<MarketPoolEntity>
+
+    @Query("UPDATE market_pools SET needsSync = 0 WHERE poolId = :poolId")
+    suspend fun markSynced(poolId: String)
+
+    @Delete
+    suspend fun delete(pool: MarketPoolEntity)
+}
+
+@Dao
+interface MarketPoolMemberDao {
+    @Insert
+    suspend fun insert(member: MarketPoolMemberEntity): Long
+
+    @Query("SELECT * FROM market_pool_members WHERE poolId = :poolId ORDER BY joinedAt ASC")
+    fun getByPoolId(poolId: String): Flow<List<MarketPoolMemberEntity>>
+
+    @Query("SELECT * FROM market_pool_members WHERE poolId = :poolId AND memberId = :memberId LIMIT 1")
+    suspend fun getByPoolAndMember(poolId: String, memberId: String): MarketPoolMemberEntity?
+
+    @Query("SELECT COUNT(*) FROM market_pool_members WHERE poolId = :poolId")
+    suspend fun getCountByPool(poolId: String): Int
+
+    @Query("SELECT * FROM market_pool_members WHERE memberId = :memberId")
+    fun getByMemberId(memberId: String): Flow<List<MarketPoolMemberEntity>>
+
+    @Query("DELETE FROM market_pool_members WHERE poolId = :poolId AND memberId = :memberId")
+    suspend fun removeMember(poolId: String, memberId: String)
+}
+
+@Dao
+interface MarketPoolTripDao {
+    @Query("SELECT * FROM market_pools ORDER BY tripDate DESC")
+    fun getAll(): Flow<List<MarketPoolEntity>>
+
+    @Query("SELECT DISTINCT p.* FROM market_pools p INNER JOIN market_pool_members m ON p.poolId = m.poolId WHERE m.memberId = :memberId ORDER BY p.tripDate DESC")
+    fun getByMemberId(memberId: String): Flow<List<MarketPoolEntity>>
+
+    @Query("SELECT * FROM market_pools WHERE status = :status ORDER BY tripDate DESC")
+    fun getByStatus(status: String): Flow<List<MarketPoolEntity>>
+}
+
+@Dao
+interface MarketPoolOrderDao {
+    @Insert
+    suspend fun insert(order: MarketPoolOrderEntity): Long
+
+    @Query("SELECT * FROM market_pool_orders WHERE poolId = :poolId ORDER BY createdAt ASC")
+    fun getByPoolId(poolId: String): Flow<List<MarketPoolOrderEntity>>
+
+    @Query("SELECT * FROM market_pool_orders WHERE poolId = :poolId AND memberId = :memberId")
+    fun getByPoolAndMember(poolId: String, memberId: String): Flow<List<MarketPoolOrderEntity>>
+
+    @Query("UPDATE market_pool_orders SET status = :status WHERE orderId = :orderId")
+    suspend fun updateStatus(orderId: Long, status: String)
+
+    @Query("UPDATE market_pool_orders SET actualPricePerUnit = :price, actualQuantity = :qty, status = 'bought' WHERE orderId = :orderId")
+    suspend fun updateActual(orderId: Long, price: Double, qty: Double)
+}
+
+@Dao
+interface MarketPoolContributionDao {
+    @Insert
+    suspend fun insert(contribution: MarketPoolContributionEntity): Long
+
+    @Query("SELECT * FROM market_pool_contributions WHERE poolId = :poolId")
+    fun getByPoolId(poolId: String): Flow<List<MarketPoolContributionEntity>>
+
+    @Query("SELECT * FROM market_pool_contributions WHERE memberId = :memberId ORDER BY createdAt DESC")
+    fun getByMemberId(memberId: String): Flow<List<MarketPoolContributionEntity>>
+
+    @Query("SELECT SUM(amountPaid) FROM market_pool_contributions WHERE poolId = :poolId")
+    suspend fun getTotalPaid(poolId: String): Double?
+
+    @Query("UPDATE market_pool_contributions SET amountPaid = :amount, status = :status, paidAt = :paidAt WHERE contributionId = :id")
+    suspend fun updatePayment(id: Long, amount: Double, status: String, paidAt: Long)
+}
+
+// ──────────────────────────────────────────────
 // Customer Profile DAO
 // ──────────────────────────────────────────────
 

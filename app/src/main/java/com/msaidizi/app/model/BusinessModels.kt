@@ -1,6 +1,8 @@
 package com.msaidizi.app.model
 
 import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
 
@@ -355,6 +357,106 @@ data class CustomerDebtSummary(
     val onTimePayments: Int,
     val latePayments: Int,
     val averageRepaymentDays: Double?
+)
+
+// ──────────────────────────────────────────────
+// Market Pooling Models
+// Mama mbogas pool wholesale market trips, split transport costs
+// ──────────────────────────────────────────────
+
+enum class MarketPoolStatus {
+    OPEN,           // Accepting members and orders
+    IN_PROGRESS,    // Trip underway
+    COMPLETED,      // Trip done, accounts settled
+    CANCELLED       // Trip cancelled
+}
+
+@Entity(tableName = "market_pools")
+data class MarketPoolEntity(
+    @PrimaryKey val poolId: String,
+    val marketDestination: String,        // e.g. "Wakulima", "Gikomba"
+    val tripDate: String,                 // YYYY-MM-DD
+    val scheduleDays: String = "",        // e.g. "Mon,Wed,Fri" for recurring
+    val transportCost: Double,            // total transport cost KSh
+    val porterageCost: Double = 0.0,      // porter/loading cost KSh
+    val creatorId: String,
+    val creatorName: String,
+    val status: String,
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis(),
+    val needsSync: Boolean = true
+)
+
+@Entity(
+    tableName = "market_pool_members",
+    foreignKeys = [ForeignKey(
+        entity = MarketPoolEntity::class,
+        parentColumns = ["poolId"],
+        childColumns = ["poolId"],
+        onDelete = ForeignKey.CASCADE
+    )],
+    indices = [Index(value = ["poolId"])]
+)
+data class MarketPoolMemberEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val poolId: String,
+    val memberId: String,
+    val memberName: String,
+    val phone: String = "",
+    val role: String = "member",          // "admin" or "member"
+    val joinedAt: Long = System.currentTimeMillis(),
+    val needsSync: Boolean = true
+)
+
+@Entity(
+    tableName = "market_pool_orders",
+    foreignKeys = [ForeignKey(
+        entity = MarketPoolEntity::class,
+        parentColumns = ["poolId"],
+        childColumns = ["poolId"],
+        onDelete = ForeignKey.CASCADE
+    )],
+    indices = [Index(value = ["poolId"]), Index(value = ["memberId"])]
+)
+data class MarketPoolOrderEntity(
+    @PrimaryKey(autoGenerate = true) val orderId: Long = 0,
+    val poolId: String,
+    val memberId: String,
+    val tripDate: String,                 // YYYY-MM-DD
+    val itemName: String,                 // e.g. "nyanya", "sukuma"
+    val quantity: Double,
+    val unit: String,                     // "kg", "bunch", "piece", "litre"
+    val maxPricePerUnit: Double,          // ceiling price KSh
+    val status: String = "pending",       // pending | bought | delivered | disputed
+    val actualPricePerUnit: Double? = null,
+    val actualQuantity: Double? = null,
+    val createdAt: Long = System.currentTimeMillis(),
+    val needsSync: Boolean = true
+)
+
+@Entity(
+    tableName = "market_pool_contributions",
+    foreignKeys = [ForeignKey(
+        entity = MarketPoolEntity::class,
+        parentColumns = ["poolId"],
+        childColumns = ["poolId"],
+        onDelete = ForeignKey.CASCADE
+    )],
+    indices = [Index(value = ["poolId"]), Index(value = ["memberId"])]
+)
+data class MarketPoolContributionEntity(
+    @PrimaryKey(autoGenerate = true) val contributionId: Long = 0,
+    val poolId: String,
+    val memberId: String,
+    val tripDate: String,
+    val amountExpected: Double,
+    val amountPaid: Double = 0.0,
+    val paymentMethod: String = "mpesa",  // "mpesa" or "cash"
+    val paymentRef: String = "",
+    val status: String = "pending",       // pending | partial | complete
+    val paidAt: Long? = null,
+    val createdAt: Long = System.currentTimeMillis(),
+    val needsSync: Boolean = true
 )
 
 // ──────────────────────────────────────────────
