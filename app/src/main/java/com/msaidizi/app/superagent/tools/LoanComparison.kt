@@ -7,11 +7,9 @@ import com.msaidizi.app.core.database.SaleDao
 import com.msaidizi.app.superagent.memory.MemoryManager
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs
-import kotlin.math.pow
 
 /**
  * LoanComparison — Side-by-side true cost comparison of loan products.
