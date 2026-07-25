@@ -3,7 +3,7 @@
 # download_models.sh — Download AI models for Msaidizi APK bundling.
 #
 # Downloads:
-#   1. Qwen3 0.6B GGUF (Q4_K_M quantised) — on-device LLM
+#   1. Qwen3.5 0.8B GGUF (Q4_K_M quantised) — on-device LLM
 #   2. sherpa-onnx Whisper Tiny (multilingual STT)
 #   3. Piper Swahili TTS
 #
@@ -24,7 +24,7 @@ ASSETS_DIR="$PROJECT_ROOT/app/src/main/assets/models"
 CACHE_DIR="${MODEL_CACHE_DIR:-$PROJECT_ROOT/.model-cache}"
 
 # ── URLs ─────────────────────────────────────────────────────
-QWEN_URL="https://huggingface.co/unsloth/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q4_K_M.gguf"
+QWEN_URL="https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf"
 WHISPER_URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-tiny.tar.bz2"
 PIPER_SW_URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/piper-swahili.tar.bz2"
 
@@ -32,7 +32,7 @@ PIPER_SW_URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models
 # These are placeholders; the script will compute and display checksums
 # on first run. Fill in after verifying downloads.
 declare -A EXPECTED_SHA256=(
-    # ["Qwen3-0.6B-Q4_K_M.gguf"]="sha256hash"
+    # ["Qwen3.5-0.8B-Q4_K_M.gguf"]="sha256hash"
     # ["sherpa-onnx-whisper-tiny.tar.bz2"]="sha256hash"
     # ["piper-swahili.tar.bz2"]="sha256hash"
 )
@@ -126,15 +126,15 @@ extract_tar() {
 # ── Download LLM model ──────────────────────────────────────
 
 download_llm() {
-    log "═══ LLM: Qwen3 0.6B (GGUF Q4_K_M) ═══"
+    log "═══ LLM: Qwen3.5 0.8B (GGUF Q4_K_M) ═══"
     local dest_dir="$ASSETS_DIR/gguf"
-    local cache_file="$CACHE_DIR/Qwen3-0.6B-Q4_K_M.gguf"
+    local cache_file="$CACHE_DIR/Qwen3.5-0.8B-Q4_K_M.gguf"
 
     download "$QWEN_URL" "$cache_file"
     verify_checksum "$cache_file"
 
     mkdir -p "$dest_dir"
-    cp -v "$cache_file" "$dest_dir/Qwen3-0.6B-Q4_K_M.gguf"
+    cp -v "$cache_file" "$dest_dir/Qwen3.5-0.8B-Q4_K_M.gguf"
     ok "LLM model placed in assets"
 }
 
@@ -232,11 +232,11 @@ verify_assets() {
     local all_ok=true
 
     # LLM
-    local gguf="$ASSETS_DIR/gguf/Qwen3-0.6B-Q4_K_M.gguf"
+    local gguf="$ASSETS_DIR/gguf/Qwen3.5-0.8B-Q4_K_M.gguf"
     if [ -f "$gguf" ]; then
         local size
         size="$(du -h "$gguf" | cut -f1)"
-        ok "LLM: Qwen3-0.6B-Q4_K_M.gguf ($size)"
+        ok "LLM: Qwen3.5-0.8B-Q4_K_M.gguf ($size)"
     else
         err "LLM model missing: $gguf"
         all_ok=false

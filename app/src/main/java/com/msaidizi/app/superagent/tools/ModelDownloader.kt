@@ -22,7 +22,7 @@ class ModelDownloader @Inject constructor() : Tool {
     }
 
     private val models = mapOf(
-        "qwen3-0.6b" to ModelInfo("Qwen3 0.6B", "v3", 500_000_000L, "https://huggingface.co/unsloth/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q4_K_M.gguf", ""),
+        "qwen3-0.6b" to ModelInfo("Qwen3.5 0.8B", "v3", 500_000_000L, "https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf", ""),
         // ── STT models (sherpa-onnx Whisper — multilingual, supports Swahili + English) ──
         "whisper-tiny" to ModelInfo(
             "Whisper Tiny (multilingual, fast)",

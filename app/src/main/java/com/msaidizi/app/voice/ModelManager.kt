@@ -23,7 +23,7 @@ import javax.inject.Singleton
  * ```
  * assets/models/
  *   gguf/
- *     Qwen3-0.6B-Q4_K_M.gguf        ← LLM
+ *     Qwen3.5-0.8B-Q4_K_M.gguf        ← LLM
  *   onnx-whisper/
  *     encoder.onnx, decoder.onnx, tokens.txt  ← STT
  *   onnx-piper/
@@ -36,7 +36,7 @@ import javax.inject.Singleton
  * After first extraction, models live at:
  * ```
  * filesDir/models/
- *   Qwen3-0.6B-Q4_K_M.gguf
+ *   Qwen3.5-0.8B-Q4_K_M.gguf
  *   sherpa-onnx/
  *     whisper/
  *       encoder.onnx, decoder.onnx, tokens.txt
@@ -74,8 +74,8 @@ class ModelManager @Inject constructor(
         // LLM — GGUF
         AssetMapping(
             assetPath = "gguf",
-            storagePath = ".",  // filesDir/models/Qwen3-0.6B-Q4_K_M.gguf
-            requiredFiles = listOf("Qwen3-0.6B-Q4_K_M.gguf")
+            storagePath = ".",  // filesDir/models/Qwen3.5-0.8B-Q4_K_M.gguf
+            requiredFiles = listOf("Qwen3.5-0.8B-Q4_K_M.gguf")
         ),
         // STT — Whisper
         AssetMapping(
@@ -138,7 +138,7 @@ class ModelManager @Inject constructor(
      * @return Absolute path, or null if not available.
      */
     fun getLlmModelPath(): String? {
-        val file = File(modelsDir, "Qwen3-0.6B-Q4_K_M.gguf")
+        val file = File(modelsDir, "Qwen3.5-0.8B-Q4_K_M.gguf")
         return if (file.exists() && file.length() >= MIN_GGUF_SIZE) {
             file.absolutePath
         } else {
@@ -180,7 +180,7 @@ class ModelManager @Inject constructor(
      * Get comprehensive model status report.
      */
     fun getModelStatus(): ModelStatus {
-        val llmFile = File(modelsDir, "Qwen3-0.6B-Q4_K_M.gguf")
+        val llmFile = File(modelsDir, "Qwen3.5-0.8B-Q4_K_M.gguf")
         val whisperDir = File(modelsDir, "sherpa-onnx/whisper")
         val piperSwDir = File(modelsDir, "sherpa-onnx/piper-sw")
         val piperEnDir = File(modelsDir, "sherpa-onnx/piper-en")
@@ -427,7 +427,7 @@ data class ModelStatus(
 
     fun toSummaryString(): String = buildString {
         appendLine("Model Status:")
-        appendLine("  LLM (Qwen3 0.6B): ${llm.status} (${String.format("%.1f", llm.sizeMb)} MB)")
+        appendLine("  LLM (Qwen3.5 0.8B): ${llm.status} (${String.format("%.1f", llm.sizeMb)} MB)")
         appendLine("  STT (Whisper):     ${sttWhisper.status} (${String.format("%.1f", sttWhisper.sizeMb)} MB)")
         appendLine("  TTS (Piper SW):    ${ttsPiperSw.status} (${String.format("%.1f", ttsPiperSw.sizeMb)} MB)")
         appendLine("  TTS (Piper EN):    ${ttsPiperEn.status} (${String.format("%.1f", ttsPiperEn.sizeMb)} MB)")

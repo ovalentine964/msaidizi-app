@@ -4,7 +4,7 @@
 # release variant, and publishes to GitHub Releases on tags.
 #
 # Models bundled in APK:
-#   - Qwen3 0.6B GGUF (~500MB) — on-device LLM
+#   - Qwen3.5 0.8B GGUF (~500MB) — on-device LLM
 #   - sherpa-onnx Whisper Tiny (~40MB) — speech-to-text
 #   - Piper Swahili (~15MB) — text-to-speech
 # ──────────────────────────────────────────────────────────────
@@ -253,7 +253,7 @@ jobs:
             echo ""
             echo "| Model | Type | Size |"
             echo "|-------|------|------|"
-            echo "| Qwen3 0.6B (Q4_K_M) | LLM (text generation) | ~500 MB |"
+            echo "| Qwen3.5 0.8B (Q4_K_M) | LLM (text generation) | ~500 MB |"
             echo "| Whisper Tiny (multilingual) | STT (speech-to-text) | ~40 MB |"
             echo "| Piper Swahili | TTS (text-to-speech) | ~15 MB |"
             echo ""

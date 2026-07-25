@@ -14,7 +14,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * LLM Engine — Interface to the on-device language model (Qwen3 0.6B via llama.cpp).
+ * LLM Engine — Interface to the on-device language model (Qwen3.5 0.8B via llama.cpp).
  *
  * This is the reasoning core of the superagent. Runs entirely on-device.
  * Uses Hermes-style function calling for tool use.
@@ -33,8 +33,8 @@ class LlmEngine @Inject constructor(
     private val llamaCppEngine: LlamaCppEngine
 ) {
     companion object {
-        /** Expected model filename (Q4_K_M quantised Qwen3 0.6B). */
-        const val EXPECTED_MODEL_NAME = "Qwen3-0.6B-Q4_K_M.gguf"
+        /** Expected model filename (Q4_K_M quantised Qwen3.5 0.8B). */
+        const val EXPECTED_MODEL_NAME = "Qwen3.5-0.8B-Q4_K_M.gguf"
 
         /** Minimum plausible GGUF file size (1 MB). */
         private const val MIN_GGUF_SIZE_BYTES = 1L * 1024 * 1024
