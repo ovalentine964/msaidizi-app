@@ -26,7 +26,7 @@ CACHE_DIR="${MODEL_CACHE_DIR:-$PROJECT_ROOT/.model-cache}"
 # ── URLs ─────────────────────────────────────────────────────
 QWEN_URL="https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf"
 WHISPER_URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-tiny.tar.bz2"
-PIPER_SW_URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/piper-swahili.tar.bz2"
+PIPER_SW_URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-sw_CD-lanfrica-medium.tar.bz2"
 
 # ── Expected checksums (SHA-256) — update after first download ──
 # These are placeholders; the script will compute and display checksums
@@ -34,7 +34,7 @@ PIPER_SW_URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models
 declare -A EXPECTED_SHA256=(
     # ["Qwen3.5-0.8B-Q4_K_M.gguf"]="sha256hash"
     # ["sherpa-onnx-whisper-tiny.tar.bz2"]="sha256hash"
-    # ["piper-swahili.tar.bz2"]="sha256hash"
+    # ["vits-piper-sw_CD-lanfrica-medium.tar.bz2"]="sha256hash"
 )
 
 # ── Colours ──────────────────────────────────────────────────
@@ -159,23 +159,25 @@ download_stt() {
 
     mkdir -p "$dest_dir"
 
-    # Copy the expected files
-    if [ -f "$model_root/encoder.onnx" ]; then
-        cp -v "$model_root/encoder.onnx" "$dest_dir/"
-        cp -v "$model_root/decoder.onnx" "$dest_dir/" 2>/dev/null || warn "No decoder.onnx found"
+    # Copy the expected files — handle both standard and prefixed names
+    # (whisper archives use tiny-encoder.onnx, tiny-tokens.txt etc.)
+    local encoder=$(find "$model_root" -name "*encoder*.onnx" ! -name "*int8*" ! -name "*fp16*" | head -1)
+    local decoder=$(find "$model_root" -name "*decoder*.onnx" ! -name "*int8*" ! -name "*fp16*" | head -1)
+    local tokens=$(find "$model_root" -name "*tokens*.txt" | head -1)
+    local model=$(find "$model_root" -name "model.onnx" ! -name "*int8*" ! -name "*fp16*" | head -1)
+
+    if [ -n "$encoder" ]; then
+        cp -v "$encoder" "$dest_dir/encoder.onnx"
+        [ -n "$decoder" ] && cp -v "$decoder" "$dest_dir/decoder.onnx"
+    elif [ -n "$model" ]; then
+        cp -v "$model" "$dest_dir/model.onnx"
     fi
-    # Also handle single-model layout (e.g., Paraformer)
-    if [ -f "$model_root/model.onnx" ] && [ ! -f "$dest_dir/encoder.onnx" ]; then
-        cp -v "$model_root/model.onnx" "$dest_dir/"
-    fi
-    # Tokens
-    find "$model_root" -name "tokens.txt" -exec cp -v {} "$dest_dir/" \; 2>/dev/null || true
+    [ -n "$tokens" ] && cp -v "$tokens" "$dest_dir/tokens.txt"
 
     # Verify we have the minimum required files
     if [ ! -f "$dest_dir/tokens.txt" ]; then
         err "tokens.txt not found in STT model archive!"
-        # Try broader search
-        find "$extract_dir" -name "tokens.txt" -exec cp -v {} "$dest_dir/" \;
+        find "$extract_dir" -name "*tokens*" -exec cp -v {} "$dest_dir/tokens.txt" \; 2>/dev/null
     fi
 
     ok "STT model placed in assets"
@@ -187,7 +189,7 @@ download_stt() {
 
 download_tts() {
     log "═══ TTS: Piper Swahili ═══"
-    local cache_file="$CACHE_DIR/piper-swahili.tar.bz2"
+    local cache_file="$CACHE_DIR/vits-piper-sw_CD-lanfrica-medium.tar.bz2"
     local extract_dir="$CACHE_DIR/piper-sw-extracted"
     local dest_dir="$ASSETS_DIR/onnx-piper/piper-sw"
 
