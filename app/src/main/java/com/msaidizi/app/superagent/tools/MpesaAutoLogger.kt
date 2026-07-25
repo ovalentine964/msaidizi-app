@@ -87,6 +87,22 @@ data class CategorySpend(val category: String, val total: Double, val percentage
 data class IncomeSource(val source: String, val total: Double, val count: Int)
 
 // ──────────────────────────────────────────────
+// SQLite / Statement extensions
+// ──────────────────────────────────────────────
+
+private fun android.database.sqlite.SQLiteStatement.bindStringOrNull(index: Int, value: String?) {
+    if (value != null) bindString(index, value) else bindNull(index)
+}
+
+private fun android.database.sqlite.SQLiteStatement.bindDoubleOrNull(index: Int, value: Double?) {
+    if (value != null) bindDouble(index, value) else bindNull(index)
+}
+
+private fun android.database.Cursor.getDoubleOrNull(columnIndex: Int): Double? {
+    return if (isNull(columnIndex)) null else getDouble(columnIndex)
+}
+
+// ──────────────────────────────────────────────
 // In-memory SQLite Store (no Room dependency)
 // ──────────────────────────────────────────────
 
@@ -155,15 +171,9 @@ class MpesaDatabase(private val context: Context) {
                 UNIQUE(counterparty, category)
             )
         """)
-        database.execSQL("""
-            CREATE INDEX IF NOT EXISTS idx_txn_timestamp ON mpesa_transactions(timestamp)
-        """)
-        database.execSQL("""
-            CREATE INDEX IF NOT EXISTS idx_txn_counterparty ON mpesa_transactions(counterparty)
-        """)
-        database.execSQL("""
-            CREATE INDEX IF NOT EXISTS idx_txn_category ON mpesa_transactions(category)
-        """)
+        database.execSQL("CREATE INDEX IF NOT EXISTS idx_txn_timestamp ON mpesa_transactions(timestamp)")
+        database.execSQL("CREATE INDEX IF NOT EXISTS idx_txn_counterparty ON mpesa_transactions(counterparty)")
+        database.execSQL("CREATE INDEX IF NOT EXISTS idx_txn_category ON mpesa_transactions(category)")
     }
 
     // ── Transaction CRUD ──
@@ -267,7 +277,7 @@ class MpesaDatabase(private val context: Context) {
                     WHEN excluded.business_name != '' THEN excluded.business_name
                     ELSE mpesa_businesses.business_name
                 END
-        """, arrayOf(biz.paybillNumber, biz.tillNumber, biz.businessName, biz.category, biz.lastSeen))
+        """, arrayOf(biz.paybillNumber, biz.tillNumber, biz.businessName, biz.category, biz.lastSeen.toString()))
     }
 
     fun lookupBusiness(paybill: String? = null, till: String? = null): MpesaBusiness? {
@@ -306,9 +316,9 @@ class MpesaDatabase(private val context: Context) {
                 frequency_days = (recurring_patterns.frequency_days * recurring_patterns.occurrences + excluded.frequency_days) / (recurring_patterns.occurrences + 1),
                 is_active = 1
         """, arrayOf(
-            pattern.counterparty, pattern.category, pattern.averageAmount,
-            pattern.frequencyDays, pattern.frequencyLabel, pattern.occurrences,
-            pattern.totalSpent, pattern.firstSeen, pattern.lastSeen
+            pattern.counterparty, pattern.category, pattern.averageAmount.toString(),
+            pattern.frequencyDays.toString(), pattern.frequencyLabel, pattern.occurrences.toString(),
+            pattern.totalSpent.toString(), pattern.firstSeen.toString(), pattern.lastSeen.toString()
         ))
     }
 
@@ -408,26 +418,24 @@ class MpesaDatabase(private val context: Context) {
         return result
     }
 
+    /**
+     * Update a single transaction's category by ID.
+     */
+    fun updateTransactionCategory(id: Long, category: String) {
+        db.execSQL("UPDATE mpesa_transactions SET category = ? WHERE id = ?", arrayOf(category, id.toString()))
+    }
+
+    /**
+     * Get a single transaction by ID.
+     */
+    fun getTransactionById(id: Long): MpesaAutoTransaction? {
+        val cursor = db.rawQuery("SELECT * FROM mpesa_transactions WHERE id = ?", arrayOf(id.toString()))
+        val result = if (cursor.moveToFirst()) cursorToTransaction(cursor) else null
+        cursor.close()
+        return result
+    }
+
     fun close() { db.close() }
-}
-
-// ──────────────────────────────────────────────
-// Cursor extensions
-// ──────────────────────────────────────────────
-private fun android.database.sqlite.SQLiteDatabase.bindStringOrNull(stmt: android.database.sqlite.SQLiteStatement, index: Int, value: String?) {
-    if (value != null) stmt.bindString(index, value) else stmt.bindNull(index)
-}
-
-private fun android.database.sqlite.SQLiteStatement.bindStringOrNull(index: Int, value: String?) {
-    if (value != null) bindString(index, value) else bindNull(index)
-}
-
-private fun android.database.sqlite.SQLiteStatement.bindDoubleOrNull(index: Int, value: Double?) {
-    if (value != null) bindDouble(index, value) else bindNull(index)
-}
-
-private fun android.database.Cursor.getDoubleOrNull(columnIndex: Int): Double? {
-    return if (isNull(columnIndex)) null else getDouble(columnIndex)
 }
 
 // ──────────────────────────────────────────────
@@ -446,6 +454,7 @@ private fun android.database.Cursor.getDoubleOrNull(columnIndex: Int): Double? {
  * - Deposit
  * - Fuliza (overdraft)
  * - MShwari / KCB M-Pesa transfers
+ * - Airtime purchase
  */
 object MpesaSmsParser {
 
@@ -466,8 +475,6 @@ object MpesaSmsParser {
 
     // Phone number pattern: "0712345678" or "+254712345678"
     private val PHONE_REGEX = Regex("(?:\\+254|0)(7\\d{8})")
-
-    // ── Transaction type patterns ──
 
     /**
      * Parse an M-Pesa SMS into a structured transaction.
@@ -493,7 +500,7 @@ object MpesaSmsParser {
                 parseTill(text, code, amount, fee, balance, phone)
 
             // Sent to [person name]
-            text.contains(Regex("^${code}\\s+Ksh.*sent to\\s+", RegexOption.IGNORE_CASE)) ->
+            text.contains(Regex("^${Regex.escape(code)}\\s+Ksh.*sent to\\s+", RegexOption.IGNORE_CASE)) ->
                 parseSendMoney(text, code, amount, fee, balance, phone)
 
             // Received from
@@ -528,7 +535,6 @@ object MpesaSmsParser {
     fun isMpesaSms(sms: String): Boolean {
         val upper = sms.uppercase()
         return MPESA_SENDERS.any { upper.contains(it) } ||
-               // Some M-Pesa SMS don't have the sender but have the code pattern
                (CODE_REGEX.containsMatchIn(sms) && AMOUNT_REGEX.containsMatchIn(sms) &&
                 sms.contains(Regex("Ksh\\s?[\\d,]", RegexOption.IGNORE_CASE)))
     }
@@ -554,14 +560,12 @@ object MpesaSmsParser {
     // ── Type-specific parsers ──
 
     private fun parsePaybill(text: String, code: String, amount: Double, fee: Double, bal: Double?, phone: String?): MpesaAutoTransaction {
-        // "sent to Pay Bill 220220 - ACCOUNT 123456"
         val paybillRegex = Regex("Pay\\s*Bill\\s*(\\d{4,7})", RegexOption.IGNORE_CASE)
         val accountRegex = Regex("(?:account|acc|acct|A/C)\\s*(?:no\\.?\\s*)?([A-Za-z0-9]+)", RegexOption.IGNORE_CASE)
 
         val paybill = paybillRegex.find(text)?.groupValues?.get(1)
         val account = accountRegex.find(text)?.groupValues?.get(1)
 
-        // Extract recipient name after "to"
         val nameRegex = Regex("sent to\\s+(.+?)(?:\\s+on|\\s+Account|\\s+A/C|\\s+Ref|\\.$)", RegexOption.IGNORE_CASE)
         val name = nameRegex.find(text)?.groupValues?.get(1)?.trim() ?: "Pay Bill $paybill"
 
@@ -581,7 +585,6 @@ object MpesaSmsParser {
     }
 
     private fun parseTill(text: String, code: String, amount: Double, fee: Double, bal: Double?, phone: String?): MpesaAutoTransaction {
-        // "sent to till 5678901 - SHOP NAME"
         val tillRegex = Regex("till\\s*(?:number\\s*)?(\\d{5,7})", RegexOption.IGNORE_CASE)
         val till = tillRegex.find(text)?.groupValues?.get(1)
 
@@ -739,7 +742,7 @@ object MpesaSmsParser {
 
     // ── Category inference ──
 
-    private fun categorizePaybill(paybill: String?, name: String?, account: String?): String {
+    internal fun categorizePaybill(paybill: String?, name: String?, account: String?): String {
         val combined = "${name ?: ""} ${account ?: ""} ${paybill ?: ""}".lowercase()
         return when {
             // KNOWN PAYBILL NUMBERS — Kenya's most common
@@ -772,7 +775,7 @@ object MpesaSmsParser {
         }
     }
 
-    private fun categorizeTill(till: String?, name: String?): String {
+    internal fun categorizeTill(till: String?, name: String?): String {
         val combined = "${name ?: ""} ${till ?: ""}".lowercase()
         return when {
             // Food & Groceries
@@ -821,7 +824,7 @@ object RecurringDetector {
 
         val patterns = mutableListOf<RecurringPattern>()
 
-        for ((key, txns) in groups) {
+        for ((_, txns) in groups) {
             if (txns.size < 3) continue // Need at least 3 occurrences
 
             val sorted = txns.sortedBy { it.timestamp }
@@ -835,20 +838,20 @@ object RecurringDetector {
             val avgIntervalDays = avgIntervalMs / (1000.0 * 60 * 60 * 24)
 
             // Classify frequency
-            val (label, isActive) = when {
-                avgIntervalDays < 1.5 -> Pair("daily", true)
-                avgIntervalDays < 3.5 -> Pair("every_2_days", true)
-                avgIntervalDays < 9.0 -> Pair("weekly", true)
-                avgIntervalDays < 18.0 -> Pair("biweekly", true)
-                avgIntervalDays < 40.0 -> Pair("monthly", true)
-                avgIntervalDays < 95.0 -> Pair("quarterly", true)
-                else -> Pair("irregular", false)
+            val label = when {
+                avgIntervalDays < 1.5 -> "daily"
+                avgIntervalDays < 3.5 -> "every_2_days"
+                avgIntervalDays < 9.0 -> "weekly"
+                avgIntervalDays < 18.0 -> "biweekly"
+                avgIntervalDays < 40.0 -> "monthly"
+                avgIntervalDays < 95.0 -> "quarterly"
+                else -> "irregular"
             }
 
             val avgAmount = sorted.map { it.amount }.average()
             val totalSpent = sorted.sumOf { it.amount }
 
-            // Check if still active (last transaction within 2x the average interval)
+            // Check if still active (last transaction within 2.5x the average interval)
             val lastTxnAge = (System.currentTimeMillis() - sorted.last().timestamp) / (1000.0 * 60 * 60 * 24)
             val stillActive = lastTxnAge < avgIntervalDays * 2.5
 
@@ -905,8 +908,8 @@ object ProfileBuilder {
     }
 
     /**
-     * Format a financial profile as a human-readable summary (Swahili/English mix
-     * matching Msaidizi's voice).
+     * Format a financial profile as a human-readable summary.
+     * Uses Swahili/English mix matching Msaidizi's voice.
      */
     fun formatSummary(profile: FinancialProfile): String {
         val sb = StringBuilder()
@@ -957,7 +960,7 @@ object ProfileBuilder {
  *
  * Usage:
  * ```
- * val receiver = MpesaSmsReceiver(context, autoLogger)
+ * val receiver = MpesaSmsReceiver(context) { txn -> process(txn) }
  * receiver.register()
  * // ...
  * receiver.unregister()
@@ -1101,10 +1104,8 @@ class MpesaAutoLogger @Inject constructor(
         // Store and link
         val stored = storeTransaction(txn)
         if (stored != null) {
-            // Update business registry if paybill/till
-            registerBusinessIfNeeded(stxn)
-            // Check for recurring pattern
-            updateRecurringPatterns(stxn)
+            registerBusinessIfNeeded(stored)
+            updateRecurringPatterns(stored)
         }
 
         return buildParseResult(stored ?: txn)
@@ -1118,7 +1119,7 @@ class MpesaAutoLogger @Inject constructor(
             val messages = gson.fromJson(messagesJson, Array<String>::class.java)
             var parsed = 0
             var failed = 0
-            val transactions = mutableListOf<Map<String, Any>>()
+            val transactions = mutableListOf<Map<String, Any?>>()
 
             for (msg in messages) {
                 val txn = MpesaSmsParser.parse(msg)
@@ -1278,25 +1279,19 @@ class MpesaAutoLogger @Inject constructor(
         val id = txnId.toLongOrNull()
             ?: return ToolResult.error(name, "Invalid transaction ID", "INVALID_ID")
 
-        db.execSQL("UPDATE mpesa_transactions SET category = ? WHERE id = ?", arrayOf(category, id))
+        val existing = db.getTransactionById(id)
+            ?: return ToolResult.error(name, "Transaction not found", "NOT_FOUND")
+
+        db.updateTransactionCategory(id, category)
 
         // Also update the business category if this txn has a paybill/till
-        val cursor = db.rawQuery("SELECT paybill_number, till_number, counterparty FROM mpesa_transactions WHERE id = ?", arrayOf(id.toString()))
-        if (cursor.moveToFirst()) {
-            val paybill = cursor.getString(0)
-            val till = cursor.getString(1)
-            val name = cursor.getString(2)
-            cursor.close()
-            if (paybill != null || till != null) {
-                db.upsertBusiness(MpesaBusiness(
-                    paybillNumber = paybill,
-                    tillNumber = till,
-                    businessName = name,
-                    category = category
-                ))
-            }
-        } else {
-            cursor.close()
+        if (existing.paybillNumber != null || existing.tillNumber != null) {
+            db.upsertBusiness(MpesaBusiness(
+                paybillNumber = existing.paybillNumber,
+                tillNumber = existing.tillNumber,
+                businessName = existing.counterparty,
+                category = category
+            ))
         }
 
         return ToolResult.success(name, mapOf("id" to id, "category" to category), "Category updated to '$category'")
@@ -1308,7 +1303,7 @@ class MpesaAutoLogger @Inject constructor(
         val bizName = params["business_name"]
         val category = params["business_category"]
 
-        // Lookup
+        // Lookup mode
         if (bizName == null && category == null) {
             if (paybill == null && till == null) {
                 return ToolResult.error(name, "Provide paybill or till number", "MISSING_PARAMS")
@@ -1325,7 +1320,7 @@ class MpesaAutoLogger @Inject constructor(
             }
         }
 
-        // Register new business
+        // Register mode
         if ((paybill == null && till == null) || bizName == null || category == null) {
             return ToolResult.error(name, "Need paybill/till + business_name + business_category", "MISSING_PARAMS")
         }
@@ -1403,16 +1398,16 @@ class MpesaAutoLogger @Inject constructor(
     private fun buildParseResult(txn: MpesaAutoTransaction): ToolResult {
         val directionEmoji = if (txn.direction == "in") "📥" else "📤"
         val typeLabel = when (txn.transactionType) {
-            "paybill" → "Pay Bill${txn.paybillNumber?.let { " ($it)" } ?: ""}"
-            "till" → "Till${txn.tillNumber?.let { " ($it)" } ?: ""}"
-            "send" → "Sent to"
-            "receive" → "Received from"
-            "withdraw" → "Withdrawn at"
-            "deposit" → "Deposited at"
-            "fuliza" → "Fuliza"
-            "mshwari" → "MShwari/KCB"
-            "airtime" → "Airtime"
-            else → txn.transactionType.replaceFirstChar { it.uppercase() }
+            "paybill" -> "Pay Bill${txn.paybillNumber?.let { " ($it)" } ?: ""}"
+            "till" -> "Till${txn.tillNumber?.let { " ($it)" } ?: ""}"
+            "send" -> "Sent to"
+            "receive" -> "Received from"
+            "withdraw" -> "Withdrawn at"
+            "deposit" -> "Deposited at"
+            "fuliza" -> "Fuliza"
+            "mshwari" -> "MShwari/KCB"
+            "airtime" -> "Airtime"
+            else -> txn.transactionType.replaceFirstChar { it.uppercase() }
         }
 
         val msg = buildString {
@@ -1442,12 +1437,4 @@ class MpesaAutoLogger @Inject constructor(
         smsReceiver = null
         db.close()
     }
-}
-
-private fun android.database.sqlite.SQLiteDatabase.execSQL(sql: String, bindArgs: Array<Any?>) {
-    rawQuery(sql, bindArgs.map { it?.toString() }.toTypedArray()).close()
-}
-
-private fun android.database.sqlite.SQLiteDatabase.rawQuery(sql: String, args: Array<String?>?): android.database.Cursor {
-    return this.rawQuery(sql, args)
 }
