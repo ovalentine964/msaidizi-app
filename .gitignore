@@ -16,11 +16,17 @@ keystore.properties
 # ── Model Assets (too large for git) ─────────────────────────
 app/src/main/assets/models/gguf/*.gguf
 app/src/main/assets/models/onnx-whisper/*.onnx
-app/src/main/assets/models/onnx-piper/*.onnx
+app/src/main/assets/models/onnx-whisper/*.txt
+app/src/main/assets/models/onnx-piper/**/*.onnx
+app/src/main/assets/models/onnx-piper/**/*.txt
+app/src/main/assets/models/onnx-piper/**/espeak-ng-data/
 app/src/main/assets/models/**/*.bin
 # Keep the directories
 !app/src/main/assets/models/**/
 !.gitkeep
+
+# ── Model Cache (CI download cache) ──────────────────────────
+.model-cache/
 
 # ── OS ────────────────────────────────────────────────────────
 .DS_Store
@@ -30,5 +36,8 @@ Thumbs.db
 .env
 .env.local
 
-# ── APK (built artifacts) ──────────────────────────────────────
+# ── APK (built artifacts) ────────────────────────────────────
 *.apk
+
+# ── Scripts temp ─────────────────────────────────────────────
+scripts/*.tmp

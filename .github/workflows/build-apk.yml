@@ -1,7 +1,12 @@
 # ──────────────────────────────────────────────────────────────
 # Msaidizi APK Build & Release Pipeline
-# Builds debug + release APKs for ARM64 and ARM32, signs the
+# Builds debug + release APKs with bundled AI models, signs the
 # release variant, and publishes to GitHub Releases on tags.
+#
+# Models bundled in APK:
+#   - Qwen3 0.6B GGUF (~500MB) — on-device LLM
+#   - sherpa-onnx Whisper Tiny (~40MB) — speech-to-text
+#   - Piper Swahili (~15MB) — text-to-speech
 # ──────────────────────────────────────────────────────────────
 name: Build & Release APK
 
@@ -24,18 +29,56 @@ concurrency:
 env:
   GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true --build-cache"
   JAVA_VERSION: "17"
+  MODEL_CACHE_VERSION: "v1"
 
 permissions:
   contents: write          # push tags & upload release assets
 
 jobs:
   # ──────────────────────────────────────────────────────────
-  # 1. Build
+  # 1. Download & Cache Models
+  # ──────────────────────────────────────────────────────────
+  prepare-models:
+    name: Prepare AI Models
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Model Cache ────────────────────────────────────────
+      - name: Cache AI models
+        id: model-cache
+        uses: actions/cache@v4
+        with:
+          path: .model-cache
+          key: ai-models-${{ env.MODEL_CACHE_VERSION }}-${{ hashFiles('scripts/download_models.sh') }}
+          restore-keys: |
+            ai-models-${{ env.MODEL_CACHE_VERSION }}-
+
+      - name: Download AI models
+        run: |
+          chmod +x scripts/download_models.sh
+          ./scripts/download_models.sh
+
+      - name: Verify model assets
+        run: ./scripts/download_models.sh --verify
+
+      - name: Report model sizes
+        run: |
+          echo "::group::Model asset sizes"
+          du -sh app/src/main/assets/models/*/
+          du -sh app/src/main/assets/models/
+          echo "::endgroup::"
+
+  # ──────────────────────────────────────────────────────────
+  # 2. Build
   # ──────────────────────────────────────────────────────────
   build:
     name: Build APK (${{ matrix.build_type }})
+    needs: prepare-models
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -48,19 +91,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate model assets
+      # ── Restore model cache ────────────────────────────────
+      - name: Restore model cache
+        uses: actions/cache@v4
+        with:
+          path: .model-cache
+          key: ai-models-${{ env.MODEL_CACHE_VERSION }}-${{ hashFiles('scripts/download_models.sh') }}
+          restore-keys: |
+            ai-models-${{ env.MODEL_CACHE_VERSION }}-
+
+      - name: Place cached models in assets
         run: |
-          echo "::group::Checking model asset directories"
-          mkdir -p app/src/main/assets/models
-          # Verify expected model dirs exist (create placeholders if missing)
-          for dir in gguf onnx-piper; do
-            if [ ! -d "app/src/main/assets/models/$dir" ]; then
-              echo "⚠️  models/$dir not found — creating placeholder"
-              mkdir -p "app/src/main/assets/models/$dir"
-              echo "# Placeholder — real model files go here" > "app/src/main/assets/models/$dir/.gitkeep"
-            fi
-          done
-          echo "::endgroup::"
+          chmod +x scripts/download_models.sh
+          ./scripts/download_models.sh
 
       - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
@@ -118,7 +161,7 @@ jobs:
         run: rm -f /tmp/release-keystore.jks
 
   # ──────────────────────────────────────────────────────────
-  # 2. Verify (smoke test the APK)
+  # 3. Verify (smoke test the APK)
   # ──────────────────────────────────────────────────────────
   verify:
     name: Verify APK
@@ -155,6 +198,11 @@ jobs:
             # Check for model assets
             ASSET_COUNT=$(unzip -l "$apk" | grep -c "assets/models/" || true)
             echo "🧠 Model asset entries: $ASSET_COUNT"
+            # Verify specific model files
+            echo ""
+            echo "── Model files in APK ──"
+            unzip -l "$apk" | grep -E "assets/models/(gguf|onnx)" | head -20 || true
+            echo ""
             # Verify ABI directories
             unzip -l "$apk" | grep "lib/arm64-v8a/" > /dev/null && echo "✅ arm64-v8a present" || echo "⚠️  arm64-v8a missing"
             unzip -l "$apk" | grep "lib/armeabi-v7a/" > /dev/null && echo "✅ armeabi-v7a present" || echo "⚠️  armeabi-v7a missing"
@@ -162,7 +210,7 @@ jobs:
           done
 
   # ──────────────────────────────────────────────────────────
-  # 3. Release (only on version tags)
+  # 4. Release (only on version tags)
   # ──────────────────────────────────────────────────────────
   release:
     name: Publish Release
@@ -199,14 +247,26 @@ jobs:
             echo ""
             echo "$CHANGES"
             echo ""
+            echo "## Bundled AI Models"
+            echo ""
+            echo "This APK includes on-device AI models (no download required after install):"
+            echo ""
+            echo "| Model | Type | Size |"
+            echo "|-------|------|------|"
+            echo "| Qwen3 0.6B (Q4_K_M) | LLM (text generation) | ~500 MB |"
+            echo "| Whisper Tiny (multilingual) | STT (speech-to-text) | ~40 MB |"
+            echo "| Piper Swahili | TTS (text-to-speech) | ~15 MB |"
+            echo ""
+            echo "**Total APK size:** ~550-600 MB (includes all models)"
+            echo ""
             echo "## Installation"
             echo ""
             echo "1. Download \`msaidizi-release.apk\` below"
             echo "2. Enable 'Install from unknown sources' on your Android device"
             echo "3. Open the APK to install"
-            echo "4. The app will download model files on first launch (~500MB)"
+            echo "4. Models are bundled — no download required on first launch"
             echo ""
-            echo "**Minimum:** Android 8.0 (API 26) · ARM64 or ARM32 · 2GB RAM"
+            echo "**Minimum:** Android 8.0 (API 26) · ARM64 or ARM32 · 3GB RAM recommended"
             echo "CHANGELOG_EOF"
           } >> "$GITHUB_OUTPUT"
 
