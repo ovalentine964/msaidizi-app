@@ -922,6 +922,58 @@ class ProfitByProduct @Inject constructor(
         }
     }
 
+    // ── Academic Formula: Simple LP for Product Allocation (OR) ─────────────
+
+    /**
+     * Solve a simple linear program for optimal product mix.
+     * Maximizes total profit subject to a budget constraint:
+     *   max  Σ (profitPerUnit_i × quantity_i)
+     *   s.t. Σ (costPerUnit_i × quantity_i) ≤ budget
+     *        quantity_i ≥ 0
+     *
+     * Uses a greedy algorithm (highest profit-to-cost ratio first)
+     * which is optimal for single-constraint LP (continuous relaxation).
+     *
+     * @param products List of Triple(productName, profitPerUnit, costPerUnit)
+     * @param constraints Map with keys: "budget" (Double), optionally "maxPerProduct" (Int)
+     * @return Map of productName → optimalQuantity to purchase
+     */
+    fun calculateOptimalMix(
+        products: List<Triple<String, Double, Double>>,
+        constraints: Map<String, Any>
+    ): Map<String, Double> {
+        val budget = (constraints["budget"] as? Double)
+            ?: (constraints["budget"] as? Number)?.toDouble()
+            ?: return emptyMap()
+        val maxPerProduct = (constraints["maxPerProduct"] as? Int)
+            ?: (constraints["maxPerProduct"] as? Number)?.toInt()
+            ?: Int.MAX_VALUE
+
+        if (products.isEmpty() || budget <= 0) return emptyMap()
+
+        // Filter to products with positive profit and cost, then sort by profit/cost ratio descending
+        val ranked = products
+            .filter { it.second > 0 && it.third > 0 }
+            .sortedByDescending { it.second / it.third }
+
+        var remainingBudget = budget
+        val allocation = mutableMapOf<String, Double>()
+
+        for ((name, profitPerUnit, costPerUnit) in ranked) {
+            if (remainingBudget <= 0) break
+            // Max units from budget
+            val maxFromBudget = remainingBudget / costPerUnit
+            // Apply per-product cap (continuous relaxation)
+            val quantity = minOf(maxFromBudget, maxPerProduct.toDouble())
+            if (quantity > 0) {
+                allocation[name] = quantity
+                remainingBudget -= quantity * costPerUnit
+            }
+        }
+
+        return allocation
+    }
+
     // ──────────────────────────────────────────────
     // ABC CLASSIFICATION
     // ──────────────────────────────────────────────

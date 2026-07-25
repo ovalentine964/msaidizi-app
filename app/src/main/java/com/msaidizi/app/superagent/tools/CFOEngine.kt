@@ -299,6 +299,70 @@ class CFOEngine @Inject constructor(
         }
     }
 
+    // ── Academic Formula Methods (MAT 121/124, ECO 101) ─────────────────────
+
+    /**
+     * Marginal Cost: MC = ΔVC / ΔQ
+     * The additional cost of producing one more unit.
+     *
+     * @param variableCostDelta Change in variable costs (ΔVC)
+     * @param quantityDelta Change in quantity (ΔQ)
+     * @return Marginal cost per unit
+     */
+    fun marginalCost(variableCostDelta: Double, quantityDelta: Double): Double {
+        require(quantityDelta > 0) { "Quantity change must be positive" }
+        return variableCostDelta / quantityDelta
+    }
+
+    /**
+     * Marginal Revenue: MR = ΔTR / ΔQ
+     * The additional revenue from selling one more unit.
+     *
+     * @param totalRevenueDelta Change in total revenue (ΔTR)
+     * @param quantityDelta Change in quantity sold (ΔQ)
+     * @return Marginal revenue per unit
+     */
+    fun marginalRevenue(totalRevenueDelta: Double, quantityDelta: Double): Double {
+        require(quantityDelta > 0) { "Quantity change must be positive" }
+        return totalRevenueDelta / quantityDelta
+    }
+
+    /**
+     * Break-Even Quantity: BE = FC / (P - AVC)
+     * The number of units that must be sold to cover all fixed costs.
+     *
+     * @param fixedCosts Total fixed costs (FC)
+     * @param price Selling price per unit (P)
+     * @param avgVariableCost Average variable cost per unit (AVC)
+     * @return Break-even quantity in units
+     */
+    fun breakEven(fixedCosts: Double, price: Double, avgVariableCost: Double): Double {
+        val contributionMargin = price - avgVariableCost
+        require(contributionMargin > 0) { "Price must exceed average variable cost to break even" }
+        return fixedCosts / contributionMargin
+    }
+
+    /**
+     * Profit-Maximizing Quantity for linear demand Q = a - b·P.
+     * Setting MR = MC with MR = a - 2bP and substituting P = (a - Q)/b:
+     *   MR = a/b - 2Q/b, set equal to MC → Q* = (a - MC·b) / 2
+     * Equivalently from inverse demand P = (a - Q)/b:
+     *   TR = P·Q = (aQ - Q²)/b, MR = (a - 2Q)/b = MC → Q* = (a - b·MC) / 2
+     *
+     * @param marginalCost Constant marginal cost (MC)
+     * @param demandIntercept a in Q = a - bP
+     * @param demandSlope b in Q = a - bP (positive)
+     * @return Profit-maximizing quantity Q*
+     */
+    fun profitMaximizingQuantity(
+        marginalCost: Double,
+        demandIntercept: Double,
+        demandSlope: Double
+    ): Double {
+        require(demandSlope > 0) { "Demand slope must be positive" }
+        return (demandIntercept - demandSlope * marginalCost) / 2.0
+    }
+
     /**
      * Generate a weekly report comparing this week to last week.
      */

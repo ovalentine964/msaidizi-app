@@ -10,6 +10,8 @@ import timber.log.Timber
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.exp
+import kotlin.math.ln
 
 /**
  * CreditReadiness — Eliminates information asymmetry for informal workers.
@@ -54,6 +56,56 @@ class CreditReadiness @Inject constructor(
         integer("save_weeks", "Number of weeks to save (for simulate)", required = false)
         integer("reduce_fuliza_weekly", "Target max Fuliza uses per week (for simulate)", required = false)
         string("voice_input", "Raw Swahili voice text to parse (e.g. 'Naweza pata mkopo?')", required = false)
+    }
+
+    // ── Academic Formula Methods (STA 341, ECO 414) ────────────────────────
+
+    /**
+     * Bayesian updating with a Beta-Binomial model.
+     * Given a Beta(α, β) prior and observed (successes, failures),
+     * returns the posterior parameters Beta(α+s, β+f).
+     *
+     * The posterior mean (expected repayment probability) is:
+     *   E[θ] = (α + s) / (α + β + s + f)
+     *
+     * @param priorAlpha α parameter of the Beta prior (prior "successes")
+     * @param priorBeta β parameter of the Beta prior (prior "failures")
+     * @param successes Observed number of successful repayments
+     * @param failures Observed number of defaults/ failures
+     * @return Pair of (posteriorAlpha, posteriorBeta)
+     */
+    fun bayesianUpdate(
+        priorAlpha: Double,
+        priorBeta: Double,
+        successes: Int,
+        failures: Int
+    ): Pair<Double, Double> {
+        require(priorAlpha > 0 && priorBeta > 0) { "Prior parameters must be positive" }
+        require(successes >= 0 && failures >= 0) { "Observations must be non-negative" }
+        val posteriorAlpha = priorAlpha + successes
+        val posteriorBeta = priorBeta + failures
+        return Pair(posteriorAlpha, posteriorBeta)
+    }
+
+    /**
+     * Logistic regression default probability.
+     * P(default) = 1 / (1 + e^(-Xβ))
+     * where Xβ = intercept + Σ(feature_i × coefficient_i)
+     *
+     * @param features Vector of feature values (e.g. debt-to-income, months in business)
+     * @param coefficients Corresponding coefficient vector (same length as features)
+     * @param intercept Logistic regression intercept (β₀), defaults to 0.0
+     * @return Probability of default ∈ (0, 1)
+     */
+    fun defaultProbability(
+        features: List<Double>,
+        coefficients: List<Double>,
+        intercept: Double = 0.0
+    ): Double {
+        require(features.size == coefficients.size) { "Features and coefficients must have same length" }
+        val linearCombination = intercept +
+            features.zip(coefficients).sumOf { (x, beta) -> x * beta }
+        return 1.0 / (1.0 + exp(-linearCombination))
     }
 
     // ──────────────────────────────────────────────

@@ -6,6 +6,8 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.ln
+import kotlin.math.pow
 
 /**
  * PriceNegotiator — Voice-based price negotiation assistant.
@@ -437,6 +439,97 @@ class PriceNegotiator @Inject constructor() : Tool {
 
     private fun formatQty(qty: Double): String =
         if (qty == qty.toLong().toDouble()) qty.toLong().toString() else "%,.1f".format(qty)
+
+    // ── Academic Formula Methods (ECO 101/321, MAT 121) ─────────────────────
+
+    /**
+     * Price Elasticity of Demand (PED) via log-log regression.
+     * PED = %ΔQ / %ΔP, estimated as slope of ln(Q) on ln(P).
+     * Returns negative value (law of demand); magnitude > 1 = elastic.
+     *
+     * @param priceHistory List of historical prices
+     * @param quantityHistory Corresponding quantities sold
+     * @return Estimated PED (typically negative)
+     */
+    fun calculateElasticity(
+        priceHistory: List<Double>,
+        quantityHistory: List<Double>
+    ): Double {
+        require(priceHistory.size == quantityHistory.size) { "Price and quantity lists must be same length" }
+        require(priceHistory.size >= 2) { "Need at least 2 data points" }
+
+        val lnP = priceHistory.map { ln(it) }
+        val lnQ = quantityHistory.map { ln(it) }
+        val meanLnP = lnP.average()
+        val meanLnQ = lnQ.average()
+
+        val numerator = lnP.zip(lnQ).sumOf { (p, q) -> (p - meanLnP) * (q - meanLnQ) }
+        val denominator = lnP.sumOf { (it - meanLnP).pow(2) }
+
+        return if (denominator > 1e-10) numerator / denominator else -1.0
+    }
+
+    /**
+     * Simple PED from two data points.
+     * PED = (ΔQ/Q̄) / (ΔP/P̄)
+     */
+    fun calculateElasticity(
+        currentPrice: Double, currentQty: Double,
+        newPrice: Double, newQty: Double
+    ): Double {
+        val avgPrice = (currentPrice + newPrice) / 2.0
+        val avgQty = (currentQty + newQty) / 2.0
+        if (avgPrice == 0.0 || avgQty == 0.0) return 0.0
+        val pctChangeQty = (newQty - currentQty) / avgQty
+        val pctChangePrice = (newPrice - currentPrice) / avgPrice
+        return if (pctChangePrice != 0.0) pctChangeQty / pctChangePrice else 0.0
+    }
+
+    /**
+     * Nash Bargaining Solution.
+     * Finds the price that maximizes: (sellerSurplus)^α × (buyerSurplus)^(1-α)
+     * where sellerSurplus = price - sellerMin, buyerSurplus = buyerMax - price.
+     *
+     * @param sellerMin Seller's reservation price (minimum acceptable)
+     * @param buyerMax Buyer's maximum willingness to pay
+     * @param sellerPower α ∈ [0,1] — seller's bargaining power (0.5 = equal)
+     * @return Optimal price from Nash bargaining
+     */
+    fun nashBargaining(
+        sellerMin: Double,
+        buyerMax: Double,
+        sellerPower: Double = 0.5
+    ): Double {
+        require(buyerMax > sellerMin) { "No zone of agreement: buyerMax must exceed sellerMin" }
+        require(sellerPower in 0.0..1.0) { "sellerPower must be between 0 and 1" }
+
+        val totalSurplus = buyerMax - sellerMin
+        // Nash solution: price = sellerMin + α × (buyerMax - sellerMin)
+        return sellerMin + totalSurplus * sellerPower
+    }
+
+    /**
+     * Optimal (profit-maximizing) price for linear demand.
+     * Given demand Q = a - b·P, the monopoly optimal price is:
+     *   P* = (a + b·MC) / (2b)  =  (a - MC) / (2b) + MC  ... but the standard
+     *   MR = MC derivation for inverse demand P = (a - Q)/b gives:
+     *   P* = (a + b·MC) / (2b)
+     * Wait — let's use the clean form: if demand is Q = a - bP, then
+     * TR = P·Q = P(a - bP), MR = a - 2bP, set MR = MC → P* = (a - MC)/(2b)
+     *
+     * @param marginalCost MC (constant marginal cost)
+     * @param demandIntercept a in Q = a - bP
+     * @param demandSlope b in Q = a - bP (positive)
+     * @return Profit-maximizing price P*
+     */
+    fun optimalPrice(
+        marginalCost: Double,
+        demandIntercept: Double,
+        demandSlope: Double
+    ): Double {
+        require(demandSlope > 0) { "Demand slope must be positive" }
+        return (demandIntercept - marginalCost) / (2.0 * demandSlope)
+    }
 
     // ── Data Classes ───────────────────────────────────────────────────────
 
