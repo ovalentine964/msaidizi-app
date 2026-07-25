@@ -6,7 +6,26 @@ import javax.inject.Inject
  * Service Voice Commands — Swahili patterns for service transactions
  * "Nimefanya repair ya simu, mia tano" → service transaction
  */
-class ServiceVoiceCommands @Inject constructor() {
+class ServiceVoiceCommands @Inject constructor() : Tool {
+
+    override val name = "service_voice_commands"
+    override val description = "Parse Swahili voice commands for service transactions (fundi, salon, barber, car wash, etc.)"
+
+    override val argsSchema = argSchema {
+        string("input", "User voice input to parse for service transaction details")
+    }
+
+    override suspend fun execute(params: Map<String, String>): ToolResult {
+        val input = params["input"] ?: return ToolResult.error(name, "Missing input", "MISSING_INPUT")
+        val match = parseServiceCommand(input)
+            ?: return ToolResult.error(name, "Could not parse service command from: $input", "PARSE_FAILED")
+        return ToolResult.success(
+            name,
+            data = match,
+            message = "Parsed service: ${match.serviceName} — KES ${match.amount}" +
+                (match.customerName?.let { " for $it" } ?: "")
+        )
+    }
 
     data class ServiceMatch(
         val serviceName: String,

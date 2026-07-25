@@ -2,6 +2,7 @@ package com.msaidizi.app.superagent.harness
 
 import android.content.Context
 import com.msaidizi.app.superagent.tools.ToolResult
+import com.msaidizi.app.voice.LlamaCppEngine
 import com.google.gson.Gson
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -21,11 +22,15 @@ import javax.inject.Singleton
  * Model must be loaded at app startup via [initialize]. If the model file is
  * missing or invalid, the engine enters a degraded mode where [generate]
  * returns fallback responses and emits a download prompt via [state].
+ *
+ * JNI bridge is owned by [LlamaCppEngine] — this class delegates native calls
+ * to avoid duplicate JNI method declarations.
  */
 @Singleton
 class LlmEngine @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val gson: Gson
+    private val gson: Gson,
+    private val llamaCppEngine: LlamaCppEngine
 ) {
     companion object {
         /** Expected model filename (Q4_K_M quantised Qwen3 0.6B). */
@@ -56,19 +61,7 @@ class LlmEngine @Inject constructor(
     private var isInitialized = false
     private var modelPath: String? = null
 
-    // JNI bridge to llama.cpp
-    private external fun nativeLoadModel(path: String, contextSize: Int, threads: Int): Long
-    private external fun nativeGenerate(
-        handle: Long,
-        prompt: String,
-        maxTokens: Int,
-        temperature: Float,
-        topP: Float,
-        stopSequences: String
-    ): String
-    private external fun nativeFreeModel(handle: Long)
-
-    private var modelHandle: Long = 0L
+    // JNI bridge delegated to LlamaCppEngine (single JNI owner)
 
     /**
      * Initialize the LLM engine with the model file.
@@ -113,18 +106,18 @@ class LlmEngine @Inject constructor(
 
             modelPath = modelFile.absolutePath
 
-            // 4. Load via llama.cpp JNI
+            // 4. Load via LlamaCppEngine (delegates to llama.cpp JNI)
             val cores = Runtime.getRuntime().availableProcessors().coerceIn(2, 4)
             val contextSize = 2048
 
-            modelHandle = nativeLoadModel(modelFile.absolutePath, contextSize, cores)
-            isInitialized = modelHandle != 0L
+            val loaded = llamaCppEngine.loadModel(modelFile.absolutePath, contextSize, cores)
+            isInitialized = loaded
 
             if (isInitialized) {
                 Timber.i("LLM initialized: %s (%d threads, ctx=%d)", modelFile.name, cores, contextSize)
                 state = State.Ready
             } else {
-                val msg = "nativeLoadModel returned 0 for ${modelFile.name}"
+                val msg = "loadModel returned false for ${modelFile.name}"
                 Timber.e(msg)
                 state = State.Error(msg)
             }
@@ -207,13 +200,12 @@ class LlmEngine @Inject constructor(
         try {
             val prompt = buildPrompt(systemPrompt, userMessage, context, toolResults, intent)
 
-            val response = nativeGenerate(
-                handle = modelHandle,
+            val response = llamaCppEngine.generate(
                 prompt = prompt,
                 maxTokens = 256,
                 temperature = 0.7f,
                 topP = 0.9f,
-                stopSequences = gson.toJson(listOf("Human:", "User:", "\n\n"))
+                stopSequences = listOf("Human:", "User:", "\n\n")
             )
 
             response.trim()
@@ -236,4 +228,7 @@ class LlmEngine @Inject constructor(
         return buildString {
             appendLine("<|im_start|>system")
             appendLine(systemPrompt)
+            appendLine("You are Msaidizi, an AI business assistant for Kenyan MSMEs.")
+            appendLine("Respond in the user's language (Swahili or English).")
+            appendLine("Be concise, actionable, and friendly.")
             appendLine("

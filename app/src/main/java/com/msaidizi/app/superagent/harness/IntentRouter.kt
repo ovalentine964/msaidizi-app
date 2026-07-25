@@ -151,6 +151,76 @@ class IntentRouter @Inject constructor(
         IntentType.RECORD_PAYMENT to listOf(
             "amepay", "amelipa", "payment received", "nimelipwa",
             "record payment", "log payment", "deni imepungua", "partial payment"
+        ),
+        IntentType.SCAN_RECEIPT to listOf(
+            "scan receipt", "skan risiti", "picha ya risiti", "ona risiti",
+            "tazama risiti", "scan picha", "receipt image", "ocr receipt",
+            "scan receipt image", "chukua risiti", "piga risiti picha"
+        ),
+        IntentType.VIEW_DASHBOARD to listOf(
+            "dashboard", "ripoti ya biashara", "muhtasari", "muhtasari wa biashara",
+            "business health", "afya ya biashara", "jinsi biashara inavyoenda",
+            "show dashboard", "dashboard status", "biashara ikoje",
+            "nione dashboard", "onekana dashboard", "overall status"
+        ),
+        IntentType.QUICK_SALE to listOf(
+            "quick sale", "uza haraka", "haraka", "sale ya haraka",
+            "fast sale", "quick record", "haraka nimeuza",
+            "one tap sale", "fupi sale", "uza upesi"
+        ),
+        IntentType.CHAMA_MANAGE to listOf(
+            "chama", "mchango", "contribute", "group savings",
+            "chama changu", "mchango wangu", "chama contributions",
+            "table banking", "harambee", "contribute to chama",
+            "chama balance", "chama members"
+        ),
+        IntentType.CREDIT_CHECK to listOf(
+            "credit score", "mkopo", "loan ready", "credit readiness",
+            "nikopeshwe", "naweza pata mkopo", "niko tayari mkopo",
+            "check credit", "credit report", "信用score",
+            "oweza mkopo", "readiness ya mkopo"
+        ),
+        IntentType.LOAN_COMPARE to listOf(
+            "compare loans", "linganisha mikopo", "which loan", "mkopo gani",
+            "loan comparison", "interest rate", "kiwango cha riba",
+            "best loan", "mkopo bora", "compare lenders",
+            "loan options", "chaguo za mkopo"
+        ),
+        IntentType.INSURANCE_MATCH to listOf(
+            "insurance", "bima", "insurance match", "bima gani",
+            "find insurance", "nipe bima", "insurance quote",
+            "bima ya biashara", "business insurance", "cover",
+            "insurance options", "chaguo za bima"
+        ),
+        IntentType.RIDE_SHARE to listOf(
+            "ride", "pikipiki", "nduthi", "boda boda",
+            "ride share", "gari", "transport", "nipe ride",
+            "panda pikipiki", "delivery", "fanya delivery",
+            "send package", "tuma mzigo"
+        ),
+        IntentType.MARKET_PRICE to listOf(
+            "market price", "bei ya soko", "soko", "bei ya soko leo",
+            "current price", "bei ya sasa", "market rates",
+            "bei za soko", "bei ya bidhaa", "price check",
+            "bei gani leo", "bei za leo"
+        ),
+        IntentType.PROOF_OF_INCOME to listOf(
+            "proof of income", "uthibitisho wa mapato", "income statement",
+            "mapato yangu", "show income", "income report",
+            "proof ya mapato", "generate income proof",
+            "income certificate", "financial statement"
+        ),
+        IntentType.GOAL_TRACK to listOf(
+            "goal", "target", "lengo", "malengo",
+            "track goal", "set target", "weka lengo",
+            "my goals", "target yangu", "progress",
+            "nimefikia", "goal tracker", "achievement"
+        ),
+        IntentType.WHATSAPP_REPORT to listOf(
+            "whatsapp", "tuma whatsapp", "report whatsapp",
+            "whatsapp report", "send report whatsapp",
+            "tuma ripoti whatsapp", "whatsapp muhtasari",
+            "share on whatsapp", "shiriki whatsapp"
         )
     )
 
@@ -422,6 +492,115 @@ class IntentRouter @Inject constructor(
             return UserIntent(type = IntentType.FAREWELL, confidence = 0.9f)
         }
 
+        // Scan receipt
+        if (matchesScanReceiptPattern(input)) {
+            return UserIntent(
+                type = IntentType.SCAN_RECEIPT,
+                confidence = 0.9f,
+                requiredTools = listOf("scan_receipt")
+            )
+        }
+
+        // Dashboard
+        if (matchesDashboardPattern(input)) {
+            return UserIntent(
+                type = IntentType.VIEW_DASHBOARD,
+                confidence = 0.85f,
+                requiredTools = listOf("business_health_dashboard")
+            )
+        }
+
+        // Quick sale
+        if (matchesQuickSalePattern(input)) {
+            return UserIntent(
+                type = IntentType.QUICK_SALE,
+                confidence = 0.85f,
+                requiredTools = listOf("quick_sale"),
+                toolParams = mapOf("quick_sale" to extractSaleParams(input))
+            )
+        }
+
+        // Chama
+        if (matchesChamaPattern(input)) {
+            return UserIntent(
+                type = IntentType.CHAMA_MANAGE,
+                confidence = 0.85f,
+                requiredTools = listOf("chama_manager")
+            )
+        }
+
+        // Credit check
+        if (matchesCreditCheckPattern(input)) {
+            return UserIntent(
+                type = IntentType.CREDIT_CHECK,
+                confidence = 0.85f,
+                requiredTools = listOf("credit_readiness")
+            )
+        }
+
+        // Loan compare
+        if (matchesLoanComparePattern(input)) {
+            return UserIntent(
+                type = IntentType.LOAN_COMPARE,
+                confidence = 0.85f,
+                requiredTools = listOf("loan_comparison")
+            )
+        }
+
+        // Insurance
+        if (matchesInsurancePattern(input)) {
+            return UserIntent(
+                type = IntentType.INSURANCE_MATCH,
+                confidence = 0.85f,
+                requiredTools = listOf("insurance_matcher")
+            )
+        }
+
+        // Ride share
+        if (matchesRideSharePattern(input)) {
+            return UserIntent(
+                type = IntentType.RIDE_SHARE,
+                confidence = 0.85f,
+                requiredTools = listOf("ride_share")
+            )
+        }
+
+        // Market price
+        if (matchesMarketPricePattern(input)) {
+            return UserIntent(
+                type = IntentType.MARKET_PRICE,
+                confidence = 0.85f,
+                requiredTools = listOf("market_price_broadcaster")
+            )
+        }
+
+        // Proof of income
+        if (matchesProofOfIncomePattern(input)) {
+            return UserIntent(
+                type = IntentType.PROOF_OF_INCOME,
+                confidence = 0.85f,
+                requiredTools = listOf("proof_of_income")
+            )
+        }
+
+        // Goal tracking
+        if (matchesGoalTrackPattern(input)) {
+            return UserIntent(
+                type = IntentType.GOAL_TRACK,
+                confidence = 0.85f,
+                requiredTools = listOf("goal_tracker")
+            )
+        }
+
+        // WhatsApp report
+        if (matchesWhatsAppReportPattern(input)) {
+            return UserIntent(
+                type = IntentType.WHATSAPP_REPORT,
+                confidence = 0.85f,
+                requiredTools = listOf("whatsapp_reporter")
+            )
+        }
+
         return null
     }
 
@@ -581,12 +760,7 @@ class IntentRouter @Inject constructor(
             val response = llmEngine.generate(
                 systemPrompt = systemPrompt,
                 userMessage = input,
-                context = AssembledContext(
-                    businessContext = "",
-                    relevantKnowledge = emptyList(),
-                    recentHistory = emptyList(),
-                    userPreferences = emptyMap()
-                ),
+                context = AssembledContext(),
                 toolResults = emptyList(),
                 intent = UserIntent(type = IntentType.UNKNOWN, confidence = 0f, rawText = input)
             )
@@ -724,6 +898,26 @@ class IntentRouter @Inject constructor(
             "farewell" -> IntentType.FAREWELL
             "thanks" -> IntentType.THANKS
             "help" -> IntentType.HELP
+            "scan_receipt" -> IntentType.SCAN_RECEIPT
+            "business_health_dashboard" -> IntentType.VIEW_DASHBOARD
+            "quick_sale" -> IntentType.QUICK_SALE
+            "chama_manager" -> IntentType.CHAMA_MANAGE
+            "credit_readiness" -> IntentType.CREDIT_CHECK
+            "loan_comparison" -> IntentType.LOAN_COMPARE
+            "insurance_matcher" -> IntentType.INSURANCE_MATCH
+            "ride_share" -> IntentType.RIDE_SHARE
+            "market_price_broadcaster" -> IntentType.MARKET_PRICE
+            "proof_of_income" -> IntentType.PROOF_OF_INCOME
+            "goal_tracker" -> IntentType.GOAL_TRACK
+            "whatsapp_reporter" -> IntentType.WHATSAPP_REPORT
+            "receipt_scanner" -> IntentType.SCAN_RECEIPT
+            "cfo_engine" -> IntentType.DAILY_REPORT
+            "pricing_advisor" -> IntentType.ASK_ADVICE
+            "debt_tracker" -> IntentType.ASK_DEBTORS
+            "inventory_tracker" -> IntentType.ASK_STOCK
+            "profit_by_product" -> IntentType.ASK_PROFIT
+            "mpesa_auto_logger" -> IntentType.RECORD_SALE
+            "record_transaction" -> IntentType.RECORD_SALE
             else -> IntentType.UNKNOWN
         }
     }
@@ -794,6 +988,55 @@ class IntentRouter @Inject constructor(
             IntentType.FAREWELL -> UserIntent(type = type, confidence = 0.8f)
             IntentType.THANKS -> UserIntent(type = type, confidence = 0.8f)
             IntentType.HELP -> UserIntent(type = type, confidence = 0.8f)
+            IntentType.SCAN_RECEIPT -> UserIntent(
+                type = type, confidence = 0.7f,
+                requiredTools = listOf("scan_receipt")
+            )
+            IntentType.VIEW_DASHBOARD -> UserIntent(
+                type = type, confidence = 0.7f,
+                requiredTools = listOf("business_health_dashboard")
+            )
+            IntentType.QUICK_SALE -> UserIntent(
+                type = type, confidence = 0.7f,
+                requiredTools = listOf("quick_sale"),
+                toolParams = mapOf("quick_sale" to extractSaleParams(input))
+            )
+            IntentType.CHAMA_MANAGE -> UserIntent(
+                type = type, confidence = 0.7f,
+                requiredTools = listOf("chama_manager")
+            )
+            IntentType.CREDIT_CHECK -> UserIntent(
+                type = type, confidence = 0.7f,
+                requiredTools = listOf("credit_readiness")
+            )
+            IntentType.LOAN_COMPARE -> UserIntent(
+                type = type, confidence = 0.7f,
+                requiredTools = listOf("loan_comparison")
+            )
+            IntentType.INSURANCE_MATCH -> UserIntent(
+                type = type, confidence = 0.7f,
+                requiredTools = listOf("insurance_matcher")
+            )
+            IntentType.RIDE_SHARE -> UserIntent(
+                type = type, confidence = 0.7f,
+                requiredTools = listOf("ride_share")
+            )
+            IntentType.MARKET_PRICE -> UserIntent(
+                type = type, confidence = 0.7f,
+                requiredTools = listOf("market_price_broadcaster")
+            )
+            IntentType.PROOF_OF_INCOME -> UserIntent(
+                type = type, confidence = 0.7f,
+                requiredTools = listOf("proof_of_income")
+            )
+            IntentType.GOAL_TRACK -> UserIntent(
+                type = type, confidence = 0.7f,
+                requiredTools = listOf("goal_tracker")
+            )
+            IntentType.WHATSAPP_REPORT -> UserIntent(
+                type = type, confidence = 0.7f,
+                requiredTools = listOf("whatsapp_reporter")
+            )
             else -> UserIntent(type = IntentType.UNKNOWN, confidence = 0.3f)
         }
     }
@@ -944,6 +1187,115 @@ class IntentRouter @Inject constructor(
         val keywords = listOf(
             "kwaheri", "bye", "goodbye", "see you", "tutaonana",
             "baadaye", "later", "good night", "usiku mwema"
+        )
+        return keywords.any { input.contains(it) }
+    }
+
+    private fun matchesScanReceiptPattern(input: String): Boolean {
+        val keywords = listOf(
+            "scan receipt", "skan risiti", "picha ya risiti", "ona risiti",
+            "tazama risiti", "scan picha", "receipt image", "ocr receipt",
+            "scan receipt image", "chukua risiti", "piga risiti picha",
+            "scan", "skan", "risiti"
+        )
+        return keywords.any { input.contains(it) }
+    }
+
+    private fun matchesDashboardPattern(input: String): Boolean {
+        val keywords = listOf(
+            "dashboard", "muhtasari wa biashara", "afya ya biashara",
+            "business health", "show dashboard", "nione dashboard",
+            "overall status", "jinsi biashara inavyoenda",
+            "onekana dashboard", "dashboard status"
+        )
+        return keywords.any { input.contains(it) }
+    }
+
+    private fun matchesQuickSalePattern(input: String): Boolean {
+        val keywords = listOf(
+            "quick sale", "uza haraka", "haraka", "sale ya haraka",
+            "fast sale", "quick record", "one tap sale", "uza upesi"
+        )
+        return keywords.any { input.contains(it) }
+    }
+
+    private fun matchesChamaPattern(input: String): Boolean {
+        val keywords = listOf(
+            "chama", "mchango", "contribute", "group savings",
+            "table banking", "harambee", "chama changu",
+            "chama balance", "chama members"
+        )
+        return keywords.any { input.contains(it) }
+    }
+
+    private fun matchesCreditCheckPattern(input: String): Boolean {
+        val keywords = listOf(
+            "credit score", "mkopo", "loan ready", "credit readiness",
+            "nikopeshwe", "naweza pata mkopo", "niko tayari mkopo",
+            "check credit", "credit report", "oweza mkopo"
+        )
+        return keywords.any { input.contains(it) }
+    }
+
+    private fun matchesLoanComparePattern(input: String): Boolean {
+        val keywords = listOf(
+            "compare loans", "linganisha mikopo", "which loan", "mkopo gani",
+            "loan comparison", "interest rate", "kiwango cha riba",
+            "best loan", "mkopo bora", "compare lenders", "loan options"
+        )
+        return keywords.any { input.contains(it) }
+    }
+
+    private fun matchesInsurancePattern(input: String): Boolean {
+        val keywords = listOf(
+            "insurance", "bima", "insurance match", "bima gani",
+            "find insurance", "nipe bima", "insurance quote",
+            "bima ya biashara", "business insurance", "cover"
+        )
+        return keywords.any { input.contains(it) }
+    }
+
+    private fun matchesRideSharePattern(input: String): Boolean {
+        val keywords = listOf(
+            "ride", "pikipiki", "nduthi", "boda boda",
+            "ride share", "panda pikipiki", "delivery",
+            "send package", "tuma mzigo", "gari"
+        )
+        return keywords.any { input.contains(it) }
+    }
+
+    private fun matchesMarketPricePattern(input: String): Boolean {
+        val keywords = listOf(
+            "market price", "bei ya soko", "soko", "bei ya soko leo",
+            "current price", "bei ya sasa", "market rates",
+            "bei za soko", "bei ya bidhaa", "bei gani leo", "bei za leo"
+        )
+        return keywords.any { input.contains(it) }
+    }
+
+    private fun matchesProofOfIncomePattern(input: String): Boolean {
+        val keywords = listOf(
+            "proof of income", "uthibitisho wa mapato", "income statement",
+            "mapato yangu", "show income", "income report",
+            "proof ya mapato", "income certificate", "financial statement"
+        )
+        return keywords.any { input.contains(it) }
+    }
+
+    private fun matchesGoalTrackPattern(input: String): Boolean {
+        val keywords = listOf(
+            "goal", "target", "lengo", "malengo",
+            "track goal", "set target", "weka lengo",
+            "my goals", "target yangu", "goal tracker"
+        )
+        return keywords.any { input.contains(it) }
+    }
+
+    private fun matchesWhatsAppReportPattern(input: String): Boolean {
+        val keywords = listOf(
+            "whatsapp", "tuma whatsapp", "report whatsapp",
+            "whatsapp report", "send report whatsapp",
+            "tuma ripoti whatsapp", "share on whatsapp"
         )
         return keywords.any { input.contains(it) }
     }

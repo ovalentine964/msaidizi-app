@@ -397,6 +397,28 @@ object HermesPromptBuilder {
             "generate_report" -> IntentType.DAILY_REPORT
             "pricing_advice", "pricing_advisor" -> IntentType.ASK_ADVICE
             "cfo_engine" -> IntentType.DAILY_REPORT
+            "scan_receipt" -> IntentType.SCAN_RECEIPT
+            "receipt_scanner" -> IntentType.SCAN_RECEIPT
+            "business_health_dashboard" -> IntentType.VIEW_DASHBOARD
+            "quick_sale" -> IntentType.QUICK_SALE
+            "chama_manager" -> IntentType.CHAMA_MANAGE
+            "credit_readiness" -> IntentType.CREDIT_CHECK
+            "loan_comparison" -> IntentType.LOAN_COMPARE
+            "insurance_matcher" -> IntentType.INSURANCE_MATCH
+            "ride_share" -> IntentType.RIDE_SHARE
+            "market_price_broadcaster" -> IntentType.MARKET_PRICE
+            "proof_of_income" -> IntentType.PROOF_OF_INCOME
+            "goal_tracker" -> IntentType.GOAL_TRACK
+            "whatsapp_reporter" -> IntentType.WHATSAPP_REPORT
+            "debt_tracker" -> IntentType.ASK_DEBTORS
+            "profit_by_product" -> IntentType.ASK_PROFIT
+            "mpesa_auto_logger" -> IntentType.RECORD_SALE
+            "record_sale" -> IntentType.RECORD_SALE
+            "record_expense" -> IntentType.RECORD_EXPENSE
+            "record_purchase" -> IntentType.RECORD_PURCHASE
+            "record_service" -> IntentType.RECORD_SERVICE
+            "record_payment" -> IntentType.RECORD_PAYMENT
+            "query_business_data" -> IntentType.ASK_ADVICE
             else -> IntentType.UNKNOWN
         }
     }

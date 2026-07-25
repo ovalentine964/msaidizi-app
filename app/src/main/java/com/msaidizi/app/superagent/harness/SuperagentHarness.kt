@@ -325,6 +325,22 @@ enum class IntentType {
     HELP,
     CHITCHAT,
 
+    // Scanner & Dashboard
+    SCAN_RECEIPT,
+    VIEW_DASHBOARD,
+
+    // Extended tools
+    QUICK_SALE,
+    CHAMA_MANAGE,
+    CREDIT_CHECK,
+    LOAN_COMPARE,
+    INSURANCE_MATCH,
+    RIDE_SHARE,
+    MARKET_PRICE,
+    PROOF_OF_INCOME,
+    GOAL_TRACK,
+    WHATSAPP_REPORT,
+
     // System
     UNKNOWN,
     VOICE_COMMAND
