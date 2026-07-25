@@ -20,17 +20,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.msaidizi.app.MainActivity
+import com.msaidizi.app.core.security.EncryptionManager
 import com.msaidizi.app.model.BusinessType
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class BootstrapActivity : ComponentActivity() {
 
+    @Inject lateinit var encryptionManager: EncryptionManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Check if bootstrap already completed
-        val prefs = getSharedPreferences("msaidizi", MODE_PRIVATE)
+        // Check if bootstrap already completed (uses encrypted prefs)
+        val prefs = encryptionManager.getEncryptedPrefs()
         if (prefs.getBoolean("bootstrap_complete", false)) {
             startActivity(Intent(this, MainActivity::class.java))
             finish()
@@ -40,8 +44,9 @@ class BootstrapActivity : ComponentActivity() {
         setContent {
             BootstrapScreen(
                 onComplete = { name, businessType, language ->
-                    // Save bootstrap data
-                    prefs.edit()
+                    // Save bootstrap data in encrypted SharedPreferences
+                    val securePrefs = encryptionManager.getEncryptedPrefs()
+                    securePrefs.edit()
                         .putString("worker_name", name)
                         .putString("business_type", businessType)
                         .putString("language", language)

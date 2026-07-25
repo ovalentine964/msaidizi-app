@@ -88,3 +88,20 @@
 
 # ── Timber ───────────────────────────────────────────────────
 -dontwarn org.jetbrains.annotations.**
+
+# ── Strip debug logs in release ─────────────────────────────
+-assumenosideeffects class timber.log.Timber {
+    public static *** d(...);
+    public static *** v(...);
+    public static *** w(...);
+}
+
+# ── Preserve crash reporting info ───────────────────────────
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
+
+# ── Strip Log.d/Log.v in release ────────────────────────────
+-assumenosideeffects class android.util.Log {
+    public static int d(...);
+    public static int v(...);
+}

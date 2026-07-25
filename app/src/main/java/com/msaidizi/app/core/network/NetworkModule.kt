@@ -41,7 +41,10 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(certificatePinner: CertificatePinner): OkHttpClient {
+    fun provideOkHttpClient(
+        certificatePinner: CertificatePinner,
+        authInterceptor: AuthInterceptor
+    ): OkHttpClient {
         val loggingLevel = if (BuildConfig.DEBUG) {
             HttpLoggingInterceptor.Level.BODY
         } else {
@@ -59,6 +62,7 @@ object NetworkModule {
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(60, TimeUnit.SECONDS)
+            .addInterceptor(authInterceptor)
             .addInterceptor(logging)
             .build()
     }

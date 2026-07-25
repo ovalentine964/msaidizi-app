@@ -1,5 +1,6 @@
 package com.msaidizi.app.core.security
 
+import com.msaidizi.app.BuildConfig
 import okhttp3.CertificatePinner
 import timber.log.Timber
 
@@ -33,6 +34,20 @@ object CertificatePinnerFactory {
      * Create a CertificatePinner for the Msaidizi API backend.
      */
     fun create(): CertificatePinner {
+        // Build-time guard: prevent shipping placeholder pins in release
+        val hasPlaceholderPins = PIN_PRIMARY.contains("AAA") || PIN_BACKUP.contains("BBB")
+        if (hasPlaceholderPins && !BuildConfig.DEBUG) {
+            throw IllegalStateException(
+                "SECURITY: Certificate pins are still placeholders! " +
+                    "Generate real SPKI hashes before release. " +
+                    "See CertificatePinnerFactory KDoc for instructions."
+            )
+        }
+        if (hasPlaceholderPins) {
+            Timber.w("Certificate pins are placeholders — pinning disabled in debug build")
+            return CertificatePinner.Builder().build() // no pinning in debug with placeholders
+        }
+
         val pinner = CertificatePinner.Builder()
             .add(API_HOSTNAME, PIN_PRIMARY)
             .add(API_HOSTNAME, PIN_BACKUP)

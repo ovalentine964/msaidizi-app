@@ -1,5 +1,7 @@
 package com.msaidizi.app.superagent.tools
 
+import com.msaidizi.app.core.security.EncryptionManager
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -19,7 +21,9 @@ data class ToolValidationResult(val valid: Boolean, val reason: String, val seve
  * this is the tool-interface version for direct tool access.
  */
 @Singleton
-class GuardrailsEngine @Inject constructor() : Tool {
+class GuardrailsEngine @Inject constructor(
+    private val encryptionManager: EncryptionManager
+) : Tool {
 
     override val name = "guardrails"
     override val description = "3-gate guardrail checks: input sanitization, tool validation, output safety"
@@ -44,9 +48,16 @@ class GuardrailsEngine @Inject constructor() : Tool {
         number("cohort_size", "Cohort size for k-anonymity check", required = false)
     }
 
+    // Rate limiting — persisted sliding window
     private val recentTransactions = mutableListOf<Double>()
     private val MAX_HOURLY = 100
     private val ANOMALY_SIGMA = 3.0
+    private val WINDOW_DURATION_MS = 60 * 60 * 1000L // 1 hour sliding window
+
+    init {
+        // Load persisted timestamps on init
+        loadPersistedRateLimits()
+    }
 
     // ── Injection patterns ──
     private val injectionPatterns = listOf(
@@ -303,6 +314,8 @@ class GuardrailsEngine @Inject constructor() : Tool {
         if (amount <= 0) return ToolValidationResult(false, "Amount must be positive", "error")
         if (amount > 1_000_000) return ToolValidationResult(false, "Amount exceeds maximum (KES 1M)", "error")
 
+        evictExpiredEntries()
+
         if (recentTransactions.size >= MAX_HOURLY) {
             return ToolValidationResult(false, "Too many transactions this hour (max $MAX_HOURLY)", "warning")
         }
@@ -321,6 +334,7 @@ class GuardrailsEngine @Inject constructor() : Tool {
         }
 
         recentTransactions.add(amount)
+        persistRateLimits()
         return ToolValidationResult(true, "Valid", "ok")
     }
 
@@ -332,5 +346,56 @@ class GuardrailsEngine @Inject constructor() : Tool {
         return ToolValidationResult(true, "Advice validated", "ok")
     }
 
-    fun resetHourlyCounter() { recentTransactions.clear() }
+    fun resetHourlyCounter() {
+        recentTransactions.clear()
+        persistRateLimits()
+    }
+
+    // ── Rate Limit Persistence ──────────────────────────────
+
+    /**
+     * Evict entries outside the sliding window and persist remaining.
+     */
+    private fun evictExpiredEntries() {
+        val cutoff = System.currentTimeMillis() - WINDOW_DURATION_MS
+        recentTransactions.removeAll { it < cutoff }
+    }
+
+    /**
+     * Persist rate limit timestamps to EncryptedSharedPreferences.
+     * We store timestamps as a comma-separated string.
+     */
+    private fun persistRateLimits() {
+        try {
+            val prefs = encryptionManager.getEncryptedPrefs()
+            val timestamps = recentTransactions.joinToString(",") { it.toLong().toString() }
+            prefs.edit().putString(KEY_RATE_LIMIT_TIMESTAMPS, timestamps).apply()
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to persist rate limits")
+        }
+    }
+
+    /**
+     * Load persisted rate limit timestamps on startup.
+     */
+    private fun loadPersistedRateLimits() {
+        try {
+            val prefs = encryptionManager.getEncryptedPrefs()
+            val stored = prefs.getString(KEY_RATE_LIMIT_TIMESTAMPS, null)
+            if (stored != null) {
+                val now = System.currentTimeMillis()
+                val cutoff = now - WINDOW_DURATION_MS
+                stored.split(",")
+                    .mapNotNull { it.toLongOrNull()?.toDouble() }
+                    .filter { it >= cutoff }
+                    .forEach { recentTransactions.add(it) }
+            }
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to load persisted rate limits")
+        }
+    }
+
+    companion object {
+        private const val KEY_RATE_LIMIT_TIMESTAMPS = "guardrails_rate_limit_ts"
+    }
 }
