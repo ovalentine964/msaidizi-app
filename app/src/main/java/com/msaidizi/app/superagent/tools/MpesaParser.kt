@@ -14,6 +14,11 @@ class MpesaParser @Inject constructor() : Tool {
     override val name = "mpesa_parser"
     override val description = "Parse M-Pesa SMS messages into structured transaction data"
 
+    override val argsSchema = argSchema {
+        enum("action", "Parser action", listOf("parse"), required = false)
+        string("sms", "M-Pesa SMS text to parse")
+    }
+
     private val patterns = listOf(
         Regex("Ksh([\\d,.]+) received from (.+?) ") to "received",
         Regex("Ksh([\\d,.]+) sent to (.+?) ") to "sent"

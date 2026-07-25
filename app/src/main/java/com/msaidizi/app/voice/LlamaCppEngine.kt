@@ -7,7 +7,7 @@ import javax.inject.Singleton
 /**
  * LlamaCppEngine — Kotlin JNI wrapper for on-device LLM inference via llama.cpp.
  *
- * Loads a GGUF model (e.g., Qwen 0.8B) and generates text completions
+ * Loads a GGUF model (e.g., Qwen3 0.6B) and generates text completions
  * entirely on-device. No network required.
  *
  * Usage:

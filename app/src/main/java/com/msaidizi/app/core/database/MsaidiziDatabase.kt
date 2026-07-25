@@ -14,9 +14,13 @@ import com.msaidizi.app.model.*
         StockMovementEntity::class,
         ConversationEntity::class,
         KnowledgeEntity::class,
-        UserProfileEntity::class
+        UserProfileEntity::class,
+        AnomalyHistoryEntity::class,
+        LearnedVocabularyEntity::class,
+        BusinessPatternEntity::class,
+        SyncStateEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 abstract class MsaidiziDatabase : RoomDatabase() {
@@ -29,4 +33,8 @@ abstract class MsaidiziDatabase : RoomDatabase() {
     abstract fun conversationDao(): ConversationDao
     abstract fun knowledgeDao(): KnowledgeDao
     abstract fun userProfileDao(): UserProfileDao
+    abstract fun anomalyHistoryDao(): AnomalyHistoryDao
+    abstract fun learnedVocabularyDao(): LearnedVocabularyDao
+    abstract fun businessPatternDao(): BusinessPatternDao
+    abstract fun syncStateDao(): SyncStateDao
 }

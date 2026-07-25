@@ -28,6 +28,12 @@ class GamificationEngine @Inject constructor(
     override val name = "gamification"
     override val description = "Points, levels, streaks, and badges for business tracking"
 
+    override val argsSchema = argSchema {
+        enum("action", "Gamification action",
+            listOf("add", "status", "streak", "badge", "leaderboard"), required = false)
+        string("action_type", "Type of action to earn points for", required = false)
+    }
+
     // Points configuration
     private val pointsTable = mapOf(
         "record_sale" to 10,

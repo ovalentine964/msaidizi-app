@@ -21,6 +21,7 @@ sqldelight = "2.0.2"
 sqlcipher = "4.5.6"
 datastore = "1.1.1"
 securityCrypto = "1.1.0-alpha06"
+biometric = "1.2.0-alpha05"
 work = "2.10.0"
 junit = "4.13.2"
 junitExt = "1.2.1"
@@ -89,6 +90,7 @@ datastore-preferences = { group = "androidx.datastore", name = "datastore-prefer
 
 # Security
 security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
+biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
 
 # Logging
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }

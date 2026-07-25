@@ -14,6 +14,18 @@ class WhatsAppReporter @Inject constructor() : Tool {
     override val name = "whatsapp_reporter"
     override val description = "Generate and send business reports via WhatsApp"
 
+    override val argsSchema = argSchema {
+        enum("action", "Report action",
+            listOf("daily", "weekly", "send"), required = false)
+        number("revenue", "Revenue amount in KES", required = false)
+        number("expenses", "Expenses amount in KES", required = false)
+        number("profit", "Profit amount in KES", required = false)
+        string("top_product", "Top product name", required = false)
+        string("best_day", "Best day of the week", required = false)
+        string("content", "Report content to send", required = false)
+        string("phone", "Phone number to send to", required = false)
+    }
+
     override suspend fun execute(params: Map<String, String>): ToolResult {
         val action = params["action"] ?: "daily"
         return when (action.lowercase()) {

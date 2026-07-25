@@ -3,7 +3,9 @@ package com.msaidizi.app.core.di
 import android.content.Context
 import androidx.room.Room
 import com.msaidizi.app.core.database.*
+import com.msaidizi.app.core.security.BiometricAuthManager
 import com.msaidizi.app.core.security.EncryptionManager
+import com.msaidizi.app.core.security.PinHasher
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -44,7 +46,10 @@ object AppModule {
     @Provides fun provideConversationDao(db: MsaidiziDatabase): ConversationDao = db.conversationDao()
     @Provides fun provideKnowledgeDao(db: MsaidiziDatabase): KnowledgeDao = db.knowledgeDao()
     @Provides fun provideUserProfileDao(db: MsaidiziDatabase): UserProfileDao = db.userProfileDao()
-}
+    @Provides fun provideAnomalyHistoryDao(db: MsaidiziDatabase): AnomalyHistoryDao = db.anomalyHistoryDao()
+    @Provides fun provideLearnedVocabularyDao(db: MsaidiziDatabase): LearnedVocabularyDao = db.learnedVocabularyDao()
+    @Provides fun provideBusinessPatternDao(db: MsaidiziDatabase): BusinessPatternDao = db.businessPatternDao()
+    @Provides fun provideSyncStateDao(db: MsaidiziDatabase): SyncStateDao = db.syncStateDao()
 
     @Provides
     @Singleton
@@ -53,6 +58,8 @@ object AppModule {
         inventoryTracker: com.msaidizi.app.superagent.tools.InventoryTracker,
         cfoEngine: com.msaidizi.app.superagent.tools.CFOEngine,
         voicePipeline: com.msaidizi.app.superagent.tools.VoicePipeline,
+        languageDetector: com.msaidizi.app.superagent.tools.LanguageDetector,
+        codeSwitchHandler: com.msaidizi.app.superagent.tools.CodeSwitchHandler,
         gamificationEngine: com.msaidizi.app.superagent.tools.GamificationEngine,
         goalTracker: com.msaidizi.app.superagent.tools.GoalTracker,
         receiptScanner: com.msaidizi.app.superagent.tools.ReceiptScanner,
@@ -61,7 +68,7 @@ object AppModule {
         securityGuard: com.msaidizi.app.superagent.tools.SecurityGuard,
         modelDownloader: com.msaidizi.app.superagent.tools.ModelDownloader,
         adaptiveLearner: com.msaidizi.app.superagent.tools.AdaptiveLearner,
-        memoryManager: com.msaidizi.app.superagent.tools.MemoryManager,
+        memoryManager: com.msaidizi.app.superagent.memory.MemoryManager,
         guardrailsEngine: com.msaidizi.app.superagent.tools.GuardrailsEngine,
         anomalyDetector: com.msaidizi.app.superagent.tools.AnomalyDetector,
         mpesaParser: com.msaidizi.app.superagent.tools.MpesaParser,
@@ -76,6 +83,8 @@ object AppModule {
         registry.register(inventoryTracker)
         registry.register(cfoEngine)
         registry.register(voicePipeline)
+        registry.register(languageDetector)
+        registry.register(codeSwitchHandler)
         registry.register(gamificationEngine)
         registry.register(goalTracker)
         registry.register(receiptScanner)
@@ -95,3 +104,4 @@ object AppModule {
         registry.register(serviceVoiceCommands)
         return registry
     }
+}

@@ -23,6 +23,14 @@ class InventoryTracker @Inject constructor(
     override val name = "inventory_tracker"
     override val description = "Tracks product stock and provides restock alerts"
 
+    override val argsSchema = argSchema {
+        enum("action", "Action to perform",
+            listOf("check", "add", "remove", "alerts", "list"), required = false)
+        string("product", "Product name", required = false)
+        number("quantity", "Stock quantity to add or remove", required = false)
+        string("reason", "Reason for stock removal (e.g. sale, spoilage)", required = false)
+    }
+
     override suspend fun execute(params: Map<String, String>): ToolResult {
         val action = params["action"] ?: "check"
         return when (action.lowercase()) {

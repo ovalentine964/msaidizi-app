@@ -26,14 +26,22 @@ class ServiceMenu @Inject constructor() : Tool {
     override val name = "record_service"
     override val description = "Record service transactions (fundi, salon, barber, etc.)"
 
+    override val argsSchema = argSchema {
+        string("service_name", "Service name or description")
+        number("amount", "Total amount charged in KES")
+        number("labour_cost", "Labour portion of the charge", required = false)
+        number("materials_cost", "Materials portion of the charge", required = false)
+        string("customer_name", "Customer name", required = false)
+    }
+
     override suspend fun execute(args: Map<String, String>): ToolResult {
         val serviceName = args["service_name"] ?: "Service"
-        val amount = args["amount"]?.toDoubleOrNull() ?: return ToolResult.error("Missing amount")
+        val amount = args["amount"]?.toDoubleOrNull() ?: return ToolResult.error(name, "Missing amount", "MISSING_AMOUNT")
         val labourCost = args["labour_cost"]?.toDoubleOrNull() ?: amount * 0.7
         val materialsCost = args["materials_cost"]?.toDoubleOrNull() ?: amount * 0.3
         val customer = args["customer_name"]
         val result = recordService(serviceName, labourCost, materialsCost, customer)
-        return ToolResult.success("Service recorded: ${result.serviceName} — KES ${result.totalCharged} (Labour: ${result.labourCost}, Materials: ${result.materialsCost})")
+        return ToolResult.success(name, message = "Service recorded: ${result.serviceName} — KES ${result.totalCharged} (Labour: ${result.labourCost}, Materials: ${result.materialsCost})")
     }
 
     // Existing implementation below

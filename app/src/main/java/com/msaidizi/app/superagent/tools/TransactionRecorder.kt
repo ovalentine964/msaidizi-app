@@ -37,6 +37,25 @@ class TransactionRecorder @Inject constructor(
     override val name = "record_transaction"
     override val description = "Records a business transaction (sale, expense, or purchase)"
 
+    override val argsSchema = argSchema {
+        enum("type", "Transaction type: sale, expense, purchase, or service",
+            listOf("sale", "expense", "purchase", "service"))
+        number("amount", "Transaction amount in KES (Kenya Shillings)")
+        string("product", "Product name (for sales and purchases)", required = false)
+        number("quantity", "Quantity sold or purchased", required = false)
+        enum("payment_method", "Payment method used",
+            listOf("cash", "mpesa", "credit"), required = false)
+        enum("category", "Expense category (for expenses only)",
+            listOf("transport", "rent", "food", "utilities", "stock", "misc"), required = false)
+        string("description", "Description of the transaction", required = false)
+        string("customer", "Customer name (for credit sales)", required = false)
+        string("service", "Service name (for service transactions)", required = false)
+        number("cost", "Total cost for stock purchases", required = false)
+        number("labour_cost", "Labour portion of service charge", required = false)
+        number("materials_cost", "Materials portion of service charge", required = false)
+        string("service_category", "Service category (repair, beauty, cleaning, etc.)", required = false)
+    }
+
     override suspend fun execute(params: Map<String, String>): ToolResult {
         val type = params["type"] ?: "sale"
         return when (type.lowercase()) {

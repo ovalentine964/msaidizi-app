@@ -37,6 +37,11 @@ class CFOEngine @Inject constructor(
     override val name = "cfo_engine"
     override val description = "Daily briefings, cash flow predictions, and savings advice"
 
+    override val argsSchema = argSchema {
+        enum("action", "CFO action to perform",
+            listOf("briefing", "cashflow", "savings", "weekly"), required = false)
+    }
+
     override suspend fun execute(params: Map<String, String>): ToolResult {
         val action = params["action"] ?: "briefing"
         return when (action.lowercase()) {

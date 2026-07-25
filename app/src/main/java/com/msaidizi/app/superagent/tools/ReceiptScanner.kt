@@ -15,6 +15,11 @@ class ReceiptScanner @Inject constructor() : Tool {
     override val name = "receipt_scanner"
     override val description = "Parse receipt OCR text into structured transaction data"
 
+    override val argsSchema = argSchema {
+        enum("action", "Scanner action", listOf("scan"), required = false)
+        string("text", "OCR text from receipt to parse")
+    }
+
     override suspend fun execute(params: Map<String, String>): ToolResult {
         val action = params["action"] ?: "scan"
         return when (action.lowercase()) {

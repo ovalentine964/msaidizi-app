@@ -12,6 +12,13 @@ class PricingAdvisor @Inject constructor() : Tool {
     override val name = "pricing_advisor"
     override val description = "Advise on product pricing based on market comparison"
 
+    override val argsSchema = argSchema {
+        enum("action", "Action to perform",
+            listOf("advise", "update_market", "list"), required = false)
+        string("product", "Product name to get pricing advice for", required = false)
+        number("price", "Current or market price in KES", required = false)
+    }
+
     private val marketPrices = mutableMapOf<String, Double>()
 
     override suspend fun execute(params: Map<String, String>): ToolResult {

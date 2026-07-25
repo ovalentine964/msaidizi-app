@@ -89,31 +89,56 @@ class SuperagentHarness @Inject constructor(
                 )
             }
 
-            // 5. CAPABILITY ACTIVATION — Use tools if needed
+            // 5. CAPABILITY ACTIVATION — Use tools if needed (schema-validated)
             _processingState.value = ProcessingState.EXECUTING
             var toolResults: List<ToolResult> = emptyList()
             if (intent.requiredTools.isNotEmpty()) {
                 toolResults = intent.requiredTools.mapNotNull { toolName ->
-                    toolRegistry.execute(toolName, intent.toolParams[toolName] ?: emptyMap())
+                    val params = intent.toolParams[toolName] ?: emptyMap()
+                    toolRegistry.execute(toolName, params)  // validates against schema before execution
                 }
             }
 
-            // 6. GENERATE RESPONSE via LLM
+            // 6. GENERATE RESPONSE via LLM (with tool schemas in system prompt)
             _processingState.value = ProcessingState.GENERATING
+            val baseSystemPrompt = buildSystemPrompt(context)
+            val systemPromptWithTools = HermesPromptBuilder.buildFunctionCallingSystemPrompt(
+                baseSystemPrompt = baseSystemPrompt,
+                toolRegistry = toolRegistry
+            )
             val response = llmEngine.generate(
-                systemPrompt = buildSystemPrompt(context),
+                systemPrompt = systemPromptWithTools,
                 userMessage = input,
                 context = context,
                 toolResults = toolResults,
                 intent = intent
             )
 
+            // 6b. If LLM output contains a <tool_call>, parse & validate it
+            val validatedCall = HermesPromptBuilder.parseAndValidateFunctionCall(response, toolRegistry)
+            val finalText = if (validatedCall.isValid) {
+                // LLM made a valid tool call — execute it
+                val call = validatedCall.call!!
+                val toolResult = toolRegistry.execute(call.name, call.arguments)
+                if (toolResult != null && toolResult.success) {
+                    toolResult.message.ifEmpty { "Done." }
+                } else {
+                    toolResult?.message ?: "Tool execution failed."
+                }
+            } else if (validatedCall.call != null) {
+                // LLM made an invalid tool call — report validation errors
+                Timber.w("Invalid tool call: ${validatedCall.errors}")
+                "Samahani, I made an error. ${validatedCall.errors.firstOrNull() ?: "Please try again."}"
+            } else {
+                response
+            }
+
             // 7. GUARDRAILS CHECK on output
-            val outputCheck = guardrailsEngine.checkOutput(response)
+            val outputCheck = guardrailsEngine.checkOutput(finalText)
             val finalResponse = if (outputCheck.blocked) {
                 outputCheck.message ?: "Samahani, I need to rephrase that."
             } else {
-                response
+                finalText
             }
 
             // 8. Save assistant response
@@ -164,36 +189,76 @@ class SuperagentHarness @Inject constructor(
         val msaidiziName = profile?.msaidiziName ?: "Msaidizi"
 
         return buildString {
+            // ═══ LAYER 1: System Identity (static, cached) ═══
+            appendLine("=== IDENTITY ===")
             appendLine("You are $msaidiziName, an AI business assistant for ${profile?.userName ?: "my boss"}.")
-            appendLine("You help with their ${context.businessProfile?.businessType?.swahiliName ?: "business"} business.")
+            appendLine("Business: ${context.businessProfile?.businessType?.swahiliName ?: "business"} (${context.businessProfile?.businessType?.displayName ?: "Other"})")
             appendLine("Location: ${context.businessProfile?.location ?: "Kenya"}")
+            appendLine("Language: ${context.businessProfile?.language?.displayName ?: "Kiswahili"}")
+            if (context.alamaScore != null) {
+                appendLine("Alama Score: ${context.alamaScore.score} (${context.alamaScore.level})")
+                if (context.alamaScore.creditReady) appendLine("Credit ready: Yes")
+            }
             appendLine()
-            appendLine("PERSONALITY:")
-            appendLine("- Warm, friendly, like a trusted business partner")
-            appendLine("- Speak naturally, mix Kiswahili and English as appropriate")
-            appendLine("- Be concise — busy workers don't have time for long answers")
-            appendLine("- Give practical, actionable advice")
-            appendLine("- Always confirm financial transactions before recording")
+
+            // ═══ LAYER 2: Working Memory / OODA State ═══
+            appendLine("=== CURRENT STATE (${context.oodaPhase.displayName}) ===")
+            if (context.oodaObservations.isNotEmpty()) {
+                appendLine("Recent observations:")
+                context.oodaObservations.takeLast(3).forEach { appendLine("  - $it") }
+            }
+            if (context.oodaDecisions.isNotEmpty()) {
+                appendLine("Active decisions:")
+                context.oodaDecisions.takeLast(2).forEach { appendLine("  - $it") }
+            }
             appendLine()
-            appendLine("CAPABILITIES:")
-            appendLine("- Record sales, expenses, stock purchases")
-            appendLine("- Track inventory and alert on low stock")
-            appendLine("- Calculate daily/weekly/monthly profit")
-            appendLine("- Manage customer credit (deni)")
-            appendLine("- Give business advice based on their data")
-            appendLine("- Answer questions in Kiswahili or English")
+
+            // ═══ LAYER 3: Session Memory ═══
+            appendLine("=== SESSION CONTEXT ===")
+            appendLine("PERSONALITY: Warm, friendly, like a trusted business partner. Speak naturally, mix Kiswahili and English. Be concise. Give practical, actionable advice. Always confirm financial transactions before recording.")
             appendLine()
-            if (context.recentFinancialSummary != null) {
-                appendLine("TODAY'S BUSINESS:")
-                appendLine(context.recentFinancialSummary)
+            appendLine("CAPABILITIES: Record sales/expenses/purchases, track inventory, calculate profit, manage customer credit (deni), give data-driven advice.")
+            appendLine()
+            if (context.sessionSummaries.isNotEmpty()) {
+                appendLine("Previous sessions:")
+                context.sessionSummaries.take(3).forEach { appendLine("  - $it") }
                 appendLine()
+            }
+
+            // ═══ LAYER 4: Knowledge Base (retrieval) ═══
+            appendLine("=== KNOWLEDGE ===")
+            if (context.recentFinancialSummary != null) {
+                appendLine("Today's business:")
+                appendLine(context.recentFinancialSummary)
             }
             if (context.knowledgeContext.isNotEmpty()) {
-                appendLine("RELEVANT KNOWLEDGE:")
-                context.knowledgeContext.forEach { appendLine("- $it") }
+                appendLine("Relevant patterns:")
+                context.knowledgeContext.forEach { appendLine("  - $it") }
+            }
+            if (context.marketInsights.isNotEmpty()) {
+                appendLine("Market/sector data:")
+                context.marketInsights.forEach { appendLine("  - $it") }
+            }
+            appendLine()
+
+            // ═══ LAYER 5: Flywheel Insights (learned) ═══
+            if (context.relevantPatterns.isNotEmpty() || context.learnedVocabulary.isNotBlank() || context.businessRhythms.isNotBlank()) {
+                appendLine("=== LEARNED INSIGHTS ===")
+                if (context.relevantPatterns.isNotEmpty()) {
+                    appendLine("Your patterns:")
+                    context.relevantPatterns.forEach { appendLine("  - $it") }
+                }
+                if (context.learnedVocabulary.isNotBlank()) {
+                    appendLine("Worker vocabulary: ${context.learnedVocabulary}")
+                }
+                if (context.businessRhythms.isNotBlank()) {
+                    appendLine("Business rhythms: ${context.businessRhythms}")
+                }
                 appendLine()
             }
-            appendLine("Respond naturally. Use Kiswahili unless the user speaks English.")
+
+            // ═══ Response Guidelines ═══
+            appendLine("Respond naturally. Use ${context.businessProfile?.language?.displayName ?: "Kiswahili"} unless the user speaks another language.")
             appendLine("Keep responses short — 1-3 sentences for simple queries.")
         }
     }
@@ -266,11 +331,30 @@ enum class IntentType {
 }
 
 data class AssembledContext(
+    // Layer 1: System Identity (static, cached)
     val userProfile: com.msaidizi.app.model.UserProfileEntity? = null,
     val businessProfile: com.msaidizi.app.model.BusinessProfile? = null,
+    val alamaScore: com.msaidizi.app.superagent.tools.AlamaScoreResult? = null,
+
+    // Layer 2: Working Memory (OODA state)
+    val oodaPhase: OodaPhase = OodaPhase.OBSERVE,
+    val oodaObservations: List<String> = emptyList(),
+    val oodaDecisions: List<String> = emptyList(),
+
+    // Layer 3: Session Memory (conversation)
     val recentConversation: List<ConversationEntity> = emptyList(),
+    val sessionSummaries: List<String> = emptyList(),
+
+    // Layer 4: Knowledge Base (retrieval)
     val recentFinancialSummary: String? = null,
     val knowledgeContext: List<String> = emptyList(),
+    val marketInsights: List<String> = emptyList(),
+
+    // Layer 5: Flywheel Insights (learned)
     val relevantPatterns: List<String> = emptyList(),
+    val learnedVocabulary: String = "",
+    val businessRhythms: String = "",
+
+    // Legacy compat
     val memoryContext: String? = null
 )

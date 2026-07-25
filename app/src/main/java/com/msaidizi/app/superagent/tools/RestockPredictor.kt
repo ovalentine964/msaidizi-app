@@ -12,6 +12,14 @@ class RestockPredictor @Inject constructor() : Tool {
     override val name = "restock_predictor"
     override val description = "Predict when products need restocking based on sales velocity"
 
+    override val argsSchema = argSchema {
+        enum("action", "Action to perform",
+            listOf("predict", "record_sale", "history"), required = false)
+        string("product", "Product name")
+        integer("stock", "Current stock level (for predict)", required = false)
+        integer("quantity", "Quantity sold (for record_sale)", required = false)
+    }
+
     private val salesHistory = mutableMapOf<String, MutableList<Int>>()
 
     override suspend fun execute(params: Map<String, String>): ToolResult {

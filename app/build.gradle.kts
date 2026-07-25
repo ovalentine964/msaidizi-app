@@ -27,6 +27,16 @@ android {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")
         }
 
+        // Native build — compiles sherpa_jni, llama_jni, vad_jni
+        externalNativeBuild {
+            cmake {
+                cppFlags += "-std=c++17"
+                arguments += listOf(
+                    "-DANDROID_STL=c++_shared"
+                )
+            }
+        }
+
         // Room schema export
         ksp {
             arg("room.schemaLocation", "$projectDir/schemas")
@@ -92,6 +102,14 @@ android {
         buildConfig = true
     }
 
+    // Point to the CMakeLists.txt that builds sherpa_jni, llama_jni, vad_jni
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
+    }
+
     // ── Native libs & model assets ───────────────────────────
     packaging {
         jniLibs {
@@ -115,6 +133,13 @@ android {
     @Suppress("DEPRECATION")
     aaptOptions {
         noCompress("gguf", "onnx", "bin", "tflite", "vocab")
+    }
+
+    // Ensure native debug symbols are included for crash reporting
+    packaging {
+        jniLibs {
+            keepDebugSymbols += listOf("**/*.so")
+        }
     }
 }
 
@@ -177,6 +202,7 @@ dependencies {
 
     // Security
     implementation(libs.security.crypto)
+    implementation(libs.biometric)
 
     // Logging
     implementation(libs.timber)

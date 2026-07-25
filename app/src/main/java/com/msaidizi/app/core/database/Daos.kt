@@ -265,6 +265,15 @@ interface ConversationDao {
 
     @Query("DELETE FROM conversations WHERE timestamp < :before")
     suspend fun deleteOlderThan(before: Long)
+
+    @Query("SELECT COUNT(*) FROM conversations WHERE sessionId = :sessionId")
+    suspend fun getSessionCount(sessionId: String): Int
+
+    @Query("DELETE FROM conversations WHERE id IN (SELECT id FROM conversations WHERE sessionId = :sessionId ORDER BY timestamp ASC LIMIT :count)")
+    suspend fun deleteOldestForSession(sessionId: String, count: Int)
+
+    @Query("SELECT DISTINCT sessionId FROM conversations ORDER BY timestamp DESC")
+    suspend fun getAllSessionIds(): List<String>
 }
 
 // ──────────────────────────────────────────────
@@ -293,6 +302,12 @@ interface KnowledgeDao {
 
     @Query("SELECT * FROM knowledge_entries ORDER BY usageCount DESC LIMIT :limit")
     fun getMostUsed(limit: Int = 20): Flow<List<KnowledgeEntity>>
+
+    @Query("SELECT COUNT(*) FROM knowledge_entries WHERE category = :category")
+    suspend fun getCategoryCount(category: String): Int
+
+    @Query("DELETE FROM knowledge_entries WHERE id IN (SELECT id FROM knowledge_entries WHERE category = :category ORDER BY usageCount ASC, updatedAt ASC LIMIT :count)")
+    suspend fun deleteLeastUsedForCategory(category: String, count: Int)
 }
 
 // ──────────────────────────────────────────────

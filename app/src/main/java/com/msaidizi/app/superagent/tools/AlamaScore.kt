@@ -2,6 +2,7 @@ package com.msaidizi.app.superagent.tools
 
 import com.msaidizi.app.core.database.DailySummaryDao
 import com.msaidizi.app.core.database.SaleDao
+import com.msaidizi.app.superagent.memory.MemoryManager
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
 import java.time.Instant
@@ -37,6 +38,8 @@ class AlamaScore @Inject constructor(
 
     override val name = "alama_score"
     override val description = "Build credit score from business data"
+
+    override val argsSchema = emptyArgSchema()
 
     override suspend fun execute(params: Map<String, String>): ToolResult {
         return try {

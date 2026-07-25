@@ -20,6 +20,15 @@ class GoalTracker @Inject constructor() : Tool {
     override val name = "goal_tracker"
     override val description = "Track savings goals and business targets"
 
+    override val argsSchema = argSchema {
+        enum("action", "Action to perform",
+            listOf("create", "update", "list", "delete"), required = false)
+        string("name", "Goal name (for create)", required = false)
+        string("goal_id", "Goal ID (for update/delete)", required = false)
+        number("target", "Target amount in KES (for create)", required = false)
+        number("amount", "Amount to add toward goal (for update)", required = false)
+    }
+
     private val goals = mutableListOf<Goal>()
 
     override suspend fun execute(params: Map<String, String>): ToolResult {
