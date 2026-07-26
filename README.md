@@ -3,7 +3,7 @@
 [![Android](https://img.shields.io/badge/Platform-Android-green)]()
 [![Kotlin](https://img.shields.io/badge/Language-Kotlin-purple)]()
 [![License](https://img.shields.io/badge/License-Proprietary-red)]()
-[![Tools](https://img.shields.io/badge/Tools-44%2B-blue)]()
+[![Tools](https://img.shields.io/badge/Tools-52%2B-blue)]()
 [![CI](https://github.com/ovalentine964/msaidizi-app/actions/workflows/ci.yml/badge.svg)]()
 [![Build](https://github.com/ovalentine964/msaidizi-app/actions/workflows/build-apk.yml/badge.svg)]()
 
@@ -26,9 +26,9 @@
 
 ---
 
-## 44+ Specialized Tools
+## 52+ Specialized Tools
 
-Msaidizi is a **superagent** — one domain-specific AI brain connected to **44+ specialized tools** across 11 categories:
+Msaidizi is a **superagent** — one domain-specific AI brain connected to **52+ specialized tools** across 13 categories:
 
 | Category | Tools | Purpose |
 |----------|-------|---------|
@@ -43,6 +43,8 @@ Msaidizi is a **superagent** — one domain-specific AI brain connected to **44+
 | 🔒 **Security** | GuardrailsEngine, EncryptionManager, FraudDetector | Financial integrity & data protection |
 | 🤖 **AI** | AdaptiveLearner, PatternRecognizer, AnomalyDetector | On-device learning & anomaly detection |
 | 📚 **Learning** | GamificationEngine, FinancialLiteracy, GoalTracker | Gamified financial education |
+| 🌾 **Agriculture** | HarvestTracker, ProducePriceTracker, YieldPredictor, PostHarvestLossTracker, FishingLog, MiningLog | Farming, fishing & mining intelligence |
+| 💼 **Marketplace** | JobMatcher, CustomerMatcher, ServiceMarketBroadcaster, WageCalculator, ServicePriceAdvisor | Job & customer matching for service workers |
 
 ### Academic Foundations
 
@@ -61,6 +63,38 @@ Msaidizi is a **superagent** — one domain-specific AI brain connected to **44+
 
 ---
 
+## Superagent Architecture
+
+Msaidizi uses a **graph-aware, loop-driven, council-orchestrated** superagent architecture:
+
+### Graph Engineering (`superagent/graph/`)
+- **ToolGraph** — 52+ tools connected by dependency, trigger, feeds-into, and conditional edges
+- **KnowledgeGraph** — Products, customers, suppliers, and categories as a graph database
+- **WorkflowDAG** — Multi-step workflows (daily reports, custom analysis) as directed acyclic graphs
+- **GraphAwareContextAssembler** — Enriches LLM context with graph neighborhood data
+
+### Loop Engineering (`superagent/loops/`)
+- **OODALoop** — Observe → Orient → Decide → Act cycle for every user interaction
+- **AdviceRefinementLoop** — Multi-pass advice generation with quality scoring
+- **SelfCorrectionLoop** — Automatic retry with exponential backoff on tool failures
+- **CircuitBreaker** — External service protection (WhatsApp, sync engine, model downloads)
+- **FeedbackLoopIntegration** — User feedback → model improvement pipeline
+
+### Council Engineering (`superagent/council/`)
+- **CouncilManager** — Routes intents to specialized councils (Finance, Inventory, Market, Growth, Agriculture, Extractive)
+- **CouncilEventBus** — Async pub/sub for inter-council communication
+- **AgentSpawner** — Spawns sub-agents for multi-council tasks (coroutines, ~2KB stack each)
+- **CouncilSupervisor** — Manages council lifecycle and error recovery
+- **ContextScope** — Scoped context per council (financial data for Finance, inventory for Inventory)
+
+### Voice-First UI (`ui/screens/`)
+- **14 Compose screens** — Dashboard, Onboarding, Voice Interaction, Harvest, Jobs, Pricing, Credit, Inventory, Customers, Goals, Chama, Reports, Services, Settings
+- **Always-on voice** — Tap-to-speak on every screen, partial text display
+- **Swahili-first** — 240+ Swahili prompts, 14 language support
+- **Design system** — Custom colors, typography, cards, charts, navigation components
+
+---
+
 ## Tech Stack
 
 | Layer | Technology | Purpose |
@@ -71,7 +105,7 @@ Msaidizi is a **superagent** — one domain-specific AI brain connected to **44+
 | **Voice Engine** | C++ sherpa-onnx | On-device STT/TTS in 15+ languages |
 | **Database** | Room + SQLCipher | Encrypted local transaction storage |
 | **Camera** | CameraX + ML Kit | Receipt OCR & computer vision |
-| **Architecture** | SuperagentHarness | 44+ tool orchestration framework |
+| **Architecture** | SuperagentHarness | 52+ tool orchestration with graph/loop/council engineering |
 | **CI/CD** | GitHub Actions | Automated build, test, security scan & release |
 
 ---
@@ -98,7 +132,10 @@ Msaidizi is a **superagent** — one domain-specific AI brain connected to **44+
 ## Documentation
 
 - [Superagent Architecture](docs/architecture/arch_superagent_design.md)
-- [44+ Tools Definition](docs/architecture/superagent_tools_definition.md)
+- [52+ Tools Definition](docs/architecture/superagent_tools_definition.md)
+- [Graph Engineering](docs/architecture/graph_engineering_report.md)
+- [Loop Engineering](docs/architecture/loop_engineering_report.md)
+- [Council Engineering](docs/architecture/hernes_engineering_report.md)
 - [Grand Synthesis](docs/architecture/grand_synthesis_architecture.md)
 - [Growth Model Evolution](docs/architecture/growth_model_evolution.md)
 - [On-Device Learning](docs/architecture/growth_ondevice_learning.md)

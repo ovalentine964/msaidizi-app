@@ -9,6 +9,10 @@ import com.msaidizi.app.superagent.memory.MemoryManager
 import com.msaidizi.app.superagent.tools.ToolRegistry
 import com.msaidizi.app.superagent.tools.ToolResult
 import com.msaidizi.app.superagent.flywheel.FlywheelEngine
+import com.msaidizi.app.superagent.loops.AdviceRefinementLoop
+import com.msaidizi.app.superagent.loops.FeedbackLoopIntegration
+import com.msaidizi.app.superagent.loops.OODALoop
+import com.msaidizi.app.superagent.loops.OODAResult
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
@@ -40,6 +44,9 @@ class SuperagentHarness @Inject constructor(
     private val conversationDao: ConversationDao,
     private val userProfileDao: UserProfileDao,
     private val knowledgeDao: KnowledgeDao,
+    private val oodaLoop: OODALoop,
+    private val adviceRefinementLoop: AdviceRefinementLoop,
+    private val feedbackLoopIntegration: FeedbackLoopIntegration,
     private val gson: Gson
 ) {
     private val sessionId = UUID.randomUUID().toString()
@@ -89,57 +96,48 @@ class SuperagentHarness @Inject constructor(
                 )
             }
 
-            // 5. CAPABILITY ACTIVATION — Use tools if needed (schema-validated)
+            // 5. EXECUTE via OODA LOOP (replaces linear pipeline)
             _processingState.value = ProcessingState.EXECUTING
-            var toolResults: List<ToolResult> = emptyList()
-            if (intent.requiredTools.isNotEmpty()) {
-                toolResults = intent.requiredTools.mapNotNull { toolName ->
-                    val params = intent.toolParams[toolName] ?: emptyMap()
-                    toolRegistry.execute(toolName, params)  // validates against schema before execution
-                }
-            }
 
-            // 6. GENERATE RESPONSE via LLM (with tool schemas in system prompt)
-            _processingState.value = ProcessingState.GENERATING
-            val baseSystemPrompt = buildSystemPrompt(context)
-            val systemPromptWithTools = HermesPromptBuilder.buildFunctionCallingSystemPrompt(
-                baseSystemPrompt = baseSystemPrompt,
-                toolRegistry = toolRegistry
-            )
-            val response = llmEngine.generate(
-                systemPrompt = systemPromptWithTools,
-                userMessage = input,
-                context = context,
-                toolResults = toolResults,
-                intent = intent
-            )
-
-            // 6b. If LLM output contains a <tool_call>, parse & validate it
-            val validatedCall = HermesPromptBuilder.parseAndValidateFunctionCall(response, toolRegistry)
-            val finalText = if (validatedCall.isValid) {
-                // LLM made a valid tool call — execute it
-                val call = validatedCall.call!!
-                val toolResult = toolRegistry.execute(call.name, call.arguments)
-                if (toolResult != null && toolResult.success) {
-                    toolResult.message.ifEmpty { "Done." }
-                } else {
-                    toolResult?.message ?: "Tool execution failed."
-                }
-            } else if (validatedCall.call != null) {
-                // LLM made an invalid tool call — report validation errors
-                Timber.w("Invalid tool call: ${validatedCall.errors}")
-                "Samahani, I made an error. ${validatedCall.errors.firstOrNull() ?: "Please try again."}"
+            val oodaResult: OODAResult = if (intent.type == IntentType.ASK_ADVICE) {
+                // ── Advice path: Use AdviceRefinementLoop ──────────────
+                val adviceResult = adviceRefinementLoop.generateRefinedAdvice(
+                    intent = intent,
+                    context = context,
+                    llmEngine = llmEngine,
+                    buildPrompt = { ctx ->
+                        val base = buildSystemPrompt(ctx)
+                        HermesPromptBuilder.buildFunctionCallingSystemPrompt(base, toolRegistry)
+                    }
+                )
+                OODAResult(
+                    response = adviceResult.advice,
+                    confidence = adviceResult.qualityScore,
+                    iterations = adviceResult.iterations,
+                    totalDurationMs = adviceResult.totalDurationMs,
+                    iterationLogs = emptyList(),
+                    terminatedBy = com.msaidizi.app.superagent.loops.TerminationReason.CONFIDENCE_MET
+                )
             } else {
-                response
+                // ── Standard path: Use OODA Loop ──────────────────────
+                oodaLoop.execute(
+                    input = input,
+                    intent = intent,
+                    context = context,
+                    llmEngine = llmEngine,
+                    toolRegistry = toolRegistry,
+                    guardrails = guardrailsEngine,
+                    flywheel = flywheelEngine,
+                    memoryManager = memoryManager,
+                    buildPrompt = { ctx ->
+                        val base = buildSystemPrompt(ctx)
+                        HermesPromptBuilder.buildFunctionCallingSystemPrompt(base, toolRegistry)
+                    }
+                )
             }
 
-            // 7. GUARDRAILS CHECK on output
-            val outputCheck = guardrailsEngine.checkOutput(finalText)
-            val finalResponse = if (outputCheck.blocked) {
-                outputCheck.message ?: "Samahani, I need to rephrase that."
-            } else {
-                finalText
-            }
+            val finalResponse = oodaResult.response
+            val toolResults: List<ToolResult> = emptyList()
 
             // 8. Save assistant response
             conversationDao.insert(
@@ -269,7 +267,10 @@ class SuperagentHarness @Inject constructor(
 // ──────────────────────────────────────────────
 
 enum class ProcessingState {
-    IDLE, ROUTING, ASSEMBLING_CONTEXT, CHECKING_GUARDRAILS, EXECUTING, GENERATING, LEARNING
+    IDLE, ROUTING, ASSEMBLING_CONTEXT, CHECKING_GUARDRAILS,
+    EXECUTING, GENERATING, LEARNING,
+    OODA_ITERATING,   // OODA loop is running (sub-state of EXECUTING)
+    REFINING_ADVICE   // Advice refinement loop is running
 }
 
 data class HarnessResponse(

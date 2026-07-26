@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Msaidizi</string>
+    <string name="app_tagline">Mwenzi wako wa Biashara wa AI</string>
+
+    <!-- Bootstrap -->
+    <string name="bootstrap_welcome">Karibu! Wacha tuweke Msaidizi wako.</string>
+    <string name="bootstrap_name_prompt">Nini niite Msaidizi wako?</string>
+    <string name="bootstrap_name_hint">mfano, Rafiki, Biashara, Msaidizi…</string>
+    <string name="bootstrap_business_type">Unaendesha biashara ya aina gani?</string>
+    <string name="bootstrap_business_options">Mama Mboga\nBoda Boda\nDuka la M-Pesa\nDuka la Vifaa\nSaloni/Barber\nMama Ntilie\nJua Kali\nNyingine</string>
+    <string name="bootstrap_location">Biashara yako iko wapi?</string>
+    <string name="bootstrap_location_hint">mfano, Soko la Gikomba, Nairobi</string>
+    <string name="bootstrap_products">Unauza nini au unatoa huduma gani?</string>
+    <string name="bootstrap_products_hint">mfano, Nyanya, vitunguu, sukuma wiki…</string>
+    <string name="bootstrap_language">Unapendelea lugha gani?</string>
+    <string name="bootstrap_voice_setup">Niruhusu nijifunze sauti yako…</string>
+    <string name="bootstrap_voice_prompt">Tafadhali sema: \"Habari yako, Msaidizi wangu\"</string>
+    <string name="bootstrap_complete">Tayari! Msaidizi wako uko tayari kukusaidia.</string>
+    <string name="bootstrap_next">Ifuatayo</string>
+    <string name="bootstrap_skip">Ruka</string>
+    <string name="bootstrap_finish">Anza Kutumia Msaidizi</string>
+
+    <!-- Main -->
+    <string name="greeting_morning">Habari za asubuhi!</string>
+    <string name="greeting_afternoon">Habari za mchana!</string>
+    <string name="greeting_evening">Habari za jioni!</string>
+    <string name="voice_prompt">Gusa ili kusema</string>
+    <string name="listening">Ninasikia…</string>
+    <string name="thinking">Ninafikiri…</string>
+    <string name="speaking">Ninazungumza…</string>
+    <string name="type_hint">Andika ujumbe…</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Nyumbani</string>
+    <string name="nav_sales">Mauzo</string>
+    <string name="nav_stock">Hesabu ya Bidhaa</string>
+    <string name="nav_reports">Ripoti</string>
+    <string name="nav_settings">Mipangilio</string>
+
+    <!-- Common actions -->
+    <string name="save">Hifadhi</string>
+    <string name="cancel">Ghairi</string>
+    <string name="delete">Futa</string>
+    <string name="confirm">Thibitisha</string>
+    <string name="retry">Jaribu tena</string>
+    <string name="error_generic">Kuna kitu kimeenda vibaya. Tafadhali jaribu tena.</string>
+    <string name="error_network">Hakuna muunganisho wa intaneti. Ninakazi nje ya mtandao.</string>
+    <string name="error_permission_microphone">Ruhusa ya maikrofoni inahitajika kwa huduma za sauti.</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_title">Dashibodi</string>
+    <string name="dashboard_today_sales">Mauzo ya Leo</string>
+    <string name="dashboard_today_expenses">Gharama za Leo</string>
+    <string name="dashboard_profit">Faida</string>
+    <string name="dashboard_stock_alerts">Tahadhari za Hesabu</string>
+    <string name="dashboard_quick_actions">Haraka</string>
+    <string name="dashboard_record_sale">Rekodi Mauzo</string>
+    <string name="dashboard_record_expense">Rekodi Gharama</string>
+    <string name="dashboard_view_stock">Angalia Hesabu</string>
+    <string name="dashboard_ask_advice">Uliza Ushauri</string>
+
+    <!-- Sales -->
+    <string name="sales_title">Mauzo</string>
+    <string name="sales_record_new">Rekodi Mauzo Mapya</string>
+    <string name="sales_product">Bidhaa</string>
+    <string name="sales_quantity">Kiasi</string>
+    <string name="sales_price">Bei</string>
+    <string name="sales_total">Jumla</string>
+    <string name="sales_customer">Mteja</string>
+    <string name="sales_payment_method">Njia ya Malipo</string>
+    <string name="sales_cash">Pesa Taslimu</string>
+    <string name="sales_mpesa">M-Pesa</string>
+    <string name="sales_credit">Deni</string>
+
+    <!-- Inventory -->
+    <string name="inventory_title">Hesabu ya Bidhaa</string>
+    <string name="inventory_add_product">Ongeza Bidhaa</string>
+    <string name="inventory_product_name">Jina la Bidhaa</string>
+    <string name="inventory_buying_price">Bei ya Kununua</string>
+    <string name="inventory_selling_price">Bei ya Kuuza</string>
+    <string name="inventory_quantity_in_stock">Kiasi Kilichopo</string>
+    <string name="inventory_low_stock">Bidhaa Zinazokaribia Kuisha</string>
+    <string name="inventory_out_of_stock">Bidhaa Zilizoisha</string>
+
+    <!-- Credit -->
+    <string name="credit_title">Alama ya Mkopo</string>
+    <string name="credit_score">Alama</string>
+    <string name="credit_tier">Kiwango</string>
+    <string name="credit_explanation">Maelezo</string>
+    <string name="credit_improve">Jinsi ya Kuboresha</string>
+    <string name="credit_history">Historia ya Mikopo</string>
+
+    <!-- Harvest -->
+    <string name="harvest_title">Mavuno</string>
+    <string name="harvest_record">Rekodi Mavuno</string>
+    <string name="harvest_crop">Zao</string>
+    <string name="harvest_quantity">Kiasi (kg)</string>
+    <string name="harvest_quality">Ubora</string>
+    <string name="harvest_location">Eneo</string>
+    <string name="harvest_price_tracker">Bei za Mazao</string>
+
+    <!-- Jobs -->
+    <string name="jobs_title">Kazi</string>
+    <string name="jobs_find">Tafuta Kazi</string>
+    <string name="jobs_post">Tangaza Kazi</string>
+    <string name="jobs_my_applications">Maombi Yangu</string>
+    <string name="jobs_matches">Zinazofanana</string>
+
+    <!-- Pricing -->
+    <string name="pricing_title">Bei</string>
+    <string name="pricing_advisor">Mshauri wa Bei</string>
+    <string name="pricing_market_rates">Viwango vya Soko</string>
+    <string name="pricing_my_prices">Bei Zangu</string>
+
+    <!-- Goals -->
+    <string name="goals_title">Malengo</string>
+    <string name="goals_add">Ongeza Lengo</string>
+    <string name="goals_progress">Maendeleo</string>
+    <string name="goals_target">Lengo</string>
+    <string name="goals_deadline">Mwisho</string>
+
+    <!-- Customers -->
+    <string name="customers_title">Wateja</string>
+    <string name="customers_add">Ongeza Mteja</string>
+    <string name="customers_history">Historia</string>
+    <string name="customers_debts">Deni</string>
+
+    <!-- Chama -->
+    <string name="chama_title">Chama</string>
+    <string name="chama_members">Wanachama</string>
+    <string name="chama_contributions">Michango</string>
+    <string name="chama_loans">Mikopo</string>
+
+    <!-- Reports -->
+    <string name="reports_title">Ripoti</string>
+    <string name="reports_daily">Ripoti ya Siku</string>
+    <string name="reports_weekly">Ripoti ya Wiki</string>
+    <string name="reports_monthly">Ripoti ya Mwezi</string>
+    <string name="reports_profit_loss">Faida na Hasara</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Mipangilio</string>
+    <string name="settings_language">Lugha</string>
+    <string name="settings_voice">Sauti</string>
+    <string name="settings_notifications">Arifa</string>
+    <string name="settings_backup">Hifadhi Nakala</string>
+    <string name="settings_about">Kuhusu</string>
+    <string name="settings_logout">Ondoka</string>
+
+    <!-- Voice Commands -->
+    <string name="voice_nimeuza">Nimeuza</string>
+    <string name="voice_nimenunua">Nimenunua</string>
+    <string name="voice_ripoti">Nipe ripoti</string>
+    <string name="voice_hesabu">Hesabu yangu</string>
+    <string name="voice_ushauri">Nipe ushauri</string>
+    <string name="voice_bei">Bei ya soko</string>
+
+    <!-- Common actions -->
+    <string name="back">Rudi</string>
+    <string name="done">Imekamilika</string>
+    <string name="loading">Inapakia…</string>
+    <string name="no_data">Hakuna data bado</string>
+    <string name="try_again">Jaribu tena</string>
+</resources>
