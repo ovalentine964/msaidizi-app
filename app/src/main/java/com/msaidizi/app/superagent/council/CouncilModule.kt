@@ -1,41 +1,16 @@
 package com.msaidizi.app.superagent.council
 
 import dagger.Module
-import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import javax.inject.Singleton
 
+/**
+ * Council DI module.
+ *
+ * CouncilEventBus, CouncilManager, AgentSpawner, and ContextScope all use
+ * @Inject constructor + @Singleton, so Hilt creates them automatically.
+ * No explicit @Provides needed — removing them avoids duplicate binding errors.
+ */
 @Module
 @InstallIn(SingletonComponent::class)
-object CouncilModule {
-
-    @Provides
-    @Singleton
-    fun provideCouncilEventBus(): CouncilEventBus {
-        return CouncilEventBus()
-    }
-
-    @Provides
-    @Singleton
-    fun provideCouncilManager(
-        eventBus: CouncilEventBus
-    ): CouncilManager {
-        return CouncilManager(eventBus)
-    }
-
-    @Provides
-    @Singleton
-    fun provideAgentSpawner(
-        councilManager: CouncilManager,
-        eventBus: CouncilEventBus
-    ): AgentSpawner {
-        return AgentSpawner(councilManager, eventBus)
-    }
-
-    @Provides
-    @Singleton
-    fun provideContextScope(): ContextScope {
-        return ContextScope()
-    }
-}
+object CouncilModule

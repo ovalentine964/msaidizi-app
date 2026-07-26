@@ -6,9 +6,14 @@
     native <methods>;
 }
 
-# Keep llama.cpp JNI bridge classes
+# Keep JNI bridge classes
 -keep class com.msaidizi.app.superagent.tools.** { *; }
 -keep class com.msaidizi.app.superagent.harness.** { *; }
+
+# Keep native JNI voice engine classes (llama_jni, sherpa_jni, vad_jni)
+-keep class com.msaidizi.app.voice.LlamaCppEngine { *; }
+-keep class com.msaidizi.app.voice.SherpaOnnxEngine { *; }
+-keep class com.msaidizi.app.voice.VadEngine { *; }
 
 # ── Room ─────────────────────────────────────────────────────
 -keep class * extends androidx.room.RoomDatabase

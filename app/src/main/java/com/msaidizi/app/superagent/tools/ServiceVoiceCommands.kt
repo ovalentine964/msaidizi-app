@@ -1,11 +1,13 @@
 package com.msaidizi.app.superagent.tools
 
 import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * Service Voice Commands — Swahili patterns for service transactions
  * "Nimefanya repair ya simu, mia tano" → service transaction
  */
+@Singleton
 class ServiceVoiceCommands @Inject constructor() : Tool {
 
     override val name = "service_voice_commands"

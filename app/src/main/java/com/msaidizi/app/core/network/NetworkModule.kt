@@ -1,6 +1,6 @@
 package com.msaidizi.app.core.network
 
-import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
+import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.msaidizi.app.BuildConfig
 import com.msaidizi.app.core.security.CertificatePinnerFactory
 import dagger.Module

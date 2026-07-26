@@ -17,7 +17,6 @@ coroutines = "1.9.0"
 retrofit = "2.11.0"
 okhttp = "4.12.0"
 serialization = "1.7.3"
-sqldelight = "2.0.2"
 sqlcipher = "4.5.4"
 datastore = "1.1.1"
 securityCrypto = "1.1.0-alpha06"
@@ -28,6 +27,8 @@ junitExt = "1.2.1"
 espresso = "3.6.1"
 timber = "5.0.1"
 gson = "2.11.0"
+cameraX = "1.4.1"
+mlkitTextRecognition = "16.0.1"
 mockk = "1.13.13"
 turbine = "1.2.0"
 
@@ -98,6 +99,14 @@ timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "tim
 # Gson (for llama.cpp JNI interop)
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 
+# CameraX
+camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "cameraX" }
+camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "cameraX" }
+camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "cameraX" }
+
+# ML Kit
+mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version.ref = "mlkitTextRecognition" }
+
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitExt" }
@@ -112,5 +121,6 @@ turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

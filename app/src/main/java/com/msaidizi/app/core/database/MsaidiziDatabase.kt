@@ -3,6 +3,7 @@ package com.msaidizi.app.core.database
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.msaidizi.app.model.*
+import com.msaidizi.app.superagent.graph.*
 import com.msaidizi.app.superagent.tools.*
 
 @Database(
@@ -37,9 +38,17 @@ import com.msaidizi.app.superagent.tools.*
         RideOfferEntity::class,
         RideRequestEntity::class,
         RideTripEntity::class,
-        RideRatingEntity::class
+        RideRatingEntity::class,
+        ServiceTransactionEntity::class,
+        ServiceMenuEntity::class,
+        BulkOrderEntity::class,
+        BulkCommitmentEntity::class,
+        BulkEscrowEntity::class,
+        KgNodeEntity::class,
+        KgEdgeEntity::class,
+        KgFactEntity::class
     ],
-    version = 8,
+    version = 11,
     exportSchema = true
 )
 abstract class MsaidiziDatabase : RoomDatabase() {
@@ -75,4 +84,12 @@ abstract class MsaidiziDatabase : RoomDatabase() {
     abstract fun rideRequestDao(): RideRequestDao
     abstract fun rideTripDao(): RideTripDao
     abstract fun rideRatingDao(): RideRatingDao
+    abstract fun serviceTransactionDao(): ServiceTransactionDao
+    abstract fun serviceMenuDao(): ServiceMenuDao
+    abstract fun bulkOrderDao(): BulkOrderDao
+    abstract fun bulkCommitmentDao(): BulkCommitmentDao
+    abstract fun bulkEscrowDao(): BulkEscrowDao
+    abstract fun kgNodeDao(): KgNodeDao
+    abstract fun kgEdgeDao(): KgEdgeDao
+    abstract fun kgFactDao(): KgFactDao
 }

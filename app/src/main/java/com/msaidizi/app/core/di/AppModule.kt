@@ -6,6 +6,7 @@ import com.msaidizi.app.core.database.*
 import com.msaidizi.app.core.security.BiometricAuthManager
 import com.msaidizi.app.core.security.EncryptionManager
 import com.msaidizi.app.core.security.PinHasher
+import com.google.gson.Gson
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -17,6 +18,10 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
+
+    @Provides
+    @Singleton
+    fun provideGson(): Gson = Gson()
 
     @Provides
     @Singleton
@@ -56,6 +61,9 @@ object AppModule {
     @Provides fun provideChamaMemberDao(db: MsaidiziDatabase): ChamaMemberDao = db.chamaMemberDao()
     @Provides fun provideChamaContributionDao(db: MsaidiziDatabase): ChamaContributionDao = db.chamaContributionDao()
     @Provides fun provideChamaPayoutDao(db: MsaidiziDatabase): ChamaPayoutDao = db.chamaPayoutDao()
+    @Provides fun provideRestockThresholdDao(db: MsaidiziDatabase): RestockThresholdDao = db.restockThresholdDao()
+    @Provides fun provideCustomerProfileDao(db: MsaidiziDatabase): CustomerProfileDao = db.customerProfileDao()
+    @Provides fun provideCustomerVisitDao(db: MsaidiziDatabase): CustomerVisitDao = db.customerVisitDao()
     @Provides fun provideMarketPoolDao(db: MsaidiziDatabase): MarketPoolDao = db.marketPoolDao()
     @Provides fun provideMarketPoolMemberDao(db: MsaidiziDatabase): MarketPoolMemberDao = db.marketPoolMemberDao()
     @Provides fun provideMarketPoolTripDao(db: MsaidiziDatabase): MarketPoolTripDao = db.marketPoolTripDao()
@@ -66,6 +74,12 @@ object AppModule {
     @Provides fun provideRideRequestDao(db: MsaidiziDatabase): RideRequestDao = db.rideRequestDao()
     @Provides fun provideRideTripDao(db: MsaidiziDatabase): RideTripDao = db.rideTripDao()
     @Provides fun provideRideRatingDao(db: MsaidiziDatabase): RideRatingDao = db.rideRatingDao()
+    @Provides fun provideServiceTransactionDao(db: MsaidiziDatabase): ServiceTransactionDao = db.serviceTransactionDao()
+    @Provides fun provideServiceMenuDao(db: MsaidiziDatabase): ServiceMenuDao = db.serviceMenuDao()
+    @Provides fun provideBulkOrderDao(db: MsaidiziDatabase): BulkOrderDao = db.bulkOrderDao()
+    @Provides fun provideBulkCommitmentDao(db: MsaidiziDatabase): BulkCommitmentDao = db.bulkCommitmentDao()
+    @Provides fun provideBulkEscrowDao(db: MsaidiziDatabase): BulkEscrowDao = db.bulkEscrowDao()
+    // KgNodeDao, KgEdgeDao, KgFactDao are provided by GraphModule (superagent/graph/GraphModule.kt)
 
     @Provides
     @Singleton
@@ -114,7 +128,20 @@ object AppModule {
         proofOfIncome: com.msaidizi.app.superagent.tools.ProofOfIncome,
         quickSale: com.msaidizi.app.superagent.tools.QuickSale,
         supplierMatcher: com.msaidizi.app.superagent.tools.SupplierMatcher,
-        wasteReducer: com.msaidizi.app.superagent.tools.WasteReducer
+        wasteReducer: com.msaidizi.app.superagent.tools.WasteReducer,
+        bookingScheduler: com.msaidizi.app.superagent.tools.BookingScheduler,
+        customerMatcher: com.msaidizi.app.superagent.tools.CustomerMatcher,
+        fishingLog: com.msaidizi.app.superagent.tools.FishingLog,
+        harvestTracker: com.msaidizi.app.superagent.tools.HarvestTracker,
+        jobMatcher: com.msaidizi.app.superagent.tools.JobMatcher,
+        miningLog: com.msaidizi.app.superagent.tools.MiningLog,
+        postHarvestLossTracker: com.msaidizi.app.superagent.tools.PostHarvestLossTracker,
+        producePriceTracker: com.msaidizi.app.superagent.tools.ProducePriceTracker,
+        ratingSystem: com.msaidizi.app.superagent.tools.RatingSystem,
+        serviceMarketBroadcaster: com.msaidizi.app.superagent.tools.ServiceMarketBroadcaster,
+        servicePriceAdvisor: com.msaidizi.app.superagent.tools.ServicePriceAdvisor,
+        wageCalculator: com.msaidizi.app.superagent.tools.WageCalculator,
+        yieldPredictor: com.msaidizi.app.superagent.tools.YieldPredictor
     ): com.msaidizi.app.superagent.tools.ToolRegistry {
         val registry = com.msaidizi.app.superagent.tools.ToolRegistry()
         registry.register(transactionRecorder)
@@ -162,6 +189,19 @@ object AppModule {
         registry.register(quickSale)
         registry.register(supplierMatcher)
         registry.register(wasteReducer)
+        registry.register(bookingScheduler)
+        registry.register(customerMatcher)
+        registry.register(fishingLog)
+        registry.register(harvestTracker)
+        registry.register(jobMatcher)
+        registry.register(miningLog)
+        registry.register(postHarvestLossTracker)
+        registry.register(producePriceTracker)
+        registry.register(ratingSystem)
+        registry.register(serviceMarketBroadcaster)
+        registry.register(servicePriceAdvisor)
+        registry.register(wageCalculator)
+        registry.register(yieldPredictor)
         return registry
     }
 }

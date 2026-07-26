@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.ksp)
 }
@@ -216,12 +217,12 @@ dependencies {
     ksp(libs.hilt.work.compiler)
 
     // CameraX
-    implementation("androidx.camera:camera-camera2:1.4.1")
-    implementation("androidx.camera:camera-lifecycle:1.4.1")
-    implementation("androidx.camera:camera-view:1.4.1")
+    implementation(libs.camera.camera2)
+    implementation(libs.camera.lifecycle)
+    implementation(libs.camera.view)
 
     // ML Kit Text Recognition (receipt OCR)
-    implementation("com.google.mlkit:text-recognition:16.0.1")
+    implementation(libs.mlkit.text.recognition)
 
     // Testing
     testImplementation(libs.junit)
