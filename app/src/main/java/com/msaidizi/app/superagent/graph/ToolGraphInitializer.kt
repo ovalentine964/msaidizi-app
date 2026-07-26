@@ -24,7 +24,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class ToolGraphInitializer @Inject constructor(
-    private val toolGraph: ToolGraph
+    private val toolGraph: ToolGraph,
+    private val toolRegistry: ToolRegistry
 ) {
     /**
      * Wire the complete Msaidizi tool graph.
@@ -134,33 +135,41 @@ class ToolGraphInitializer @Inject constructor(
         // ═══════════════════════════════════════════════════════════
 
         // All write operations to inventory must serialize
-        toolGraph.registerNode(
-            object : Tool {
-                override val name = "inventory_tracker"
-                override val description = "Track inventory levels"
-                override val argsSchema = argSchema {}
-                override suspend fun execute(params: Map<String, String>) = TODO()
-            },
-            ToolNodeMeta(concurrencyGroup = "inventory_writes", writesData = true)
-        )
+        // inventory_tracker is already registered by InventoryTracker — just set metadata
+        toolGraph.setNodeMeta("inventory_tracker", ToolNodeMeta(
+            concurrencyGroup = "inventory_writes",
+            writesData = true
+        ))
 
         // All write operations to sales must serialize
+        // record_sale delegates to record_transaction (which handles all transaction types)
         toolGraph.registerNode(
             object : Tool {
                 override val name = "record_sale"
                 override val description = "Record a sale"
                 override val argsSchema = argSchema {}
-                override suspend fun execute(params: Map<String, String>) = TODO()
+                override suspend fun execute(params: Map<String, String>): ToolResult {
+                    val saleParams = params.toMutableMap()
+                    saleParams["type"] = "sale"
+                    return toolRegistry.execute("record_transaction", saleParams)
+                        ?: ToolResult.error(name, "record_transaction tool not found", "TOOL_NOT_FOUND")
+                }
             },
             ToolNodeMeta(concurrencyGroup = "transaction_writes", writesData = true, required = true)
         )
 
+        // record_expense delegates to record_transaction
         toolGraph.registerNode(
             object : Tool {
                 override val name = "record_expense"
                 override val description = "Record an expense"
                 override val argsSchema = argSchema {}
-                override suspend fun execute(params: Map<String, String>) = TODO()
+                override suspend fun execute(params: Map<String, String>): ToolResult {
+                    val expenseParams = params.toMutableMap()
+                    expenseParams["type"] = "expense"
+                    return toolRegistry.execute("record_transaction", expenseParams)
+                        ?: ToolResult.error(name, "record_transaction tool not found", "TOOL_NOT_FOUND")
+                }
             },
             ToolNodeMeta(concurrencyGroup = "transaction_writes", writesData = true)
         )

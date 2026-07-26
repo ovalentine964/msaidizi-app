@@ -47,7 +47,7 @@ class GraphAwareContextAssembler @Inject constructor(
 ) {
     // ── Layer 1 Cache (same as ContextAssembler) ───────────────────
     private var cachedIdentity: SystemIdentity? = null
-    private var identityCacheTimestamp: 0L = 0
+    private var identityCacheTimestamp: Long = 0
     private val IDENTITY_CACHE_TTL_MS = 5 * 60 * 1000L
 
     // ── Layer 2: OODA State ────────────────────────────────────────
@@ -57,7 +57,7 @@ class GraphAwareContextAssembler @Inject constructor(
 
     // ── Session Summaries Cache ────────────────────────────────────
     private var cachedSessionSummaries: List<String>? = null
-    private var sessionSummariesTimestamp: 0L = 0
+    private var sessionSummariesTimestamp: Long = 0
     private val SESSION_SUMMARIES_TTL_MS = 2 * 60 * 1000L
 
     // ═══════════════════════════════════════════════════════════════

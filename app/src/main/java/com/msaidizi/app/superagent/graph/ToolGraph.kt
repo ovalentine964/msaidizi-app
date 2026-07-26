@@ -46,13 +46,30 @@ class ToolGraph @Inject constructor(
     /**
      * Register a tool as a node in the graph.
      * Backward-compatible with flat ToolRegistry.
+     *
+     * If the tool is already registered, only metadata is updated (no overwrite).
      */
     fun registerNode(tool: Tool, meta: ToolNodeMeta = ToolNodeMeta()) {
-        toolRegistry.register(tool)
+        if (!toolRegistry.hasTool(tool.name)) {
+            toolRegistry.register(tool)
+        } else {
+            Timber.d("ToolGraph: tool '${tool.name}' already registered, skipping re-register")
+        }
         edges.computeIfAbsent(tool.name) { mutableListOf() }
         reverseEdges.computeIfAbsent(tool.name) { mutableListOf() }
         toolMeta[tool.name] = meta
         Timber.d("ToolGraph: node registered '${tool.name}' (group=${meta.concurrencyGroup})")
+    }
+
+    /**
+     * Set metadata for an already-registered tool node without overwriting the tool.
+     * Use when the tool is registered elsewhere and you only need to set concurrency/group hints.
+     */
+    fun setNodeMeta(toolName: String, meta: ToolNodeMeta) {
+        edges.computeIfAbsent(toolName) { mutableListOf() }
+        reverseEdges.computeIfAbsent(toolName) { mutableListOf() }
+        toolMeta[toolName] = meta
+        Timber.d("ToolGraph: metadata set for '$toolName' (group=${meta.concurrencyGroup})")
     }
 
     /**

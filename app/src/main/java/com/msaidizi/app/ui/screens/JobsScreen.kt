@@ -16,6 +16,19 @@ import com.msaidizi.app.ui.components.*
 import com.msaidizi.app.ui.designsystem.*
 
 // ──────────────────────────────────────────────
+// Job Listing Data
+// ──────────────────────────────────────────────
+
+data class JobListing(
+    val titleSw: String,
+    val titleEn: String,
+    val location: String,
+    val pay: String,
+    val type: String,
+    val postedAgo: String
+)
+
+// ──────────────────────────────────────────────
 // Jobs Screen
 // Job matching, marketplace (for fundis, househelps,
 // construction workers, etc.)
@@ -31,15 +44,6 @@ fun JobsScreen(
     val tabs = listOf("Kazi" to "Jobs", "Zangu" to "My Jobs", "Portfolio" to "Portfolio")
 
     // Sample job data
-    data class JobListing(
-        val titleSw: String,
-        val titleEn: String,
-        val location: String,
-        val pay: String,
-        val type: String,
-        val postedAgo: String
-    )
-
     val jobs = listOf(
         JobListing("Kujenga Ukuta", "Build a Wall", "Westlands, Nairobi", "KES 5,000/day", "Mjengo", "Saa 2 zilizopita"),
         JobListing("Kupaka Rangi", "Paint House", "Kasarani, Nairobi", "KES 8,000 total", "Mjengo", "Saa 5 zilizopita"),
@@ -158,14 +162,9 @@ fun JobsScreen(
 }
 
 @Composable
-private fun JobCard(job: Any) {
+private fun JobCard(job: JobListing) {
     val colors = MsaidiziThemeTokens.colors
-    // Using reflection-free approach with data class
-    val title = when (job) {
-        is String -> job
-        else -> job.toString()
-    }
-    // Simplified — in production, use the actual JobListing type
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MsaidiziShapes().medium,
@@ -179,8 +178,10 @@ private fun JobCard(job: Any) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Kazi Mpya", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                    Text("New Job Available", style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+                    Text(job.titleSw, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                    Text(job.titleEn, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+                    Text("${job.location} · ${job.pay}", style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
+                    Text(job.postedAgo, style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant.copy(alpha = 0.7f))
                 }
                 FilledTonalButton(onClick = { /* Apply */ }) {
                     Text("Omba", fontWeight = FontWeight.SemiBold)

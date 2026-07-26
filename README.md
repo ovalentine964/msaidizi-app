@@ -1,11 +1,16 @@
-# 🏦 Msaidizi — AI-Powered CFO for 600 Million Informal Workers
+<p align="center">
+  <img src=".github/banner.svg" alt="Msaidizi — AI-Powered CFO for 600 Million Informal Workers" width="100%">
+</p>
 
-[![Android](https://img.shields.io/badge/Platform-Android-green)]()
-[![Kotlin](https://img.shields.io/badge/Language-Kotlin-purple)]()
-[![License](https://img.shields.io/badge/License-Proprietary-red)]()
-[![Tools](https://img.shields.io/badge/Tools-52%2B-blue)]()
-[![CI](https://github.com/ovalentine964/msaidizi-app/actions/workflows/ci.yml/badge.svg)]()
-[![Build](https://github.com/ovalentine964/msaidizi-app/actions/workflows/build-apk.yml/badge.svg)]()
+<p align="center">
+  <img src="https://img.shields.io/badge/Android-3DDC84?style=flat-square&logo=android&logoColor=white" alt="Android">
+  <img src="https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin">
+  <img src="https://img.shields.io/badge/Offline--First-FF6B35?style=flat-square" alt="Offline-First">
+  <img src="https://img.shields.io/badge/Voice--First-E8A838?style=flat-square" alt="Voice-First">
+  <img src="https://img.shields.io/badge/Tools-52+-1B4965?style=flat-square" alt="52+ Tools">
+  <img src="https://img.shields.io/badge/CI-Passing-3DDC84?style=flat-square" alt="CI">
+  <img src="https://img.shields.io/badge/License-SSPL--1.0-blue?style=flat-square" alt="License">
+</p>
 
 > **Every mama mboga deserves a CFO.** Msaidizi is a free, voice-first, offline-first AI CFO that runs on your phone. Speak in your language — track your business, understand your profit, build your credit.
 

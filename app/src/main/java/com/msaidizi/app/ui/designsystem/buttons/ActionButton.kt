@@ -1,5 +1,6 @@
 package com.msaidizi.app.ui.designsystem.buttons
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -154,8 +155,9 @@ fun OutlinedActionButton(
         enabled = enabled,
         shape = MsaidiziShapes().large,
         colors = ButtonDefaults.outlinedButtonColors(contentColor = contentColor),
-        border = ButtonDefaults.outlinedButtonBorder(enabled).copy(
-            brush = androidx.compose.ui.graphics.SolidColor(borderColor)
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (enabled) borderColor else borderColor.copy(alpha = 0.3f)
         )
     ) {
         Icon(

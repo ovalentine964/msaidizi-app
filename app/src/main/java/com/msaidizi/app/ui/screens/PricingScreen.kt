@@ -16,6 +16,18 @@ import com.msaidizi.app.ui.components.*
 import com.msaidizi.app.ui.designsystem.*
 
 // ──────────────────────────────────────────────
+// Price Comparison Data
+// ──────────────────────────────────────────────
+
+data class PriceComparison(
+    val product: String,
+    val myPrice: Double,
+    val marketAvg: Double,
+    val lowestPrice: Double,
+    val highestPrice: Double
+)
+
+// ──────────────────────────────────────────────
 // Pricing Screen
 // Service/product pricing advisor with market comparison
 // ──────────────────────────────────────────────
@@ -28,15 +40,6 @@ fun PricingScreen(
     val colors = MsaidiziThemeTokens.colors
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Bei Zangu" to "My Prices", "Soko" to "Market", "Ushauri" to "Advice")
-
-    // Sample pricing data
-    data class PriceComparison(
-        val product: String,
-        val myPrice: Double,
-        val marketAvg: Double,
-        val lowestPrice: Double,
-        val highestPrice: Double
-    )
 
     val prices = listOf(
         PriceComparison("Nyanya (kg)", 80.0, 85.0, 60.0, 120.0),
@@ -137,9 +140,17 @@ fun PricingScreen(
 }
 
 @Composable
-private fun PriceComparisonCard(price: Any) {
+private fun PriceComparisonCard(price: PriceComparison) {
     val colors = MsaidiziThemeTokens.colors
-    // Simplified — in production use the actual data class
+
+    val diff = price.myPrice - price.marketAvg
+    val diffPct = if (price.marketAvg > 0) (diff / price.marketAvg * 100) else 0.0
+    val advice = when {
+        diffPct > 5 -> "Panda ↑" to colors.success
+        diffPct < -5 -> "Shusha ↓" to colors.error
+        else -> "Sawa →" to colors.info
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MsaidiziShapes().medium,
@@ -147,7 +158,7 @@ private fun PriceComparisonCard(price: Any) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Bidhaa", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text(price.product, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -155,15 +166,15 @@ private fun PriceComparisonCard(price: Any) {
             ) {
                 Column {
                     Text("Bei Yako", style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
-                    Text("KES 80", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = colors.primary)
+                    Text("KES ${"%,.0f".format(price.myPrice)}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = colors.primary)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("Wastani wa Soko", style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
-                    Text("KES 85", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = colors.info)
+                    Text("KES ${"%,.0f".format(price.marketAvg)}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = colors.info)
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text("Ushauri", style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
-                    Text("Panda ↑", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = colors.success)
+                    Text(advice.first, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = advice.second)
                 }
             }
         }
