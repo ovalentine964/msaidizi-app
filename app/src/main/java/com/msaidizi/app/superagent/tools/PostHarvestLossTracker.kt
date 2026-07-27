@@ -1,6 +1,7 @@
 package com.msaidizi.app.superagent.tools
 
 import android.content.ContentValues
+import dagger.hilt.android.qualifiers.ApplicationContext
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
@@ -24,7 +25,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class PostHarvestLossTracker @Inject constructor(
-    private val context: Context
+    @ApplicationContext private val context: Context
 ) : Tool {
 
     override val name = "post_harvest_loss_tracker"

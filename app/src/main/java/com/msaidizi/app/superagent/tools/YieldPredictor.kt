@@ -1,6 +1,7 @@
 package com.msaidizi.app.superagent.tools
 
 import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import timber.log.Timber
@@ -27,7 +28,7 @@ import kotlin.math.sqrt
  */
 @Singleton
 class YieldPredictor @Inject constructor(
-    private val context: Context,
+    @ApplicationContext private val context: Context,
     private val harvestTracker: HarvestTracker,
     private val producePriceTracker: ProducePriceTracker
 ) : Tool {

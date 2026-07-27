@@ -1,6 +1,7 @@
 package com.msaidizi.app.superagent.tools
 
 import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
@@ -36,7 +37,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class RatingSystem @Inject constructor(
-    private val context: Context,
+    @ApplicationContext private val context: Context,
     private val gamificationEngine: GamificationEngine,
     private val gson: Gson
 ) : Tool {
