@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GRADLE_OPTS: "-Dorg.gradle.daemon=false --build-cache"
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.caching=true"
   JAVA_VERSION: "17"
   MODEL_CACHE_VERSION: "v1"
 
