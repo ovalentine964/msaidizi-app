@@ -8,7 +8,7 @@ import javax.inject.Singleton
 data class ToolValidationResult(val valid: Boolean, val reason: String, val severity: String)
 
 /**
- * GuardrailsEngine (Tool) — 3-Gate Guardrail Interface.
+ * GuardrailsTool — 3-Gate Guardrail Interface (Tool wrapper).
  *
  * Exposes the 3-gate guardrail architecture as a tool callable by the agent:
  * - input_gate:  Sanitization, PII detection, rate limiting
@@ -21,7 +21,7 @@ data class ToolValidationResult(val valid: Boolean, val reason: String, val seve
  * this is the tool-interface version for direct tool access.
  */
 @Singleton
-class GuardrailsEngine @Inject constructor(
+class GuardrailsTool @Inject constructor(
     private val encryptionManager: EncryptionManager
 ) : Tool {
 

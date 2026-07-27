@@ -99,7 +99,7 @@ object AppModule {
         modelDownloader: com.msaidizi.app.superagent.tools.ModelDownloader,
         adaptiveLearner: com.msaidizi.app.superagent.tools.AdaptiveLearner,
         memoryManager: com.msaidizi.app.superagent.memory.MemoryManager,
-        guardrailsEngine: com.msaidizi.app.superagent.tools.GuardrailsEngine,
+        guardrailsTool: com.msaidizi.app.superagent.tools.GuardrailsTool,
         anomalyDetector: com.msaidizi.app.superagent.tools.AnomalyDetector,
         mpesaParser: com.msaidizi.app.superagent.tools.MpesaParser,
         pricingAdvisor: com.msaidizi.app.superagent.tools.PricingAdvisor,
@@ -159,7 +159,7 @@ object AppModule {
         registry.register(modelDownloader)
         registry.register(adaptiveLearner)
         registry.register(memoryManager)
-        registry.register(guardrailsEngine)
+        registry.register(guardrailsTool)
         registry.register(anomalyDetector)
         registry.register(mpesaParser)
         registry.register(pricingAdvisor)

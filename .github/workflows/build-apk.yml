@@ -91,6 +91,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # ── Native deps cache ──────────────────────────────────
+      - name: Cache native deps
+        uses: actions/cache@v4
+        with:
+          path: app/src/main/cpp/third_party
+          key: native-deps-v1-${{ hashFiles('scripts/setup_native_deps.sh') }}
+          restore-keys: |
+            native-deps-v1-
+
+      - name: Clone native dependencies (llama.cpp, sherpa-onnx)
+        run: |
+          chmod +x scripts/setup_native_deps.sh
+          ./scripts/setup_native_deps.sh --shallow
+
       # ── Restore model cache ────────────────────────────────
       - name: Restore model cache
         uses: actions/cache@v4

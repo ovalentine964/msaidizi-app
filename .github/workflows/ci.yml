@@ -222,6 +222,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Cache native deps
+        uses: actions/cache@v4
+        with:
+          path: app/src/main/cpp/third_party
+          key: native-deps-v1-${{ hashFiles('scripts/setup_native_deps.sh') }}
+          restore-keys: |
+            native-deps-v1-
+
+      - name: Clone native dependencies (llama.cpp, sherpa-onnx)
+        run: |
+          chmod +x scripts/setup_native_deps.sh
+          ./scripts/setup_native_deps.sh --shallow
+
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
@@ -255,6 +268,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Cache native deps
+        uses: actions/cache@v4
+        with:
+          path: app/src/main/cpp/third_party
+          key: native-deps-v1-${{ hashFiles('scripts/setup_native_deps.sh') }}
+          restore-keys: |
+            native-deps-v1-
+
+      - name: Clone native dependencies (llama.cpp, sherpa-onnx)
+        run: |
+          chmod +x scripts/setup_native_deps.sh
+          ./scripts/setup_native_deps.sh --shallow
 
       - name: Set up JDK
         uses: actions/setup-java@v4
