@@ -231,4 +231,13 @@ class LlmEngine @Inject constructor(
             appendLine("You are Msaidizi, an AI business assistant for Kenyan MSMEs.")
             appendLine("Respond in the user's language (Swahili or English).")
             appendLine("Be concise, actionable, and friendly.")
-            appendLine("
+            appendLine("Always cite sources for financial claims.")
+            appendLine("Use tools when needed. Think step by step.")
+            appendLine("</system>")
+            appendLine("<message role=\"user\">")
+            appendLine(userMessage)
+            appendLine("</message>")
+            appendLine("<|im_start|>assistant")
+        }
+    }
+}
