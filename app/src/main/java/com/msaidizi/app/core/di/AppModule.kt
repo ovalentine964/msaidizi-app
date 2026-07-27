@@ -3,6 +3,7 @@ package com.msaidizi.app.core.di
 import android.content.Context
 import androidx.room.Room
 import com.msaidizi.app.core.database.*
+import com.msaidizi.app.superagent.tools.*
 import com.msaidizi.app.core.security.BiometricAuthManager
 import com.msaidizi.app.core.security.EncryptionManager
 import com.msaidizi.app.core.security.PinHasher
