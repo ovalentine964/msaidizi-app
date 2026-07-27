@@ -138,13 +138,13 @@ jobs:
       - name: Build ${{ matrix.build_type }} APK
         run: |
           if [ "${{ matrix.build_type }}" = "release" ]; then
-            ./gradlew assembleRelease \
+            ./gradlew assembleRelease --no-configuration-cache \
               -Pandroid.injected.signing.store.file=/tmp/release-keystore.jks \
               -Pandroid.injected.signing.store.password="${{ secrets.APK_KEYSTORE_PASSWORD }}" \
               -Pandroid.injected.signing.key.alias="${{ secrets.APK_KEY_ALIAS }}" \
               -Pandroid.injected.signing.key.password="${{ secrets.APK_KEY_PASSWORD }}"
           else
-            ./gradlew assembleDebug
+            ./gradlew assembleDebug --no-configuration-cache
           fi
 
       - name: Rename APK

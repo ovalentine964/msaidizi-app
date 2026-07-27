@@ -47,7 +47,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Android Lint
-        run: ./gradlew lint --continue
+        run: ./gradlew lint --no-configuration-cache --continue
 
       - name: Upload lint report
         if: always()
@@ -97,7 +97,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Run unit tests
-        run: ./gradlew testDebugUnitTest --continue
+        run: ./gradlew testDebugUnitTest --no-configuration-cache --continue
 
       - name: Upload test results
         if: always()
@@ -245,7 +245,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Compile debug build
-        run: ./gradlew compileDebugKotlin
+        run: ./gradlew compileDebugKotlin --no-configuration-cache
 
       - name: Verify ProGuard rules
         run: |
