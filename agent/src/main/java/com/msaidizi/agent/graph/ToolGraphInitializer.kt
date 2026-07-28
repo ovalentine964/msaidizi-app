@@ -174,6 +174,51 @@ class ToolGraphInitializer @Inject constructor(
             ToolNodeMeta(concurrencyGroup = "transaction_writes", writesData = true)
         )
 
+        // ═══════════════════════════════════════════════════════════
+        //  FARMER CLUSTER (Fix 1-5: Seasonal budgeting, harvest timing,
+        //  storage decisions, weather caching, post-harvest losses)
+        // ═══════════════════════════════════════════════════════════
+
+        // SeasonalBudgetPlanner depends on harvest_tracker (for income data)
+        safeAddEdge("seasonal_budget_planner", "harvest_tracker", EdgeType.DEPENDENCY)
+
+        // HarvestTimingOptimizer depends on produce_price_tracker (for price data)
+        safeAddEdge("harvest_timing_optimizer", "produce_price_tracker", EdgeType.DEPENDENCY)
+
+        // HarvestTimingOptimizer depends on seasonal_budget_planner (for cash needs)
+        safeAddEdge("harvest_timing_optimizer", "seasonal_budget_planner", EdgeType.FEEDS_INTO)
+
+        // StorageDecisionCalculator depends on harvest_timing_optimizer (for price forecasts)
+        safeAddEdge("storage_decision_calculator", "harvest_timing_optimizer", EdgeType.DEPENDENCY)
+
+        // StorageDecisionCalculator feeds into harvest_timing_optimizer
+        safeAddEdge("storage_decision_calculator", "harvest_timing_optimizer", EdgeType.FEEDS_INTO)
+
+        // WeatherCacheManager triggers harvest_timing_optimizer (rain → harvest now)
+        safeAddEdge("weather_cache_manager", "harvest_timing_optimizer", EdgeType.TRIGGER)
+
+        // WeatherCacheManager triggers seasonal_budget_planner (weather → adjust plan)
+        safeAddEdge("weather_cache_manager", "seasonal_budget_planner", EdgeType.TRIGGER)
+
+        // PostHarvestLossTracker depends on harvest_tracker (harvest vs sold)
+        safeAddEdge("post_harvest_loss_tracker", "harvest_tracker", EdgeType.DEPENDENCY)
+
+        // PostHarvestLossTracker feeds into storage_decision_calculator (loss data → better ROI calc)
+        safeAddEdge("post_harvest_loss_tracker", "storage_decision_calculator", EdgeType.FEEDS_INTO)
+
+        // harvest_tracker feeds into seasonal_budget_planner (harvest income)
+        safeAddEdge("harvest_tracker", "seasonal_budget_planner", EdgeType.FEEDS_INTO)
+
+        // Concurrency: farmer write operations
+        toolGraph.setNodeMeta("seasonal_budget_planner", ToolNodeMeta(
+            concurrencyGroup = "farmer_writes",
+            writesData = true
+        ))
+        toolGraph.setNodeMeta("harvest_timing_optimizer", ToolNodeMeta(
+            concurrencyGroup = "farmer_writes",
+            writesData = true
+        ))
+
         val stats = toolGraph.getStats()
         Timber.d("ToolGraphInitializer: graph wired — %d nodes, %d edges, %d concurrency groups",
             stats.nodeCount, stats.edgeCount, stats.concurrencyGroups)
