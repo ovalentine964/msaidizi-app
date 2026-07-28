@@ -28,7 +28,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class GuardrailsEngine @Inject constructor(
-    private val knowledgeDao: KnowledgeDao
+    private val knowledgeDao: KnowledgeDao,
+    private val sensitiveActionGuard: SensitiveActionGuard
 ) {
     // ─── Pillar 1: Financial Integrity — Source Registry ───
     private val financialSourceRegistry = mutableMapOf<String, FinancialSource>()
@@ -337,7 +338,7 @@ class GuardrailsEngine @Inject constructor(
 
     /**
      * Check intent + context before processing.
-     * Enhanced with Pillar 1 financial integrity checks.
+     * Enhanced with Pillar 1 financial integrity checks + SensitiveActionGuard.
      */
     suspend fun check(intent: UserIntent, context: AssembledContext): GuardrailResult {
         // Block dangerous intents
@@ -368,6 +369,78 @@ class GuardrailsEngine @Inject constructor(
                     blocked = true,
                     message = "That amount seems very large (Ksh ${"%,.0f".format(amount)}). Please confirm."
                 )
+            }
+
+            // ── SensitiveActionGuard: Large transaction confirmation ──
+            val sensitiveActionType = when (intent.type) {
+                IntentType.RECORD_SALE -> SensitiveActionType.TRANSACTION
+                IntentType.RECORD_EXPENSE -> SensitiveActionType.LARGE_EXPENSE
+                IntentType.RECORD_PURCHASE -> SensitiveActionType.LARGE_EXPENSE
+                else -> SensitiveActionType.TRANSACTION
+            }
+            val confirmation = sensitiveActionGuard.requiresConfirmation(
+                actionType = sensitiveActionType,
+                amount = amount,
+                description = "${intent.type.name}: KES ${"%,.0f".format(amount)}",
+                metadata = mapOf(
+                    "intent_type" to intent.type.name,
+                    "source_id" to (sourceId ?: "none")
+                )
+            )
+            if (confirmation != null) {
+                return GuardrailResult(
+                    blocked = false,
+                    requiresConfirmation = true,
+                    confirmationId = confirmation.confirmationId,
+                    message = confirmation.prompt
+                )
+            }
+        }
+
+        // ── SensitiveActionGuard: Loan applications ──
+        if (intent.type == IntentType.CREDIT_CHECK) {
+            val confirmation = sensitiveActionGuard.requiresConfirmation(
+                actionType = SensitiveActionType.LOAN_APPLICATION,
+                description = "Omba mkopo",
+                metadata = mapOf("intent_type" to intent.type.name)
+            )
+            if (confirmation != null) {
+                return GuardrailResult(
+                    blocked = false,
+                    requiresConfirmation = true,
+                    confirmationId = confirmation.confirmationId,
+                    message = confirmation.prompt
+                )
+            }
+        }
+
+        // ── SensitiveActionGuard: Chama/group contributions ──
+        if (intent.type == IntentType.CHAMA_MANAGE) {
+            val action = intent.entities["action"]
+            val amount = intent.entities["amount"]?.toDoubleOrNull()
+            val sensitiveType = when (action) {
+                "contribute" -> SensitiveActionType.GROUP_CONTRIBUTION
+                "payout" -> SensitiveActionType.CHAMA_WITHDRAWAL
+                else -> null
+            }
+            if (sensitiveType != null) {
+                val confirmation = sensitiveActionGuard.requiresConfirmation(
+                    actionType = sensitiveType,
+                    amount = amount,
+                    description = "Chama: ${action ?: "manage"}" + if (amount != null) " KES ${"%,.0f".format(amount)}" else "",
+                    metadata = mapOf(
+                        "intent_type" to intent.type.name,
+                        "chama_action" to (action ?: "unknown")
+                    )
+                )
+                if (confirmation != null) {
+                    return GuardrailResult(
+                        blocked = false,
+                        requiresConfirmation = true,
+                        confirmationId = confirmation.confirmationId,
+                        message = confirmation.prompt
+                    )
+                }
             }
         }
 
@@ -553,7 +626,9 @@ class GuardrailsEngine @Inject constructor(
 
 data class GuardrailResult(
     val blocked: Boolean,
-    val message: String? = null
+    val message: String? = null,
+    val requiresConfirmation: Boolean = false,
+    val confirmationId: String? = null
 )
 
 /**

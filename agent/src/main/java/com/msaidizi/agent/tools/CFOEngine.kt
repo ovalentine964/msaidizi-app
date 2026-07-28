@@ -10,6 +10,8 @@ import com.google.gson.Gson
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
 import com.msaidizi.agent.flywheel.FlywheelEngine
+import com.msaidizi.agent.tools.CFOReportReviewer
+import com.msaidizi.agent.tools.ReportType
 import java.util.Calendar
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -31,6 +33,7 @@ class CFOEngine @Inject constructor(
     private val productDao: ProductDao,
     private val dailySummaryDao: DailySummaryDao,
     private val flywheelEngine: FlywheelEngine,
+    private val reportReviewer: CFOReportReviewer,
     private val gson: Gson
 ) : Tool {
 
@@ -44,13 +47,54 @@ class CFOEngine @Inject constructor(
 
     override suspend fun execute(params: Map<String, String>): ToolResult {
         val action = params["action"] ?: "briefing"
-        return when (action.lowercase()) {
+        val deliveryChannel = params["delivery_channel"]
+        val recipient = params["recipient"]
+
+        val result = when (action.lowercase()) {
             "briefing" -> generateDailyBriefing()
             "cashflow" -> predictCashFlow()
             "savings" -> getSavingsAdvice()
             "weekly" -> generateWeeklyReport()
             else -> ToolResult.error(name, "Unknown action: $action", "INVALID_ACTION")
         }
+
+        // ── HUMAN-IN-THE-LOOP: CFO Report Review ──
+        // Before delivering any report, show preview for user approval
+        if (result.success && deliveryChannel != null) {
+            val reportType = when (action.lowercase()) {
+                "briefing" -> ReportType.DAILY_BRIEFING
+                "weekly" -> ReportType.WEEKLY_REPORT
+                "cashflow" -> ReportType.CASHFLOW_FORECAST
+                "savings" -> ReportType.SAVINGS_ADVICE
+                else -> ReportType.DAILY_BRIEFING
+            }
+            val channel = when (deliveryChannel.lowercase()) {
+                "whatsapp" -> com.msaidizi.agent.tools.DeliveryChannel.WHATSAPP
+                "sms" -> com.msaidizi.agent.tools.DeliveryChannel.SMS
+                "email" -> com.msaidizi.agent.tools.DeliveryChannel.EMAIL
+                else -> com.msaidizi.agent.tools.DeliveryChannel.IN_APP
+            }
+
+            val reviewRequest = reportReviewer.submitForReview(
+                reportContent = result.message ?: "",
+                reportType = reportType,
+                deliveryChannel = channel,
+                recipientInfo = recipient
+            )
+
+            // Return the preview with review request — harness will present to user
+            return ToolResult.success(
+                toolName = name,
+                data = result.data + mapOf(
+                    "review_required" to true,
+                    "review_id" to reviewRequest.reviewId,
+                    "preview" to reviewRequest.previewText
+                ),
+                message = reviewRequest.previewText
+            )
+        }
+
+        return result
     }
 
     /**

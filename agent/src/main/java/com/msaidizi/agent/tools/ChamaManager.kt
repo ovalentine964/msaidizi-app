@@ -39,7 +39,8 @@ class ChamaManager @Inject constructor(
     private val chamaDao: ChamaDao,
     private val chamaMemberDao: ChamaMemberDao,
     private val chamaContributionDao: ChamaContributionDao,
-    private val chamaPayoutDao: ChamaPayoutDao
+    private val chamaPayoutDao: ChamaPayoutDao,
+    private val approvalWorkflow: ChamaApprovalWorkflow
 ) : Tool {
 
     override val name = "chama_manager"
@@ -95,6 +96,9 @@ class ChamaManager @Inject constructor(
             "status" -> chamaStatus(effectiveParams)
             "members" -> listMembers(effectiveParams)
             "history" -> contributionHistory(effectiveParams)
+            "approve" -> handleApproval(effectiveParams)
+            "vote" -> handleVote(effectiveParams)
+            "proposals" -> handleListProposals(effectiveParams)
             else -> ToolResult.error(name, "Unknown action: $action", "INVALID_ACTION")
         }
     }
@@ -232,7 +236,7 @@ class ChamaManager @Inject constructor(
     }
 
     // ──────────────────────────────────────────────
-    // RECORD PAYOUT
+    // RECORD PAYOUT — With approval workflow
     // ──────────────────────────────────────────────
 
     private suspend fun recordPayout(params: Map<String, String>): ToolResult {
@@ -252,6 +256,37 @@ class ChamaManager @Inject constructor(
             val totalContributions = chamaContributionDao.getTotalContributedSince(chamaId, sinceTimestamp) ?: 0.0
             val totalPenalties = chamaContributionDao.getTotalPenaltiesSince(chamaId, sinceTimestamp) ?: 0.0
             val payoutAmount = totalContributions + totalPenalties // penalties go into the pot
+
+            // ── HUMAN-IN-THE-LOOP: Chama Approval Workflow ──
+            // Payouts require majority approval from chama members
+            val proposalResult = approvalWorkflow.createProposal(
+                chamaId = chamaId,
+                proposerPhone = params["proposer_phone"] ?: params["recipient_phone"] ?: "",
+                action = ChamaProposalAction.WITHDRAWAL,
+                description = "Malipo kwa ${member.name} — KES ${"%,.0f".format(payoutAmount)}",
+                amount = payoutAmount,
+                metadata = mapOf(
+                    "recipient" to member.name,
+                    "cycle" to (chamaPayoutDao.getPayoutCount(chamaId) + 1).toString()
+                )
+            )
+
+            if (proposalResult.status == ProposalStatus.PENDING) {
+                // Approval needed — don't execute payout yet
+                return ToolResult.success(
+                    toolName = name,
+                    data = mapOf(
+                        "approval_required" to true,
+                        "proposal_id" to proposalResult.proposalId,
+                        "chama" to chama.name,
+                        "recipient" to member.name,
+                        "amount" to payoutAmount,
+                        "required_approvals" to proposalResult.requiredApprovals,
+                        "total_members" to proposalResult.totalMembers
+                    ),
+                    message = proposalResult.message
+                )
+            }
 
             // Determine this payout's cycle number
             val payoutCount = chamaPayoutDao.getPayoutCount(chamaId)
@@ -799,5 +834,80 @@ class ChamaManager @Inject constructor(
     private fun buildProgressBar(pct: Int, width: Int = 10): String {
         val filled = (pct * width / 100).coerceIn(0, width)
         return "[" + "█".repeat(filled) + "░".repeat(width - filled) + "]"
+    }
+
+    // ──────────────────────────────────────────────
+    // APPROVAL WORKFLOW HANDLERS
+    // ──────────────────────────────────────────────
+
+    /**
+     * Handle approval of a chama proposal.
+     */
+    private suspend fun handleApproval(params: Map<String, String>): ToolResult {
+        val proposalId = params["proposal_id"]
+            ?: return ToolResult.error(name, "Proposal ID required", "MISSING_PROPOSAL_ID")
+        val voterPhone = params["voter_phone"]
+            ?: return ToolResult.error(name, "Voter phone required", "MISSING_VOTER_PHONE")
+        val approve = params["approve"]?.toBooleanStrictOrNull() ?: true
+
+        val result = approvalWorkflow.vote(
+            proposalId = proposalId,
+            voterPhone = voterPhone,
+            vote = if (approve) Vote.APPROVE else Vote.REJECT,
+            comment = params["comment"]
+        )
+
+        return ToolResult.success(
+            name,
+            data = mapOf(
+                "proposal_id" to proposalId,
+                "status" to result.status.name,
+                "approvals" to result.approvals,
+                "rejections" to result.rejections,
+                "total_members" to result.totalMembers
+            ),
+            message = result.message
+        )
+    }
+
+    /**
+     * Handle vote on a chama proposal (alias for approve with explicit vote).
+     */
+    private suspend fun handleVote(params: Map<String, String>): ToolResult {
+        return handleApproval(params)
+    }
+
+    /**
+     * List active proposals for a chama.
+     */
+    private suspend fun handleListProposals(params: Map<String, String>): ToolResult {
+        val chamaId = params["chama_id"]?.toLongOrNull()
+            ?: return ToolResult.error(name, "Chama ID required", "MISSING_CHAMA_ID")
+
+        val proposals = approvalWorkflow.listActiveProposals(chamaId)
+
+        if (proposals.isEmpty()) {
+            return ToolResult.success(name, message = "Hakuna pendekezo linalosubiri kura.")
+        }
+
+        val message = buildString {
+            appendLine("📋 PENDEKEZO ZINAZOSUBIRI KURA:")
+            for (p in proposals) {
+                appendLine()
+                appendLine(p.message)
+            }
+        }
+
+        return ToolResult.success(
+            name,
+            data = mapOf("proposals" to proposals.map { mapOf(
+                "proposal_id" to it.proposalId,
+                "action" to (it.action?.name ?: "unknown"),
+                "approvals" to it.approvals,
+                "required" to it.requiredApprovals,
+                "total" to it.totalMembers
+            )}),
+            message = message
+        )
     }
 }

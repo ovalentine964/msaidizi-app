@@ -5,6 +5,10 @@ import com.msaidizi.core.database.DebtDao
 import com.msaidizi.core.database.ExpenseDao
 import com.msaidizi.core.database.SaleDao
 import com.msaidizi.agent.memory.MemoryManager
+import com.msaidizi.agent.guardrails.SensitiveActionGuard
+import com.msaidizi.agent.guardrails.SensitiveActionType
+import com.msaidizi.agent.guardrails.ConfirmationResult
+import com.msaidizi.agent.guardrails.ConfirmationStatus
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
@@ -38,7 +42,8 @@ class CreditReadiness @Inject constructor(
     private val expenseDao: ExpenseDao,
     private val dailySummaryDao: DailySummaryDao,
     private val debtDao: DebtDao,
-    private val memoryManager: MemoryManager
+    private val memoryManager: MemoryManager,
+    private val sensitiveActionGuard: SensitiveActionGuard
 ) : Tool {
 
     override val name = "credit_readiness"
@@ -517,6 +522,49 @@ class CreditReadiness @Inject constructor(
                 "score=$score,eligible=${eligible.size},ineligible=${ineligible.size},dti=${"%.1f".format(debtToIncome)}",
                 "credit"
             )
+
+            // ── HUMAN-IN-THE-LOOP: Credit Decision Approval ──
+            // When Alama Score suggests loan eligibility, require human confirmation
+            // before any credit application can proceed.
+            val topEligible = eligible.maxByOrNull { it["max_amount"] as Double }
+            if (topEligible != null) {
+                val maxAmount = topEligible["max_amount"] as Double
+                val lenderName = topEligible["swahili_name"] as String
+                val confirmation = sensitiveActionGuard.requiresConfirmation(
+                    actionType = SensitiveActionType.CREDIT_DECISION,
+                    amount = maxAmount,
+                    description = "Unaweza kupata mkopo wa KES ${"%,.0f".format(maxAmount)} kutoka $lenderName. Alama Score: $score ($level)",
+                    metadata = mapOf(
+                        "alama_score" to score.toString(),
+                        "lender" to lenderName,
+                        "max_amount" to maxAmount.toString(),
+                        "eligible_count" to eligible.size.toString()
+                    )
+                )
+                if (confirmation != null) {
+                    // Return the credit assessment WITH the confirmation prompt
+                    // The harness will present the confirmation to the user
+                    return ToolResult.success(
+                        toolName = name,
+                        data = mapOf(
+                            "score" to score,
+                            "level" to level,
+                            "percentile" to percentile,
+                            "eligible_products" to eligible,
+                            "ineligible_products" to ineligible,
+                            "debt_to_income_pct" to debtToIncome,
+                            "risk_flags" to riskFlags,
+                            "improvement_path" to improvementPath,
+                            "avg_monthly_revenue" to avgMonthlyRevenue,
+                            "avg_monthly_expenses" to avgMonthlyExpenses,
+                            "confirmation_required" to true,
+                            "confirmation_id" to confirmation.confirmationId,
+                            "confirmation_prompt" to confirmation.prompt
+                        ),
+                        message = message + "\n\n" + confirmation.prompt
+                    )
+                }
+            }
 
             ToolResult.success(
                 toolName = name,
