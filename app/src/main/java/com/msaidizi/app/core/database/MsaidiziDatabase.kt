@@ -49,9 +49,18 @@ import com.msaidizi.app.superagent.tools.*
         KgNodeEntity::class,
         KgEdgeEntity::class,
         KgFactEntity::class,
-        MpesaTransactionEntity::class
+        MpesaTransactionEntity::class,
+        EmergencyContactEntity::class,
+        SOSEventEntity::class,
+        BodaIncomeEntity::class,
+        BodaExpenseEntity::class,
+        FuelPurchaseEntity::class,
+        TripKilometersEntity::class,
+        FareRecordEntity::class,
+        HirePurchaseAgreementEntity::class,
+        HirePaymentEntity::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = true
 )
 abstract class MsaidiziDatabase : RoomDatabase() {
@@ -96,4 +105,13 @@ abstract class MsaidiziDatabase : RoomDatabase() {
     abstract fun kgEdgeDao(): KgEdgeDao
     abstract fun kgFactDao(): KgFactDao
     abstract fun mpesaTransactionDao(): MpesaTransactionDao
+    abstract fun emergencyContactDao(): EmergencyContactDao
+    abstract fun sosEventDao(): SOSEventDao
+    abstract fun bodaIncomeDao(): BodaIncomeDao
+    abstract fun bodaExpenseDao(): BodaExpenseDao
+    abstract fun fuelPurchaseDao(): FuelPurchaseDao
+    abstract fun tripKilometersDao(): TripKilometersDao
+    abstract fun fareRecordDao(): FareRecordDao
+    abstract fun hirePurchaseAgreementDao(): HirePurchaseAgreementDao
+    abstract fun hirePaymentDao(): HirePaymentDao
 }

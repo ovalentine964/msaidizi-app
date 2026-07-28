@@ -3,6 +3,7 @@ package com.msaidizi.app.core.di
 import android.content.Context
 import androidx.room.Room
 import com.msaidizi.app.core.database.*
+import com.msaidizi.app.superagent.tools.*
 import com.msaidizi.app.core.security.BiometricAuthManager
 import com.msaidizi.app.core.security.EncryptionManager
 import com.msaidizi.app.core.security.PinHasher
@@ -80,6 +81,16 @@ object AppModule {
     @Provides fun provideBulkCommitmentDao(db: MsaidiziDatabase): BulkCommitmentDao = db.bulkCommitmentDao()
     @Provides fun provideBulkEscrowDao(db: MsaidiziDatabase): BulkEscrowDao = db.bulkEscrowDao()
     // KgNodeDao, KgEdgeDao, KgFactDao are provided by GraphModule (superagent/graph/GraphModule.kt)
+    // Boda boda DAOs (Fix 1-5)
+    @Provides fun provideEmergencyContactDao(db: MsaidiziDatabase): EmergencyContactDao = db.emergencyContactDao()
+    @Provides fun provideSosEventDao(db: MsaidiziDatabase): SOSEventDao = db.sosEventDao()
+    @Provides fun provideBodaIncomeDao(db: MsaidiziDatabase): BodaIncomeDao = db.bodaIncomeDao()
+    @Provides fun provideBodaExpenseDao(db: MsaidiziDatabase): BodaExpenseDao = db.bodaExpenseDao()
+    @Provides fun provideFuelPurchaseDao(db: MsaidiziDatabase): FuelPurchaseDao = db.fuelPurchaseDao()
+    @Provides fun provideTripKilometersDao(db: MsaidiziDatabase): TripKilometersDao = db.tripKilometersDao()
+    @Provides fun provideFareRecordDao(db: MsaidiziDatabase): FareRecordDao = db.fareRecordDao()
+    @Provides fun provideHirePurchaseAgreementDao(db: MsaidiziDatabase): HirePurchaseAgreementDao = db.hirePurchaseAgreementDao()
+    @Provides fun provideHirePaymentDao(db: MsaidiziDatabase): HirePaymentDao = db.hirePaymentDao()
 
     @Provides
     @Singleton
@@ -141,7 +152,13 @@ object AppModule {
         serviceMarketBroadcaster: com.msaidizi.app.superagent.tools.ServiceMarketBroadcaster,
         servicePriceAdvisor: com.msaidizi.app.superagent.tools.ServicePriceAdvisor,
         wageCalculator: com.msaidizi.app.superagent.tools.WageCalculator,
-        yieldPredictor: com.msaidizi.app.superagent.tools.YieldPredictor
+        yieldPredictor: com.msaidizi.app.superagent.tools.YieldPredictor,
+        // Boda boda tools (Fix 1-5)
+        sosSafetyButton: com.msaidizi.app.superagent.tools.SOSSafetyButton,
+        netIncomeCalculator: com.msaidizi.app.superagent.tools.NetIncomeCalculator,
+        fuelEfficiencyTracker: com.msaidizi.app.superagent.tools.FuelEfficiencyTracker,
+        fareIntelligence: com.msaidizi.app.superagent.tools.FareIntelligence,
+        hirePurchaseTracker: com.msaidizi.app.superagent.tools.HirePurchaseTracker
     ): com.msaidizi.app.superagent.tools.ToolRegistry {
         val registry = com.msaidizi.app.superagent.tools.ToolRegistry()
         registry.register(transactionRecorder)
@@ -202,6 +219,12 @@ object AppModule {
         registry.register(servicePriceAdvisor)
         registry.register(wageCalculator)
         registry.register(yieldPredictor)
+        // Boda boda tools (Fix 1-5)
+        registry.register(sosSafetyButton)
+        registry.register(netIncomeCalculator)
+        registry.register(fuelEfficiencyTracker)
+        registry.register(fareIntelligence)
+        registry.register(hirePurchaseTracker)
         return registry
     }
 }
