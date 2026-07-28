@@ -32,6 +32,9 @@ class MsaidiziApp : Application(), Configuration.Provider {
 
         createNotificationChannels()
         scheduleModelDownload()
+
+        // Schedule proactive agent runs (daily CFO, weekly summary, monthly review)
+        com.msaidizi.app.superagent.proactive.ScheduledAgentWorker.scheduleAll(this)
     }
 
     /**

@@ -4,6 +4,8 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.msaidizi.app.model.*
 import com.msaidizi.app.superagent.graph.*
+import com.msaidizi.app.superagent.mpesa.MpesaTransactionEntity
+import com.msaidizi.app.superagent.mpesa.MpesaTransactionDao
 import com.msaidizi.app.superagent.tools.*
 
 @Database(
@@ -46,9 +48,10 @@ import com.msaidizi.app.superagent.tools.*
         BulkEscrowEntity::class,
         KgNodeEntity::class,
         KgEdgeEntity::class,
-        KgFactEntity::class
+        KgFactEntity::class,
+        MpesaTransactionEntity::class
     ],
-    version = 11,
+    version = 12,
     exportSchema = true
 )
 abstract class MsaidiziDatabase : RoomDatabase() {
@@ -92,4 +95,5 @@ abstract class MsaidiziDatabase : RoomDatabase() {
     abstract fun kgNodeDao(): KgNodeDao
     abstract fun kgEdgeDao(): KgEdgeDao
     abstract fun kgFactDao(): KgFactDao
+    abstract fun mpesaTransactionDao(): MpesaTransactionDao
 }
