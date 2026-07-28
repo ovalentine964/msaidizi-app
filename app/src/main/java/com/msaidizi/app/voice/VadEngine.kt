@@ -215,4 +215,20 @@ class VadEngine @Inject constructor() {
         "created" to isCreated,
         "handle" to vadHandle
     )
+
+    /**
+     * Update the VAD threshold dynamically (e.g., from adaptive noise floor).
+     * Requires destroying and recreating the VAD with the new threshold.
+     * @param modelPath Path to the Silero VAD model
+     * @param newThreshold New speech detection threshold (0.0–1.0)
+     * @return true if the VAD was recreated successfully
+     */
+    fun updateThreshold(modelPath: String, newThreshold: Float): Boolean {
+        if (!isCreated) return false
+        destroyVad()
+        return createVad(
+            modelPath = modelPath,
+            threshold = newThreshold
+        )
+    }
 }

@@ -9,6 +9,9 @@ import java.io.File
 import java.io.FileOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * ModelManager — Manages on-device AI model lifecycle.
@@ -48,7 +51,11 @@ import javax.inject.Singleton
  */
 @Singleton
 class ModelManager @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val modelTier: ModelTier,
+    private val whisperConfig: WhisperModelConfig,
+    private val deltaUpdater: DeltaModelUpdater,
+    private val batteryOptimizer: BatteryOptimizer
 ) {
     companion object {
         private const val MODELS_DIR = "models"
@@ -62,6 +69,10 @@ class ModelManager @Inject constructor(
         /** Minimum plausible ONNX size (10 KB). */
         private const val MIN_ONNX_SIZE = 10L * 1024
     }
+
+    /** Observable current tier for UI updates. */
+    private val _currentTier = MutableStateFlow(modelTier.getActiveTier())
+    val currentTier: StateFlow<ModelTier.Tier> = _currentTier.asStateFlow()
 
     /** Model directories in assets/. */
     private data class AssetMapping(
@@ -135,19 +146,92 @@ class ModelManager @Inject constructor(
 
     /**
      * Get the path to the LLM model file.
+     * Uses the active tier to determine which model to load.
      * @return Absolute path, or null if not available.
      */
     fun getLlmModelPath(): String? {
-        val file = File(modelsDir, "Qwen3.5-0.8B-Q4_K_M.gguf")
-        return if (file.exists() && file.length() >= MIN_GGUF_SIZE) {
-            file.absolutePath
-        } else {
-            // Try any .gguf file as fallback
-            modelsDir.listFiles()?.firstOrNull {
-                it.extension.equals("gguf", ignoreCase = true) && it.length() >= MIN_GGUF_SIZE
-            }?.absolutePath
+        val tier = modelTier.getActiveTier()
+        // Try tier-specific model first
+        val tierFile = File(modelsDir, tier.llmModelFilename)
+        if (tierFile.exists() && tierFile.length() >= MIN_GGUF_SIZE) {
+            return tierFile.absolutePath
         }
+        // Try the old default model
+        val defaultFile = File(modelsDir, "Qwen3.5-0.8B-Q4_K_M.gguf")
+        if (defaultFile.exists() && defaultFile.length() >= MIN_GGUF_SIZE) {
+            return defaultFile.absolutePath
+        }
+        // Try any .gguf file as fallback
+        return modelsDir.listFiles()?.firstOrNull {
+            it.extension.equals("gguf", ignoreCase = true) && it.length() >= MIN_GGUF_SIZE
+        }?.absolutePath
     }
+
+    /**
+     * Switch to a different model tier without app restart.
+     * @param newTier The tier to switch to
+     * @return true if the switch was successful
+     */
+    suspend fun switchTier(newTier: ModelTier.Tier): Boolean {
+        val switched = modelTier.switchTier(newTier)
+        if (switched) {
+            _currentTier.value = newTier
+            Timber.i("ModelManager: switched to tier %s", newTier.displayName)
+        }
+        return switched
+    }
+
+    /**
+     * Get the active model tier.
+     */
+    fun getActiveTier(): ModelTier.Tier = modelTier.getActiveTier()
+
+    /**
+     * Get the recommended tier for this device.
+     */
+    fun getRecommendedTier(): ModelTier.Tier = modelTier.detectRecommendedTier()
+
+    /**
+     * Get tier comparison info for settings UI.
+     */
+    fun getTierComparison(): List<TierInfo> = modelTier.getTierComparison()
+
+    /**
+     * Get device info for diagnostics.
+     */
+    fun getDeviceInfo(): DeviceInfo = modelTier.getDeviceInfo()
+
+    /**
+     * Get the context size for the current tier and battery state.
+     */
+    fun getEffectiveContextSize(): Int {
+        val tier = modelTier.getActiveTier()
+        val batteryProfile = batteryOptimizer.getPerformanceProfile()
+        return minOf(tier.nCtx, batteryProfile.contextSize)
+    }
+
+    /**
+     * Get the max tokens for the current tier and battery state.
+     */
+    fun getEffectiveMaxTokens(): Int {
+        val batteryProfile = batteryOptimizer.getPerformanceProfile()
+        return batteryProfile.maxTokens
+    }
+
+    /**
+     * Get the Whisper model configuration.
+     */
+    fun getWhisperConfig(): WhisperModelConfig = whisperConfig
+
+    /**
+     * Get the delta updater.
+     */
+    fun getDeltaUpdater(): DeltaModelUpdater = deltaUpdater
+
+    /**
+     * Get the battery optimizer.
+     */
+    fun getBatteryOptimizer(): BatteryOptimizer = batteryOptimizer
 
     /**
      * Get the directory for Whisper STT models.

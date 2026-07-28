@@ -7,6 +7,9 @@ import android.media.AudioRecord
 import android.media.AudioTrack
 import android.media.MediaRecorder
 import com.msaidizi.app.voice.SherpaOnnxEngine
+import com.msaidizi.app.voice.AdaptiveNoiseFloor
+import com.msaidizi.app.voice.WhisperModelConfig
+import com.msaidizi.app.voice.ModelTier
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -53,7 +56,9 @@ class VoicePipeline @Inject constructor(
     @ApplicationContext private val context: Context,
     private val sherpaEngine: SherpaOnnxEngine,
     private val languageDetector: LanguageDetector,
-    private val codeSwitchHandler: CodeSwitchHandler
+    private val codeSwitchHandler: CodeSwitchHandler,
+    private val adaptiveNoiseFloor: AdaptiveNoiseFloor,
+    private val whisperModelConfig: WhisperModelConfig
 ) : Tool {
 
     override val name = "voice_pipeline"
@@ -78,6 +83,12 @@ class VoicePipeline @Inject constructor(
     private var sttInitialized = false
     private var ttsInitialized = false
     private var activeTtsLanguage: String? = null
+
+    /** Whether to use adaptive noise floor (true) or fixed threshold (false). */
+    var useAdaptiveNoiseFloor: Boolean = true
+
+    /** Fallback fixed RMS threshold when adaptive noise floor is disabled. */
+    private val fixedRmsThreshold: Double = 500.0
 
     // ── Model path resolution ────────────────────────────────
 
@@ -282,13 +293,43 @@ class VoicePipeline @Inject constructor(
             }
             "status" -> {
                 val sherpaStatus = sherpaEngine.getStatus()
+                val noiseDiag = adaptiveNoiseFloor.getDiagnostics()
+                val whisperDiag = whisperModelConfig.getDiagnostics()
                 ToolResult.success(name, data = mapOf(
                     "stt_initialized" to sttInitialized,
                     "tts_initialized" to ttsInitialized,
                     "active_tts_language" to (activeTtsLanguage ?: "none"),
                     "models_dir" to modelsDir.absolutePath,
-                    "sherpa" to sherpaStatus
-                ), message = "STT: ${if (sttInitialized) "ready" else "not initialized"}, TTS: ${if (ttsInitialized) "ready ($activeTtsLanguage)" else "not initialized"}")
+                    "sherpa" to sherpaStatus,
+                    "noise_floor" to noiseDiag.toSummaryString(),
+                    "whisper_config" to whisperDiag,
+                    "adaptive_noise_enabled" to useAdaptiveNoiseFloor
+                ), message = "STT: ${if (sttInitialized) "ready" else "not initialized"}, TTS: ${if (ttsInitialized) "ready ($activeTtsLanguage)" else "not initialized"}, Noise: ${if (noiseDiag.isCalibrated) "calibrated" else "calibrating"}")
+            }
+            "noise_diagnostics" -> {
+                val diag = adaptiveNoiseFloor.getDiagnostics()
+                ToolResult.success(name, data = mapOf(
+                    "isCalibrated" to diag.isCalibrated,
+                    "noiseFloor" to diag.noiseFloor,
+                    "speechOnThreshold" to diag.speechOnThreshold,
+                    "speechOffThreshold" to diag.speechOffThreshold,
+                    "gateState" to diag.gateState.name
+                ), message = diag.toSummaryString())
+            }
+            "set_noise_mode" -> {
+                val adaptive = params["adaptive"]?.toBooleanStrictOrNull() ?: true
+                useAdaptiveNoiseFloor = adaptive
+                if (adaptive) adaptiveNoiseFloor.recalibrate()
+                ToolResult.success(name, message = "Noise mode: ${if (adaptive) "adaptive" else "fixed threshold"}")
+            }
+            "switch_whisper" -> {
+                val sizeParam = params["size"]?.uppercase()
+                val size = try { ModelTier.WhisperSize.valueOf(sizeParam ?: "TINY") } catch (_: Exception) {
+                    return ToolResult.error(name, "Invalid Whisper size: $sizeParam. Use: TINY, BASE, SMALL", "INVALID_SIZE")
+                }
+                val switched = whisperModelConfig.switchModel(size)
+                ToolResult.success(name, data = mapOf("size" to size.name, "switched" to switched),
+                    message = if (switched) "Switched to ${size.displayName}" else "Switch failed — model files missing")
             }
             else -> ToolResult.error(name, "Unknown action: $action. Valid: listen, stop, speak, transcribe, detect_language, handle_codeswitch, init_stt, init_tts, status", "INVALID_ACTION")
         }
@@ -344,14 +385,28 @@ class VoicePipeline @Inject constructor(
             val maxSilence = 50 // ~1 second of silence (at 20ms per read)
             var speechDetected = false
 
+            // Reset adaptive noise floor for new recording session
+            if (useAdaptiveNoiseFloor) {
+                adaptiveNoiseFloor.reset()
+            }
+
             while (isRecording) {
                 val bytesRead = audioRecord?.read(buffer, 0, buffer.size) ?: 0
                 if (bytesRead > 0) {
                     audioBuffer.write(buffer, 0, bytesRead)
 
-                    // Simple VAD: detect silence after speech
-                    val amplitude = calculateRMSAmplitude(buffer, bytesRead)
-                    if (amplitude > 500) {
+                    // Voice Activity Detection
+                    val isSpeech = if (useAdaptiveNoiseFloor) {
+                        // Adaptive noise floor: automatically calibrates from first 2s of audio,
+                        // then uses noise gate with hysteresis to prevent flickering in noisy environments
+                        adaptiveNoiseFloor.processPcm16(buffer, bytesRead)
+                    } else {
+                        // Legacy fixed threshold fallback
+                        val amplitude = calculateRMSAmplitude(buffer, bytesRead)
+                        amplitude > fixedRmsThreshold
+                    }
+
+                    if (isSpeech) {
                         speechDetected = true
                         silenceCounter = 0
                     } else if (speechDetected) {
@@ -362,6 +417,13 @@ class VoicePipeline @Inject constructor(
                         }
                     }
                 }
+            }
+
+            // Log noise floor diagnostics
+            if (useAdaptiveNoiseFloor) {
+                val diag = adaptiveNoiseFloor.getDiagnostics()
+                Timber.d("Noise floor: calibrated=%b, floor=%.1f, on=%.1f, off=%.1s",
+                    diag.isCalibrated, diag.noiseFloor, diag.speechOnThreshold, diag.speechOffThreshold)
             }
 
             val audioData = audioBuffer.toByteArray()

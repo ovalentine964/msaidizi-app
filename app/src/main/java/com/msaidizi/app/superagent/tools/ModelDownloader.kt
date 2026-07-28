@@ -2,6 +2,9 @@ package com.msaidizi.app.superagent.tools
 
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.msaidizi.app.voice.ModelTier
+import com.msaidizi.app.voice.DeltaModelUpdater
+import com.msaidizi.app.voice.WhisperModelConfig
 
 data class ModelInfo(val name: String, val version: String, val sizeBytes: Long, val url: String, val sha256: String)
 data class DownloadProgress(val modelName: String, val percent: Int, val status: String)
@@ -10,15 +13,20 @@ data class DownloadProgress(val modelName: String, val percent: Int, val status:
  * ModelDownloader — Manage on-device AI model downloads.
  */
 @Singleton
-class ModelDownloader @Inject constructor() : Tool {
+class ModelDownloader @Inject constructor(
+    private val modelTier: ModelTier,
+    private val deltaUpdater: DeltaModelUpdater,
+    private val whisperConfig: WhisperModelConfig
+) : Tool {
 
     override val name = "model_downloader"
     override val description = "Download and manage on-device AI models (LLM, STT, TTS)"
 
     override val argsSchema = argSchema {
         enum("action", "Model management action",
-            listOf("download", "status", "delete", "list"), required = false)
+            listOf("download", "status", "delete", "list", "tier", "delta", "switch_whisper"), required = false)
         string("model_name", "Name of the model", required = false)
+        string("tier", "Model tier (lite, standard, pro)", required = false)
     }
 
     private val models = mapOf(
@@ -93,6 +101,45 @@ class ModelDownloader @Inject constructor() : Tool {
             "check_wifi" -> {
                 val wifiAvailable = params["wifi"]?.toBooleanStrictOrNull() ?: false
                 ToolResult.success(name, mapOf("should_download" to shouldDownload(wifiAvailable)), if (shouldDownload(wifiAvailable)) "Ready to download" else "Waiting for WiFi")
+            }
+            "tier" -> {
+                val tierParam = params["tier"]
+                if (tierParam != null) {
+                    val tier = try {
+                        ModelTier.Tier.valueOf(tierParam.uppercase())
+                    } catch (_: Exception) {
+                        return ToolResult.error(name, "Invalid tier: $tierParam. Use: LITE, STANDARD, PRO", "INVALID_TIER")
+                    }
+                    modelTier.setManualTier(tier)
+                    val info = modelTier.getDeviceInfo()
+                    ToolResult.success(name, data = mapOf("tier" to tier.name, "device" to info.toSummaryString()),
+                        message = "Tier set to ${tier.displayName}. ${tier.description}")
+                } else {
+                    val info = modelTier.getDeviceInfo()
+                    val comparison = modelTier.getTierComparison()
+                    val tiers = comparison.joinToString("\n") {
+                        val marker = if (it.isActive) "▶" else if (it.isRecommended) "★" else " "
+                        "$marker ${it.tier.displayName}: ${it.tier.llmModelSizeMb}MB LLM + ${it.tier.whisperModel.sizeMb}MB Whisper = ${it.totalModelSizeMb}MB ${if (!it.canRun) "(insufficient RAM)" else ""}"
+                    }
+                    ToolResult.success(name, data = mapOf("device" to info.toSummaryString(), "tiers" to tiers),
+                        message = "Active: ${info.activeTier.displayName} | Recommended: ${info.recommendedTier.displayName}\n$tiers")
+                }
+            }
+            "delta" -> {
+                val modelName = params["model"] ?: "qwen3-0.8b"
+                val history = deltaUpdater.getUpdateHistory(modelName)
+                ToolResult.success(name, data = history, message = deltaUpdater.getDiagnostics())
+            }
+            "switch_whisper" -> {
+                val sizeParam = params["size"]?.uppercase()
+                val size = try {
+                    ModelTier.WhisperSize.valueOf(sizeParam ?: "TINY")
+                } catch (_: Exception) {
+                    return ToolResult.error(name, "Invalid size: $sizeParam. Use: TINY, BASE, SMALL", "INVALID_SIZE")
+                }
+                val switched = whisperConfig.switchModel(size)
+                ToolResult.success(name, data = mapOf("size" to size.name, "switched" to switched),
+                    message = if (switched) "Switched to ${size.displayName}" else "Switch failed — model files missing")
             }
             else -> ToolResult.error(name, "Unknown action: $action", "INVALID_ACTION")
         }

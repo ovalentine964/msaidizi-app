@@ -3,6 +3,8 @@ package com.msaidizi.app.superagent.harness
 import android.content.Context
 import com.msaidizi.app.superagent.tools.ToolResult
 import com.msaidizi.app.voice.LlamaCppEngine
+import com.msaidizi.app.voice.BatteryOptimizer
+import com.msaidizi.app.voice.ModelTier
 import com.google.gson.Gson
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -30,7 +32,9 @@ import javax.inject.Singleton
 class LlmEngine @Inject constructor(
     @ApplicationContext private val context: Context,
     private val gson: Gson,
-    private val llamaCppEngine: LlamaCppEngine
+    private val llamaCppEngine: LlamaCppEngine,
+    private val batteryOptimizer: BatteryOptimizer,
+    private val modelTier: ModelTier
 ) {
     companion object {
         /** Expected model filename (Q4_K_M quantised Qwen3.5 0.8B). */
@@ -107,8 +111,11 @@ class LlmEngine @Inject constructor(
             modelPath = modelFile.absolutePath
 
             // 4. Load via LlamaCppEngine (delegates to llama.cpp JNI)
-            val cores = Runtime.getRuntime().availableProcessors().coerceIn(2, 4)
-            val contextSize = 2048
+            // Use tier-specific settings + battery-aware context sizing
+            val tier = modelTier.getActiveTier()
+            val batteryProfile = batteryOptimizer.getPerformanceProfile()
+            val cores = tier.nThreads.coerceAtMost(Runtime.getRuntime().availableProcessors())
+            val contextSize = minOf(tier.nCtx, batteryProfile.contextSize)
 
             val loaded = llamaCppEngine.loadModel(modelFile.absolutePath, contextSize, cores)
             isInitialized = loaded
@@ -200,13 +207,18 @@ class LlmEngine @Inject constructor(
         try {
             val prompt = buildPrompt(systemPrompt, userMessage, context, toolResults, intent)
 
+            // Record battery drain for this inference
+            batteryOptimizer.startInferenceSession()
+
             val response = llamaCppEngine.generate(
                 prompt = prompt,
-                maxTokens = 256,
-                temperature = 0.7f,
+                maxTokens = batteryOptimizer.getPerformanceProfile().maxTokens,
+                temperature = batteryOptimizer.getPerformanceProfile().temperature,
                 topP = 0.9f,
                 stopSequences = listOf("Human:", "User:", "\n\n")
             )
+
+            batteryOptimizer.endInferenceSession()
 
             response.trim()
         } catch (e: Exception) {
