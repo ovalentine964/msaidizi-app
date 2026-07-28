@@ -7,6 +7,7 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
 import com.msaidizi.agent.flywheel.FlywheelEngine
+import com.msaidizi.agent.harness.HarnessImprover
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.sqrt
@@ -37,6 +38,7 @@ import kotlin.math.sqrt
 class IntentRouter @Inject constructor(
     private val knowledgeDao: KnowledgeDao,
     private val flywheelEngine: FlywheelEngine,
+    private val harnessImprover: HarnessImprover,
     private val llmEngine: LlmEngine,
     private val gson: Gson
 ) {
@@ -286,8 +288,12 @@ class IntentRouter @Inject constructor(
         }
 
         if (tier1Result != null && tier1Result.confidence > TIER1_CONFIDENCE) {
-            Timber.d("Tier 1 matched: %s (%.2f)", tier1Result.type, tier1Result.confidence)
+            // Apply harness improvement weight adjustment
+            val weightAdjustment = harnessImprover.getIntentWeight(tier1Result.type.name)
+            val adjustedConfidence = (tier1Result.confidence * weightAdjustment).coerceIn(0.3f, 1.0f)
+            Timber.d("Tier 1 matched: %s (%.2f, weight=%.2f)", tier1Result.type, adjustedConfidence, weightAdjustment)
             return tier1Result.copy(
+                confidence = adjustedConfidence,
                 entities = extractEntities(input),
                 rawText = input
             )

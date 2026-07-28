@@ -5,10 +5,17 @@ import com.msaidizi.core.database.KnowledgeDao
 import com.msaidizi.core.database.UserProfileDao
 import com.msaidizi.core.model.ConversationEntity
 import com.msaidizi.agent.guardrails.GuardrailsEngine
+import com.msaidizi.agent.guardrails.EscalationManager
+import com.msaidizi.agent.guardrails.EscalationCategory
+import com.msaidizi.agent.guardrails.SensitiveActionGuard
+import com.msaidizi.agent.guardrails.HumanApprovalInterceptor
+import com.msaidizi.agent.guardrails.InterceptionAction
 import com.msaidizi.agent.memory.MemoryManager
 import com.msaidizi.agent.tools.ToolRegistry
 import com.msaidizi.agent.tools.ToolResult
 import com.msaidizi.agent.flywheel.FlywheelEngine
+import com.msaidizi.agent.trace.TraceCollector
+import com.msaidizi.agent.trace.IntentTier
 import com.msaidizi.agent.loops.AdviceRefinementLoop
 import com.msaidizi.agent.loops.FeedbackLoopIntegration
 import com.msaidizi.agent.loops.OODALoop
@@ -47,6 +54,10 @@ class SuperagentHarness @Inject constructor(
     private val oodaLoop: OODALoop,
     private val adviceRefinementLoop: AdviceRefinementLoop,
     private val feedbackLoopIntegration: FeedbackLoopIntegration,
+    private val traceCollector: TraceCollector,
+    private val escalationManager: EscalationManager,
+    private val sensitiveActionGuard: SensitiveActionGuard,
+    private val humanApprovalInterceptor: HumanApprovalInterceptor,
     private val gson: Gson
 ) {
     private val sessionId = UUID.randomUUID().toString()
@@ -73,9 +84,23 @@ class SuperagentHarness @Inject constructor(
                 )
             )
 
+            // 1.5. START TRACE — Begin structured trace collection
+            val traceId = traceCollector.startTrace(sessionId, input, isVoice)
+
             // 2. INTENT ROUTING — Understand what the user wants
+            val routingStart = System.currentTimeMillis()
             val intent = intentRouter.route(input)
+            val routingMs = System.currentTimeMillis() - routingStart
             Timber.d("Intent: ${intent.type} (${intent.confidence})")
+
+            // 2.5. RECORD INTENT in trace
+            // Determine which tier resolved the intent (simplified heuristic)
+            val intentTier = when {
+                intent.confidence >= 0.85f -> IntentTier.PATTERN
+                intent.confidence >= 0.6f -> IntentTier.EMBEDDING
+                else -> IntentTier.LLM
+            }
+            traceCollector.recordIntent(intent, intentTier, routingMs)
 
             // 3. CONTEXT ASSEMBLY — Gather relevant context from all memory layers
             _processingState.value = ProcessingState.ASSEMBLING_CONTEXT
@@ -96,8 +121,22 @@ class SuperagentHarness @Inject constructor(
                 )
             }
 
+            // 4b. SENSITIVE ACTION CONFIRMATION — If guardrails flagged for confirmation
+            if (guardrailResult.requiresConfirmation) {
+                return@withContext HarnessResponse(
+                    text = guardrailResult.message ?: "Tafadhali thibitisha.",
+                    intent = intent,
+                    requiresConfirmation = true,
+                    confirmationId = guardrailResult.confirmationId
+                )
+            }
+
             // 5. EXECUTE via OODA LOOP (replaces linear pipeline)
             _processingState.value = ProcessingState.EXECUTING
+
+            // 5.1. RECORD TOOL SELECTION in trace
+            traceCollector.recordToolSelection(intent.requiredTools, intent.toolParams)
+            val toolExecStart = System.currentTimeMillis()
 
             val oodaResult: OODAResult = if (intent.type == IntentType.ASK_ADVICE) {
                 // ── Advice path: Use AdviceRefinementLoop ──────────────
@@ -138,13 +177,59 @@ class SuperagentHarness @Inject constructor(
 
             val finalResponse = oodaResult.response
             val toolResults: List<ToolResult> = emptyList()
+            val toolExecMs = System.currentTimeMillis() - toolExecStart
+
+            // 5.5. RECORD OODA RESULT and tool results in trace
+            traceCollector.recordOODAResult(oodaResult)
+            traceCollector.recordToolResults(toolResults, toolExecMs)
+            traceCollector.recordLlmInference(
+                promptTokens = 0,  // estimated from context length
+                outputTokens = finalResponse.length / 4,  // rough estimate
+                responseSummary = finalResponse,
+                inferenceMs = oodaResult.totalDurationMs
+            )
+
+            // 6. HUMAN-IN-THE-LOOP INTERCEPTION
+            // Unified check: escalation (low confidence) + sensitive action confirmation
+            _processingState.value = ProcessingState.CHECKING_GUARDRAILS
+            val interception = humanApprovalInterceptor.intercept(
+                response = finalResponse,
+                intent = intent,
+                toolResults = toolResults,
+                confidence = oodaResult.confidence
+            )
+            val verifiedResponse = when (interception.action) {
+                InterceptionAction.ESCALATE -> {
+                    Timber.w("Low confidence (${oodaResult.confidence}), escalating to user")
+                    return@withContext HarnessResponse(
+                        text = interception.message ?: finalResponse,
+                        intent = intent,
+                        requiresEscalation = true,
+                        escalationId = interception.escalationRequest?.escalationId,
+                        originalOutput = finalResponse,
+                        confidence = oodaResult.confidence
+                    )
+                }
+                InterceptionAction.REQUEST_CONFIRMATION -> {
+                    Timber.d("Sensitive action — requesting confirmation")
+                    return@withContext HarnessResponse(
+                        text = interception.message ?: finalResponse,
+                        intent = intent,
+                        requiresConfirmation = true,
+                        confirmationId = interception.confirmationRequest?.confirmationId,
+                        originalOutput = finalResponse,
+                        confidence = oodaResult.confidence
+                    )
+                }
+                InterceptionAction.DELIVER -> finalResponse
+            }
 
             // 8. Save assistant response
             conversationDao.insert(
                 ConversationEntity(
                     sessionId = sessionId,
                     role = "assistant",
-                    content = finalResponse,
+                    content = verifiedResponse,
                     intent = intent.type.name
                 )
             )
@@ -153,18 +238,26 @@ class SuperagentHarness @Inject constructor(
             _processingState.value = ProcessingState.LEARNING
             flywheelEngine.processInteraction(
                 input = input,
-                response = finalResponse,
+                response = verifiedResponse,
                 intent = intent,
                 toolResults = toolResults
             )
 
             // 10. Update working memory
-            memoryManager.updateWorkingMemory(input, finalResponse, intent)
+            memoryManager.updateWorkingMemory(input, verifiedResponse, intent)
 
             _processingState.value = ProcessingState.IDLE
 
+            // 10.5. FINISH TRACE — Persist the structured trace
+            val profile = context.userProfile
+            val businessCategory = context.businessProfile?.businessType?.category
+            traceCollector.finishTrace(
+                businessCategory = businessCategory,
+                region = context.businessProfile?.location
+            )
+
             HarnessResponse(
-                text = finalResponse,
+                text = verifiedResponse,
                 intent = intent,
                 toolResults = toolResults
             )
@@ -278,6 +371,12 @@ data class HarnessResponse(
     val intent: UserIntent? = null,
     val toolResults: List<ToolResult> = emptyList(),
     val blocked: Boolean = false,
+    val requiresConfirmation: Boolean = false,
+    val confirmationId: String? = null,
+    val requiresEscalation: Boolean = false,
+    val escalationId: String? = null,
+    val originalOutput: String? = null,
+    val confidence: Float? = null,
     val error: String? = null
 )
 

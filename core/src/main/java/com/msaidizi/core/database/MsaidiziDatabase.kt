@@ -46,9 +46,10 @@ import com.msaidizi.app.superagent.tools.*
         BulkEscrowEntity::class,
         KgNodeEntity::class,
         KgEdgeEntity::class,
-        KgFactEntity::class
+        KgFactEntity::class,
+        TraceEntity::class
     ],
-    version = 11,
+    version = 12,
     exportSchema = true
 )
 abstract class MsaidiziDatabase : RoomDatabase() {
@@ -92,4 +93,5 @@ abstract class MsaidiziDatabase : RoomDatabase() {
     abstract fun kgNodeDao(): KgNodeDao
     abstract fun kgEdgeDao(): KgEdgeDao
     abstract fun kgFactDao(): KgFactDao
+    abstract fun traceDao(): TraceDao
 }

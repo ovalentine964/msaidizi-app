@@ -233,6 +233,53 @@ object Migrations {
     }
 
     /**
+     * Migration 11 → 12: Agent trace collection table
+     * Adds agent_traces table for structured trace logging (Loop 4: harness improvement).
+     */
+    val MIGRATION_11_12 = object : Migration(11, 12) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS agent_traces (
+                    traceId TEXT NOT NULL PRIMARY KEY,
+                    sessionId TEXT NOT NULL,
+                    timestamp INTEGER NOT NULL,
+                    rawInputHash TEXT NOT NULL,
+                    intentType TEXT NOT NULL,
+                    intentConfidence REAL NOT NULL,
+                    intentTier TEXT NOT NULL,
+                    toolsSelected TEXT NOT NULL DEFAULT '[]',
+                    toolsSucceeded INTEGER NOT NULL DEFAULT 0,
+                    toolsFailed INTEGER NOT NULL DEFAULT 0,
+                    toolResultsJson TEXT NOT NULL DEFAULT '[]',
+                    promptTokenCount INTEGER NOT NULL DEFAULT 0,
+                    outputTokenCount INTEGER NOT NULL DEFAULT 0,
+                    llmResponseSummary TEXT NOT NULL DEFAULT '',
+                    totalLatencyMs INTEGER NOT NULL DEFAULT 0,
+                    intentRoutingMs INTEGER NOT NULL DEFAULT 0,
+                    toolExecutionMs INTEGER NOT NULL DEFAULT 0,
+                    llmInferenceMs INTEGER NOT NULL DEFAULT 0,
+                    finalConfidence REAL NOT NULL DEFAULT 0.0,
+                    oodaIterations INTEGER NOT NULL DEFAULT 1,
+                    guardrailBlocked INTEGER NOT NULL DEFAULT 0,
+                    userFeedback INTEGER,
+                    userCorrection TEXT,
+                    correctionLatencyMs INTEGER,
+                    oodaPhase TEXT NOT NULL DEFAULT 'OBSERVE',
+                    isVoice INTEGER NOT NULL DEFAULT 0,
+                    businessCategory TEXT,
+                    region TEXT,
+                    needsSync INTEGER NOT NULL DEFAULT 1,
+                    syncedAt INTEGER
+                )
+            """)
+
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_agent_traces_timestamp ON agent_traces(timestamp)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_agent_traces_intentType ON agent_traces(intentType)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_agent_traces_needsSync ON agent_traces(needsSync)")
+        }
+    }
+
+    /**
      * All migrations in order.
      * Add to MsaidiziDatabase.builder():
      *   Room.databaseBuilder(..., MsaidiziDatabase::class.java, "msaidizi-db")
@@ -242,6 +289,7 @@ object Migrations {
     val ALL_MIGRATIONS = arrayOf(
         MIGRATION_8_9,
         MIGRATION_9_10,
-        MIGRATION_10_11
+        MIGRATION_10_11,
+        MIGRATION_11_12
     )
 }
