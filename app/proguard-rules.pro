@@ -7,13 +7,13 @@
 }
 
 # Keep JNI bridge classes
--keep class com.msaidizi.app.superagent.tools.** { *; }
--keep class com.msaidizi.app.superagent.harness.** { *; }
+-keep class com.msaidizi.agent.tools.** { *; }
+-keep class com.msaidizi.agent.harness.** { *; }
 
 # Keep native JNI voice engine classes (llama_jni, sherpa_jni, vad_jni)
--keep class com.msaidizi.app.voice.LlamaCppEngine { *; }
--keep class com.msaidizi.app.voice.SherpaOnnxEngine { *; }
--keep class com.msaidizi.app.voice.VadEngine { *; }
+-keep class com.msaidizi.voice.LlamaCppEngine { *; }
+-keep class com.msaidizi.voice.SherpaOnnxEngine { *; }
+-keep class com.msaidizi.voice.VadEngine { *; }
 
 # ── Room ─────────────────────────────────────────────────────
 -keep class * extends androidx.room.RoomDatabase

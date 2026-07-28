@@ -231,6 +231,21 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Cache native dependencies
+        id: native-cache
+        uses: actions/cache@v4
+        with:
+          path: app/src/main/cpp/third_party
+          key: native-deps-${{ hashFiles('scripts/setup_native_deps.sh') }}
+          restore-keys: |
+            native-deps-
+
+      - name: Setup native dependencies (llama.cpp + sherpa-onnx)
+        if: steps.native-cache.outputs.cache-hit != 'true'
+        run: |
+          chmod +x scripts/setup_native_deps.sh
+          ./scripts/setup_native_deps.sh
+
       - name: Compile debug build
         run: ./gradlew compileDebugKotlin
 
@@ -264,6 +279,23 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+
+      # ── Native Dependencies Cache ──────────────────────────
+      # Cache llama.cpp and sherpa-onnx source to avoid re-cloning.
+      - name: Cache native dependencies
+        id: native-cache
+        uses: actions/cache@v4
+        with:
+          path: app/src/main/cpp/third_party
+          key: native-deps-${{ hashFiles('scripts/setup_native_deps.sh') }}
+          restore-keys: |
+            native-deps-
+
+      - name: Setup native dependencies (llama.cpp + sherpa-onnx)
+        if: steps.native-cache.outputs.cache-hit != 'true'
+        run: |
+          chmod +x scripts/setup_native_deps.sh
+          ./scripts/setup_native_deps.sh
 
       # ── Model Cache ────────────────────────────────────────
       # Cache downloaded models to avoid re-downloading on every run.

@@ -22,3 +22,10 @@ dependencyResolutionManagement {
 
 rootProject.name = "Msaidizi"
 include(":app")
+include(":core")
+include(":voice")
+include(":agent")
+include(":feature:finance")
+include(":feature:agriculture")
+include(":feature:market")
+include(":feature:credit")

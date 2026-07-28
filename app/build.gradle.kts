@@ -153,6 +153,15 @@ fun loadProperty(key: String): String {
 }
 
 dependencies {
+    // Project modules
+    implementation(project(":core"))
+    implementation(project(":voice"))
+    implementation(project(":agent"))
+    implementation(project(":feature:finance"))
+    implementation(project(":feature:agriculture"))
+    implementation(project(":feature:market"))
+    implementation(project(":feature:credit"))
+
     // AndroidX Core
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

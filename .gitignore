@@ -28,6 +28,13 @@ app/src/main/assets/models/**/*.bin
 # ── Model Cache (CI download cache) ──────────────────────────
 .model-cache/
 
+# ── Native Dependencies (cloned by setup_native_deps.sh) ────
+app/src/main/cpp/third_party/llama.cpp/
+app/src/main/cpp/third_party/sherpa-onnx/
+
+# ── Native Cache ─────────────────────────────────────────────
+.native-cache/
+
 # ── OS ────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
