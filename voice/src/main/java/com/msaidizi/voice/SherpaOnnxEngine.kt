@@ -27,7 +27,7 @@ import javax.inject.Singleton
 @Singleton
 class SherpaOnnxEngine @Inject constructor() {
 
-    companion object {
+    companion object AudioUtils {
         init {
             try {
                 System.loadLibrary("sherpa_jni")
@@ -36,7 +36,6 @@ class SherpaOnnxEngine @Inject constructor() {
                 Timber.e(e, "Failed to load sherpa_jni — ASR/TTS unavailable")
             }
         }
-    }
 
     // ── Native methods (defined in sherpa_jni.cpp) ───────────
 
@@ -313,9 +312,7 @@ class SherpaOnnxEngine @Inject constructor() {
         "synthesizerHandle" to synthesizerHandle
     )
 
-    // ── Audio conversion utilities ───────────────────────────
 
-    companion object AudioUtils {
         /**
          * Convert PCM 16-bit LE bytes to float array normalised to [-1, 1].
          */
