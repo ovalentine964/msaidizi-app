@@ -1,9 +1,7 @@
 package com.msaidizi.agent.tools
 
-import com.msaidizi.core.database.DailySummaryDao
-import com.msaidizi.core.database.ExpenseDao
-import com.msaidizi.core.database.SaleDao
-import com.msaidizi.core.model.DailySummaryEntity
+import com.msaidizi.core.database.*
+import com.msaidizi.core.model.*
 import com.msaidizi.core.util.DateTimeUtil
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
@@ -21,127 +19,9 @@ import javax.inject.Singleton
 // TRUE profit visible. The single most valuable insight.
 // ══════════════════════════════════════════════
 
-// ──────────────────────────────────────────────
-// Boda Boda Income Entity
-// ──────────────────────────────────────────────
-
-/**
- * Tracks a boda boda rider's daily income entries.
- * Each fare/payment the rider receives during the day.
- */
-@androidx.room.Entity(
-    tableName = "boda_income",
-    indices = [androidx.room.Index(value = ["date"])]
-)
-data class BodaIncomeEntity(
-    @androidx.room.PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val amount: Double,                    // fare amount in KES
-    val route: String = "",                // "Town → Stage ya Mawe"
-    val tripType: String = "fare",         // fare | delivery | charter | other
-    val paymentMethod: String = "cash",    // cash | mpesa
-    val passengerCount: Int = 1,
-    val date: String = "",                 // YYYY-MM-DD
-    val timestamp: Long = System.currentTimeMillis(),
-    val needsSync: Boolean = true
-)
-
-// ──────────────────────────────────────────────
-// Boda Boda Expense Entity
-// ──────────────────────────────────────────────
-
-/**
- * Tracks ALL boda boda expenses including hidden costs.
- * Categories: fuel, hire_fee, police_bribe, maintenance,
- * sacco, airtime, food, other
- */
-@androidx.room.Entity(
-    tableName = "boda_expenses",
-    indices = [androidx.room.Index(value = ["date"])]
-)
-data class BodaExpenseEntity(
-    @androidx.room.PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val amount: Double,
-    val category: String,                  // fuel | hire_fee | police_bribe | maintenance | sacco | airtime | food | other
-    val description: String = "",
-    val date: String = "",                 // YYYY-MM-DD
-    val timestamp: Long = System.currentTimeMillis(),
-    val needsSync: Boolean = true
-)
-
-// ──────────────────────────────────────────────
-// DAOs
-// ──────────────────────────────────────────────
-
-@androidx.room.Dao
-interface BodaIncomeDao {
-    @androidx.room.Insert
-    suspend fun insert(income: BodaIncomeEntity): Long
-
-    @androidx.room.Query("SELECT * FROM boda_income WHERE date = :date ORDER BY timestamp DESC")
-    fun getByDate(date: String): kotlinx.coroutines.flow.Flow<List<BodaIncomeEntity>>
-
-    @androidx.room.Query("SELECT COALESCE(SUM(amount), 0) FROM boda_income WHERE date = :date")
-    suspend fun getTotalForDate(date: String): Double
-
-    @androidx.room.Query("SELECT COALESCE(SUM(amount), 0) FROM boda_income WHERE date BETWEEN :startDate AND :endDate")
-    suspend fun getTotalBetween(startDate: String, endDate: String): Double
-
-    @androidx.room.Query("SELECT COUNT(*) FROM boda_income WHERE date = :date")
-    suspend fun getTripCountForDate(date: String): Int
-
-    @androidx.room.Query("SELECT route, COUNT(*) as count, AVG(amount) as avgFare FROM boda_income WHERE date BETWEEN :startDate AND :endDate GROUP BY route ORDER BY count DESC LIMIT :limit")
-    suspend fun getTopRoutes(startDate: String, endDate: String, limit: Int = 10): List<RouteSummary>
-
-    @androidx.room.Query("SELECT * FROM boda_income ORDER BY timestamp DESC LIMIT :limit")
-    fun getRecent(limit: Int = 50): kotlinx.coroutines.flow.Flow<List<BodaIncomeEntity>>
-
-    @androidx.room.Delete
-    suspend fun delete(income: BodaIncomeEntity)
-}
-
-data class RouteSummary(
-    val route: String,
-    val count: Int,
-    val avgFare: Double
-)
-
-@androidx.room.Dao
-interface BodaExpenseDao {
-    @androidx.room.Insert
-    suspend fun insert(expense: BodaExpenseEntity): Long
-
-    @androidx.room.Query("SELECT * FROM boda_expenses WHERE date = :date ORDER BY timestamp DESC")
-    fun getByDate(date: String): kotlinx.coroutines.flow.Flow<List<BodaExpenseEntity>>
-
-    @androidx.room.Query("SELECT COALESCE(SUM(amount), 0) FROM boda_expenses WHERE date = :date")
-    suspend fun getTotalForDate(date: String): Double
-
-    @androidx.room.Query("SELECT COALESCE(SUM(amount), 0) FROM boda_expenses WHERE date = :date AND category = :category")
-    suspend fun getTotalForDateByCategory(date: String, category: String): Double
-
-    @androidx.room.Query("SELECT COALESCE(SUM(amount), 0) FROM boda_expenses WHERE date BETWEEN :startDate AND :endDate")
-    suspend fun getTotalBetween(startDate: String, endDate: String): Double
-
-    @androidx.room.Query("SELECT category, COALESCE(SUM(amount), 0) as total FROM boda_expenses WHERE date = :date GROUP BY category ORDER BY total DESC")
-    suspend fun getByCategoryForDate(date: String): List<CategoryTotal>
-
-    @androidx.room.Query("SELECT category, COALESCE(SUM(amount), 0) as total FROM boda_expenses WHERE date BETWEEN :startDate AND :endDate GROUP BY category ORDER BY total DESC")
-    suspend fun getByCategoryBetween(startDate: String, endDate: String): List<CategoryTotal>
-
-    @androidx.room.Query("SELECT COALESCE(SUM(amount), 0) FROM boda_expenses WHERE date BETWEEN :startDate AND :endDate AND category = 'police_bribe'")
-    suspend fun getBribesBetween(startDate: String, endDate: String): Double
-
-    @androidx.room.Query("SELECT * FROM boda_expenses ORDER BY timestamp DESC LIMIT :limit")
-    fun getRecent(limit: Int = 50): kotlinx.coroutines.flow.Flow<List<BodaExpenseEntity>>
-
-    @androidx.room.Delete
-    suspend fun delete(expense: BodaExpenseEntity)
-}
-
-data class CategoryTotal(
-    val category: String,
-    val total: Double
-)
+// Entities and DAOs moved to core module:
+// com.msaidizi.core.model.BodaEntities
+// com.msaidizi.core.database.BodaDaos
 
 // ──────────────────────────────────────────────
 // TRUE NET INCOME CALCULATOR TOOL

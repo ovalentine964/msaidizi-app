@@ -53,10 +53,10 @@ class CFOReportReview @Inject constructor(
     ): ReportReviewRequest {
         // Generate the report via CFOEngine
         val reportResult = when (reportType) {
-            ReportType.BRIEFING -> cfoEngine.generateDailyBriefing()
-            ReportType.CASHFLOW -> cfoEngine.predictCashFlow()
-            ReportType.WEEKLY -> cfoEngine.generateWeeklyReport()
-            ReportType.SAVINGS -> cfoEngine.getSavingsAdvice()
+            ReportType.DAILY_BRIEFING -> cfoEngine.generateDailyBriefing()
+            ReportType.CASHFLOW_FORECAST -> cfoEngine.predictCashFlow()
+            ReportType.WEEKLY_REPORT -> cfoEngine.generateWeeklyReport()
+            ReportType.SAVINGS_ADVICE -> cfoEngine.getSavingsAdvice()
         }
 
         if (!reportResult.success) {
@@ -237,13 +237,6 @@ class CFOReportReview @Inject constructor(
 }
 
 // ─── Data Classes ───
-
-enum class ReportType(val displayName: String) {
-    BRIEFING("Daily Briefing"),
-    CASHFLOW("Cash Flow Forecast"),
-    WEEKLY("Weekly Report"),
-    SAVINGS("Savings Advice")
-}
 
 data class ReportReviewRequest(
     val confirmationId: String?,

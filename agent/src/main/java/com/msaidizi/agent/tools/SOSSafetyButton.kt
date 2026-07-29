@@ -7,6 +7,8 @@ import android.location.Location
 import android.location.LocationManager
 import android.media.MediaRecorder
 import androidx.core.content.ContextCompat
+import com.msaidizi.core.database.*
+import com.msaidizi.core.model.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
@@ -27,90 +29,9 @@ import javax.inject.Singleton
 // are the leading cause of road traffic injuries in Kenya.
 // ══════════════════════════════════════════════
 
-// ──────────────────────────────────────────────
-// Emergency Contact Entity (Room)
-// ──────────────────────────────────────────────
-
-@androidx.room.Entity(tableName = "emergency_contacts")
-data class EmergencyContactEntity(
-    @androidx.room.PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val name: String,
-    val phone: String,               // +254 format
-    val relationship: String = "",    // "wife", "brother", "sacco_chairman", etc.
-    val isActive: Boolean = true,
-    val createdAt: Long = System.currentTimeMillis()
-)
-
-// ──────────────────────────────────────────────
-// SOS Event Log Entity
-// ──────────────────────────────────────────────
-
-@androidx.room.Entity(
-    tableName = "sos_events",
-    indices = [androidx.room.Index(value = ["triggeredAt"])]
-)
-data class SOSEventEntity(
-    @androidx.room.PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val triggeredAt: Long = System.currentTimeMillis(),
-    val latitude: Double? = null,
-    val longitude: Double? = null,
-    val locationAccuracy: Float? = null,
-    val audioFilePath: String? = null,
-    val contactsNotified: Int = 0,        // how many contacts received SMS
-    val smsMessage: String = "",
-    val status: String = "triggered",     // triggered | cancelled | resolved
-    val resolvedAt: Long? = null,
-    val notes: String = ""
-)
-
-// ──────────────────────────────────────────────
-// DAOs
-// ──────────────────────────────────────────────
-
-@androidx.room.Dao
-interface EmergencyContactDao {
-    @androidx.room.Insert
-    suspend fun insert(contact: EmergencyContactEntity): Long
-
-    @androidx.room.Update
-    suspend fun update(contact: EmergencyContactEntity)
-
-    @androidx.room.Delete
-    suspend fun delete(contact: EmergencyContactEntity)
-
-    @androidx.room.Query("SELECT * FROM emergency_contacts WHERE isActive = 1 ORDER BY id ASC")
-    fun getAllActive(): kotlinx.coroutines.flow.Flow<List<EmergencyContactEntity>>
-
-    @androidx.room.Query("SELECT * FROM emergency_contacts WHERE isActive = 1")
-    suspend fun getAllActiveOnce(): List<EmergencyContactEntity>
-
-    @androidx.room.Query("SELECT * FROM emergency_contacts WHERE id = :id")
-    suspend fun getById(id: Long): EmergencyContactEntity?
-
-    @androidx.room.Query("SELECT COUNT(*) FROM emergency_contacts WHERE isActive = 1")
-    suspend fun getActiveCount(): Int
-}
-
-@androidx.room.Dao
-interface SOSEventDao {
-    @androidx.room.Insert
-    suspend fun insert(event: SOSEventEntity): Long
-
-    @androidx.room.Update
-    suspend fun update(event: SOSEventEntity)
-
-    @androidx.room.Query("SELECT * FROM sos_events ORDER BY triggeredAt DESC LIMIT :limit")
-    fun getRecent(limit: Int = 20): kotlinx.coroutines.flow.Flow<List<SOSEventEntity>>
-
-    @androidx.room.Query("SELECT * FROM sos_events WHERE id = :id")
-    suspend fun getById(id: Long): SOSEventEntity?
-
-    @androidx.room.Query("SELECT * FROM sos_events WHERE status = 'triggered' ORDER BY triggeredAt DESC LIMIT 1")
-    suspend fun getActiveSOS(): SOSEventEntity?
-
-    @androidx.room.Query("UPDATE sos_events SET status = :status, resolvedAt = :resolvedAt WHERE id = :id")
-    suspend fun updateStatus(id: Long, status: String, resolvedAt: Long = System.currentTimeMillis())
-}
+// Entities and DAOs moved to core module:
+// com.msaidizi.core.model.SafetyEntities
+// com.msaidizi.core.database.SafetyDaos
 
 // ──────────────────────────────────────────────
 // SOS SAFETY BUTTON TOOL

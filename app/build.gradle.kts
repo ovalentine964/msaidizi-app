@@ -122,13 +122,7 @@ android {
         buildConfig = true
     }
 
-    // Point to the CMakeLists.txt that builds sherpa_jni, llama_jni, vad_jni
-    externalNativeBuild {
-        cmake {
-            path = file("src/main/cpp/CMakeLists.txt")
-            version = "3.22.1"
-        }
-    }
+
 
     // ── Native libs & model assets ───────────────────────────
     packaging {

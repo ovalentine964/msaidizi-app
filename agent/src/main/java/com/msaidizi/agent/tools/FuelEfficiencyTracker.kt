@@ -1,5 +1,7 @@
 package com.msaidizi.agent.tools
 
+import com.msaidizi.core.database.*
+import com.msaidizi.core.model.*
 import com.msaidizi.core.util.DateTimeUtil
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
@@ -17,108 +19,9 @@ import javax.inject.Singleton
 // sudden efficiency drops (possible fuel theft).
 // ══════════════════════════════════════════════
 
-// ──────────────────────────────────────────────
-// Fuel Purchase Entity
-// ──────────────────────────────────────────────
-
-@androidx.room.Entity(
-    tableName = "fuel_purchases",
-    indices = [androidx.room.Index(value = ["date"])]
-)
-data class FuelPurchaseEntity(
-    @androidx.room.PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val liters: Double,                    // liters purchased
-    val costPerLiter: Double,              // KES per liter
-    val totalCost: Double,                 // total KES spent
-    val stationName: String = "",          // petrol station name
-    val odometer: Double? = null,          // optional odometer reading (km)
-    val date: String = "",                 // YYYY-MM-DD
-    val timestamp: Long = System.currentTimeMillis(),
-    val needsSync: Boolean = true
-)
-
-// ──────────────────────────────────────────────
-// Trip Kilometers Entity
-// ──────────────────────────────────────────────
-
-@androidx.room.Entity(
-    tableName = "trip_kilometers",
-    indices = [androidx.room.Index(value = ["date"])]
-)
-data class TripKilometersEntity(
-    @androidx.room.PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val kilometers: Double,                // km ridden
-    val route: String = "",                // route description
-    val tripType: String = "regular",      // regular | delivery | charter
-    val date: String = "",                 // YYYY-MM-DD
-    val timestamp: Long = System.currentTimeMillis(),
-    val needsSync: Boolean = true
-)
-
-// ──────────────────────────────────────────────
-// DAOs
-// ──────────────────────────────────────────────
-
-@androidx.room.Dao
-interface FuelPurchaseDao {
-    @androidx.room.Insert
-    suspend fun insert(purchase: FuelPurchaseEntity): Long
-
-    @androidx.room.Query("SELECT * FROM fuel_purchases WHERE date = :date ORDER BY timestamp DESC")
-    fun getByDate(date: String): kotlinx.coroutines.flow.Flow<List<FuelPurchaseEntity>>
-
-    @androidx.room.Query("SELECT COALESCE(SUM(totalCost), 0) FROM fuel_purchases WHERE date = :date")
-    suspend fun getTotalCostForDate(date: String): Double
-
-    @androidx.room.Query("SELECT COALESCE(SUM(liters), 0) FROM fuel_purchases WHERE date = :date")
-    suspend fun getTotalLitersForDate(date: String): Double
-
-    @androidx.room.Query("SELECT COALESCE(SUM(totalCost), 0) FROM fuel_purchases WHERE date BETWEEN :startDate AND :endDate")
-    suspend fun getTotalCostBetween(startDate: String, endDate: String): Double
-
-    @androidx.room.Query("SELECT COALESCE(SUM(liters), 0) FROM fuel_purchases WHERE date BETWEEN :startDate AND :endDate")
-    suspend fun getTotalLitersBetween(startDate: String, endDate: String): Double
-
-    @androidx.room.Query("SELECT AVG(costPerLiter) FROM fuel_purchases WHERE date BETWEEN :startDate AND :endDate")
-    suspend fun getAvgCostPerLiterBetween(startDate: String, endDate: String): Double?
-
-    @androidx.room.Query("SELECT * FROM fuel_purchases ORDER BY timestamp DESC LIMIT :limit")
-    fun getRecent(limit: Int = 50): kotlinx.coroutines.flow.Flow<List<FuelPurchaseEntity>>
-
-    @androidx.room.Query("SELECT stationName, COUNT(*) as visits, AVG(costPerLiter) as avgPrice, SUM(totalCost) as totalSpent FROM fuel_purchases WHERE date BETWEEN :startDate AND :endDate GROUP BY stationName ORDER BY visits DESC")
-    suspend fun getStationComparison(startDate: String, endDate: String): List<StationSummary>
-
-    @androidx.room.Delete
-    suspend fun delete(purchase: FuelPurchaseEntity)
-}
-
-data class StationSummary(
-    val stationName: String,
-    val visits: Int,
-    val avgPrice: Double,
-    val totalSpent: Double
-)
-
-@androidx.room.Dao
-interface TripKilometersDao {
-    @androidx.room.Insert
-    suspend fun insert(trip: TripKilometersEntity): Long
-
-    @androidx.room.Query("SELECT * FROM trip_kilometers WHERE date = :date ORDER BY timestamp DESC")
-    fun getByDate(date: String): kotlinx.coroutines.flow.Flow<List<TripKilometersEntity>>
-
-    @androidx.room.Query("SELECT COALESCE(SUM(kilometers), 0) FROM trip_kilometers WHERE date = :date")
-    suspend fun getTotalKmForDate(date: String): Double
-
-    @androidx.room.Query("SELECT COALESCE(SUM(kilometers), 0) FROM trip_kilometers WHERE date BETWEEN :startDate AND :endDate")
-    suspend fun getTotalKmBetween(startDate: String, endDate: String): Double
-
-    @androidx.room.Query("SELECT * FROM trip_kilometers ORDER BY timestamp DESC LIMIT :limit")
-    fun getRecent(limit: Int = 50): kotlinx.coroutines.flow.Flow<List<TripKilometersEntity>>
-
-    @androidx.room.Delete
-    suspend fun delete(trip: TripKilometersEntity)
-}
+// Entities and DAOs moved to core module:
+// com.msaidizi.core.model.BodaEntities
+// com.msaidizi.core.database.BodaDaos
 
 // ──────────────────────────────────────────────
 // FUEL EFFICIENCY TRACKER TOOL

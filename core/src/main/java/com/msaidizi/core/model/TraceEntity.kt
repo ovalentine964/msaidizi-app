@@ -1,4 +1,4 @@
-package com.msaidizi.agent.trace
+package com.msaidizi.core.model
 
 import androidx.room.Entity
 import androidx.room.Index

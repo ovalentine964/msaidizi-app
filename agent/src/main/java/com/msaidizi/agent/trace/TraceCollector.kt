@@ -2,7 +2,7 @@ package com.msaidizi.agent.trace
 
 import com.google.gson.Gson
 import com.msaidizi.agent.harness.IntentType
-import com.msaidizi.agent.harness.IntentTier
+import com.msaidizi.agent.trace.IntentTier
 import com.msaidizi.agent.harness.UserIntent
 import com.msaidizi.agent.loops.OODAResult
 import com.msaidizi.agent.tools.ToolResult

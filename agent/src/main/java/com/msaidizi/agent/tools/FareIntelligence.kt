@@ -1,5 +1,7 @@
 package com.msaidizi.agent.tools
 
+import com.msaidizi.core.database.*
+import com.msaidizi.core.model.*
 import com.msaidizi.core.util.DateTimeUtil
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
@@ -19,106 +21,9 @@ import javax.inject.Singleton
 // "Town → Westlands at 7am = KES 300 avg"
 // ══════════════════════════════════════════════
 
-// ──────────────────────────────────────────────
-// Fare Record Entity
-// ──────────────────────────────────────────────
-
-@androidx.room.Entity(
-    tableName = "fare_records",
-    indices = [
-        androidx.room.Index(value = ["route"]),
-        androidx.room.Index(value = ["date"]),
-        androidx.room.Index(value = ["hourOfDay"])
-    ]
-)
-data class FareRecordEntity(
-    @androidx.room.PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val fare: Double,                      // actual fare charged in KES
-    val route: String,                     // normalized route name
-    val fromLocation: String,              // origin
-    val toLocation: String,                // destination
-    val distanceKm: Double? = null,        // estimated distance
-    val hourOfDay: Int = 0,                // 0-23
-    val dayOfWeek: Int = 0,                // 1=Mon, 7=Sun
-    val weather: String = "clear",         // clear | rain | hot | cold
-    val passengerCount: Int = 1,
-    val date: String = "",                 // YYYY-MM-DD
-    val timestamp: Long = System.currentTimeMillis(),
-    val needsSync: Boolean = true
-)
-
-// ──────────────────────────────────────────────
-// DAO
-// ──────────────────────────────────────────────
-
-@androidx.room.Dao
-interface FareRecordDao {
-    @androidx.room.Insert
-    suspend fun insert(record: FareRecordEntity): Long
-
-    @androidx.room.Query("SELECT * FROM fare_records WHERE route = :route ORDER BY timestamp DESC LIMIT :limit")
-    fun getByRoute(route: String, limit: Int = 50): kotlinx.coroutines.flow.Flow<List<FareRecordEntity>>
-
-    @androidx.room.Query("SELECT route, COUNT(*) as tripCount, AVG(fare) as avgFare, MIN(fare) as minFare, MAX(fare) as maxFare FROM fare_records WHERE date BETWEEN :startDate AND :endDate GROUP BY route ORDER BY tripCount DESC")
-    suspend fun getRouteSummary(startDate: String, endDate: String): List<RouteFareSummary>
-
-    @androidx.room.Query("SELECT route, AVG(fare) as avgFare, COUNT(*) as count FROM fare_records WHERE hourOfDay BETWEEN :startHour AND :endHour AND date BETWEEN :startDate AND :endDate GROUP BY route ORDER BY avgFare DESC")
-    suspend fun getRoutesByTimeOfDay(startHour: Int, endHour: Int, startDate: String, endDate: String): List<TimeRouteSummary>
-
-    @androidx.room.Query("SELECT weather, route, AVG(fare) as avgFare, COUNT(*) as count FROM fare_records WHERE route = :route GROUP BY weather ORDER BY avgFare DESC")
-    suspend fun getWeatherFareComparison(route: String): List<WeatherFareSummary>
-
-    @androidx.room.Query("SELECT weather, AVG(fare) as avgFare, COUNT(*) as count FROM fare_records WHERE date BETWEEN :startDate AND :endDate GROUP BY weather ORDER BY avgFare DESC")
-    suspend fun getOverallWeatherComparison(startDate: String, endDate: String): List<WeatherFareSummary>
-
-    @androidx.room.Query("SELECT hourOfDay, AVG(fare) as avgFare, COUNT(*) as count FROM fare_records WHERE date BETWEEN :startDate AND :endDate GROUP BY hourOfDay ORDER BY hourOfDay")
-    suspend fun getHourlyFarePattern(startDate: String, endDate: String): List<HourlyFarePattern>
-
-    @androidx.room.Query("SELECT dayOfWeek, AVG(fare) as avgFare, COUNT(*) as count FROM fare_records WHERE date BETWEEN :startDate AND :endDate GROUP BY dayOfWeek ORDER BY dayOfWeek")
-    suspend fun getDayOfWeekPattern(startDate: String, endDate: String): List<DailyFarePattern>
-
-    @androidx.room.Query("SELECT * FROM fare_records ORDER BY timestamp DESC LIMIT :limit")
-    fun getRecent(limit: Int = 50): kotlinx.coroutines.flow.Flow<List<FareRecordEntity>>
-
-    @androidx.room.Query("SELECT DISTINCT route FROM fare_records ORDER BY route ASC")
-    suspend fun getAllRoutes(): List<String>
-
-    @androidx.room.Delete
-    suspend fun delete(record: FareRecordEntity)
-}
-
-data class RouteFareSummary(
-    val route: String,
-    val tripCount: Int,
-    val avgFare: Double,
-    val minFare: Double,
-    val maxFare: Double
-)
-
-data class TimeRouteSummary(
-    val route: String,
-    val avgFare: Double,
-    val count: Int
-)
-
-data class WeatherFareSummary(
-    val weather: String,
-    val route: String = "",
-    val avgFare: Double,
-    val count: Int
-)
-
-data class HourlyFarePattern(
-    val hourOfDay: Int,
-    val avgFare: Double,
-    val count: Int
-)
-
-data class DailyFarePattern(
-    val dayOfWeek: Int,
-    val avgFare: Double,
-    val count: Int
-)
+// Entities and DAOs moved to core module:
+// com.msaidizi.core.model.BodaEntities
+// com.msaidizi.core.database.BodaDaos
 
 // ──────────────────────────────────────────────
 // FARE INTELLIGENCE TOOL

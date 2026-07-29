@@ -1,5 +1,7 @@
 package com.msaidizi.agent.tools
 
+import com.msaidizi.core.database.*
+import com.msaidizi.core.model.*
 import com.msaidizi.core.util.DateTimeUtil
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
@@ -20,96 +22,9 @@ import javax.inject.Singleton
 //  enough to buy your own motorcycle!"
 // ══════════════════════════════════════════════
 
-// ──────────────────────────────────────────────
-// Hire-Purchase Agreement Entity
-// ──────────────────────────────────────────────
-
-@androidx.room.Entity(tableName = "hire_purchase_agreements")
-data class HirePurchaseAgreementEntity(
-    @androidx.room.PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val ownerName: String,                 // who owns the motorcycle
-    val ownerPhone: String = "",
-    val motorcycleDescription: String = "", // make/model/color
-    val dailyFee: Double,                  // KES per day
-    val depositPaid: Double = 0.0,         // initial deposit if any
-    val startDate: String = "",            // YYYY-MM-DD
-    val endDate: String? = null,           // if fixed term
-    val totalPurchasePrice: Double? = null, // agreed buyout price
-    val isActive: Boolean = true,
-    val notes: String = "",
-    val createdAt: Long = System.currentTimeMillis(),
-    val needsSync: Boolean = true
-)
-
-// ──────────────────────────────────────────────
-// Hire Payment Entity
-// ──────────────────────────────────────────────
-
-@androidx.room.Entity(
-    tableName = "hire_payments",
-    indices = [androidx.room.Index(value = ["agreementId", "date"])]
-)
-data class HirePaymentEntity(
-    @androidx.room.PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val agreementId: Long,
-    val amount: Double,                    // amount paid
-    val paymentType: String = "daily_fee", // daily_fee | deposit | buyout | other
-    val date: String = "",                 // YYYY-MM-DD
-    val timestamp: Long = System.currentTimeMillis(),
-    val needsSync: Boolean = true
-)
-
-// ──────────────────────────────────────────────
-// DAOs
-// ──────────────────────────────────────────────
-
-@androidx.room.Dao
-interface HirePurchaseAgreementDao {
-    @androidx.room.Insert
-    suspend fun insert(agreement: HirePurchaseAgreementEntity): Long
-
-    @androidx.room.Update
-    suspend fun update(agreement: HirePurchaseAgreementEntity)
-
-    @androidx.room.Query("SELECT * FROM hire_purchase_agreements WHERE isActive = 1 LIMIT 1")
-    suspend fun getActiveAgreement(): HirePurchaseAgreementEntity?
-
-    @androidx.room.Query("SELECT * FROM hire_purchase_agreements WHERE id = :id")
-    suspend fun getById(id: Long): HirePurchaseAgreementEntity?
-
-    @androidx.room.Query("SELECT * FROM hire_purchase_agreements ORDER BY createdAt DESC")
-    fun getAll(): kotlinx.coroutines.flow.Flow<List<HirePurchaseAgreementEntity>>
-
-    @androidx.room.Query("UPDATE hire_purchase_agreements SET isActive = 0 WHERE id = :id")
-    suspend fun deactivate(id: Long)
-}
-
-@androidx.room.Dao
-interface HirePaymentDao {
-    @androidx.room.Insert
-    suspend fun insert(payment: HirePaymentEntity): Long
-
-    @androidx.room.Query("SELECT * FROM hire_payments WHERE agreementId = :agreementId ORDER BY date DESC")
-    fun getByAgreement(agreementId: Long): kotlinx.coroutines.flow.Flow<List<HirePaymentEntity>>
-
-    @androidx.room.Query("SELECT COALESCE(SUM(amount), 0) FROM hire_payments WHERE agreementId = :agreementId")
-    suspend fun getTotalPaid(agreementId: Long): Double
-
-    @androidx.room.Query("SELECT COALESCE(SUM(amount), 0) FROM hire_payments WHERE agreementId = :agreementId AND paymentType = :type")
-    suspend fun getTotalPaidByType(agreementId: Long, type: String): Double
-
-    @androidx.room.Query("SELECT COALESCE(SUM(amount), 0) FROM hire_payments WHERE agreementId = :agreementId AND date BETWEEN :startDate AND :endDate")
-    suspend fun getTotalPaidBetween(agreementId: Long, startDate: String, endDate: String): Double
-
-    @androidx.room.Query("SELECT COUNT(DISTINCT date) FROM hire_payments WHERE agreementId = :agreementId AND paymentType = 'daily_fee'")
-    suspend fun getDaysPaid(agreementId: Long): Int
-
-    @androidx.room.Query("SELECT * FROM hire_payments WHERE agreementId = :agreementId ORDER BY timestamp DESC LIMIT :limit")
-    fun getRecent(agreementId: Long, limit: Int = 30): kotlinx.coroutines.flow.Flow<List<HirePaymentEntity>>
-
-    @androidx.room.Delete
-    suspend fun delete(payment: HirePaymentEntity)
-}
+// Entities and DAOs moved to core module:
+// com.msaidizi.core.model.HirePurchaseEntities
+// com.msaidizi.core.database.HirePurchaseDaos
 
 // ──────────────────────────────────────────────
 // HIRE-PURCHASE TRACKER TOOL
