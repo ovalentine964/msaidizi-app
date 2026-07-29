@@ -43,8 +43,8 @@ SHERPA_ONNX_BRANCH="master"
 SHERPA_ONNX_TAG=""  # Set to a tag like "v1.10.0" for reproducible builds
 
 # Pre-built release URLs (for --prebuilt mode)
-SHERPA_ONNX_VERSION="v1.10.43"
-SHERPA_ONNX_AAR_URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/${SHERPA_ONNX_VERSION}/sherpa-onnx-${SHERPA_ONNX_VERSION}-aar.tar.bz2"
+SHERPA_ONNX_VERSION="v1.13.4"
+SHERPA_ONNX_AAR_URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/${SHERPA_ONNX_VERSION}/sherpa-onnx-${SHERPA_ONNX_VERSION#v}.aar"
 
 # ── Colours ──────────────────────────────────────────────────
 RED='\033[0;31m'
@@ -176,41 +176,37 @@ setup_prebuilt() {
     mkdir -p "$cache_dir"
 
     # Download sherpa-onnx AAR (contains pre-built .so for all ABIs)
-    local aar_tar="$cache_dir/sherpa-onnx-aar.tar.bz2"
-    if [ ! -f "$aar_tar" ]; then
+    local aar_file="$cache_dir/sherpa-onnx.aar"
+    if [ ! -f "$aar_file" ]; then
         log "Downloading sherpa-onnx AAR (${SHERPA_ONNX_VERSION})..."
         if command -v wget &>/dev/null; then
-            wget --tries=3 --timeout=120 --show-progress -O "$aar_tar" "$SHERPA_ONNX_AAR_URL" || {
+            wget --tries=3 --timeout=120 --show-progress -O "$aar_file" "$SHERPA_ONNX_AAR_URL" || {
                 err "Failed to download sherpa-onnx AAR"
                 return 1
             }
         elif command -v curl &>/dev/null; then
-            curl -L --retry 3 --retry-delay 5 --progress-bar -o "$aar_tar" "$SHERPA_ONNX_AAR_URL" || {
+            curl -L --retry 3 --retry-delay 5 --progress-bar -o "$aar_file" "$SHERPA_ONNX_AAR_URL" || {
                 err "Failed to download sherpa-onnx AAR"
                 return 1
             }
         fi
     fi
 
-    # Extract sherpa-onnx headers and pre-built .so files
+    # Extract sherpa-onnx AAR (it's a ZIP file)
     local sherpa_dir="$THIRD_PARTY_DIR/sherpa-onnx"
     if [ ! -d "$sherpa_dir" ]; then
-        log "Extracting sherpa-onnx..."
+        log "Extracting sherpa-onnx AAR..."
         mkdir -p "$sherpa_dir"
-        tar xjf "$aar_tar" --strip-components=1 -C "$sherpa_dir" 2>/dev/null || true
+        # AAR is a ZIP file
+        unzip -q "$aar_file" -d "$sherpa_dir/aar-extracted" 2>/dev/null || true
 
-        # The AAR contains JNI libs for each ABI
-        # Reorganize to match CMakeLists.txt expected layout:
-        #   sherpa-onnx/include/sherpa-onnx/c-api/c-api.h
-        #   sherpa-onnx/lib/arm64-v8a/libsherpa-onnx-c-api.so
-        #   sherpa-onnx/lib/armeabi-v7a/libsherpa-onnx-c-api.so
-
-        if [ -d "$sherpa_dir/jni" ]; then
+        # AAR contains jni/ with pre-built .so files for each ABI
+        if [ -d "$sherpa_dir/aar-extracted/jni" ]; then
             mkdir -p "$sherpa_dir/lib"
             for abi in arm64-v8a armeabi-v7a; do
-                if [ -d "$sherpa_dir/jni/$abi" ]; then
+                if [ -d "$sherpa_dir/aar-extracted/jni/$abi" ]; then
                     mkdir -p "$sherpa_dir/lib/$abi"
-                    cp -v "$sherpa_dir/jni/$abi/"*.so "$sherpa_dir/lib/$abi/" 2>/dev/null || true
+                    cp -v "$sherpa_dir/aar-extracted/jni/$abi/"*.so "$sherpa_dir/lib/$abi/" 2>/dev/null || true
                 fi
             done
         fi
@@ -219,13 +215,12 @@ setup_prebuilt() {
         # CMakeLists.txt expects: sherpa-onnx/include/sherpa-onnx/c-api/c-api.h
         local include_dir="$sherpa_dir/include/sherpa-onnx/c-api"
         mkdir -p "$include_dir"
-        local found_header=$(find "$sherpa_dir" -name "c-api.h" 2>/dev/null | head -1)
-        if [ -n "$found_header" ]; then
-            cp -v "$found_header" "$include_dir/"
-        else
-            log "Downloading sherpa-onnx C API header..."
-            curl -sL "https://raw.githubusercontent.com/k2-fsa/sherpa-onnx/refs/heads/master/sherpa-onnx/c-api/c-api.h" -o "$include_dir/c-api.h" 2>/dev/null || true
-        fi
+        # Download the C API header from the source repo
+        log "Downloading sherpa-onnx C API header..."
+        curl -sL "https://raw.githubusercontent.com/k2-fsa/sherpa-onnx/refs/heads/master/sherpa-onnx/c-api/c-api.h" -o "$include_dir/c-api.h" 2>/dev/null || true
+
+        # Cleanup extracted AAR
+        rm -rf "$sherpa_dir/aar-extracted"
 
         ok "sherpa-onnx extracted"
     fi
