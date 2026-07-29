@@ -1,6 +1,6 @@
 package com.msaidizi.agent.mpesa
 
-import com.msaidizi.core.database.Daos.*
+import com.msaidizi.core.database.*
 import com.msaidizi.core.model.*
 import com.msaidizi.agent.events.TransactionEventBus
 import timber.log.Timber

@@ -1,8 +1,8 @@
 package com.msaidizi.agent.tools
 
 import com.google.gson.JsonObject
-import com.msaidizi.core.network.CuOptApiClient
-import com.msaidizi.core.network.CuOptResult
+import com.msaidizi.agent.network.CuOptApiClient
+import com.msaidizi.agent.network.CuOptResult
 import com.msaidizi.core.database.RideOfferDao
 import com.msaidizi.core.database.RideUserDao
 import kotlinx.coroutines.flow.first
