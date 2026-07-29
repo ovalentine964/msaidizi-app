@@ -19,7 +19,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class SpeechEngineRouter @Inject constructor(
-    private val sherpaEngine: SherpaOnnxEngine,
+    private val sherpaEngine: LocalSpeechEngine,
     private val rivaEngine: RivaClientEngine,
     private val rivaConfig: RivaConfig
 ) {
