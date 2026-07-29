@@ -1,6 +1,7 @@
 package com.msaidizi.agent.tools
 
 import com.google.gson.JsonObject
+import com.msaidizi.agent.flywheel.FlywheelEngine
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -47,7 +48,9 @@ interface Tool {
  *  3. Provides a lookup from tool name → schema for the harness
  */
 @Singleton
-class ToolRegistry @Inject constructor() {
+class ToolRegistry @Inject constructor(
+    private val flywheelEngine: FlywheelEngine
+) {
 
     private val tools = mutableMapOf<String, Tool>()
 
@@ -141,6 +144,45 @@ class ToolRegistry @Inject constructor() {
             def.addProperty("description", tool.description)
             def.add("parameters", tool.argsSchema.toJsonSchema())
             def
+        }
+    }
+
+    // ── Flywheel-powered reliability ──
+
+    /**
+     * Get reliability score for a tool from flywheel learning data.
+     * Returns 0.0-1.0 (default 0.5 for untracked tools).
+     */
+    suspend fun getReliabilityScore(toolName: String): Float {
+        return try {
+            val reliability = flywheelEngine.getToolReliability()
+            reliability[toolName] ?: 0.5f
+        } catch (e: Exception) {
+            0.5f
+        }
+    }
+
+    /**
+     * Suggest a more reliable alternative tool for the same intent.
+     * Returns the alternative tool name if one exists with higher reliability, else null.
+     */
+    suspend fun suggestAlternative(currentTool: String, intentType: String): String? {
+        return try {
+            val reliability = flywheelEngine.getToolReliability()
+            val currentScore = reliability[currentTool] ?: 0.5f
+
+            // Find tools with same intent prefix that are more reliable
+            val intentPrefix = intentType.lowercase().replace("_", "").take(6)
+            val alternatives = reliability.entries
+                .filter { (name, score) ->
+                    name != currentTool && score > currentScore + 0.1f &&
+                    name.lowercase().replace("_", "").contains(intentPrefix)
+                }
+                .sortedByDescending { it.value }
+
+            alternatives.firstOrNull()?.key
+        } catch (e: Exception) {
+            null
         }
     }
 }

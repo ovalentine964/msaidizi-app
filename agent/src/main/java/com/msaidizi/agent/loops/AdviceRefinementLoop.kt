@@ -71,6 +71,20 @@ class AdviceRefinementLoop @Inject constructor(
         val cfoResult = cfoEngine.execute(mapOf("action" to getActionForIntent(intent)))
         val initialAdvice = cfoResult.message
 
+        // ── Load flywheel advice confidence for dynamic threshold ──
+        val adviceConfidence = try {
+            flywheelEngine.getAdviceConfidence()
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to load advice confidence from flywheel")
+            emptyMap()
+        }
+        val intentConfidence = adviceConfidence[intent.type.name.lowercase()] ?: 0.5f
+        // Dynamic threshold: high flywheel confidence → lower quality bar (trusted pattern)
+        // Low flywheel confidence → higher quality bar (needs more scrutiny)
+        val dynamicThreshold = (QUALITY_THRESHOLD * (1.2f - intentConfidence)).coerceIn(0.6f, 0.95f)
+        Timber.d("AdviceRefinement: intent=%s, flywheel_confidence=%.2f, quality_threshold=%.2f",
+            intent.type.name, intentConfidence, dynamicThreshold)
+
         var currentAdvice = initialAdvice
         var bestAdvice = initialAdvice
         var bestQuality = assessQuality(initialAdvice, context)
@@ -107,13 +121,13 @@ class AdviceRefinementLoop @Inject constructor(
             }
             if (hallucinationIssues.isNotEmpty()) {
                 val highIssues = hallucinationIssues.filter {
-                    it.severity == com.msaidizi.app.superagent.guardrails.IssueSeverity.HIGH
+                    it.severity == com.msaidizi.agent.guardrails.IssueSeverity.HIGH
                 }
                 if (highIssues.isNotEmpty()) {
                     refinements.add("High-severity hallucination: ${highIssues.first().message}")
                 }
             }
-            if (quality < QUALITY_THRESHOLD) {
+            if (quality < dynamicThreshold) {
                 val qualityIssues = diagnoseQualityIssues(currentAdvice, context)
                 refinements.addAll(qualityIssues)
             }

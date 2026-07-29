@@ -15,6 +15,7 @@ import com.google.gson.Gson
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
 import java.util.concurrent.ConcurrentLinkedDeque
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -65,6 +66,88 @@ class MemoryManager @Inject constructor(
     // ── L1: Working Memory (RAM, session-scoped) ────────────────────
     // Thread-safe deque; newest at tail, oldest auto-evicted from head.
     private val workingMemory = ConcurrentLinkedDeque<WorkingMemoryEntry>()
+
+    // ── Inverted Index for fast memory search ──────────────────────
+    // Maps normalized keywords → list of (layer, key, value) tuples
+    // Built incrementally as entries are stored; used by searchAcrossSessions()
+    // and retrieve() to avoid O(n) String.contains() scans.
+    private val invertedIndex = ConcurrentHashMap<String, MutableList<IndexEntry>>()
+
+    private data class IndexEntry(
+        val layer: String,
+        val key: String,
+        val value: String,
+        val timestamp: Long
+    )
+
+    /**
+     * Tokenize text into normalized keywords for the inverted index.
+     * Strips punctuation, lowercases, removes stopwords, and applies
+     * basic stemming for Swahili/English.
+     */
+    private fun tokenize(text: String): List<String> {
+        val stopwords = setOf(
+            "the", "a", "an", "is", "are", "was", "were", "be", "been",
+            "in", "on", "at", "to", "for", "of", "with", "by", "from",
+            "and", "or", "but", "not", "this", "that", "it", "as",
+            "ni", "na", "ya", "wa", "za", "la", "kwa", "katika",
+            "kwa", "sana", "pia", "lakini", "au"
+        )
+        return text.lowercase()
+            .split(Regex("[^\\p{L}\\p{N}]+"))
+            .filter { it.length > 2 && it !in stopwords }
+            .distinct()
+    }
+
+    /**
+     * Add an entry to the inverted index.
+     */
+    private fun indexEntry(layer: String, key: String, value: String, timestamp: Long = System.currentTimeMillis()) {
+        val entry = IndexEntry(layer, key, value, timestamp)
+        val tokens = tokenize("$key $value")
+        for (token in tokens) {
+            invertedIndex.getOrPut(token) { mutableListOf() }.add(entry)
+        }
+    }
+
+    /**
+     * Fuzzy match: find index entries matching any token from the query.
+     * Returns results sorted by number of matching tokens (descending),
+     * then by recency.
+     */
+    private fun fuzzySearch(query: String, limit: Int = 10): List<IndexEntry> {
+        val queryTokens = tokenize(query)
+        if (queryTokens.isEmpty()) return emptyList()
+
+        // Count matches per unique entry (identified by layer+key)
+        val matchCounts = mutableMapOf<String, MutablePair<IndexEntry, Int>>()
+        for (token in queryTokens) {
+            // Exact match
+            invertedIndex[token]?.forEach { entry ->
+                val id = "${entry.layer}:${entry.key}"
+                matchCounts.getOrPut(id) { MutablePair(entry, 0) }.second += 1
+            }
+            // Prefix match for partial queries (e.g., "sal" matches "sale")
+            invertedIndex.keys
+                .filter { it.startsWith(token) && it != token }
+                .take(5) // limit prefix matches to avoid explosion
+                .forEach { prefixKey ->
+                    invertedIndex[prefixKey]?.forEach { entry ->
+                        val id = "${entry.layer}:${entry.key}"
+                        matchCounts.getOrPut(id) { MutablePair(entry, 0) }.second += 1
+                    }
+                }
+        }
+
+        return matchCounts.values
+            .sortedWith(compareByDescending<MutablePair<IndexEntry, Int>> { it.second }
+                .thenByDescending { it.first.timestamp })
+            .take(limit)
+            .map { it.first }
+    }
+
+    /** Helper for mutable pair in fuzzy search. */
+    private data class MutablePair<A, B>(val first: A, var second: B)
 
     // ── Tool.execute ────────────────────────────────────────────────
 
@@ -335,14 +418,25 @@ class MemoryManager @Inject constructor(
 
     /**
      * Search across all sessions for relevant context.
-     * Enables cross-session memory persistence.
+     * Uses inverted index for O(1) keyword lookup instead of O(n) contains().
      */
     suspend fun searchAcrossSessions(query: String, limit: Int = 10): List<String> {
         return try {
-            conversationDao.getRecent(200).first()
+            // Use inverted index for fast lookup
+            val indexResults = fuzzySearch(query, limit)
+            if (indexResults.isNotEmpty()) {
+                return indexResults.map { "[${it.layer}] ${it.key}: ${it.value}" }
+            }
+            // Fallback to DB scan if index is empty (cold start)
+            val dbResults = conversationDao.getRecent(200).first()
                 .filter { it.content.contains(query, ignoreCase = true) }
                 .take(limit)
                 .map { "[${it.sessionId}] ${it.role}: ${it.content}" }
+            // Index the DB results for future searches
+            dbResults.forEach { result ->
+                indexEntry("conversation", "search_result", result)
+            }
+            dbResults
         } catch (e: Exception) {
             Timber.w(e, "Cross-session search failed")
             emptyList()
@@ -412,15 +506,17 @@ class MemoryManager @Inject constructor(
 
     /**
      * Store a key-value pair in a specific memory layer.
+     * Also indexes the entry for fast keyword search.
      */
     suspend fun storeMemory(key: String, value: String, layer: String) {
+        val timestamp = System.currentTimeMillis()
         when (layer) {
             LAYER_WORKING -> {
                 workingMemory.addLast(WorkingMemoryEntry(
                     input = key,
                     response = value,
                     intentType = IntentType.UNKNOWN,
-                    timestamp = System.currentTimeMillis()
+                    timestamp = timestamp
                 ))
                 while (workingMemory.size > MAX_ENTRIES_PER_LAYER) {
                     workingMemory.pollFirst()
@@ -432,7 +528,7 @@ class MemoryManager @Inject constructor(
                         sessionId = "tool_stored",
                         role = "system",
                         content = "$key: $value",
-                        timestamp = System.currentTimeMillis()
+                        timestamp = timestamp
                     )
                 )
                 evictLayer(LAYER_CONVERSATION)
@@ -461,44 +557,67 @@ class MemoryManager @Inject constructor(
                 evictLayer(LAYER_PATTERNS)
             }
         }
+        // Add to inverted index for fast search
+        indexEntry(layer, key, value, timestamp)
     }
 
     // ── Retrieve Across Layers ───────────────────────────────────────
 
     /**
      * Retrieve relevant context across all layers for a query.
-     * Used by the Tool interface.
+     * Uses inverted index for O(1) keyword lookup on L2-L4.
      */
     suspend fun retrieve(query: String, maxTokens: Int = 1500): String {
         val context = mutableListOf<String>()
 
-        // L1: Working memory
+        // L1: Working memory (always include recent)
         workingMemory.toList().takeLast(3).forEach {
             context.add("L1: ${it.input} → ${it.response}")
         }
 
-        // L2: Conversation matches
-        try {
-            conversationDao.getRecent(50).first()
-                .filter { it.content.contains(query, ignoreCase = true) }
-                .take(3)
-                .forEach { context.add("L2: ${it.role}: ${it.content}") }
-        } catch (_: Exception) {}
+        // Use inverted index for L2-L4 search
+        val indexHits = fuzzySearch(query, limit = 7)
+        if (indexHits.isNotEmpty()) {
+            for (hit in indexHits) {
+                val layerLabel = when (hit.layer) {
+                    LAYER_CONVERSATION -> "L2"
+                    LAYER_DAILY -> "L3"
+                    LAYER_PATTERNS -> "L4"
+                    else -> hit.layer
+                }
+                context.add("$layerLabel: ${hit.key}: ${hit.value}")
+            }
+        } else {
+            // Fallback: direct DB scan (cold start or empty index)
+            try {
+                conversationDao.getRecent(50).first()
+                    .filter { it.content.contains(query, ignoreCase = true) }
+                    .take(3)
+                    .forEach {
+                        context.add("L2: ${it.role}: ${it.content}")
+                        indexEntry(LAYER_CONVERSATION, "${it.role}", it.content, it.timestamp)
+                    }
+            } catch (_: Exception) {}
 
-        // L3: Daily patterns
-        try {
-            knowledgeDao.getByCategory(LAYER_DAILY).first()
-                .takeLast(1)
-                .forEach { context.add("L3: ${it.value}") }
-        } catch (_: Exception) {}
+            try {
+                knowledgeDao.getByCategory(LAYER_DAILY).first()
+                    .takeLast(1)
+                    .forEach {
+                        context.add("L3: ${it.value}")
+                        indexEntry(LAYER_DAILY, it.key, it.value)
+                    }
+            } catch (_: Exception) {}
 
-        // L4: Patterns matching query
-        try {
-            knowledgeDao.getByCategory(LAYER_PATTERNS).first()
-                .filter { it.value.contains(query, ignoreCase = true) || it.key.contains(query, ignoreCase = true) }
-                .take(2)
-                .forEach { context.add("L4: ${it.key}: ${it.value}") }
-        } catch (_: Exception) {}
+            try {
+                knowledgeDao.getByCategory(LAYER_PATTERNS).first()
+                    .filter { it.value.contains(query, ignoreCase = true) || it.key.contains(query, ignoreCase = true) }
+                    .take(2)
+                    .forEach {
+                        context.add("L4: ${it.key}: ${it.value}")
+                        indexEntry(LAYER_PATTERNS, it.key, it.value)
+                    }
+            } catch (_: Exception) {}
+        }
 
         return context.joinToString("\n").take(maxTokens)
     }

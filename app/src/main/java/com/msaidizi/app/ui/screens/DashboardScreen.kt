@@ -13,7 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.msaidizi.app.model.*
+import com.msaidizi.core.model.*
 import com.msaidizi.app.ui.components.*
 import com.msaidizi.app.ui.designsystem.*
 

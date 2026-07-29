@@ -97,14 +97,14 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Run unit tests
-        run: ./gradlew testDebugUnitTest --continue
+        run: ./gradlew testFullDebugUnitTest --continue
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: app/build/test-results/testDebugUnitTest/
+          path: app/build/test-results/testFullDebugUnitTest/
           retention-days: 14
 
       - name: Upload test report
@@ -112,13 +112,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-report
-          path: app/build/reports/tests/testDebugUnitTest/
+          path: app/build/reports/tests/testFullDebugUnitTest/
           retention-days: 14
 
       - name: Parse test summary
         if: always()
         run: |
-          RESULTS_DIR="app/build/test-results/testDebugUnitTest"
+          RESULTS_DIR="app/build/test-results/testFullDebugUnitTest"
           if [ -d "$RESULTS_DIR" ]; then
             TOTAL=$(grep -rh 'tests=' "$RESULTS_DIR"/*.xml 2>/dev/null | sed 's/.*tests="\([0-9]*\)".*/\1/' | paste -sd+ | bc 2>/dev/null || echo "0")
             FAILURES=$(grep -rh 'failures=' "$RESULTS_DIR"/*.xml 2>/dev/null | sed 's/.*failures="\([0-9]*\)".*/\1/' | paste -sd+ | bc 2>/dev/null || echo "0")
@@ -154,7 +154,7 @@ jobs:
         run: |
           # Use Gradle dependency insight for known CVEs
           echo "::group::Dependency tree"
-          ./gradlew :app:dependencies --configuration releaseRuntimeClasspath 2>&1 | head -100
+          ./gradlew :app:dependencies --configuration fullReleaseRuntimeClasspath 2>&1 | head -100
           echo "::endgroup::"
 
       - name: Check for hardcoded secrets
@@ -235,7 +235,7 @@ jobs:
         id: native-cache
         uses: actions/cache@v4
         with:
-          path: app/src/main/cpp/third_party
+          path: voice/src/main/cpp/third_party
           key: native-deps-${{ hashFiles('scripts/setup_native_deps.sh') }}
           restore-keys: |
             native-deps-
@@ -247,7 +247,7 @@ jobs:
           ./scripts/setup_native_deps.sh
 
       - name: Compile debug build
-        run: ./gradlew compileDebugKotlin
+        run: ./gradlew compileFullDebugKotlin
 
       - name: Verify ProGuard rules
         run: |
@@ -286,7 +286,7 @@ jobs:
         id: native-cache
         uses: actions/cache@v4
         with:
-          path: app/src/main/cpp/third_party
+          path: voice/src/main/cpp/third_party
           key: native-deps-${{ hashFiles('scripts/setup_native_deps.sh') }}
           restore-keys: |
             native-deps-
@@ -321,7 +321,7 @@ jobs:
           echo "::endgroup::"
 
       - name: Build debug APK with models
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleFullDebug
 
       - name: Report APK size
         run: |
@@ -336,5 +336,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: msaidizi-debug-with-models
-          path: app/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/full/debug/*.apk
           retention-days: 7

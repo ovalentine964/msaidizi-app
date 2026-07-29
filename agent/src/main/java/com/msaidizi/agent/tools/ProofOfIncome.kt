@@ -722,7 +722,7 @@ class ProofOfIncome @Inject constructor(
      * Fills missing months with zeros for complete table display.
      */
     private fun aggregateMonthly(
-        summaries: List<com.msaidizi.app.model.DailySummaryEntity>,
+        summaries: List<com.msaidizi.core.model.DailySummaryEntity>,
         periodMonths: Int
     ): List<MonthlyFinancial> {
         val monthFormat = SimpleDateFormat("yyyy-MM", Locale.US)

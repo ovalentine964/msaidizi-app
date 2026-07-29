@@ -23,9 +23,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.msaidizi.app.model.ChatMessage
-import com.msaidizi.app.model.MessageRole
-import com.msaidizi.app.model.VoiceState
+import com.msaidizi.core.model.ChatMessage
+import com.msaidizi.core.model.MessageRole
+import com.msaidizi.core.model.VoiceState
 import com.msaidizi.app.ui.components.VoiceFAB
 import com.msaidizi.app.ui.components.VoiceState as VoiceStateEnum
 import com.msaidizi.app.ui.components.VoiceWaveform

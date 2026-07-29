@@ -82,7 +82,7 @@ class FeedbackLoopIntegration @Inject constructor(
         // Store correction in knowledge base for vocabulary learning
         val correctionKey = "correction_${correctionType.name.lowercase()}_${System.currentTimeMillis()}"
         knowledgeDao.insert(
-            com.msaidizi.app.model.KnowledgeEntity(
+            com.msaidizi.core.model.KnowledgeEntity(
                 category = "corrections",
                 key = correctionKey,
                 value = gson.toJson(mapOf(
@@ -109,7 +109,7 @@ class FeedbackLoopIntegration @Inject constructor(
                 ))
             } else {
                 knowledgeDao.insert(
-                    com.msaidizi.app.model.KnowledgeEntity(
+                    com.msaidizi.core.model.KnowledgeEntity(
                         category = "vocab",
                         key = word,
                         value = gson.toJson(mapOf(
@@ -126,7 +126,7 @@ class FeedbackLoopIntegration @Inject constructor(
         // If it was a product name correction, update the product vocabulary mapping
         if (correctionType == CorrectionType.PRODUCT_NAME) {
             knowledgeDao.insert(
-                com.msaidizi.app.model.KnowledgeEntity(
+                com.msaidizi.core.model.KnowledgeEntity(
                     category = "product_corrections",
                     key = originalInput.lowercase().take(50),
                     value = correctedInput.lowercase(),
@@ -196,7 +196,7 @@ class FeedbackLoopIntegration @Inject constructor(
             }
         } else {
             knowledgeDao.insert(
-                com.msaidizi.app.model.KnowledgeEntity(
+                com.msaidizi.core.model.KnowledgeEntity(
                     category = "advice_feedback",
                     key = patternKey,
                     value = gson.toJson(mapOf(
@@ -231,7 +231,7 @@ class FeedbackLoopIntegration @Inject constructor(
      */
     private suspend fun flagAdviceForReview(adviceType: String, confidence: Float) {
         knowledgeDao.insert(
-            com.msaidizi.app.model.KnowledgeEntity(
+            com.msaidizi.core.model.KnowledgeEntity(
                 category = "advice_review",
                 key = "review_${adviceType}_${System.currentTimeMillis()}",
                 value = gson.toJson(mapOf(
@@ -312,7 +312,7 @@ class FeedbackLoopIntegration @Inject constructor(
             ))
         } else {
             knowledgeDao.insert(
-                com.msaidizi.app.model.KnowledgeEntity(
+                com.msaidizi.core.model.KnowledgeEntity(
                     category = "prediction_calibration",
                     key = errorKey,
                     value = gson.toJson(mapOf(
@@ -345,7 +345,7 @@ class FeedbackLoopIntegration @Inject constructor(
     private suspend fun recalibratePrediction(predictionType: String, recentError: Double) {
         // Store recalibration signal
         knowledgeDao.insert(
-            com.msaidizi.app.model.KnowledgeEntity(
+            com.msaidizi.core.model.KnowledgeEntity(
                 category = "prediction_recalibration",
                 key = "recal_${predictionType}_${System.currentTimeMillis()}",
                 value = gson.toJson(mapOf(
@@ -429,7 +429,7 @@ class FeedbackLoopIntegration @Inject constructor(
                 ))
             } else {
                 knowledgeDao.insert(
-                    com.msaidizi.app.model.KnowledgeEntity(
+                    com.msaidizi.core.model.KnowledgeEntity(
                         category = "tool_patterns",
                         key = patternKey,
                         value = gson.toJson(mapOf(

@@ -30,7 +30,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-THIRD_PARTY_DIR="$PROJECT_ROOT/app/src/main/cpp/third_party"
+THIRD_PARTY_DIR="$PROJECT_ROOT/voice/src/main/cpp/third_party"
 
 # ── Versions ─────────────────────────────────────────────────
 # Pin to known-good commits for reproducible builds.

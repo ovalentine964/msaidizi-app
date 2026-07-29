@@ -12,9 +12,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.msaidizi.app.model.ChamaEntity
-import com.msaidizi.app.model.ChamaMemberEntity
-import com.msaidizi.app.model.ChamaContributionEntity
+import com.msaidizi.core.model.ChamaEntity
+import com.msaidizi.core.model.ChamaMemberEntity
+import com.msaidizi.core.model.ChamaContributionEntity
 import com.msaidizi.app.ui.components.*
 import com.msaidizi.app.ui.designsystem.*
 

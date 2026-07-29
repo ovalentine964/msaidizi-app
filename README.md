@@ -13,6 +13,9 @@
 </p>
 
 > **Every mama mboga deserves a CFO.** Msaidizi is a free, voice-first, offline-first AI CFO that runs on your phone. Speak in your language — track your business, understand your profit, build your credit.
+>
+> 📋 **New to the codebase?** Read [`program.md`](program.md) for a declarative overview of the superagent's identity, intent types, guardrails, memory hierarchy, and all operational parameters — extracted from the source code into one file.
+> For programmatic access, use [`program.json`](program.json).
 
 **Built by [Angavu Intelligence Ltd.](https://ovalentine964.github.io/angavu-intelligence/)** — *Making the Invisible Economy Visible*
 

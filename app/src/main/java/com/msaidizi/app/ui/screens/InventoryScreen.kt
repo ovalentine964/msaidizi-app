@@ -12,7 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.msaidizi.app.model.ProductEntity
+import com.msaidizi.core.model.ProductEntity
 import com.msaidizi.app.ui.components.*
 import com.msaidizi.app.ui.designsystem.*
 

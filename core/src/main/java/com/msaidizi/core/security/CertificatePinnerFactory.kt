@@ -1,6 +1,6 @@
 package com.msaidizi.core.security
 
-import com.msaidizi.app.BuildConfig
+import com.msaidizi.core.BuildConfig
 import okhttp3.CertificatePinner
 import timber.log.Timber
 

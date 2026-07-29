@@ -77,15 +77,60 @@ class ContextAssembler @Inject constructor(
     private var sessionSummariesTimestamp: 0L = 0
     private val SESSION_SUMMARIES_TTL_MS = 2 * 60 * 1000L // 2 minutes
 
+    // ── Token Budget Constants ──────────────────────────────────────
+    companion object {
+        /** Default max context tokens (conservative for most LLMs) */
+        const val MAX_CONTEXT_TOKENS = 4000
+    }
+
+    /**
+     * Approximate token count for text.
+     * English: ~4 chars per token; Swahili: ~2 chars per token (more agglutinative).
+     * We use a blended estimate since both languages are common.
+     */
+    private fun estimateTokens(text: String): Int {
+        if (text.isEmpty()) return 0
+        // Detect if text is predominantly Swahili (agglutinative, shorter tokens)
+        val swahiliIndicators = listOf("na ", "ya ", "wa ", "za ", "kwa ", "ni ", "la ", "katika")
+        val swahiliCount = swahiliIndicators.count { text.contains(it, ignoreCase = true) }
+        val charsPerToken = if (swahiliCount >= 2) 2.5 else 4.0
+        return (text.length / charsPerToken).toInt().coerceAtLeast(1)
+    }
+
+    /**
+     * Estimate tokens for a list of strings.
+     */
+    private fun estimateTokensList(texts: List<String>): Int {
+        return texts.sumOf { estimateTokens(it) }
+    }
+
+    /**
+     * Truncate a list of strings to fit within a token budget.
+     * Prioritizes recent entries (last items) over older ones.
+     */
+    private fun truncateToBudget(texts: List<String>, maxTokens: Int): List<String> {
+        val result = mutableListOf<String>()
+        var usedTokens = 0
+        // Iterate from most recent (end) to oldest (start)
+        for (text in texts.reversed()) {
+            val tokens = estimateTokens(text)
+            if (usedTokens + tokens > maxTokens) break
+            result.add(0, text) // prepend to maintain order
+            usedTokens += tokens
+        }
+        return result
+    }
+
     /**
      * Assemble full 5-layer context for the LLM.
-     * Layers are populated in priority order; each layer can be truncated
-     * to fit the overall token budget.
+     * Layers are populated in priority order; each layer is truncated
+     * to fit the overall token budget, with recent context prioritized.
      */
     suspend fun assemble(
         intent: UserIntent,
         sessionId: String,
-        recentConversation: Flow<List<ConversationEntity>>
+        recentConversation: Flow<List<ConversationEntity>>,
+        maxContextTokens: Int = MAX_CONTEXT_TOKENS
     ): AssembledContext {
         // ── Layer 1: System Identity (static, cached) ───────────────
         val identity = buildOrGetIdentity()
@@ -110,6 +155,53 @@ class ContextAssembler @Inject constructor(
 
         // ── Layer 5: Flywheel Insights (learned) ────────────────────
         val flywheelPatterns = getFlywheelInsights(intent)
+
+        // ── Token Budget Allocation ─────────────────────────────────
+        // Allocate tokens per layer by priority. Higher-priority layers get
+        // more budget; lower-priority layers get the remainder.
+        var remainingTokens = maxContextTokens
+
+        // L1: System identity — always include fully (small, rarely changes)
+        val identityTexts = listOfNotNull(
+            identity.userProfile?.let { "Profile: ${it.name}" },
+            identity.businessProfile?.let { "Business: ${it.businessType}" },
+            identity.alamaScore?.let { "Alama Score: ${it.score}" }
+        )
+        remainingTokens -= estimateTokensList(identityTexts)
+
+        // L2: OODA state — always include (small)
+        val oodaTexts = oodaState.observations + oodaState.decisions
+        remainingTokens -= estimateTokensList(oodaTexts)
+
+        // L3: Conversation — allocate ~40% of remaining budget
+        val l3Budget = (remainingTokens * 0.4).toInt()
+        val truncatedConversation = truncateToBudget(
+            conversation.map { "${it.role}: ${it.content}" },
+            l3Budget
+        )
+        val truncatedSummaries = truncateToBudget(sessionSummaries, (l3Budget * 0.2).toInt())
+        remainingTokens -= estimateTokensList(truncatedConversation) + estimateTokensList(truncatedSummaries)
+
+        // L4: Knowledge — allocate ~35% of remaining budget
+        val l4Budget = (remainingTokens * 0.35).toInt()
+        val allKnowledge = listOfNotNull(financialSummary) + knowledge + marketInsights
+        val truncatedKnowledge = truncateToBudget(allKnowledge, l4Budget)
+        remainingTokens -= estimateTokensList(truncatedKnowledge)
+
+        // L5: Flywheel — use whatever budget remains
+        val l5Budget = remainingTokens.coerceAtLeast(100)
+        val truncatedPatterns = truncateToBudget(flywheelPatterns.learnedPatterns, (l5Budget * 0.6).toInt())
+        val truncatedVocabulary = flywheelPatterns.learnedVocabulary.take(l5Budget / 4)
+        val truncatedRhythms = flywheelPatterns.businessRhythms.take(l5Budget / 4)
+
+        Timber.d("Context tokens: L1=%d, L2=%d, L3=%d, L4=%d, L5=%d, total_budget=%d".format(
+            estimateTokensList(identityTexts),
+            estimateTokensList(oodaTexts),
+            estimateTokensList(truncatedConversation) + estimateTokensList(truncatedSummaries),
+            estimateTokensList(truncatedKnowledge),
+            estimateTokensList(truncatedPatterns),
+            maxContextTokens
+        ))
 
         return AssembledContext(
             // Layer 1
@@ -506,7 +598,7 @@ data class OodaState(
 data class SystemIdentity(
     val userProfile: UserProfileEntity?,
     val businessProfile: BusinessProfile?,
-    val alamaScore: com.msaidizi.app.superagent.tools.AlamaScoreResult?
+    val alamaScore: com.msaidizi.agent.tools.AlamaScoreResult?
 )
 
 /**

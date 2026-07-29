@@ -1,7 +1,7 @@
 package com.msaidizi.core.network
 
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
-import com.msaidizi.app.BuildConfig
+import com.msaidizi.core.BuildConfig
 import com.msaidizi.core.security.CertificatePinnerFactory
 import dagger.Module
 import dagger.Provides

@@ -83,7 +83,7 @@ class LlamaCppEngine @Inject constructor() {
     val isNativeAvailable: Boolean
         get() = try {
             // Will throw if library not loaded
-            Class.forName("com.msaidizi.app.voice.LlamaCppEngine")
+            Class.forName("com.msaidizi.voice.LlamaCppEngine")
             true
         } catch (_: Exception) {
             false

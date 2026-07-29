@@ -199,6 +199,9 @@ class WeatherCacheManager @Inject constructor(
 
         // Kenya counties with approximate GPS coordinates
         val KENYA_COUNTIES = mapOf(
+            "migori" to Pair(-1.0634, 34.4731),
+            "kisumu" to Pair(-0.1022, 34.7617),
+            "nairobi" to Pair(-1.2921, 36.8219),
             "nakuru" to Pair(-0.3031, 36.0800),
             "nyeri" to Pair(-0.4167, 36.9500),
             "meru" to Pair(0.0500, 37.6500),

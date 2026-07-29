@@ -147,6 +147,12 @@ class FlywheelEngine @Inject constructor(
             if (result.success) {
                 reinforcePattern(intent.type, result)
             }
+            // Track per-tool reliability for flywheel read-back
+            try {
+                recordToolReliability(result.toolName, result.success)
+            } catch (e: Exception) {
+                Timber.w(e, "Failed to track tool reliability")
+            }
         }
 
         // Track intent patterns
@@ -199,8 +205,8 @@ class FlywheelEngine @Inject constructor(
 
     private suspend fun learnBusinessPattern(intent: UserIntent, metrics: LoopMetrics) {
         if (intent.type !in listOf(
-                com.msaidizi.app.superagent.harness.IntentType.RECORD_SALE,
-                com.msaidizi.app.superagent.harness.IntentType.RECORD_EXPENSE
+                com.msaidizi.agent.harness.IntentType.RECORD_SALE,
+                com.msaidizi.agent.harness.IntentType.RECORD_EXPENSE
             )
         ) return
 
@@ -288,7 +294,7 @@ class FlywheelEngine @Inject constructor(
                 val resultData = result.data?.toString() ?: ""
 
                 // Detect payment/repayment signals
-                if (intent.type == com.msaidizi.app.superagent.harness.IntentType.RECORD_SALE) {
+                if (intent.type == com.msaidizi.agent.harness.IntentType.RECORD_SALE) {
                     val isPaid = resultData.lowercase().let {
                         it.contains("paid") || it.contains("cash") || it.contains("complete")
                     }
@@ -302,7 +308,7 @@ class FlywheelEngine @Inject constructor(
                 }
 
                 // Track debt/credit signals
-                if (intent.type == com.msaidizi.app.superagent.harness.IntentType.RECORD_EXPENSE) {
+                if (intent.type == com.msaidizi.agent.harness.IntentType.RECORD_EXPENSE) {
                     persistPattern("credit", "expense_pattern",
                         mapOf(
                             "type" to intent.type.name,
@@ -435,7 +441,7 @@ class FlywheelEngine @Inject constructor(
     // ─────────────────────────────────────────────────────────
 
     private suspend fun reinforcePattern(
-        intentType: com.msaidizi.app.superagent.harness.IntentType,
+        intentType: com.msaidizi.agent.harness.IntentType,
         result: ToolResult
     ) {
         val key = "pattern_${intentType.name.lowercase()}"
@@ -593,6 +599,69 @@ class FlywheelEngine @Inject constructor(
             }
         }
         return total
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Tool Reliability Tracking
+    // ─────────────────────────────────────────────────────────
+
+    /**
+     * Record a tool execution result for reliability tracking.
+     * Called after every tool execution to build per-tool success rates.
+     */
+    suspend fun recordToolReliability(toolName: String, success: Boolean) {
+        val key = "tool_reliability_${toolName}"
+        val existing = knowledgeDao.getEntry("tool_reliability", key)
+        if (existing != null) {
+            val data = try {
+                @Suppress("UNCHECKED_CAST")
+                gson.fromJson(existing.value, MutableMap::class.java) as MutableMap<String, Any>
+            } catch (e: Exception) {
+                mutableMapOf("total" to 0, "successes" to 0)
+            }
+            val total = ((data["total"] as? Number)?.toInt() ?: 0) + 1
+            val successes = ((data["successes"] as? Number)?.toInt() ?: 0) + if (success) 1 else 0
+            val reliability = successes.toFloat() / total.coerceAtLeast(1)
+            data["total"] = total
+            data["successes"] = successes
+            data["reliability"] = reliability
+            knowledgeDao.update(existing.copy(
+                value = gson.toJson(data),
+                confidence = reliability,
+                usageCount = total,
+                updatedAt = System.currentTimeMillis()
+            ))
+        } else {
+            knowledgeDao.insert(KnowledgeEntity(
+                category = "tool_reliability",
+                key = key,
+                value = gson.toJson(mapOf(
+                    "tool" to toolName,
+                    "total" to 1,
+                    "successes" to if (success) 1 else 0,
+                    "reliability" to if (success) 1.0f else 0.0f
+                )),
+                confidence = if (success) 1.0f else 0.0f,
+                usageCount = 1
+            ))
+        }
+    }
+
+    /**
+     * Get tool reliability scores — maps tool name to success rate (0.0-1.0).
+     * Used by ToolRegistry to prefer reliable tools.
+     */
+    suspend fun getToolReliability(): Map<String, Float> {
+        return try {
+            knowledgeDao.getByCategory("tool_reliability").first()
+                .associate { entry ->
+                    val toolName = entry.key.removePrefix("tool_reliability_")
+                    toolName to entry.confidence
+                }
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to read tool reliability")
+            emptyMap()
+        }
     }
 
     // ─────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 package com.msaidizi.agent.graph
 
-import com.msaidizi.core.database.MsaidiziDatabase
+import com.msaidizi.core.database.*
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

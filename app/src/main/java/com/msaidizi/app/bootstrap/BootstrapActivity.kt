@@ -20,8 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.msaidizi.app.MainActivity
-import com.msaidizi.app.core.security.EncryptionManager
-import com.msaidizi.app.model.BusinessType
+import com.msaidizi.core.security.EncryptionManager
+import com.msaidizi.core.model.BusinessType
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 

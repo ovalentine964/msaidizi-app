@@ -155,7 +155,7 @@ class SuperagentHarness @Inject constructor(
                     iterations = adviceResult.iterations,
                     totalDurationMs = adviceResult.totalDurationMs,
                     iterationLogs = emptyList(),
-                    terminatedBy = com.msaidizi.app.superagent.loops.TerminationReason.CONFIDENCE_MET
+                    terminatedBy = com.msaidizi.agent.loops.TerminationReason.CONFIDENCE_MET
                 )
             } else {
                 // ── Standard path: Use OODA Loop ──────────────────────
@@ -448,9 +448,9 @@ enum class IntentType {
 
 data class AssembledContext(
     // Layer 1: System Identity (static, cached)
-    val userProfile: com.msaidizi.app.model.UserProfileEntity? = null,
-    val businessProfile: com.msaidizi.app.model.BusinessProfile? = null,
-    val alamaScore: com.msaidizi.app.superagent.tools.AlamaScoreResult? = null,
+    val userProfile: com.msaidizi.core.model.UserProfileEntity? = null,
+    val businessProfile: com.msaidizi.core.model.BusinessProfile? = null,
+    val alamaScore: com.msaidizi.agent.tools.AlamaScoreResult? = null,
 
     // Layer 2: Working Memory (OODA state)
     val oodaPhase: OodaPhase = OodaPhase.OBSERVE,

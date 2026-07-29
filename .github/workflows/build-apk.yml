@@ -83,6 +83,7 @@ jobs:
       fail-fast: false
       matrix:
         build_type: [debug, release]
+        flavor: [full]
         exclude:
           - build_type: ${{ github.event.inputs.build_type == 'release' && 'debug' || 'none' }}
           - build_type: ${{ github.event.inputs.build_type == 'debug' && 'release' || 'none' }}
@@ -96,7 +97,7 @@ jobs:
         id: native-cache
         uses: actions/cache@v4
         with:
-          path: app/src/main/cpp/third_party
+          path: voice/src/main/cpp/third_party
           key: native-deps-${{ hashFiles('scripts/setup_native_deps.sh') }}
           restore-keys: |
             native-deps-
@@ -137,29 +138,27 @@ jobs:
         run: |
           echo "${{ secrets.APK_SIGNING_KEYSTORE_BASE64 }}" | base64 -d > /tmp/release-keystore.jks
 
-      - name: Build ${{ matrix.build_type }} APK
+      - name: Build ${{ matrix.flavor }}-${{ matrix.build_type }} APK
         run: |
+          TASK="assemble${{ matrix.flavor }}${{ matrix.build_type == 'release' && 'Release' || 'Debug' }}"
           if [ "${{ matrix.build_type }}" = "release" ]; then
-            ./gradlew assembleRelease \
+            ./gradlew "$TASK" \
               -Pandroid.injected.signing.store.file=/tmp/release-keystore.jks \
               -Pandroid.injected.signing.store.password="${{ secrets.APK_KEYSTORE_PASSWORD }}" \
               -Pandroid.injected.signing.key.alias="${{ secrets.APK_KEY_ALIAS }}" \
               -Pandroid.injected.signing.key.password="${{ secrets.APK_KEY_PASSWORD }}"
           else
-            ./gradlew assembleDebug
+            ./gradlew "$TASK"
           fi
 
       - name: Rename APK
         id: rename
         run: |
-          SUFFIX="${{ matrix.build_type }}"
-          if [ "${{ matrix.build_type }}" = "release" ]; then
-            APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
-            DEST="msaidizi-release.apk"
-          else
-            APK_PATH=$(find app/build/outputs/apk/debug -name "*.apk" | head -1)
-            DEST="msaidizi-debug.apk"
-          fi
+          FLAVOR="${{ matrix.flavor }}"
+          BTYPE="${{ matrix.build_type }}"
+          APK_DIR="app/build/outputs/apk/${FLAVOR}/${BTYPE}"
+          APK_PATH=$(find "$APK_DIR" -name "*.apk" | head -1)
+          DEST="msaidizi-${FLAVOR}-${BTYPE}.apk"
           cp "$APK_PATH" "$DEST"
           echo "apk_path=$DEST" >> "$GITHUB_OUTPUT"
           echo "apk_size=$(du -h "$DEST" | cut -f1)" >> "$GITHUB_OUTPUT"
@@ -167,7 +166,7 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: msaidizi-${{ matrix.build_type }}-apk
+          name: msaidizi-${{ matrix.flavor }}-${{ matrix.build_type }}-apk
           path: ${{ steps.rename.outputs.apk_path }}
           retention-days: 30
           if-no-files-found: error
@@ -188,14 +187,14 @@ jobs:
       - name: Download release APK
         uses: actions/download-artifact@v4
         with:
-          name: msaidizi-release-apk
+          name: msaidizi-full-release-apk
           path: ./artifacts
         continue-on-error: true
 
       - name: Download debug APK
         uses: actions/download-artifact@v4
         with:
-          name: msaidizi-debug-apk
+          name: msaidizi-full-debug-apk
           path: ./artifacts
         continue-on-error: true
 
@@ -295,8 +294,8 @@ jobs:
           draft: false
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
           files: |
-            release-assets/msaidizi-release.apk
-            release-assets/msaidizi-debug.apk
+            release-assets/msaidizi-full-release.apk
+            release-assets/msaidizi-full-debug.apk
           generate_release_notes: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

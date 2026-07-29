@@ -3,8 +3,8 @@ package com.msaidizi.core.database
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.msaidizi.core.model.*
-import com.msaidizi.app.superagent.graph.*
-import com.msaidizi.app.superagent.tools.*
+// Graph entities in core.database.GraphEntities
+// MpesaTransactionEntity in core.database.MpesaTransactionEntity
 
 @Database(
     entities = [
@@ -48,6 +48,7 @@ import com.msaidizi.app.superagent.tools.*
         KgEdgeEntity::class,
         KgFactEntity::class,
         TraceEntity::class,
+        MpesaTransactionEntity::class,
         EmergencyContactEntity::class,
         SOSEventEntity::class,
         BodaIncomeEntity::class,
@@ -103,6 +104,7 @@ abstract class MsaidiziDatabase : RoomDatabase() {
     abstract fun kgEdgeDao(): KgEdgeDao
     abstract fun kgFactDao(): KgFactDao
     abstract fun traceDao(): TraceDao
+    abstract fun mpesaTransactionDao(): MpesaTransactionDao
     abstract fun emergencyContactDao(): EmergencyContactDao
     abstract fun sosEventDao(): SOSEventDao
     abstract fun bodaIncomeDao(): BodaIncomeDao

@@ -20,7 +20,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.msaidizi.app.model.DailySummaryEntity
+import com.msaidizi.core.model.DailySummaryEntity
 import com.msaidizi.app.ui.components.*
 import com.msaidizi.app.ui.designsystem.*
 

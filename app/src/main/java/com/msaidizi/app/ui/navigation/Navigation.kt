@@ -17,7 +17,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.msaidizi.app.model.*
+import com.msaidizi.core.model.*
 import com.msaidizi.app.ui.components.MsaidiziBottomBar
 import com.msaidizi.app.ui.screens.*
 

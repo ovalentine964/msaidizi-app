@@ -33,8 +33,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.msaidizi.app.model.DashboardState
-import com.msaidizi.app.model.ProductEntity
+import com.msaidizi.core.model.DashboardState
+import com.msaidizi.core.model.ProductEntity
 
 // ──────────────────────────────────────────────
 // Theme Colors

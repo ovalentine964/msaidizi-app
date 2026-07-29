@@ -94,11 +94,11 @@ class AgentSpawner @Inject constructor(
 
         // Report and advice intents often need cross-council data
         return intent.type in setOf(
-            com.msaidizi.app.superagent.harness.IntentType.DAILY_REPORT,
-            com.msaidizi.app.superagent.harness.IntentType.WEEKLY_REPORT,
-            com.msaidizi.app.superagent.harness.IntentType.MONTHLY_REPORT,
-            com.msaidizi.app.superagent.harness.IntentType.ASK_ADVICE,
-            com.msaidizi.app.superagent.harness.IntentType.VIEW_DASHBOARD
+            com.msaidizi.agent.harness.IntentType.DAILY_REPORT,
+            com.msaidizi.agent.harness.IntentType.WEEKLY_REPORT,
+            com.msaidizi.agent.harness.IntentType.MONTHLY_REPORT,
+            com.msaidizi.agent.harness.IntentType.ASK_ADVICE,
+            com.msaidizi.agent.harness.IntentType.VIEW_DASHBOARD
         )
     }
 
@@ -212,9 +212,9 @@ class AgentSpawner @Inject constructor(
 
         // For reports and advice, add cross-council analysis sub-tasks
         when (intent.type) {
-            com.msaidizi.app.superagent.harness.IntentType.DAILY_REPORT,
-            com.msaidizi.app.superagent.harness.IntentType.WEEKLY_REPORT,
-            com.msaidizi.app.superagent.harness.IntentType.MONTHLY_REPORT -> {
+            com.msaidizi.agent.harness.IntentType.DAILY_REPORT,
+            com.msaidizi.agent.harness.IntentType.WEEKLY_REPORT,
+            com.msaidizi.agent.harness.IntentType.MONTHLY_REPORT -> {
                 // Finance analysis is already covered above
                 // Add inventory status sub-task if not already present
                 if (CouncilType.INVENTORY !in subTasks.map { it.council }) {
@@ -237,7 +237,7 @@ class AgentSpawner @Inject constructor(
                     ))
                 }
             }
-            com.msaidizi.app.superagent.harness.IntentType.ASK_ADVICE -> {
+            com.msaidizi.agent.harness.IntentType.ASK_ADVICE -> {
                 // Advice needs data from multiple councils
                 if (CouncilType.FINANCE !in subTasks.map { it.council }) {
                     subTasks.add(SubTask(

@@ -450,7 +450,7 @@ class OODALoop @Inject constructor(
 
         // Reduce confidence if guardrails flagged issues
         if (outputCheck.hallucinationIssues.isNotEmpty()) {
-            val highSeverity = outputCheck.hallucinationIssues.count { it.severity == com.msaidizi.app.superagent.guardrails.IssueSeverity.HIGH }
+            val highSeverity = outputCheck.hallucinationIssues.count { it.severity == com.msaidizi.agent.guardrails.IssueSeverity.HIGH }
             actConfidence -= (highSeverity * 0.2f)
         }
 
@@ -565,5 +565,5 @@ data class ActResult(
     val confidence: Float,
     val toolResults: List<ToolResult>,
     val blocked: Boolean,
-    val guardrailLabel: com.msaidizi.app.superagent.guardrails.ConfidenceLabel
+    val guardrailLabel: com.msaidizi.agent.guardrails.ConfidenceLabel
 )

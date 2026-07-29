@@ -1,7 +1,7 @@
 package com.msaidizi.app.ui.mamamboga
 
-import com.msaidizi.app.model.BusinessType
-import com.msaidizi.app.model.UserProfileEntity
+import com.msaidizi.core.model.BusinessType
+import com.msaidizi.core.model.UserProfileEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject

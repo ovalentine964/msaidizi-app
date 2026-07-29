@@ -200,6 +200,32 @@ class ToolGraphInitializer @Inject constructor(
         // WeatherCacheManager triggers seasonal_budget_planner (weather → adjust plan)
         safeAddEdge("weather_cache_manager", "seasonal_budget_planner", EdgeType.TRIGGER)
 
+        // ═══════════════════════════════════════════════════════════
+        //  EARTH2STUDIO WEATHER CLUSTER (AI-powered forecasting)
+        // ═══════════════════════════════════════════════════════════
+
+        // WeatherForecastService FEEDS_INTO weather_cache_manager (AI forecasts → cache)
+        safeAddEdge("weather_forecast_service", "weather_cache_manager", EdgeType.FEEDS_INTO)
+
+        // WeatherForecastService TRIGGERS harvest_timing_optimizer (rain forecast → sell/store)
+        safeAddEdge("weather_forecast_service", "harvest_timing_optimizer", EdgeType.TRIGGER)
+
+        // WeatherForecastService TRIGGERS seasonal_budget_planner (weather → budget adjust)
+        safeAddEdge("weather_forecast_service", "seasonal_budget_planner", EdgeType.TRIGGER)
+
+        // WeatherForecastService FEEDS_INTO yield_predictor (weather-adjusted predictions)
+        safeAddEdge("weather_forecast_service", "yield_predictor", EdgeType.FEEDS_INTO)
+
+        // WeatherForecastService FEEDS_INTO harvest_tracker (weather at harvest time)
+        safeAddEdge("weather_forecast_service", "harvest_tracker", EdgeType.FEEDS_INTO)
+
+        // Concurrency: weather API calls should serialize to avoid rate limits
+        toolGraph.setNodeMeta("weather_forecast_service", ToolNodeMeta(
+            concurrencyGroup = "weather_api",
+            writesData = true,
+            estimatedMs = 5000  // API call ~2-5s
+        ))
+
         // PostHarvestLossTracker depends on harvest_tracker (harvest vs sold)
         safeAddEdge("post_harvest_loss_tracker", "harvest_tracker", EdgeType.DEPENDENCY)
 
@@ -217,6 +243,35 @@ class ToolGraphInitializer @Inject constructor(
         toolGraph.setNodeMeta("harvest_timing_optimizer", ToolNodeMeta(
             concurrencyGroup = "farmer_writes",
             writesData = true
+        ))
+
+        // ═══════════════════════════════════════════════════════════
+        //  BODA BODA ROUTING CLUSTER (cuOpt GPU-accelerated)
+        // ═══════════════════════════════════════════════════════════
+
+        // boda_boda_router FEEDS_INTO ride_share (optimized routes → ride matching)
+        safeAddEdge("boda_boda_router", "ride_share", EdgeType.FEEDS_INTO)
+
+        // boda_boda_router FEEDS_INTO bulk_order_coordinator (delivery routing)
+        safeAddEdge("boda_boda_router", "bulk_order_coordinator", EdgeType.FEEDS_INTO)
+
+        // boda_boda_router FEEDS_INTO market_pooling (market trip routing)
+        safeAddEdge("boda_boda_router", "market_pooling", EdgeType.FEEDS_INTO)
+
+        // ride_share TRIGGERS boda_boda_router (new ride → optimize pickup route)
+        safeAddEdge("ride_share", "boda_boda_router", EdgeType.TRIGGER)
+
+        // bulk_order_coordinator TRIGGERS boda_boda_router (confirmed order → plan delivery)
+        safeAddEdge("bulk_order_coordinator", "boda_boda_router", EdgeType.TRIGGER)
+
+        // market_pooling TRIGGERS boda_boda_router (pool created → optimize member pickup)
+        safeAddEdge("market_pooling", "boda_boda_router", EdgeType.TRIGGER)
+
+        // Concurrency: routing reads are parallel-safe, but writes serialize
+        toolGraph.setNodeMeta("boda_boda_router", ToolNodeMeta(
+            concurrencyGroup = "routing_compute",
+            writesData = false,
+            estimatedMs = 2000  // cuOpt solve ~1-2s
         ))
 
         val stats = toolGraph.getStats()

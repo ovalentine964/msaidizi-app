@@ -36,7 +36,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class WorkflowDAG @Inject constructor(
-    private val kgFactDao: com.msaidizi.app.superagent.graph.KgFactDao,
+    private val kgFactDao: com.msaidizi.core.database.KgFactDao,
     private val gson: Gson
 ) {
     /** Registry of named workflows. */

@@ -9,6 +9,7 @@ import com.msaidizi.core.database.CustomerDao
 import com.msaidizi.core.database.CustomerProfileDao
 import com.msaidizi.core.database.SaleDao
 import com.msaidizi.core.model.CustomerProfileEntity
+import com.msaidizi.agent.flywheel.FlywheelEngine
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
 import java.text.SimpleDateFormat
@@ -50,6 +51,7 @@ class CustomerMatcher @Inject constructor(
     private val saleDao: SaleDao,
     private val customerDao: CustomerDao,
     private val gamificationEngine: GamificationEngine,
+    private val flywheelEngine: FlywheelEngine,
     private val gson: Gson
 ) : Tool {
 
@@ -244,6 +246,25 @@ class CustomerMatcher @Inject constructor(
 
             // Sort by predicted date
             predictions.sortBy { it.daysFromNow }
+
+            // ── Flywheel: Adjust confidence with credit patterns ──
+            val creditPatterns = try {
+                flywheelEngine.getCreditPatterns()
+            } catch (e: Exception) {
+                emptyList()
+            }
+            val paidCount = creditPatterns.count { it.data["paid"]?.toBoolean() == true }
+            val totalCredit = creditPatterns.size
+            val paymentReliability = if (totalCredit > 0) paidCount.toFloat() / totalCredit else 0.5f
+
+            // Boost/penalize predictions based on payment reliability
+            if (totalCredit > 0) {
+                predictions.forEachIndexed { i, pred ->
+                    val adjustedConfidence = (pred.confidence * (0.8f + 0.4f * paymentReliability)).coerceIn(0.3, 0.95)
+                    predictions[i] = pred.copy(confidence = adjustedConfidence)
+                }
+                Timber.d("CustomerMatcher: Adjusted predictions with flywheel payment reliability=%.2f", paymentReliability)
+            }
 
             val output = buildString {
                 appendLine("🔮 *Wateja Wanaotarajia Kufika — Siku $daysAhead Zijazo*")
