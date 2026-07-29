@@ -113,7 +113,7 @@ class BiometricAuthManager @Inject constructor(
         if (cryptoObject != null) {
             // Crypto-backed: requires biometric (no device credential fallback with crypto)
             promptInfoBuilder.setNegativeButtonText(negativeButtonText)
-            biometricPrompt.authenticate(cryptoObject, promptInfoBuilder.build())
+            biometricPrompt.authenticate(promptInfoBuilder.build(), cryptoObject)
         } else {
             // Non-crypto: allow device credential fallback
             promptInfoBuilder.setAllowedAuthenticators(

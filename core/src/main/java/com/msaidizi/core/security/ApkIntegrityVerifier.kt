@@ -1,8 +1,10 @@
 package com.msaidizi.core.security
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import com.msaidizi.core.BuildConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 import timber.log.Timber
 import java.security.MessageDigest
@@ -83,6 +85,7 @@ class ApkIntegrityVerifier @Inject constructor(
     /**
      * Get the SHA-256 hash of the APK signing certificate.
      */
+    @SuppressLint("NewApi")
     fun getSigningCertificateHash(): String? {
         return try {
             val signatures = if (Build.VERSION.SDK_INT >= 28) {
