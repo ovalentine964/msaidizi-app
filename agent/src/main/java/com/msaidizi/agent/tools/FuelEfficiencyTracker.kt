@@ -324,12 +324,16 @@ class FuelEfficiencyTracker @Inject constructor(
                     when {
                         monthKmPerLiter > 40 -> appendLine("✅ Injini yako ni nzuri — endelea hivyo!")
                         monthKmPerLiter > 30 -> appendLine("👍 Ufanisi wa kawaida. Angalia tairi pressure.")
-                        monthKmPerLiter > 20 -> appendLine("⚠️ Ufanisi wa chini. Angalia:")
-                        appendLine("   • Tairi pressure (baridi = wastani)")
-                        appendLine("   • Mafuta ya injini (badilisha kila km 3000)")
-                        appendLine("   • Air filter (safisha kila wiki)")
-                        else -> appendLine("🔴 Ufanisi mbaya! Hatari ya mafuta kuvuja au injini kuharibika.")
-                        appendLine("   Pita garage haraka!")
+                        monthKmPerLiter > 20 -> {
+                            appendLine("⚠️ Ufanisi wa chini. Angalia:")
+                            appendLine("   • Tairi pressure (baridi = wastani)")
+                            appendLine("   • Mafuta ya injini (badilisha kila km 3000)")
+                            appendLine("   • Air filter (safisha kila wiki)")
+                        }
+                        else -> {
+                            appendLine("🔴 Ufanisi mbaya! Hatari ya mafuta kuvuja au injini kuharibika.")
+                            appendLine("   Pita garage haraka!")
+                        }
                     }
                 }
 
