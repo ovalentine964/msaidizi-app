@@ -9,7 +9,7 @@
   <img src="https://img.shields.io/badge/Voice--First-E8A838?style=flat-square" alt="Voice-First">
   <img src="https://img.shields.io/badge/Tools-52+-1B4965?style=flat-square" alt="52+ Tools">
   <img src="https://img.shields.io/badge/CI-Passing-3DDC84?style=flat-square" alt="CI">
-  <img src="https://img.shields.io/badge/License-SSPL--1.0-blue?style=flat-square" alt="License">
+  <img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square" alt="License">
 </p>
 
 > **Every mama mboga deserves a CFO.** Msaidizi is a free, voice-first, offline-first AI CFO that runs on your phone. Speak in your language — track your business, understand your profit, build your credit.

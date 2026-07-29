@@ -103,10 +103,12 @@ jobs:
             native-deps-
 
       - name: Setup native dependencies (llama.cpp + sherpa-onnx)
-        if: steps.native-cache.outputs.cache-hit != 'true'
         run: |
           chmod +x scripts/setup_native_deps.sh
-          ./scripts/setup_native_deps.sh
+          # llama.cpp: clone from source (no pre-built Android libs available)
+          ./scripts/setup_native_deps.sh --llama-only
+          # sherpa-onnx: use pre-built AAR to avoid onnxruntime download failure in CI
+          ./scripts/setup_native_deps.sh --prebuilt || ./scripts/setup_native_deps.sh --sherpa-only
 
       # ── Restore model cache ────────────────────────────────
       - name: Restore model cache

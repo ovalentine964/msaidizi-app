@@ -241,10 +241,10 @@ jobs:
             native-deps-
 
       - name: Setup native dependencies (llama.cpp + sherpa-onnx)
-        if: steps.native-cache.outputs.cache-hit != 'true'
         run: |
           chmod +x scripts/setup_native_deps.sh
-          ./scripts/setup_native_deps.sh
+          ./scripts/setup_native_deps.sh --llama-only
+          ./scripts/setup_native_deps.sh --prebuilt || ./scripts/setup_native_deps.sh --sherpa-only
 
       - name: Compile debug build
         run: ./gradlew compileFullDebugKotlin

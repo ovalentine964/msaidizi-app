@@ -215,6 +215,18 @@ setup_prebuilt() {
             done
         fi
 
+        # Set up include directory for CMake pre-built path
+        # CMakeLists.txt expects: sherpa-onnx/include/sherpa-onnx/c-api/c-api.h
+        local include_dir="$sherpa_dir/include/sherpa-onnx/c-api"
+        mkdir -p "$include_dir"
+        local found_header=$(find "$sherpa_dir" -name "c-api.h" 2>/dev/null | head -1)
+        if [ -n "$found_header" ]; then
+            cp -v "$found_header" "$include_dir/"
+        else
+            log "Downloading sherpa-onnx C API header..."
+            curl -sL "https://raw.githubusercontent.com/k2-fsa/sherpa-onnx/refs/heads/master/sherpa-onnx/c-api/c-api.h" -o "$include_dir/c-api.h" 2>/dev/null || true
+        fi
+
         ok "sherpa-onnx extracted"
     fi
 
