@@ -122,6 +122,13 @@ jobs:
           chmod +x scripts/download_models.sh
           ./scripts/download_models.sh
 
+      - name: Remove LLM model for cloud flavor
+        if: matrix.flavor == 'cloud'
+        run: |
+          echo "Removing LLM model for cloud flavor (uses cloud API instead)"
+          rm -rf app/src/main/assets/models/gguf/
+          echo "LLM model removed — cloud flavor will use Groq API"
+
       - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
         with:

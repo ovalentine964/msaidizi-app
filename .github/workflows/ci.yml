@@ -320,8 +320,18 @@ jobs:
           ./scripts/download_models.sh --verify
           echo "::endgroup::"
 
-      - name: Build cloud debug APK (~50MB)
+      - name: Remove LLM model for cloud build
+        run: |
+          echo "Removing LLM model for cloud flavor (uses cloud API instead)"
+          rm -rf app/src/main/assets/models/gguf/
+
+      - name: Build cloud debug APK (~50MB, no LLM)
         run: ./gradlew assembleCloudDebug
+
+      - name: Restore LLM model for full build
+        run: |
+          chmod +x scripts/download_models.sh
+          ./scripts/download_models.sh --llm-only
 
       - name: Build full debug APK (~550MB, with models)
         run: ./gradlew assembleFullDebug
