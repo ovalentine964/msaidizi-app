@@ -208,7 +208,7 @@ data class TimeRouteSummary(
 
 data class WeatherFareSummary(
     val weather: String,
-    val route: String = "",
+    val route: String? = null,
     val avgFare: Double,
     val count: Int
 )

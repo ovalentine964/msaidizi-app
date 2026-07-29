@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface RideUserDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(user: RideUserEntity): String
+    suspend fun insert(user: RideUserEntity): Long
 
     @Update
     suspend fun update(user: RideUserEntity)

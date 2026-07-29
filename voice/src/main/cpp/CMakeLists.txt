@@ -1,15 +1,13 @@
-/**
- * Msaidizi — CMake build for native components.
- *
- * Links:
- *   - llama.cpp  (on-device LLM inference)
- *   - sherpa-onnx (on-device ASR / TTS / VAD)
- *
- * Produces three shared libraries loaded via JNI:
- *   libllama_jni.so   — LLM bridge
- *   libsherpa_jni.so  — ASR / TTS bridge
- *   libvad_jni.so     — Voice Activity Detection bridge
- */
+# Msaidizi — CMake build for native components.
+#
+# Links:
+#   - llama.cpp  (on-device LLM inference)
+#   - sherpa-onnx (on-device ASR / TTS / VAD)
+#
+# Produces three shared libraries loaded via JNI:
+#   libllama_jni.so   — LLM bridge
+#   libsherpa_jni.so  — ASR / TTS bridge
+#   libvad_jni.so     — Voice Activity Detection bridge
 
 cmake_minimum_required(VERSION 3.22.1)
 project("msaidizi_native" LANGUAGES CXX)
