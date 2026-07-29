@@ -320,21 +320,35 @@ jobs:
           ./scripts/download_models.sh --verify
           echo "::endgroup::"
 
-      - name: Build debug APK with models
+      - name: Build cloud debug APK (~50MB)
+        run: ./gradlew assembleCloudDebug
+
+      - name: Build full debug APK (~550MB, with models)
         run: ./gradlew assembleFullDebug
 
-      - name: Report APK size
+      - name: Report APK sizes
         run: |
-          APK=$(find app/build/outputs/apk/debug -name "*.apk" | head -1)
-          if [ -n "$APK" ]; then
-            SIZE=$(du -h "$APK" | cut -f1)
-            echo "📱 Debug APK size: $SIZE"
-            echo "apk_size=$SIZE" >> "$GITHUB_ENV"
+          echo "::group::APK sizes"
+          CLOUD_APK=$(find app/build/outputs/apk/cloud/debug -name "*.apk" | head -1)
+          FULL_APK=$(find app/build/outputs/apk/full/debug -name "*.apk" | head -1)
+          if [ -n "$CLOUD_APK" ]; then
+            echo "📱 Cloud APK: $(du -h "$CLOUD_APK" | cut -f1)"
           fi
+          if [ -n "$FULL_APK" ]; then
+            echo "📱 Full APK: $(du -h "$FULL_APK" | cut -f1)"
+          fi
+          echo "::endgroup::"
 
-      - name: Upload debug APK
+      - name: Upload cloud debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: msaidizi-debug-with-models
+          name: msaidizi-cloud-debug
+          path: app/build/outputs/apk/cloud/debug/*.apk
+          retention-days: 7
+
+      - name: Upload full debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: msaidizi-full-debug
           path: app/build/outputs/apk/full/debug/*.apk
           retention-days: 7

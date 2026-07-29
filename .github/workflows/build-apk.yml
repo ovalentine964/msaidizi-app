@@ -83,7 +83,7 @@ jobs:
       fail-fast: false
       matrix:
         build_type: [debug, release]
-        flavor: [full]
+        flavor: [cloud, full]
         exclude:
           - build_type: ${{ github.event.inputs.build_type == 'release' && 'debug' || 'none' }}
           - build_type: ${{ github.event.inputs.build_type == 'debug' && 'release' || 'none' }}
@@ -184,14 +184,28 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Download release APK
+      - name: Download cloud release APK
+        uses: actions/download-artifact@v4
+        with:
+          name: msaidizi-cloud-release-apk
+          path: ./artifacts
+        continue-on-error: true
+
+      - name: Download cloud debug APK
+        uses: actions/download-artifact@v4
+        with:
+          name: msaidizi-cloud-debug-apk
+          path: ./artifacts
+        continue-on-error: true
+
+      - name: Download full release APK
         uses: actions/download-artifact@v4
         with:
           name: msaidizi-full-release-apk
           path: ./artifacts
         continue-on-error: true
 
-      - name: Download debug APK
+      - name: Download full debug APK
         uses: actions/download-artifact@v4
         with:
           name: msaidizi-full-debug-apk
@@ -294,6 +308,8 @@ jobs:
           draft: false
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
           files: |
+            release-assets/msaidizi-cloud-release.apk
+            release-assets/msaidizi-cloud-debug.apk
             release-assets/msaidizi-full-release.apk
             release-assets/msaidizi-full-debug.apk
           generate_release_notes: false

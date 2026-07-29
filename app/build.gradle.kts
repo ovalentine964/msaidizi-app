@@ -69,6 +69,25 @@ android {
         }
     }
 
+    // ── Product Flavors ──────────────────────────────────────
+    // cloud: ~50MB APK, models downloaded on first launch
+    // full: ~550MB APK, all models bundled for offline use
+    flavorDimensions += listOf("distribution")
+    productFlavors {
+        create("cloud") {
+            dimension = "distribution"
+            applicationIdSuffix = ".cloud"
+            versionNameSuffix = "-cloud"
+            buildConfigField("boolean", "BUNDLE_MODELS", "false")
+            buildConfigField("String", "CLOUD_API_DEFAULT", "\"https://api.groq.com/openai/v1\"")
+        }
+        create("full") {
+            dimension = "distribution"
+            buildConfigField("boolean", "BUNDLE_MODELS", "true")
+            buildConfigField("String", "CLOUD_API_DEFAULT", "\"\"")
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
