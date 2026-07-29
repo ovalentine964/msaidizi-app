@@ -37,6 +37,47 @@ class SherpaOnnxEngine @Inject constructor() {
             }
         }
 
+        // ── Audio conversion utilities ───────────────────────
+
+        /**
+         * Convert PCM 16-bit LE bytes to float array normalised to [-1, 1].
+         */
+        fun pcm16ToFloat(pcm: ByteArray): FloatArray {
+            val samples = FloatArray(pcm.size / 2)
+            for (i in samples.indices) {
+                val lo = pcm[i * 2].toInt() and 0xFF
+                val hi = pcm[i * 2 + 1].toInt()
+                val sample = (hi shl 8) or lo
+                samples[i] = sample.toFloat() / 32768.0f
+            }
+            return samples
+        }
+
+        /**
+         * Convert float array ([-1, 1]) to PCM 16-bit LE bytes.
+         */
+        fun floatToPcm16(samples: FloatArray): ByteArray {
+            val pcm = ByteArray(samples.size * 2)
+            for (i in samples.indices) {
+                val clamped = samples[i].coerceIn(-1.0f, 1.0f)
+                val intSample = (clamped * 32767.0f).toInt()
+                pcm[i * 2] = (intSample and 0xFF).toByte()
+                pcm[i * 2 + 1] = (intSample shr 8).toByte()
+            }
+            return pcm
+        }
+
+        /**
+         * Simple JSON string escape.
+         */
+        internal fun String.escapeJson(): String =
+            replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t")
+    }
+
     // ── Native methods (defined in sherpa_jni.cpp) ───────────
 
     // --- ASR (Recognizer) ---
@@ -311,44 +352,4 @@ class SherpaOnnxEngine @Inject constructor() {
         "recognizerHandle" to recognizerHandle,
         "synthesizerHandle" to synthesizerHandle
     )
-
-
-        /**
-         * Convert PCM 16-bit LE bytes to float array normalised to [-1, 1].
-         */
-        fun pcm16ToFloat(pcm: ByteArray): FloatArray {
-            val samples = FloatArray(pcm.size / 2)
-            for (i in samples.indices) {
-                val lo = pcm[i * 2].toInt() and 0xFF
-                val hi = pcm[i * 2 + 1].toInt()
-                val sample = (hi shl 8) or lo
-                samples[i] = sample.toFloat() / 32768.0f
-            }
-            return samples
-        }
-
-        /**
-         * Convert float array ([-1, 1]) to PCM 16-bit LE bytes.
-         */
-        fun floatToPcm16(samples: FloatArray): ByteArray {
-            val pcm = ByteArray(samples.size * 2)
-            for (i in samples.indices) {
-                val clamped = samples[i].coerceIn(-1.0f, 1.0f)
-                val intSample = (clamped * 32767.0f).toInt()
-                pcm[i * 2] = (intSample and 0xFF).toByte()
-                pcm[i * 2 + 1] = (intSample shr 8).toByte()
-            }
-            return pcm
-        }
-
-        /**
-         * Simple JSON string escape.
-         */
-        internal fun String.escapeJson(): String =
-            replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t")
-    }
 }
