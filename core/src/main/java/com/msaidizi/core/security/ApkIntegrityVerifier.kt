@@ -89,11 +89,13 @@ class ApkIntegrityVerifier @Inject constructor(
     fun getSigningCertificateHash(): String? {
         return try {
             val signatures = if (Build.VERSION.SDK_INT >= 28) {
+                @Suppress("DEPRECATION")
                 val info = context.packageManager.getPackageInfo(
                     context.packageName,
-                    PackageManager.GET_SIGNING_INFO
+                    PackageManager.GET_SIGNATURES
                 )
-                info.signingInfo.apkContentsSigners
+                // On API 28+, signatures contains the signing info
+                info.signatures
             } else {
                 @Suppress("DEPRECATION")
                 val info = context.packageManager.getPackageInfo(
