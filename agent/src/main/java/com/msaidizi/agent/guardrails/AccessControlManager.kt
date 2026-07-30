@@ -223,42 +223,39 @@ class AccessControlManager @Inject constructor() {
         /**
          * Role → allowed tool names.
          */
-        val ROLE_PERMISSIONS: Map<Role, Set<String>> = mapOf(
-            Role.WORKER to setOf(
+        val ROLE_PERMISSIONS: Map<Role, Set<String>> = run {
+            val workerPerms = setOf(
                 "record_transaction", "check_stock", "voice_pipeline",
                 "language_detector", "code_switch_handler"
-            ),
-            Role.AGENT to buildSet {
-                addAll(ROLE_PERMISSIONS[Role.WORKER] ?: emptySet())
-                addAll(setOf(
-                    "inventory_tracker", "daily_report", "weekly_report",
-                    "pricing_advisor", "customer_manager"
-                ))
-            },
-            Role.FIELD_OFFICER to buildSet {
-                addAll(ROLE_PERMISSIONS[Role.AGENT] ?: emptySet())
-                addAll(setOf(
-                    "anomaly_detector", "goal_tracker", "gamification_engine",
-                    "whatsapp_reporter", "restock_predictor"
-                ))
-            },
-            Role.ADMIN to buildSet {
-                addAll(ROLE_PERMISSIONS[Role.FIELD_OFFICER] ?: emptySet())
-                addAll(setOf(
-                    "user_management", "business_config", "security_guard",
-                    "model_downloader", "sync_engine"
-                ))
-            },
-            Role.DPO to setOf(
-                "privacy_audit", "data_export", "data_deletion",
-                "consent_manager", "audit_trail_viewer"
-            ),
-            Role.ENGINEER to setOf(
-                "system_config", "model_management", "log_viewer",
-                "debug_tools", "performance_monitor", "sync_engine",
-                "model_downloader"
             )
-        )
+            val agentPerms = workerPerms + setOf(
+                "inventory_tracker", "daily_report", "weekly_report",
+                "pricing_advisor", "customer_manager"
+            )
+            val fieldOfficerPerms = agentPerms + setOf(
+                "anomaly_detector", "goal_tracker", "gamification_engine",
+                "whatsapp_reporter", "restock_predictor"
+            )
+            val adminPerms = fieldOfficerPerms + setOf(
+                "user_management", "business_config", "security_guard",
+                "model_downloader", "sync_engine"
+            )
+            mapOf(
+                Role.WORKER to workerPerms,
+                Role.AGENT to agentPerms,
+                Role.FIELD_OFFICER to fieldOfficerPerms,
+                Role.ADMIN to adminPerms,
+                Role.DPO to setOf(
+                    "privacy_audit", "data_export", "data_deletion",
+                    "consent_manager", "audit_trail_viewer"
+                ),
+                Role.ENGINEER to setOf(
+                    "system_config", "model_management", "log_viewer",
+                    "debug_tools", "performance_monitor", "sync_engine",
+                    "model_downloader"
+                )
+            )
+        }
 
         /**
          * Role → resource → allowed actions.

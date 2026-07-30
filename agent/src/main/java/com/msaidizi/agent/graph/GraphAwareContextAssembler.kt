@@ -169,7 +169,7 @@ class GraphAwareContextAssembler @Inject constructor(
                     val toNode = neighborhood.nodes.find { it.id == edge.toId }
 
                     if (fromNode != null && toNode != null) {
-                        val relation = edge.relation.replace("_", " ")
+                        val relation = edge.relation.name.replace("_", " ")
                         context.add("${fromNode.label} $relation ${toNode.label}")
 
                         // Add edge properties
@@ -249,9 +249,9 @@ class GraphAwareContextAssembler @Inject constructor(
             for (j in i + 1 until entityIds.size) {
                 val paths = knowledgeGraph.findPaths(entityIds[i], entityIds[j], maxDepth = 3)
                 if (paths.isNotEmpty()) {
-                    val pathDesc = paths.first().joinToString(" → ") { id ->
+                    val pathDesc = paths.first().map { id ->
                         knowledgeGraph.getNode(id)?.label ?: id
-                    }
+                    }.joinToString(" → ")
                     insights.add("Related: $pathDesc")
                 }
             }

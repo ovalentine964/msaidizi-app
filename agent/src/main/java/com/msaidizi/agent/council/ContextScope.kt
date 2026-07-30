@@ -7,6 +7,8 @@ import com.msaidizi.agent.harness.OodaPhase
 import com.msaidizi.agent.tools.AlamaScoreResult
 import timber.log.Timber
 import java.util.concurrent.ConcurrentHashMap
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * ContextScope — Hierarchical context sharing between supervisor and councils.

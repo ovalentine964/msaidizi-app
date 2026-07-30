@@ -613,11 +613,11 @@ class FlywheelEngine @Inject constructor(
         val key = "tool_reliability_${toolName}"
         val existing = knowledgeDao.getEntry("tool_reliability", key)
         if (existing != null) {
-            val data = try {
+            val data: MutableMap<String, Any> = try {
                 @Suppress("UNCHECKED_CAST")
                 gson.fromJson(existing.value, MutableMap::class.java) as MutableMap<String, Any>
             } catch (e: Exception) {
-                mutableMapOf("total" to 0, "successes" to 0)
+                mutableMapOf<String, Any>("total" to 0, "successes" to 0)
             }
             val total = ((data["total"] as? Number)?.toInt() ?: 0) + 1
             val successes = ((data["successes"] as? Number)?.toInt() ?: 0) + if (success) 1 else 0

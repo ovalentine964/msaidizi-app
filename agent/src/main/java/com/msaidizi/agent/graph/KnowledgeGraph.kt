@@ -285,7 +285,7 @@ class KnowledgeGraph @Inject constructor(
             if (fromNode != null && toNode != null) {
                 val fromLabel = fromNode.label
                 val toLabel = toNode.label
-                val relation = edge.relation.replace("_", " ")
+                val relation = edge.relation.name.replace("_", " ")
                 contextLines.add("$fromLabel $relation $toLabel")
 
                 // Add properties as context

@@ -8,6 +8,7 @@ import kotlinx.coroutines.*
 import timber.log.Timber
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import com.msaidizi.core.database.KgFactEntity
 import javax.inject.Inject
 import javax.inject.Singleton
 

@@ -206,7 +206,7 @@ class ToolGraph @Inject constructor(
                         if (depResult != null && depResult.success) {
                             // Pass dependency output as input param
                             params["${dep}_result"] = depResult.message
-                            depResult.data?.forEach { (k, v) ->
+                            (depResult.data as? Map<*, *>)?.forEach { (k, v) ->
                                 params["${dep}_$k"] = v.toString()
                             }
                         }
@@ -384,7 +384,7 @@ class ToolGraph @Inject constructor(
             }
             condition.startsWith("data_has:") -> {
                 val key = condition.removePrefix("data_has:")
-                result.data?.containsKey(key) == true
+                (result.data as? Map<*, *>)?.containsKey(key) == true
             }
             else -> {
                 Timber.w("ToolGraph: unknown condition: $condition")
