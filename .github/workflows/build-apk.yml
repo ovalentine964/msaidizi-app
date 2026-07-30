@@ -20,6 +20,11 @@ on:
         description: "Build type (debug / release / both)"
         required: false
         default: "both"
+        type: choice
+        options:
+          - debug
+          - release
+          - both
 
 # Cancel redundant runs on the same ref
 concurrency:
