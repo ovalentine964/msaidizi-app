@@ -54,7 +54,7 @@ struct VadHandle {
 
     ~VadHandle() {
 #if HAVE_SHERPA
-        if (vad) SherpaOnnxVoiceActivityDetectorDestroy(vad);
+        if (vad) SherpaOnnxDestroyVoiceActivityDetector(vad);
 #endif
     }
 };
@@ -129,8 +129,7 @@ Java_com_msaidizi_voice_VadEngine_nativeCreateVad(
     memset(&vad_config, 0, sizeof(vad_config));
 
     // Silero VAD model config
-    strncpy(vad_config.silero_vad.model, model_path.c_str(),
-            sizeof(vad_config.silero_vad.model) - 1);
+    vad_config.silero_vad.model = model_path.c_str();
     vad_config.silero_vad.threshold = threshold;
     vad_config.silero_vad.min_silence_duration = minSilenceDuration;
     vad_config.silero_vad.min_speech_duration = minSpeechDuration;
@@ -140,7 +139,7 @@ Java_com_msaidizi_voice_VadEngine_nativeCreateVad(
     vad_config.sample_rate = 16000;
     vad_config.num_threads = 2;
 
-    vh->vad = SherpaOnnxVoiceActivityDetectorCreate(&vad_config, 30.0f /* buffer size in seconds */);
+    vh->vad = SherpaOnnxCreateVoiceActivityDetector(&vad_config, 30.0f /* buffer size in seconds */);
     if (!vh->vad) {
         LOGE("Failed to create VAD");
         throw_rte(env, "Failed to create VAD detector");
@@ -195,14 +194,14 @@ Java_com_msaidizi_voice_VadEngine_nativeProcessAudio(
             SherpaOnnxVoiceActivityDetectorFront(vh->vad);
         if (segment) {
             is_speech = 1;
-            SherpaOnnxSpeechSegmentDestroy(segment);
+            SherpaOnnxDestroySpeechSegment(segment);
         }
         SherpaOnnxVoiceActivityDetectorPop(vh->vad);
     }
 
     // Also check the "is_speech" flag for real-time state
     if (!is_speech) {
-        is_speech = SherpaOnnxVoiceActivityDetectorIsSpeech(vh->vad) ? 1 : 0;
+        is_speech = SherpaOnnxVoiceActivityDetectorDetected(vh->vad) ? 1 : 0;
     }
 
     vh->speech_detected = (is_speech != 0);
@@ -226,7 +225,7 @@ Java_com_msaidizi_voice_VadEngine_nativeIsSpeech(
     if (!vh || !vh->valid) return JNI_FALSE;
 
     std::lock_guard<std::mutex> lock(vh->mu);
-    return SherpaOnnxVoiceActivityDetectorIsSpeech(vh->vad) ? JNI_TRUE : JNI_FALSE;
+    return SherpaOnnxVoiceActivityDetectorDetected(vh->vad) ? JNI_TRUE : JNI_FALSE;
 #endif
 }
 

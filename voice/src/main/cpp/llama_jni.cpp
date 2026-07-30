@@ -148,7 +148,7 @@ Java_com_msaidizi_voice_LlamaCppEngine_nativeLoadModel(
     llama_model_params model_params = llama_model_default_params();
     model_params.n_gpu_layers = 0;  // CPU-only on Android
 
-    mc->model = llama_load_model_from_file(path.c_str(), model_params);
+    mc->model = llama_model_load_from_file(path.c_str(), model_params);
     if (!mc->model) {
         LOGE("Failed to load model from %s", path.c_str());
         throw_java_exception(env, "Failed to load GGUF model file");
@@ -162,7 +162,7 @@ Java_com_msaidizi_voice_LlamaCppEngine_nativeLoadModel(
     ctx_params.n_threads       = std::max(1, static_cast<int>(nThreads));
     ctx_params.n_threads_batch = std::max(1, static_cast<int>(nThreads));
 
-    mc->ctx = llama_new_context_with_model(mc->model, ctx_params);
+    mc->ctx = llama_init_from_model(mc->model, ctx_params);
     if (!mc->ctx) {
         LOGE("Failed to create llama context");
         throw_java_exception(env, "Failed to create inference context");
@@ -205,17 +205,20 @@ Java_com_msaidizi_voice_LlamaCppEngine_nativeGenerate(
         return env->NewStringUTF("");
     }
 
+    // ── Get vocabulary ───────────────────────────────────────
+    const struct llama_vocab * vocab = llama_model_get_vocab(mc->model);
+
     // ── Tokenise prompt ──────────────────────────────────────
     const int n_max = llama_n_ctx(mc->ctx);
     std::vector<llama_token> tokens(n_max);
     int n_tokens = llama_tokenize(
-        mc->model,
+        vocab,
         prompt.c_str(),
         static_cast<int32_t>(prompt.size()),
         tokens.data(),
         n_max,
         true,   // add_bos
-        false   // special tokens
+        false   // parse_special
     );
 
     if (n_tokens < 0) {
@@ -258,14 +261,14 @@ Java_com_msaidizi_voice_LlamaCppEngine_nativeGenerate(
     for (int i = 0; i < maxTokens; ++i) {
         new_token = llama_sampler_sample(smpl, mc->ctx, -1);
 
-        if (llama_token_is_eog(mc->model, new_token)) {
+        if (llama_vocab_is_eog(vocab, new_token)) {
             LOGI("EOS token reached after %d tokens", n_generated);
             break;
         }
 
         // Decode token to text
         char buf[256];
-        int n = llama_token_to_piece(mc->model, new_token, buf, sizeof(buf), 0, true);
+        int n = llama_token_to_piece(vocab, new_token, buf, sizeof(buf), 0, true);
         if (n > 0) {
             output.append(buf, n);
         }

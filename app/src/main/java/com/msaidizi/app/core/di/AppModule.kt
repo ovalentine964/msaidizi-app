@@ -1,6 +1,6 @@
 package com.msaidizi.app.core.di
 
-import com.msaidizi.core.database.*
+import com.msaidizi.agent.flywheel.FlywheelEngine
 import com.msaidizi.agent.tools.*
 import dagger.Module
 import dagger.Provides
@@ -21,6 +21,7 @@ object AppModule {
     @Provides
     @Singleton
     fun provideToolRegistry(
+        flywheelEngine: FlywheelEngine,
         transactionRecorder: TransactionRecorder,
         inventoryTracker: InventoryTracker,
         cfoEngine: CFOEngine,
@@ -99,7 +100,7 @@ object AppModule {
         weatherForecastService: WeatherForecastService,
         bodaBodaRouter: BodaBodaRouter
     ): ToolRegistry {
-        val registry = ToolRegistry()
+        val registry = ToolRegistry(flywheelEngine)
         registry.register(transactionRecorder)
         registry.register(inventoryTracker)
         registry.register(cfoEngine)
