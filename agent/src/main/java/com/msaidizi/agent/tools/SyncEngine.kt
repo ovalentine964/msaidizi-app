@@ -188,11 +188,11 @@ class SyncEngine @Inject constructor(
                         "Synced $count items to cloud (attempt $attempt)"
                     )
                 } else {
-                    lastError = "HTTP ${response.code()}: ${response.message()}"
+                    lastError = "HTTP ${response.code}: ${response.message()}"
                     Timber.w("Sync failed (attempt $attempt): $lastError")
 
                     // Don't retry on client errors (4xx)
-                    if (response.code() in 400..499 && response.code() != 429) {
+                    if (response.code in 400..499 && response.code != 429) {
                         break
                     }
                 }

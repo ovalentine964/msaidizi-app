@@ -407,7 +407,7 @@ class YieldPredictor @Inject constructor(
 
         val numerator = xValues.zip(yValues).sumOf { (x, y) -> (x - xMean) * (y - yMean) }
         val denominator = xValues.sumOf { (it - xMean) * (it - xMean) }
-        val slope = if (denominator != 0) numerator / denominator else 0.0
+        val slope = if (denominator != 0.0) numerator / denominator else 0.0
 
         // Interpret slope
         val avgYield = yMean

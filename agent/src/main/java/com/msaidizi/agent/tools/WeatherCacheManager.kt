@@ -431,8 +431,8 @@ class WeatherCacheManager @Inject constructor(
         } else {
             buildString {
                 appendLine("Harvest window — ${location.first}:")
-                goodDays.forEach { appendLine("✅ ${f.forecastDate}: ${f.condition}, ${f.rainfallMm?.toInt() ?: 0}mm rain") }
-                badDays.forEach { appendLine("❌ ${f.forecastDate}: ${f.rainfallMm?.toInt() ?: 0}mm rain") }
+                goodDays.forEach { f -> appendLine("✅ ${f.forecastDate}: ${f.condition}, ${f.rainfallMm?.toInt() ?: 0}mm rain") }
+                badDays.forEach { f -> appendLine("❌ ${f.forecastDate}: ${f.rainfallMm?.toInt() ?: 0}mm rain") }
             }
         }
 
@@ -827,7 +827,7 @@ class WeatherCacheManager @Inject constructor(
         }
 
         // Check existing cache freshness
-        val cachedCount = db.rawQuery(
+        val cachedCount: Int = db.rawQuery(
             "SELECT COUNT(*) FROM $TABLE_FORECASTS WHERE location = ? AND expires_at > ?",
             arrayOf(location.first, now.toString())
         ).use { if (it.moveToFirst()) it.getInt(0) else 0 }
