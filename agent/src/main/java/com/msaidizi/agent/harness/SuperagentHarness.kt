@@ -14,6 +14,7 @@ import com.msaidizi.agent.memory.MemoryManager
 import com.msaidizi.agent.tools.ToolRegistry
 import com.msaidizi.agent.tools.ToolResult
 import com.msaidizi.agent.flywheel.FlywheelEngine
+import com.msaidizi.agent.graph.GraphContextStats
 import com.msaidizi.agent.trace.TraceCollector
 import com.msaidizi.agent.trace.IntentTier
 import com.msaidizi.agent.loops.AdviceRefinementLoop
@@ -470,6 +471,9 @@ data class AssembledContext(
     val relevantPatterns: List<String> = emptyList(),
     val learnedVocabulary: String = "",
     val businessRhythms: String = "",
+
+    // Graph metadata
+    val graphStats: GraphContextStats? = null,
 
     // Legacy compat
     val memoryContext: String? = null

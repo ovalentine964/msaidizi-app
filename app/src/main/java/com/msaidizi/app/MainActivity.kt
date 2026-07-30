@@ -46,13 +46,6 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MsaidiziTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = lightColorScheme(
-            primary = Color(0xFF1B4965),
-            secondary = Color(0xFFE8A838),
-            tertiary = Color(0xFFE8853D)
-        ),
-        content = content
-    )
+private fun MsaidiziTheme(content: @Composable () -> Unit) {
+    com.msaidizi.app.ui.designsystem.MsaidiziTheme(content = content)
 }

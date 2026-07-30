@@ -48,3 +48,5 @@ Thumbs.db
 
 # ── Scripts temp ─────────────────────────────────────────────
 scripts/*.tmp
+.model-cache/
+app/src/main/assets/models/

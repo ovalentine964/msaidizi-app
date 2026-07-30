@@ -21,7 +21,7 @@ data class ToolValidationResult(val valid: Boolean, val reason: String, val seve
  * this is the tool-interface version for direct tool access.
  */
 @Singleton
-class GuardrailsEngine @Inject constructor(
+class GuardrailsTool @Inject constructor(
     private val encryptionManager: EncryptionManager
 ) : Tool {
 

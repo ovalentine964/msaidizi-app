@@ -90,7 +90,7 @@ class TraceCollector @Inject constructor(
                     toolName = result.toolName,
                     success = result.success,
                     durationMs = 0, // individual tool timing not available from ToolResult
-                    error = result.errorMessage,
+                    error = if (!result.success) result.message else null,
                     outputSummary = result.message?.take(200)
                 )
             }

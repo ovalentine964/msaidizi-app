@@ -39,6 +39,7 @@ object AppModule {
             "msaidizi.db"
         )
             .openHelperFactory(factory)
+            .addMigrations(*com.msaidizi.core.database.Migrations.ALL_MIGRATIONS)
             .fallbackToDestructiveMigration()
             .build()
     }

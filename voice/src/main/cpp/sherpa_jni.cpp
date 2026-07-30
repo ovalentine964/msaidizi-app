@@ -21,6 +21,8 @@
  *     "language": "sw",
  *     ...
  *   }
+ *
+ * Compatible with sherpa-onnx v1.13.4 C API.
  */
 
 #include <jni.h>
@@ -32,6 +34,7 @@
 #include <unordered_map>
 #include <memory>
 #include <cstring>
+#include <cstdlib>
 #include <sstream>
 
 #define TAG "sherpa_jni"
@@ -46,14 +49,80 @@
 #else
 #define HAVE_SHERPA 0
 // Stub types so the file compiles without the library
-typedef void* SherpaOnnxOnlineRecognizer;
-typedef void* SherpaOnnxOfflineRecognizer;
-typedef void* SherpaOnnxOfflineTts;
-struct SherpaOnnxOfflineTtsGeneratedAudio {
+typedef void SherpaOnnxOfflineRecognizer;
+typedef void SherpaOnnxOfflineTts;
+typedef void SherpaOnnxOfflineStream;
+struct SherpaOnnxGeneratedAudio {
     const float* samples;
     int32_t n;
+    int32_t sample_rate;
 };
 #endif
+
+// ─────────────────────────────────────────────────────────────
+// Minimal JSON field extractor (no external JSON lib needed)
+// ─────────────────────────────────────────────────────────────
+
+/// Extract a string value for a given key from a flat JSON object.
+/// Returns empty string if key not found. Handles escaped quotes.
+static std::string json_str(const char* json, const char* key) {
+    if (!json || !key) return "";
+    std::string needle = std::string("\"") + key + "\"";
+    const char* pos = strstr(json, needle.c_str());
+    if (!pos) return "";
+
+    // Skip past "key"
+    pos += needle.size();
+
+    // Skip whitespace and colon
+    while (*pos == ' ' || *pos == '\t' || *pos == ':') ++pos;
+
+    if (*pos != '"') return "";
+
+    ++pos; // skip opening quote
+    std::string value;
+    while (*pos && *pos != '"') {
+        if (*pos == '\\' && *(pos + 1)) {
+            ++pos;
+            switch (*pos) {
+                case '"':  value += '"';  break;
+                case '\\': value += '\\'; break;
+                case 'n':  value += '\n'; break;
+                case 'r':  value += '\r'; break;
+                case 't':  value += '\t'; break;
+                default:   value += *pos; break;
+            }
+        } else {
+            value += *pos;
+        }
+        ++pos;
+    }
+    return value;
+}
+
+/// Extract an integer value for a given key from a flat JSON object.
+/// Returns default_val if key not found.
+static int json_int(const char* json, const char* key, int default_val) {
+    if (!json || !key) return default_val;
+    std::string needle = std::string("\"") + key + "\"";
+    const char* pos = strstr(json, needle.c_str());
+    if (!pos) return default_val;
+    pos += needle.size();
+    while (*pos == ' ' || *pos == '\t' || *pos == ':') ++pos;
+    return static_cast<int>(strtol(pos, nullptr, 10));
+}
+
+/// Extract a float value for a given key from a flat JSON object.
+/// Returns default_val if key not found.
+static float json_float(const char* json, const char* key, float default_val) {
+    if (!json || !key) return default_val;
+    std::string needle = std::string("\"") + key + "\"";
+    const char* pos = strstr(json, needle.c_str());
+    if (!pos) return default_val;
+    pos += needle.size();
+    while (*pos == ' ' || *pos == '\t' || *pos == ':') ++pos;
+    return strtof(pos, nullptr);
+}
 
 // ─────────────────────────────────────────────────────────────
 // Handle registry (recognisers & synthesisers)
@@ -67,7 +136,7 @@ struct RecognizerHandle {
     bool valid = false;
     ~RecognizerHandle() {
 #if HAVE_SHERPA
-        if (recognizer) SherpaOnnxOfflineRecognizerDestroy(recognizer);
+        if (recognizer) SherpaOnnxDestroyOfflineRecognizer(recognizer);
 #endif
     }
 };
@@ -75,18 +144,16 @@ struct RecognizerHandle {
 struct SynthesizerHandle {
 #if HAVE_SHERPA
     const SherpaOnnxOfflineTts* tts = nullptr;
+    int32_t sample_rate = 22050;
 #endif
     std::mutex mu;
     bool valid = false;
     ~SynthesizerHandle() {
 #if HAVE_SHERPA
-        if (tts) SherpaOnnxOfflineTtsDestroy(tts);
+        if (tts) SherpaOnnxDestroyOfflineTts(tts);
 #endif
     }
 };
-
-// Generic handle registry
-
 
 // Separate registries for recogniser and synthesiser
 static std::mutex g_recog_mu;
@@ -164,28 +231,53 @@ Java_com_msaidizi_voice_SherpaOnnxEngine_nativeCreateRecognizer(
     std::string cfg = jstr(env, jConfigJson);
     LOGI("Creating recogniser with config: %s", cfg.c_str());
 
-    // Parse config JSON (minimal parser — avoid pulling in a JSON lib)
-    // Expected fields: encoder, decoder, tokens, language, numThreads
-    // For production, use a proper JSON parser or pass individual params.
-
+    const char* json = cfg.c_str();
     auto rh = std::make_unique<RecognizerHandle>();
 
+    // Build config manually from JSON fields (no ParseFromJson in C API)
     SherpaOnnxOfflineRecognizerConfig config;
     memset(&config, 0, sizeof(config));
 
-    // Use sensible defaults; actual paths come from the Kotlin layer
-    // which already resolved them from the ModelManager.
-    // The config JSON is a thin wrapper around sherpa-onnx's own config struct.
+    // Feature config defaults
+    config.feat_config.sample_rate = json_int(json, "sample_rate", 16000);
+    config.feat_config.feature_dim = json_int(json, "feature_dim", 80);
 
-    // For now, we accept individual JNI params in a future overload;
-    // this JSON path works with sherpa-onnx's built-in config parser.
-    SherpaOnnxOfflineRecognizerConfig* parsed =
-        SherpaOnnxOfflineRecognizerConfigParseFromJson(cfg.c_str());
+    // Model config — support Whisper encoder/decoder paths from Kotlin layer
+    std::string encoder  = json_str(json, "encoder");
+    std::string decoder  = json_str(json, "decoder");
+    std::string tokens   = json_str(json, "tokens");
+    std::string language = json_str(json, "language");
+    std::string model_type = json_str(json, "model_type");
 
-    if (parsed) {
-        rh->recognizer = SherpaOnnxOfflineRecognizerCreate(parsed);
-        SherpaOnnxOfflineRecognizerConfigDestroy(parsed);
+    // For Whisper models: encoder → whisper.encoder, decoder → whisper.decoder
+    if (!encoder.empty()) config.model_config.whisper.encoder = encoder.c_str();
+    if (!decoder.empty()) config.model_config.whisper.decoder = decoder.c_str();
+    if (!language.empty()) config.model_config.whisper.language = language.c_str();
+    config.model_config.whisper.task = "transcribe";
+
+    // For transducer models: support encoder/decoder/joiner
+    std::string joiner = json_str(json, "joiner");
+    if (!joiner.empty()) {
+        // If joiner is present, treat as transducer model
+        config.model_config.transducer.encoder = encoder.c_str();
+        config.model_config.transducer.decoder = decoder.c_str();
+        config.model_config.transducer.joiner = joiner.c_str();
+        // Clear whisper paths
+        config.model_config.whisper.encoder = nullptr;
+        config.model_config.whisper.decoder = nullptr;
+        config.model_config.whisper.language = nullptr;
     }
+
+    if (!tokens.empty()) config.model_config.tokens = tokens.c_str();
+    config.model_config.num_threads = json_int(json, "num_threads", 2);
+    config.model_config.debug = json_int(json, "debug", 0);
+    if (!model_type.empty()) config.model_config.model_type = model_type.c_str();
+
+    // Decoding method
+    std::string decoding = json_str(json, "decoding_method");
+    if (!decoding.empty()) config.decoding_method = decoding.c_str();
+
+    rh->recognizer = SherpaOnnxCreateOfflineRecognizer(&config);
 
     if (!rh->recognizer) {
         LOGE("Failed to create recogniser");
@@ -224,27 +316,28 @@ Java_com_msaidizi_voice_SherpaOnnxEngine_nativeRecognize(
     }
 
     // Create offline stream
-    SherpaOnnxOfflineStream* stream =
-        SherpaOnnxOfflineRecognizerCreateStream(rh->recognizer);
+    const SherpaOnnxOfflineStream* stream =
+        SherpaOnnxCreateOfflineStream(rh->recognizer);
 
-    // Accept waveform
-    SherpaOnnxOfflineStreamAcceptWaveform(stream, sampleRate, audio, len);
+    // Feed waveform
+    SherpaOnnxAcceptWaveformOffline(stream, sampleRate, audio, len);
     env->ReleaseFloatArrayElements(jAudioData, audio, JNI_ABORT);
 
     // Decode
-    SherpaOnnxOfflineRecognizerDecode(rh->recognizer, stream);
+    SherpaOnnxDecodeOfflineStream(rh->recognizer, stream);
 
-    // Get result
+    // Get result (returns a new allocation; caller must destroy)
     const SherpaOnnxOfflineRecognizerResult* result =
-        SherpaOnnxOfflineRecognizerGetResult(rh->recognizer, stream);
+        SherpaOnnxGetOfflineStreamResult(stream);
 
     std::string text;
     if (result && result->text) {
         text = result->text;
     }
 
-    if (result) SherpaOnnxOfflineRecognizerDestroyResult(result);
-    SherpaOnnxOfflineStreamDestroy(stream);
+    // Clean up: destroy result, then stream
+    if (result) SherpaOnnxDestroyOfflineRecognizerResult(result);
+    SherpaOnnxDestroyOfflineStream(stream);
 
     LOGI("Recognised: %s (%zu chars)", text.c_str(), text.size());
     return env->NewStringUTF(text.c_str());
@@ -280,15 +373,48 @@ Java_com_msaidizi_voice_SherpaOnnxEngine_nativeCreateSynthesizer(
     std::string cfg = jstr(env, jConfigJson);
     LOGI("Creating synthesiser with config: %s", cfg.c_str());
 
+    const char* json = cfg.c_str();
     auto sh = std::make_unique<SynthesizerHandle>();
 
-    SherpaOnnxOfflineTtsConfig* parsed =
-        SherpaOnnxOfflineTtsConfigParseFromJson(cfg.c_str());
+    // Build config manually from JSON fields (no ParseFromJson in C API)
+    SherpaOnnxOfflineTtsConfig config;
+    memset(&config, 0, sizeof(config));
 
-    if (parsed) {
-        sh->tts = SherpaOnnxOfflineTtsCreate(parsed);
-        SherpaOnnxOfflineTtsConfigDestroy(parsed);
+    // Model paths — support Piper/VITS model from Kotlin layer
+    std::string model    = json_str(json, "model");
+    std::string tokens   = json_str(json, "tokens");
+    std::string data_dir = json_str(json, "data_dir");
+    std::string lexicon  = json_str(json, "lexicon");
+    std::string dict_dir = json_str(json, "dict_dir");
+
+    // Default to VITS model config (used by Piper TTS)
+    if (!model.empty())    config.model.vits.model    = model.c_str();
+    if (!tokens.empty())   config.model.vits.tokens   = tokens.c_str();
+    if (!data_dir.empty()) config.model.vits.data_dir = data_dir.c_str();
+    if (!lexicon.empty())  config.model.vits.lexicon  = lexicon.c_str();
+    if (!dict_dir.empty()) config.model.vits.dict_dir = dict_dir.c_str();
+
+    config.model.num_threads = json_int(json, "num_threads", 2);
+    config.model.debug = json_int(json, "debug", 0);
+
+    // Also support Kokoro model format
+    std::string kokoro_model  = json_str(json, "kokoro_model");
+    std::string kokoro_voices = json_str(json, "kokoro_voices");
+    if (!kokoro_model.empty()) {
+        config.model.kokoro.model  = kokoro_model.c_str();
+        config.model.kokoro.voices = kokoro_voices.c_str();
+        config.model.kokoro.tokens = tokens.c_str();
+        config.model.kokoro.data_dir = data_dir.c_str();
+        // Clear vits paths
+        config.model.vits.model    = nullptr;
+        config.model.vits.tokens   = nullptr;
+        config.model.vits.data_dir = nullptr;
     }
+
+    config.max_num_sentences = json_int(json, "max_num_sentences", 999);
+    config.silence_scale = json_float(json, "silence_scale", 1.0f);
+
+    sh->tts = SherpaOnnxCreateOfflineTts(&config);
 
     if (!sh->tts) {
         LOGE("Failed to create synthesiser");
@@ -296,9 +422,13 @@ Java_com_msaidizi_voice_SherpaOnnxEngine_nativeCreateSynthesizer(
         return 0;
     }
 
+    // Cache the output sample rate
+    sh->sample_rate = SherpaOnnxOfflineTtsSampleRate(sh->tts);
+
     sh->valid = true;
     jlong handle = reg_tts(std::move(sh));
-    LOGI("Synthesiser created — handle=%lld", (long long)handle);
+    LOGI("Synthesiser created — handle=%lld, sample_rate=%d",
+         (long long)handle, sh->sample_rate);
     return handle;
 #endif
 }
@@ -328,23 +458,35 @@ Java_com_msaidizi_voice_SherpaOnnxEngine_nativeSynthesize(
 
     LOGI("Synthesising: %s (sid=%d, speed=%.2f)", text.c_str(), sid, speed);
 
-    SherpaOnnxOfflineTtsGeneratedAudio audio =
-        SherpaOnnxOfflineTtsGenerate(sh->tts, text.c_str(), sid, speed);
+    // Use the modern GenerateWithConfig API (non-deprecated)
+    SherpaOnnxGenerationConfig gen_cfg;
+    memset(&gen_cfg, 0, sizeof(gen_cfg));
+    gen_cfg.sid = sid;
+    gen_cfg.speed = speed;
+    gen_cfg.silence_scale = 1.0f;
 
-    if (!audio.samples || audio.n <= 0) {
+    const SherpaOnnxGeneratedAudio* audio =
+        SherpaOnnxOfflineTtsGenerateWithConfig(sh->tts, text.c_str(),
+                                               &gen_cfg, nullptr, nullptr);
+
+    if (!audio || !audio->samples || audio->n <= 0) {
         LOGE("TTS generation returned no audio");
+        if (audio) SherpaOnnxDestroyOfflineTtsGeneratedAudio(audio);
         return env->NewFloatArray(0);
     }
 
-    // Copy to Java float array (samples are already float32 at 22050 Hz)
-    jfloatArray result = env->NewFloatArray(audio.n);
-    env->SetFloatArrayRegion(result, 0, audio.n, audio.samples);
+    // Copy to Java float array (samples are float32 at the model's output rate)
+    jfloatArray result = env->NewFloatArray(audio->n);
+    env->SetFloatArrayRegion(result, 0, audio->n, audio->samples);
+
+    int32_t n_samples = audio->n;
+    int32_t sr = audio->sample_rate > 0 ? audio->sample_rate : sh->sample_rate;
 
     // Free native buffer
-    SherpaOnnxOfflineTtsDestroyAudio(&audio);
+    SherpaOnnxDestroyOfflineTtsGeneratedAudio(audio);
 
-    LOGI("Synthesised %d samples (%.2f seconds at 22050 Hz)",
-         audio.n, audio.n / 22050.0f);
+    LOGI("Synthesised %d samples (%.2f seconds at %d Hz)",
+         n_samples, n_samples / (float)sr, sr);
     return result;
 #endif
 }

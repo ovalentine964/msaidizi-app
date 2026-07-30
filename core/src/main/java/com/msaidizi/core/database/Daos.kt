@@ -333,6 +333,9 @@ interface KnowledgeDao {
 
     @Query("DELETE FROM knowledge_entries WHERE id IN (SELECT id FROM knowledge_entries WHERE category = :category ORDER BY usageCount ASC, updatedAt ASC LIMIT :count)")
     suspend fun deleteLeastUsedForCategory(category: String, count: Int)
+
+    @Delete
+    suspend fun delete(entry: KnowledgeEntity)
 }
 
 // ──────────────────────────────────────────────

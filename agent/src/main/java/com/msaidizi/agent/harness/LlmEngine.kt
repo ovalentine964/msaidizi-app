@@ -126,14 +126,14 @@ class LlmEngine @Inject constructor(
         appendLine("Be concise, actionable, and friendly.")
         appendLine("</s>")
         appendLine("<|im_start|>user")
-        if (context.businessSummary.isNotEmpty()) {
+        if (!context.recentFinancialSummary.isNullOrEmpty()) {
             appendLine("Business context:")
-            appendLine(context.businessSummary.take(500))
+            appendLine(context.recentFinancialSummary.take(500))
         }
         if (toolResults.isNotEmpty()) {
             appendLine("Tool results:")
             toolResults.forEach { result ->
-                appendLine("- ${result.toolName}: ${result.output.take(200)}")
+                appendLine("- ${result.toolName}: ${result.message.take(200)}")
             }
         }
         appendLine(userMessage)
@@ -143,9 +143,9 @@ class LlmEngine @Inject constructor(
 
     private fun generateFallbackResponse(intent: UserIntent): String {
         return when (intent.type) {
-            IntentType.TRACK_SALE -> "Nimesikia! Tafadhali sema tena ili nirekodi mauzo yako."
-            IntentType.TRACK_EXPENSE -> "Sawa! Tafadhali sema gharama yako tena."
-            IntentType.CHECK_PROFIT -> "Inapakia ripoti ya faida yako..."
+            IntentType.RECORD_SALE -> "Nimesikia! Tafadhali sema tena ili nirekodi mauzo yako."
+            IntentType.RECORD_EXPENSE -> "Sawa! Tafadhali sema gharama yako tena."
+            IntentType.ASK_PROFIT -> "Inapakia ripoti ya faida yako..."
             IntentType.GREETING -> "Habari! Mimi ni Msaidizi, msaidizi wako wa biashara. Nisaidie nini leo?"
             else -> "Pole sana, sijaelewa. Tafadhali jaribu tena."
         }

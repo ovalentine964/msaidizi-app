@@ -142,7 +142,6 @@ class HarnessImprover @Inject constructor(
             if (delta != 0f) {
                 val newWeight = (currentWeight + delta).coerceIn(0.5f, 1.5f)
                 intentWeightAdjustments[intent] = newWeight
-                adjustments++
                 adjustmentsMade++
                 adjustments.add(AdjustmentRecord(
                     type = AdjustmentType.INTENT_WEIGHT,
