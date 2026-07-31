@@ -8,6 +8,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.sqrt
 import com.msaidizi.agent.tools.core.*
+import com.msaidizi.agent.tools.market.ProducePriceTracker
 
 /**
  * YieldPredictor — Predict future yields from historical harvest data.
