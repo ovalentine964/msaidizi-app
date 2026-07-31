@@ -1923,7 +1923,7 @@ CREATE TABLE proactive_voice_log (
 | Qwen 0.8B LLM | ~500MB | Loaded on-demand for Tier 3 |
 | **Total (ambient)** | **~17MB** | Wake word + audio buffers |
 | **Total (active STT)** | **~170MB** | + Whisper model |
-| **Total (full pipeline)** | **~700MB** | + LLM (peak) |
+| **Total (full pipeline)** | **~555MB** | + LLM (peak) |
 
 ### 10.3 Battery Budget
 

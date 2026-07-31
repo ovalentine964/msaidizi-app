@@ -95,7 +95,7 @@ African market phones (2024-2025):
 - Supports context windows up to 32K tokens (enough for financial conversations).
 
 **Model delivery strategy:**
-- Ship Q3_K_M (~700MB) in initial APK download
+- Ship Q3_K_M (~555MB) in initial APK download
 - Offer Q4_K_M (~1GB) as optional download for better quality
 - Model stored in app-private storage, downloaded once, verified with checksum
 - Delta updates for model versions to save bandwidth

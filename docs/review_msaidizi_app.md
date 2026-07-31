@@ -488,7 +488,7 @@ Based on the `WorkerProfile` and `OnboardingSessionData`:
 ### What's Missing from Bootstrap
 
 1. **No voice-guided onboarding** — despite being "voice-first," onboarding uses Fragments with text
-2. **No model download during onboarding** — `ModelDownloadManager` exists but 700MB download on mobile data is unrealistic
+2. **No model download during onboarding** — `ModelDownloadManager` exists but 555MB download on mobile data is unrealistic
 3. **No offline-first onboarding** — requires backend API for phone verification
 4. **No sample transaction** — the "First Use" step should show a real transaction, not a tutorial
 
@@ -553,22 +553,22 @@ https://github.com/ovalentine964/msaidizi-app/releases/download/latest/msaidizi-
 ### Device Requirements
 
 - RAM: 2GB minimum (3GB+ recommended)
-- Storage: ~700MB free
+- Storage: ~555MB free
 - Android: 8.0+ (API 26)
 - Architecture: ARM64 (arm64-v8a)
 
 ### Issues
 
-1. **700MB APK** — exceeds Google Play's 150MB limit. Product flavors exist (full/cloud-only) but the "full" build is the only one in releases.
+1. **555MB APK** — exceeds Google Play's 150MB limit. Product flavors exist (full/cloud-only) but the "full" build is the only one in releases.
 2. **ARM64 only in releases** — despite `abiFilters` including `armeabi-v7a`, the release notes say ARM64 only. 32-bit devices (common in target market) can't install.
 3. **No install verification** — no SHA256 checksum published
 4. **No Play Store listing** — direct APK install requires "Unknown Sources" enabled, which many users won't know how to do
-5. **Model download on first launch** — if models aren't bundled, first launch requires 700MB download on mobile data (KSh 50-100 on Safaricom)
+5. **Model download on first launch** — if models aren't bundled, first launch requires 555MB download on mobile data (KSh 50-100 on Safaricom)
 
 ### Install Experience (Predicted)
 
 ```
-1. User downloads 700MB APK (5-15 minutes on 4G)
+1. User downloads 555MB APK (5-15 minutes on 4G)
 2. Android blocks install: "Unknown sources"
 3. User enables unknown sources (if they know how)
 4. Install takes 2-5 minutes
@@ -604,7 +604,7 @@ The app targets "informal workers in Africa" but:
 - Phone validation is Kenya-only (07XX, 01XX, +254)
 - Backend uses Safaricom-specific features
 - No evidence of testing with actual target users
-- 700MB APK assumes smartphone with storage — many target users have 16GB phones with 2GB free
+- 555MB APK assumes smartphone with storage — many target users have 16GB phones with 2GB free
 
 ### 7.4 Missing Critical Features
 
@@ -666,7 +666,7 @@ The app targets "informal workers in Africa" but:
 - Multi-agent → superagent migration is incomplete
 - LLM inference is not feasible on target devices
 - No evidence of real user testing
-- 700MB APK is impractical for distribution
+- 555MB APK is impractical for distribution
 - Many core features (M-Pesa, OCR, credit scoring) are documented but not implemented
 
 ### What's Ugly
