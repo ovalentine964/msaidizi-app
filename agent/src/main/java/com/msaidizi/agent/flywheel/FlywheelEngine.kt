@@ -1,6 +1,8 @@
 package com.msaidizi.agent.flywheel
 
 import com.msaidizi.core.database.KnowledgeDao
+import com.msaidizi.core.database.KgFactDao
+import com.msaidizi.core.database.KgFactEntity
 import com.msaidizi.core.util.DateTimeUtil
 import com.msaidizi.core.model.KnowledgeEntity
 import com.msaidizi.agent.harness.UserIntent
@@ -36,6 +38,7 @@ import javax.inject.Singleton
 @Singleton
 class FlywheelEngine @Inject constructor(
     private val knowledgeDao: KnowledgeDao,
+    private val kgFactDao: KgFactDao,
     private val gson: Gson
 ) {
 
@@ -97,6 +100,138 @@ class FlywheelEngine @Inject constructor(
     // ─────────────────────────────────────────────────────────
     // Main Entry Point
     // ─────────────────────────────────────────────────────────
+
+    /**
+     * Decay confidence values to prevent inflation.
+     * Called periodically (e.g., daily) to reduce confidence of entries
+     * that haven't been reinforced recently.
+     *
+     * Without decay, confidence values only go up, leading to false certainty.
+     * Decay rate: 5% per day since last update, minimum 0.1.
+     */
+    suspend fun decayConfidence() {
+        val now = System.currentTimeMillis()
+        val oneDayMs = 24 * 60 * 60 * 1000L
+        var decayedCount = 0
+
+        for (category in listOf("business_pattern", "market_intelligence", "credit", "intent_pattern", "model_evolution")) {
+            try {
+                val entries = knowledgeDao.getByCategory(category).first()
+                for (entry in entries) {
+                    val daysSinceUpdate = ((now - entry.updatedAt) / oneDayMs).coerceAtLeast(0)
+                    if (daysSinceUpdate > 0) {
+                        val decayFactor = (1.0f - 0.05f * daysSinceUpdate).coerceAtLeast(0.1f)
+                        val newConfidence = (entry.confidence * decayFactor).coerceAtLeast(0.1f)
+                        if (newConfidence < entry.confidence) {
+                            knowledgeDao.update(entry.copy(
+                                confidence = newConfidence,
+                                updatedAt = now
+                            ))
+                            decayedCount++
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Timber.w(e, "Failed to decay confidence for %s", category)
+            }
+        }
+
+        // Decay flywheel metrics velocity (not the raw counts)
+        for (loop in Loop.entries) {
+            val key = "flywheel_metrics_${loop.name.lowercase()}"
+            val existing = knowledgeDao.getEntry("flywheel_metrics", key)
+            if (existing != null) {
+                try {
+                    val data: MutableMap<String, Any> = @Suppress("UNCHECKED_CAST")
+                        gson.fromJson(existing.value, MutableMap::class.java) as MutableMap<String, Any>
+                    val velocity = (data["velocity"] as? Number)?.toDouble() ?: 0.0
+                    if (velocity > 0) {
+                        data["velocity"] = velocity * 0.9 // 10% velocity decay per cycle
+                        knowledgeDao.update(existing.copy(
+                            value = gson.toJson(data),
+                            updatedAt = now
+                        ))
+                    }
+                } catch (_: Exception) {}
+            }
+        }
+
+        Timber.d("Confidence decay: %d entries decayed", decayedCount)
+    }
+
+    // ── Learning → Knowledge Graph Feedback ──────────────────────────────
+
+    /**
+     * Close the learning loop: push high-confidence learned patterns
+     * back into the Knowledge Graph as facts.
+     *
+     * This creates a bidirectional feedback loop:
+     *   Learning → Knowledge Graph → Context Assembly → Better Responses → Better Learning
+     */
+    suspend fun feedbackToKnowledgeGraph() {
+        var factsCreated = 0
+
+        // Push vocabulary words as KG facts
+        try {
+            val vocab = knowledgeDao.getByCategory("vocab").first()
+                .filter { it.confidence >= 0.5f }
+                .take(50)
+            for (entry in vocab) {
+                kgFactDao.upsert(KgFactEntity(
+                    subject = "vocabulary",
+                    predicate = "contains_word",
+                    obj = entry.key,
+                    confidence = entry.confidence,
+                    source = "flywheel_vocab"
+                ))
+                factsCreated++
+            }
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to feedback vocab to KG")
+        }
+
+        // Push business patterns as KG facts
+        try {
+            val patterns = knowledgeDao.getByCategory("business_pattern").first()
+                .filter { it.confidence >= 0.6f }
+                .take(20)
+            for (entry in patterns) {
+                kgFactDao.upsert(KgFactEntity(
+                    subject = "business",
+                    predicate = entry.key,
+                    obj = entry.value,
+                    confidence = entry.confidence,
+                    source = "flywheel_pattern"
+                ))
+                factsCreated++
+            }
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to feedback patterns to KG")
+        }
+
+        // Push market intelligence as KG facts
+        try {
+            val market = knowledgeDao.getByCategory("market_intelligence").first()
+                .filter { it.confidence >= 0.5f }
+                .take(10)
+            for (entry in market) {
+                kgFactDao.upsert(KgFactEntity(
+                    subject = "market",
+                    predicate = entry.key,
+                    obj = entry.value,
+                    confidence = entry.confidence,
+                    source = "flywheel_market"
+                ))
+                factsCreated++
+            }
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to feedback market intel to KG")
+        }
+
+        if (factsCreated > 0) {
+            Timber.d("Learning→KG feedback: %d facts pushed to knowledge graph", factsCreated)
+        }
+    }
 
     /**
      * Process an interaction for learning signals across all 6 loops.
@@ -365,8 +500,28 @@ class FlywheelEngine @Inject constructor(
             ))
         }
 
+        // Mark for FL sync: store gradient-ready training pair
+        persistPattern("fl_training_pairs", "pair_${System.currentTimeMillis()}",
+            mapOf(
+                "input_hash" to hashForFL(input),
+                "intent" to intent.type.name,
+                "confidence" to intent.confidence,
+                "tool_success_rate" to toolResults.count { it.success }.toFloat() / toolResults.size,
+                "ready_for_sync" to true
+            ))
+
         metrics.recordEvent()
         metrics.improvementsGenerated++
+    }
+
+    /**
+     * Hash input for FL privacy: never send raw text to backend.
+     * Uses a one-way hash so backend can aggregate patterns without seeing data.
+     */
+    private fun hashForFL(input: String): String {
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        val hash = digest.digest(input.toByteArray())
+        return hash.joinToString("") { "%02x".format(it) }.take(16)
     }
 
     // ─────────────────────────────────────────────────────────

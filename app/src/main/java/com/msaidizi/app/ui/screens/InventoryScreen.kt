@@ -64,7 +64,7 @@ fun InventoryScreen(
                 containerColor = colors.tertiary,
                 contentColor = colors.onTertiary
             ) {
-                Icon(Icons.Default.Add, contentDescription = null)
+                Icon(Icons.Default.Add, contentDescription = "Ongeza")
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Bidhaa Mpya", fontWeight = FontWeight.SemiBold)
             }

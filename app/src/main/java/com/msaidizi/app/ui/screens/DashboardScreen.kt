@@ -315,7 +315,7 @@ private fun ProfitIndicatorCard(state: DashboardState) {
         ) {
             Icon(
                 imageVector = if (state.todayProfit >= 0) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
-                contentDescription = null,
+                contentDescription = "Dashibodi icon",
                 tint = profitColor,
                 modifier = Modifier.size(32.dp)
             )

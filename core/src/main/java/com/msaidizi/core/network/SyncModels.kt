@@ -26,7 +26,8 @@ data class AnonymizedTransaction(
     val paymentMethod: String,      // cash, mpesa, credit
     val hourOfDay: Int,             // 0-23 for time-of-day patterns
     val dayOfWeek: Int,             // 1-7
-    val isService: Boolean = false
+    val isService: Boolean = false,
+    val dedupKey: String? = null    // SHA-256 hash for server-side deduplication
 )
 
 @Serializable

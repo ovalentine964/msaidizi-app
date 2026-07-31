@@ -74,15 +74,7 @@ class SyncEngine @Inject constructor(
         }
     }
 
-    // Retry configuration
-    companion object {
-        private const val MAX_RETRIES = 3
-        private const val INITIAL_BACKOFF_MS = 1000L
-        private const val BACKOFF_MULTIPLIER = 2.0
-        private const val BATTERY_THRESHOLD = 20
-        private const val SYNC_PROTOCOL_VERSION = 1
-        private const val KEY_PHONE_HASH_SALT = "phone_hash_salt"
-    }
+
 
     data class PendingTransaction(
         val amount: Double,
@@ -91,8 +83,26 @@ class SyncEngine @Inject constructor(
         val isService: Boolean,
         val timestamp: Long,
         val location: String?,     // raw — will be anonymized
-        val phone: String?         // raw — will be anonymized
+        val phone: String?,        // raw — will be anonymized
+        val dedupKey: String = generateDedupKey(amount, category, timestamp)
     )
+
+    companion object {
+        private const val MAX_RETRIES = 3
+        private const val INITIAL_BACKOFF_MS = 1000L
+        private const val BACKOFF_MULTIPLIER = 2.0
+        private const val BATTERY_THRESHOLD = 20
+        private const val SYNC_PROTOCOL_VERSION = 1
+        private const val KEY_PHONE_HASH_SALT = "phone_hash_salt"
+
+        /** Generate a dedup key from transaction fields to prevent duplicate syncs. */
+        fun generateDedupKey(amount: Double, category: String, timestamp: Long): String {
+            val raw = "$amount|$category|$timestamp"
+            val digest = java.security.MessageDigest.getInstance("SHA-256")
+            val hash = digest.digest(raw.toByteArray())
+            return hash.joinToString("") { "%02x".format(it) }.take(16)
+        }
+    }
 
     override suspend fun execute(params: Map<String, String>): ToolResult {
         val action = params["action"] ?: "sync"
@@ -171,21 +181,36 @@ class SyncEngine @Inject constructor(
                     val count = pendingTransactions.size
                     pendingTransactions.clear()
 
-                    // Record success in DB
-                    syncStateDao.recordSuccess(
-                        timestamp = System.currentTimeMillis(),
-                        status = body?.status ?: "ok"
-                    )
+                    // Handle conflicts: last-write-wins + user notification
+                    val conflictsResolved = body?.conflictsResolved ?: 0
+                    if (conflictsResolved > 0) {
+                        Timber.w("Sync: %d conflicts resolved via last-write-wins", conflictsResolved)
+                        // Record conflict for user notification
+                        syncStateDao.recordSuccess(
+                            timestamp = System.currentTimeMillis(),
+                            status = "conflicts_resolved"
+                        )
+                    } else {
+                        syncStateDao.recordSuccess(
+                            timestamp = System.currentTimeMillis(),
+                            status = body?.status ?: "ok"
+                        )
+                    }
 
                     return ToolResult.success(
                         name,
                         mapOf(
                             "synced_count" to count,
                             "server_timestamp" to (body?.serverTimestamp ?: 0),
-                            "conflicts_resolved" to (body?.conflictsResolved ?: 0),
-                            "attempt" to attempt
+                            "conflicts_resolved" to conflictsResolved,
+                            "attempt" to attempt,
+                            "conflict_resolution" to if (conflictsResolved > 0) "last_write_wins" else "none"
                         ),
-                        "Synced $count items to cloud (attempt $attempt)"
+                        if (conflictsResolved > 0) {
+                            "Synced $count items. $conflictsResolved conflicts resolved (last-write-wins)."
+                        } else {
+                            "Synced $count items to cloud (attempt $attempt)"
+                        }
                     )
                 } else {
                     lastError = "HTTP ${response.code}: ${response.message()}"
@@ -266,7 +291,8 @@ class SyncEngine @Inject constructor(
                     .get(java.util.Calendar.HOUR_OF_DAY),
                 dayOfWeek = java.util.Calendar.getInstance().apply { timeInMillis = tx.timestamp }
                     .get(java.util.Calendar.DAY_OF_WEEK),
-                isService = tx.isService
+                isService = tx.isService,
+                dedupKey = tx.dedupKey
             )
         }
 

@@ -69,7 +69,7 @@ fun SettingsScreen(
                     ) {
                         Icon(
                             Icons.Default.Person,
-                            contentDescription = null,
+                            contentDescription = "Mpangilio icon",
                             tint = colors.onPrimaryContainer,
                             modifier = Modifier.size(48.dp)
                         )
@@ -272,7 +272,7 @@ private fun SettingsToggleItem(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(icon, contentDescription = null, tint = colors.primary, modifier = Modifier.size(24.dp))
+            Icon(icon, contentDescription = "Chaguo icon", tint = colors.primary, modifier = Modifier.size(24.dp))
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(titleSw, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
@@ -313,13 +313,13 @@ private fun SettingsClickableItem(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(icon, contentDescription = null, tint = colors.primary, modifier = Modifier.size(24.dp))
+            Icon(icon, contentDescription = "Chaguo icon", tint = colors.primary, modifier = Modifier.size(24.dp))
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(titleSw, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                 Text(subtitleSw, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
             }
-            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = colors.onSurfaceVariant)
+            Icon(Icons.Default.ChevronRight, contentDescription = "Endelea", tint = colors.onSurfaceVariant)
         }
     }
 }

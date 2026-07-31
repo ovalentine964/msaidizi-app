@@ -7,6 +7,7 @@ import android.media.AudioRecord
 import android.media.AudioTrack
 import android.media.MediaRecorder
 import com.msaidizi.voice.SherpaOnnxEngine
+import com.msaidizi.voice.VadEngine
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -53,7 +54,8 @@ class VoicePipeline @Inject constructor(
     @ApplicationContext private val context: Context,
     private val sherpaEngine: SherpaOnnxEngine,
     private val languageDetector: LanguageDetector,
-    private val codeSwitchHandler: CodeSwitchHandler
+    private val codeSwitchHandler: CodeSwitchHandler,
+    private val vadEngine: VadEngine
 ) : Tool {
 
     override val name = "voice_pipeline"
@@ -78,6 +80,7 @@ class VoicePipeline @Inject constructor(
     private var sttInitialized = false
     private var ttsInitialized = false
     private var activeTtsLanguage: String? = null
+    private var vadInitialized = false
 
     // ── Model path resolution ────────────────────────────────
 
@@ -338,30 +341,60 @@ class VoicePipeline @Inject constructor(
 
             Timber.d("Voice recording started (lang=%s)", language)
 
-            // Read audio data with VAD
+            // Read audio data with Silero VAD (or fallback to RMS-based)
             val buffer = ByteArray(bufferSize)
             var silenceCounter = 0
             val maxSilence = 50 // ~1 second of silence (at 20ms per read)
             var speechDetected = false
+
+            // Initialize Silero VAD if model is available
+            val vadModelPath = File(modelsDir, "silero_vad/silero_vad.onnx")
+            if (!vadInitialized && vadModelPath.exists()) {
+                vadInitialized = vadEngine.createVad(vadModelPath.absolutePath)
+                if (vadInitialized) {
+                    Timber.i("Silero VAD initialized for voice pipeline")
+                }
+            }
 
             while (isRecording) {
                 val bytesRead = audioRecord?.read(buffer, 0, buffer.size) ?: 0
                 if (bytesRead > 0) {
                     audioBuffer.write(buffer, 0, bytesRead)
 
-                    // Simple VAD: detect silence after speech
-                    val amplitude = calculateRMSAmplitude(buffer, bytesRead)
-                    if (amplitude > 500) {
-                        speechDetected = true
-                        silenceCounter = 0
-                    } else if (speechDetected) {
-                        silenceCounter++
-                        if (silenceCounter > maxSilence) {
-                            Timber.d("Voice activity ended (silence detected)")
-                            break
+                    if (vadInitialized) {
+                        // Use Silero VAD: convert PCM16 bytes to float samples
+                        val floatSamples = pcm16ToFloat(buffer, bytesRead)
+                        val isSpeech = vadEngine.processAudio(floatSamples)
+                        if (isSpeech) {
+                            speechDetected = true
+                            silenceCounter = 0
+                        } else if (speechDetected) {
+                            silenceCounter++
+                            if (silenceCounter > maxSilence) {
+                                Timber.d("Voice activity ended (Silero VAD silence)")
+                                break
+                            }
+                        }
+                    } else {
+                        // Fallback: naive RMS-based VAD
+                        val amplitude = calculateRMSAmplitude(buffer, bytesRead)
+                        if (amplitude > 500) {
+                            speechDetected = true
+                            silenceCounter = 0
+                        } else if (speechDetected) {
+                            silenceCounter++
+                            if (silenceCounter > maxSilence) {
+                                Timber.d("Voice activity ended (RMS silence)")
+                                break
+                            }
                         }
                     }
                 }
+            }
+
+            // Reset VAD state for next recording
+            if (vadInitialized) {
+                vadEngine.reset()
             }
 
             val audioData = audioBuffer.toByteArray()
@@ -622,6 +655,20 @@ class VoicePipeline @Inject constructor(
     }
 
     // ── Audio utilities ──────────────────────────────────────
+
+    /**
+     * Convert PCM 16-bit LE bytes to float array normalized to [-1, 1].
+     * Used by Silero VAD which expects float input.
+     */
+    private fun pcm16ToFloat(buffer: ByteArray, length: Int): FloatArray {
+        val sampleCount = length / 2
+        val floatArray = FloatArray(sampleCount)
+        val shortBuffer = ByteBuffer.wrap(buffer, 0, length).order(ByteOrder.LITTLE_ENDIAN)
+        for (i in 0 until sampleCount) {
+            floatArray[i] = shortBuffer.getShort().toFloat() / 32768.0f
+        }
+        return floatArray
+    }
 
     private fun calculateRMSAmplitude(buffer: ByteArray, length: Int): Double {
         var sum = 0.0

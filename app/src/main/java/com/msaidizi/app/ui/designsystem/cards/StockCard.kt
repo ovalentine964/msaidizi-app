@@ -85,7 +85,7 @@ fun StockCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Inventory2,
-                        contentDescription = null,
+                        contentDescription = "Hesabu ya bidhaa",
                         tint = colors.primary,
                         modifier = Modifier.size(24.dp)
                     )

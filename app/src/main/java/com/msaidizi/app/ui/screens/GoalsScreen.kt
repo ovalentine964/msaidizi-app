@@ -48,7 +48,7 @@ fun GoalsScreen(
                 containerColor = colors.tertiary,
                 contentColor = colors.onTertiary
             ) {
-                Icon(Icons.Default.Add, contentDescription = null)
+                Icon(Icons.Default.Add, contentDescription = "Ongeza")
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Lengo Jipya", fontWeight = FontWeight.SemiBold)
             }
@@ -102,14 +102,14 @@ fun GoalsScreen(
                                     .padding(16.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Default.Groups, contentDescription = null, tint = colors.onPrimaryContainer, modifier = Modifier.size(40.dp))
+                                Icon(Icons.Default.Groups, contentDescription = "Wanachama", tint = colors.onPrimaryContainer, modifier = Modifier.size(40.dp))
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text("Chama Yako", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = colors.onPrimaryContainer)
                                     Text("Your Savings Group", style = MaterialTheme.typography.bodySmall, color = colors.onPrimaryContainer.copy(alpha = 0.7f))
                                     Text("Bonyeza kuona mchango wako", style = MaterialTheme.typography.bodySmall, color = colors.onPrimaryContainer.copy(alpha = 0.6f))
                                 }
-                                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = colors.onPrimaryContainer)
+                                Icon(Icons.Default.ChevronRight, contentDescription = "Endelea", tint = colors.onPrimaryContainer)
                             }
                         }
                     }
@@ -215,7 +215,7 @@ private fun ChamaQuickItem(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.Groups, contentDescription = null, tint = colors.primary, modifier = Modifier.size(32.dp))
+            Icon(Icons.Default.Groups, contentDescription = "Wanachama", tint = colors.primary, modifier = Modifier.size(32.dp))
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)

@@ -475,7 +475,7 @@ private fun VoiceCalibrationStep(
             onValueChange = onNameChange,
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text("Andika jina lako... — Enter your name...") },
-            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+            leadingIcon = { Icon(Icons.Default.Person, contentDescription = "Jina la mtumiaji") },
             shape = MsaidiziShapes().large,
             singleLine = true,
             textStyle = MaterialTheme.typography.bodyLarge,
@@ -540,7 +540,7 @@ private fun VoiceCalibrationStep(
                 shape = MsaidiziShapes().large,
                 colors = ButtonDefaults.buttonColors(containerColor = colors.success)
             ) {
-                Icon(Icons.Default.CheckCircle, contentDescription = null)
+                Icon(Icons.Default.CheckCircle, contentDescription = "Imekamilika")
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Anza Kuuza! — Start Selling!", fontWeight = FontWeight.Bold)
             }

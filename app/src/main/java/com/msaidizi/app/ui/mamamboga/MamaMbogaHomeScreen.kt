@@ -113,7 +113,7 @@ fun MamaMbogaHomeScreen(
                         shape = MsaidiziShapes().large,
                         colors = ButtonDefaults.buttonColors(containerColor = colors.success)
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = null)
+                        Icon(Icons.Default.Add, contentDescription = "Ongeza")
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             "Rekodi Mauzo",
@@ -127,7 +127,7 @@ fun MamaMbogaHomeScreen(
                         modifier = Modifier.weight(1f).height(56.dp),
                         shape = MsaidiziShapes().large
                     ) {
-                        Icon(Icons.Default.Remove, contentDescription = null)
+                        Icon(Icons.Default.Remove, contentDescription = "Ondoa")
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             "Rekodi Gharama",

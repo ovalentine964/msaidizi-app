@@ -280,6 +280,54 @@ object Migrations {
     }
 
     /**
+     * Migration 12 → 13: Performance indices on frequently queried columns.
+     * Adds composite and single-column indices for sales, products, expenses,
+     * conversations, knowledge_entries, debts, and customer_visits.
+     */
+    val MIGRATION_13_14 = object : Migration(13, 14) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            // Sales performance indices
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_sales_timestamp ON sales(timestamp)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_sales_productName ON sales(productName)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_sales_paymentMethod ON sales(paymentMethod)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_sales_customerId ON sales(customerId)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_sales_timestamp_paymentMethod ON sales(timestamp, paymentMethod)")
+
+            // Products indices
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_products_category ON products(category)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_products_isActive ON products(isActive)")
+
+            // Expenses indices
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_expenses_timestamp ON expenses(timestamp)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_expenses_category ON expenses(category)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_expenses_timestamp_category ON expenses(timestamp, category)")
+
+            // Conversations indices
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_conversations_sessionId ON conversations(sessionId)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_conversations_timestamp ON conversations(timestamp)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_conversations_role_timestamp ON conversations(role, timestamp)")
+
+            // Knowledge entries indices
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_knowledge_entries_category ON knowledge_entries(category)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_knowledge_entries_category_key ON knowledge_entries(category, key)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_knowledge_entries_updatedAt ON knowledge_entries(updatedAt)")
+
+            // Debts indices
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_debts_status ON debts(status)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_debts_customerName ON debts(customerName)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_debts_dueDate ON debts(dueDate)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_debts_status_outstandingBalance ON debts(status, outstandingBalance)")
+
+            // Customer visits indices
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_customer_visits_workerId ON customer_visits(workerId)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_customer_visits_customerKey ON customer_visits(customerKey)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_customer_visits_visitDate ON customer_visits(visitDate)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_customer_visits_workerId_customerKey ON customer_visits(workerId, customerKey)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_customer_visits_workerId_visitDate ON customer_visits(workerId, visitDate)")
+        }
+    }
+
+    /**
      * All migrations in order.
      * Add to MsaidiziDatabase.builder():
      *   Room.databaseBuilder(..., MsaidiziDatabase::class.java, "msaidizi-db")
@@ -290,6 +338,7 @@ object Migrations {
         MIGRATION_8_9,
         MIGRATION_9_10,
         MIGRATION_10_11,
-        MIGRATION_11_12
+        MIGRATION_11_12,
+        MIGRATION_13_14
     )
 }

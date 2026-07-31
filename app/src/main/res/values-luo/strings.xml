@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Luo (Dholuo) string resources for Msaidizi -->
+<!-- Key greetings and financial terms -->
+<resources>
+    <string name="app_name">Msaidizi</string>
+    <string name="app_tagline">Japuonj gi Biro</string>
+
+    <!-- Greetings -->
+    <string name="greeting_morning">Oyawore</string>
+    <string name="greeting_afternoon">Odiero</string>
+    <string name="greeting_evening">Oimore</string>
+
+    <!-- Voice -->
+    <string name="voice_prompt">Dii me wuoyo</string>
+    <string name="listening">Adiera…</string>
+    <string name="thinking">Ariyo…</string>
+    <string name="speaking">Awuoyo…</string>
+    <string name="type_hint">Kata ntie…</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Dala</string>
+    <string name="nav_sales">Tija</string>
+    <string name="nav_stock">Yie thur</string>
+    <string name="nav_reports">Ripoti</string>
+    <string name="nav_settings">Chenro</string>
+
+    <!-- Common actions -->
+    <string name="save">Kiw</string>
+    <string name="cancel">Chul</string>
+    <string name="delete">Gol</string>
+    <string name="confirm">Aseyi</string>
+    <string name="retry">Dog malo</string>
+    <string name="error_generic">Ng\'ato osekore. Kawo dog malo.</string>
+    <string name="error_network">Koro gi intanet. Otiro e yo ma ok iye.</string>
+
+    <!-- Financial terms -->
+    <string name="dashboard_today_sales">Tija ma ich</string>
+    <string name="dashboard_today_expenses">Yudo ich</string>
+    <string name="dashboard_profit">Owinjo</string>
+    <string name="dashboard_record_sale">Kwanyo tija</string>
+    <string name="dashboard_record_expense">Kwanyo yudo</string>
+    <string name="dashboard_ask_advice">Peny siego</string>
+
+    <!-- Sales -->
+    <string name="sales_title">Tija</string>
+    <string name="sales_record_new">Kwanyo tija manyien</string>
+    <string name="sales_product">Thur</string>
+    <string name="sales_quantity">Pong\'</string>
+    <string name="sales_price">Nengo</string>
+    <string name="sales_total">Piny</string>
+    <string name="sales_cash">Pesa</string>
+    <string name="sales_mpesa">M-Pesa</string>
+    <string name="sales_credit">Chung</string>
+
+    <!-- Inventory -->
+    <string name="inventory_title">Yie thur</string>
+    <string name="inventory_add_product">Med thur</string>
+    <string name="inventory_product_name">Nying thur</string>
+    <string name="inventory_buying_price">Nengo ne ng\'iewo</string>
+    <string name="inventory_selling_price">Nengo ne tijo</string>
+    <string name="inventory_low_stock">Thur ma oyae</string>
+
+    <!-- Credit -->
+    <string name="credit_title">Alama mar chung</string>
+    <string name="credit_score">Alama</string>
+    <string name="credit_tier">Kata</string>
+    <string name="credit_explanation">Wach</string>
+    <string name="credit_improve">Yiero mak nene</string>
+
+    <!-- Chama -->
+    <string name="chama_title">Chama</string>
+    <string name="chama_members">Loruo</string>
+    <string name="chama_contributions">Chango</string>
+    <string name="chama_loans">Chung</string>
+
+    <!-- Reports -->
+    <string name="reports_title">Ripoti</string>
+    <string name="reports_daily">Ripoti mar chieng</string>
+    <string name="reports_weekly">Ripoti mar juma</string>
+    <string name="reports_monthly">Ripoti mar dwe</string>
+    <string name="reports_profit_loss">Owinjo kod ok owinjo</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Chenro</string>
+    <string name="settings_language">Wuok</string>
+    <string name="settings_voice">Wuoyo</string>
+    <string name="settings_notifications">Pwoyo</string>
+    <string name="settings_about">Makare</string>
+    <string name="settings_logout">Kuwo</string>
+
+    <!-- Bootstrap -->
+    <string name="bootstrap_welcome">Oyawore! Ka bi Msaidizi mara.</string>
+    <string name="bootstrap_complete">Asayi! Msaidizi mara otimoro.</string>
+    <string name="bootstrap_next">Malchiel</string>
+    <string name="bootstrap_skip">Char</string>
+    <string name="bootstrap_finish">Chakri Yudo Msaidizi</string>
+
+    <!-- Approval prompts -->
+    <string name="approval_approve">Aseyi</string>
+    <string name="approval_reject">Alos</string>
+    <string name="approval_expired">Saa osekore.</string>
+
+    <!-- Loading -->
+    <string name="loading">Loade…</string>
+    <string name="no_data">Data en tich</string>
+    <string name="back">Dok</string>
+    <string name="done">Otimo</string>
+</resources>

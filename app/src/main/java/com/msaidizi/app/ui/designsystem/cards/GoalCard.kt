@@ -72,7 +72,7 @@ fun GoalCard(
                 ) {
                     Icon(
                         imageVector = if (isComplete) Icons.Default.CheckCircle else icon,
-                        contentDescription = null,
+                        contentDescription = if (isComplete) "Lengo limekamilika" else "Lengo icon",
                         tint = progressColor,
                         modifier = Modifier.size(24.dp)
                     )

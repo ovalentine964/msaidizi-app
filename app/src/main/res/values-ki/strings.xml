@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Kikuyu (Gikuyu) string resources for Msaidizi -->
+<!-- Key greetings and financial terms -->
+<resources>
+    <string name="app_name">Msaidizi</string>
+    <string name="app_tagline">Mũteithia wa Bia</string>
+
+    <!-- Greetings -->
+    <string name="greeting_morning">Wĩ mwĩhũko</string>
+    <string name="greeting_afternoon">Wĩ mũtĩ wa mũthenya</string>
+    <string name="greeting_evening">Wĩ hwaĩ-inĩ</string>
+
+    <!-- Voice -->
+    <string name="voice_prompt">Ĩra gũkuuga</string>
+    <string name="listening">Ndwĩrĩria…</string>
+    <string name="thinking">Ndĩĩra…</string>
+    <string name="speaking">Ndĩarĩkia…</string>
+    <string name="type_hint">Ĩra ũandĩke…</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Mũciĩ</string>
+    <string name="nav_sales">Kũgũũra</string>
+    <string name="nav_stock">Irio cia gũcũũra</string>
+    <string name="nav_reports">Ripoti</string>
+    <string name="nav_settings">Mĩtũũrĩre</string>
+
+    <!-- Common actions -->
+    <string name="save">Hinga</string>
+    <string name="cancel">Rĩga</string>
+    <string name="delete">Tharia</string>
+    <string name="confirm">Ũhootane</string>
+    <string name="retry">Ũngĩũra</string>
+    <string name="error_generic">Kĩrĩ kĩakĩa. Ũraũgũũra.</string>
+    <string name="error_network">Gũtirĩ intaneti. Ũtũũra thĩinĩ wa intaneti.</string>
+
+    <!-- Financial terms -->
+    <string name="dashboard_today_sales">Kũgũũra ũmũthĩ</string>
+    <string name="dashboard_today_expenses">Kũheana ũmũthĩ</string>
+    <string name="dashboard_profit">Wĩra</string>
+    <string name="dashboard_record_sale">Andĩka kũgũũra</string>
+    <string name="dashboard_record_expense">Andĩka kũheana</string>
+    <string name="dashboard_ask_advice">Ũria ũtaaro</string>
+
+    <!-- Sales -->
+    <string name="sales_title">Kũgũũra</string>
+    <string name="sales_record_new">Andĩka kũgũũra gũtheri</string>
+    <string name="sales_product">Kĩamũ</string>
+    <string name="sales_quantity">Mũiga</string>
+    <string name="sales_price">Gĩa</string>
+    <string name="sales_total">Ciothe</string>
+    <string name="sales_cash">Pesa</string>
+    <string name="sales_mpesa">M-Pesa</string>
+    <string name="sales_credit">Gũhĩtia</string>
+
+    <!-- Inventory -->
+    <string name="inventory_title">Irio cia gũcũũra</string>
+    <string name="inventory_add_product">Ongera kĩamũ</string>
+    <string name="inventory_product_name">Rĩĩtwa rĩa kĩamũ</string>
+    <string name="inventory_buying_price">Gĩa cia kũgũũra</string>
+    <string name="inventory_selling_price">Gĩa cia kũheana</string>
+    <string name="inventory_low_stock">Irio cia gũkĩra</string>
+
+    <!-- Credit -->
+    <string name="credit_title">Alama ya gũhĩtia</string>
+    <string name="credit_score">Alama</string>
+    <string name="credit_tier">Mũtũũrĩre</string>
+    <string name="credit_explanation">Ũhoro</string>
+    <string name="credit_improve">Mũromo wa gũthondeka</string>
+
+    <!-- Chama -->
+    <string name="chama_title">Chama</string>
+    <string name="chama_members">Andũ a chama</string>
+    <string name="chama_contributions">Gũtũũra</string>
+    <string name="chama_loans">Gũhĩtia</string>
+
+    <!-- Reports -->
+    <string name="reports_title">Ripoti</string>
+    <string name="reports_daily">Ripoti ya mũthenya</string>
+    <string name="reports_weekly">Ripoti ya wiki</string>
+    <string name="reports_monthly">Ripoti ya mweri</string>
+    <string name="reports_profit_loss">Wĩra na ũtarĩ wĩra</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Mĩtũũrĩre</string>
+    <string name="settings_language">Rũthiomi</string>
+    <string name="settings_voice">Mũgambo</string>
+    <string name="settings_notifications">Ũtũũri</string>
+    <string name="settings_about">Makare</string>
+    <string name="settings_logout">Ũka</string>
+
+    <!-- Bootstrap -->
+    <string name="bootstrap_welcome">Nĩ wega! Reke tũũre Msaidizi waku.</string>
+    <string name="bootstrap_complete">Nĩ gwĩkĩka! Msaidizi waku nĩ arĩkĩtie.</string>
+    <string name="bootstrap_next">Ĩnĩ</string>
+    <string name="bootstrap_skip">Ũtigane</string>
+    <string name="bootstrap_finish">Ambĩrĩria Gũtuĩka Msaidizi</string>
+
+    <!-- Approval prompts -->
+    <string name="approval_approve">Ũhootane</string>
+    <string name="approval_reject">Ara</string>
+    <string name="approval_expired">Saa nĩ ĩarĩkĩtie.</string>
+
+    <!-- Loading -->
+    <string name="loading">Nĩ ĩathĩka…</string>
+    <string name="no_data">Gũtirĩ data</string>
+    <string name="back">Rũga</string>
+    <string name="done">Nĩ ĩarĩkĩtie</string>
+</resources>

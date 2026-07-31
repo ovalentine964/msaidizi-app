@@ -107,7 +107,16 @@ data class OperatingHours(
 // Room Entities
 // ──────────────────────────────────────────────
 
-@Entity(tableName = "sales")
+@Entity(
+    tableName = "sales",
+    indices = [
+        Index(value = ["timestamp"]),
+        Index(value = ["productName"]),
+        Index(value = ["paymentMethod"]),
+        Index(value = ["customerId"]),
+        Index(value = ["timestamp", "paymentMethod"])
+    ]
+)
 data class SaleEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val productId: Long,
@@ -122,7 +131,13 @@ data class SaleEntity(
     val notes: String? = null
 )
 
-@Entity(tableName = "products")
+@Entity(
+    tableName = "products",
+    indices = [
+        Index(value = ["category"]),
+        Index(value = ["isActive"])
+    ]
+)
 data class ProductEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
@@ -137,7 +152,14 @@ data class ProductEntity(
     val updatedAt: Long = System.currentTimeMillis()
 )
 
-@Entity(tableName = "expenses")
+@Entity(
+    tableName = "expenses",
+    indices = [
+        Index(value = ["timestamp"]),
+        Index(value = ["category"]),
+        Index(value = ["timestamp", "category"])
+    ]
+)
 data class ExpenseEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val category: String, // transport, rent, stock, utilities, misc
@@ -249,7 +271,14 @@ data class ServiceMenuEntity(
 // Conversation & Memory Models
 // ──────────────────────────────────────────────
 
-@Entity(tableName = "conversations")
+@Entity(
+    tableName = "conversations",
+    indices = [
+        Index(value = ["sessionId"]),
+        Index(value = ["timestamp"]),
+        Index(value = ["role", "timestamp"])
+    ]
+)
 data class ConversationEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val sessionId: String,
@@ -259,7 +288,14 @@ data class ConversationEntity(
     val timestamp: Long = System.currentTimeMillis()
 )
 
-@Entity(tableName = "knowledge_entries")
+@Entity(
+    tableName = "knowledge_entries",
+    indices = [
+        Index(value = ["category"]),
+        Index(value = ["category", "key"]),
+        Index(value = ["updatedAt"])
+    ]
+)
 data class KnowledgeEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val category: String, // vocab, dialect, pattern, advice
@@ -297,7 +333,15 @@ data class UserProfileEntity(
  * Tracks the original amount, outstanding balance, product/service sold,
  * and due date for aging analysis.
  */
-@Entity(tableName = "debts")
+@Entity(
+    tableName = "debts",
+    indices = [
+        Index(value = ["status"]),
+        Index(value = ["customerName"]),
+        Index(value = ["dueDate"]),
+        Index(value = ["status", "outstandingBalance"])
+    ]
+)
 data class DebtEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val customerName: String,
@@ -542,6 +586,13 @@ data class RestockThresholdEntity(
             childColumns = ["profileId"],
             onDelete = androidx.room.ForeignKey.CASCADE
         )
+    ],
+    indices = [
+        Index(value = ["workerId"]),
+        Index(value = ["customerKey"]),
+        Index(value = ["visitDate"]),
+        Index(value = ["workerId", "customerKey"]),
+        Index(value = ["workerId", "visitDate"])
     ]
 )
 data class CustomerVisitEntity(

@@ -63,7 +63,7 @@ fun CustomersScreen(
                 containerColor = colors.tertiary,
                 contentColor = colors.onTertiary
             ) {
-                Icon(Icons.Default.PersonAdd, contentDescription = null)
+                Icon(Icons.Default.PersonAdd, contentDescription = "Ongeza mteja")
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Mteja Mpya", fontWeight = FontWeight.SemiBold)
             }
@@ -83,7 +83,7 @@ fun CustomersScreen(
                     onValueChange = { searchQuery = it },
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = { Text("Tafuta mteja... — Search customer...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Tafuta") },
                     shape = MsaidiziShapes().full,
                     singleLine = true,
                     textStyle = MaterialTheme.typography.bodyLarge,
@@ -195,7 +195,7 @@ private fun CustomerItem(
             ) {
                 Icon(
                     imageVector = if (hasDebt) Icons.Default.Warning else Icons.Default.Person,
-                    contentDescription = null,
+                    contentDescription = "Mteja icon",
                     tint = if (hasDebt) colors.warning else colors.primary,
                     modifier = Modifier.size(28.dp)
                 )

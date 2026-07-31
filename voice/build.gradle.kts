@@ -77,6 +77,9 @@ dependencies {
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
 
+    // Security — EncryptedSharedPreferences for API key storage
+    implementation(libs.security.crypto)
+
     // Logging
     implementation(libs.timber)
 

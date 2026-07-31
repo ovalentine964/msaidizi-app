@@ -653,6 +653,52 @@ class MemoryManager @Inject constructor(
     // ── Pruning ──────────────────────────────────────────────────────
 
     /**
+     * Full memory consolidation pipeline.
+     * Call on app startup and periodically (e.g., during heartbeat).
+     *
+     * Steps:
+     * 1. Consolidate L1 working memory → L2 conversation store
+     * 2. Compress L2 conversations → L3 daily summaries
+     * 3. Extract L3 daily patterns → L4 long-term patterns
+     * 4. Prune old entries beyond retention period
+     */
+    suspend fun runConsolidationPipeline() {
+        Timber.d("Memory consolidation pipeline starting")
+
+        // Step 1: L1 → L2 (flush working memory to persistent store)
+        try {
+            consolidateL1ToL2()
+        } catch (e: Exception) {
+            Timber.w(e, "L1→L2 consolidation failed")
+        }
+
+        // Step 2: L2 → L3 (compress today's conversations into daily summary)
+        try {
+            compressDaily()
+        } catch (e: Exception) {
+            Timber.w(e, "L3 daily compression failed")
+        }
+
+        // Step 3: L3 → L4 (promote repeated patterns to long-term)
+        try {
+            extractLongTermPatterns()
+        } catch (e: Exception) {
+            Timber.w(e, "L4 pattern extraction failed")
+        }
+
+        // Step 4: Prune old data (30-day retention)
+        try {
+            pruneOld(30)
+        } catch (e: Exception) {
+            Timber.w(e, "Pruning failed")
+        }
+
+        val stats = getLayerStats()
+        Timber.d("Memory consolidation complete: L1=%d L2=%d L3=%d L4=%d vocab=%d",
+            stats["working"], stats["conversation"], stats["daily"], stats["patterns"], stats["vocab"])
+    }
+
+    /**
      * Prune old entries across all layers.
      */
     suspend fun pruneOld(maxAgeDays: Int = 30) {

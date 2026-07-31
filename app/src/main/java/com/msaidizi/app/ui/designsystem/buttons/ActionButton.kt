@@ -31,7 +31,7 @@ fun ActionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     containerColor: Color = MsaidiziThemeTokens.colors.primary,
-    contentColor: Color = Color.White,
+    contentColor: Color = MsaidiziThemeTokens.colors.onPrimary,
     enabled: Boolean = true
 ) {
     Button(
@@ -54,7 +54,7 @@ fun ActionButton(
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = null,
+            contentDescription = label,
             modifier = Modifier.size(24.dp)
         )
         Spacer(modifier = Modifier.width(12.dp))
@@ -162,7 +162,7 @@ fun OutlinedActionButton(
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = null,
+            contentDescription = label,
             modifier = Modifier.size(24.dp)
         )
         Spacer(modifier = Modifier.width(12.dp))

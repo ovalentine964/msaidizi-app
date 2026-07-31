@@ -19,32 +19,56 @@ import timber.log.Timber
  */
 object CertificatePinnerFactory {
 
-    // Certificate pins MUST be generated from production backend certificates before release.
-    // Run the openssl command documented in the class KDoc against your production API domain
-    // and replace the placeholder values below with the real SHA-256 SPKI hashes.
-    // Always include at least one backup pin from a different key/cert for rotation.
+    // ╔═══════════════════════════════════════════════════════════════════╗
+    // ║  CERTIFICATE PINS — MUST be set before any release build        ║
+    // ║                                                                   ║
+    // ║  Generate pins with:                                              ║
+    // ║    openssl s_client -connect api.msaidizi.com:443 \              ║
+    //║      -servername api.msaidizi.com | openssl x509 -pubkey -noout | ║
+    //║      openssl pkey -pubin -outform DER | openssl dgst -sha256 \   ║
+    //║      -binary | openssl enc -base64                                ║
+    //║                                                                   ║
+    //║  Set via BuildConfig fields (injected from CI/CD secrets):        ║
+    //║    buildConfigField "String", "CERT_PIN_PRIMARY", ...             ║
+    //║    buildConfigField "String", "CERT_PIN_BACKUP", ...              ║
+    //║                                                                   ║
+    //║  NEVER ship placeholder hashes in a release APK.                 ║
+    //╚═══════════════════════════════════════════════════════════════════╝
     private const val API_HOSTNAME = "api.msaidizi.com"
 
-    // Primary pin: current certificate's SPKI hash (replace before production deployment)
-    private const val PIN_PRIMARY = "sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-    // Backup pin: backup certificate or intermediate CA SPKI hash (replace before production deployment)
-    private const val PIN_BACKUP = "sha256/BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB="
+    // Pins are sourced from BuildConfig at build time (set in build.gradle):
+    //   buildConfigField "String", "CERT_PIN_PRIMARY", '"sha256/REAL_HASH_HERE"'
+    //   buildConfigField "String", "CERT_PIN_BACKUP", '"sha256/BACKUP_HASH_HERE"'
+    private val PIN_PRIMARY: String
+        get() = try {
+            val field = BuildConfig::class.java.getField("CERT_PIN_PRIMARY")
+            field.get(null) as? String ?: ""
+        } catch (_: Exception) { "" }
+
+    private val PIN_BACKUP: String
+        get() = try {
+            val field = BuildConfig::class.java.getField("CERT_PIN_BACKUP")
+            field.get(null) as? String ?: ""
+        } catch (_: Exception) { "" }
 
     /**
      * Create a CertificatePinner for the Msaidizi API backend.
      */
     fun create(): CertificatePinner {
-        // Build-time guard: prevent shipping placeholder pins in release
-        val hasPlaceholderPins = PIN_PRIMARY.contains("AAA") || PIN_BACKUP.contains("BBB")
+        // Build-time guard: prevent shipping without real certificate pins
+        val hasPlaceholderPins = PIN_PRIMARY.isEmpty() || PIN_BACKUP.isEmpty() ||
+            PIN_PRIMARY.contains("AAA") || PIN_BACKUP.contains("BBB") ||
+            PIN_PRIMARY.contains("placeholder") || PIN_BACKUP.contains("placeholder")
         if (hasPlaceholderPins && !BuildConfig.DEBUG) {
             throw IllegalStateException(
-                "SECURITY: Certificate pins are still placeholders! " +
-                    "Generate real SPKI hashes before release. " +
-                    "See CertificatePinnerFactory KDoc for instructions."
+                "SECURITY: Certificate pins are not configured! " +
+                    "Set CERT_PIN_PRIMARY and CERT_PIN_BACKUP in BuildConfig " +
+                    "via CI/CD secrets before building a release. " +
+                    "See CertificatePinnerFactory KDoc for generation instructions."
             )
         }
         if (hasPlaceholderPins) {
-            Timber.w("Certificate pins are placeholders — pinning disabled in debug build")
+            Timber.w("SECURITY: Certificate pins are empty/placeholders — pinning disabled in debug build")
             return CertificatePinner.Builder().build() // no pinning in debug with placeholders
         }
 
@@ -53,7 +77,7 @@ object CertificatePinnerFactory {
             .add(API_HOSTNAME, PIN_BACKUP)
             .build()
 
-        Timber.d("Certificate pinning configured for $API_HOSTNAME")
+        Timber.d("Certificate pinning configured for %s with %d pins", API_HOSTNAME, 2)
         return pinner
     }
 

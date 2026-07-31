@@ -61,7 +61,7 @@ fun TransactionListScreen(
                 containerColor = colors.tertiary,
                 contentColor = colors.onTertiary
             ) {
-                Icon(Icons.Default.Add, contentDescription = null)
+                Icon(Icons.Default.Add, contentDescription = "Ongeza")
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Rekodi Mpya", fontWeight = FontWeight.SemiBold)
             }
@@ -81,7 +81,7 @@ fun TransactionListScreen(
                     onValueChange = { searchQuery = it },
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = { Text("Tafuta miamala... — Search transactions...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Tafuta") },
                     trailingIcon = {
                         if (searchQuery.isNotBlank()) {
                             IconButton(onClick = { searchQuery = "" }) {

@@ -197,7 +197,7 @@ private fun MarketPriceItem(market: String, line1: String, line2: String) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(market, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                Icon(Icons.Default.LocationOn, contentDescription = null, tint = colors.primary, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.LocationOn, contentDescription = "Eneo", tint = colors.primary, modifier = Modifier.size(18.dp))
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(line1, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)

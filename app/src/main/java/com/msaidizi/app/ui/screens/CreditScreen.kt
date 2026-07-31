@@ -186,7 +186,7 @@ private fun ScoreTip(tipSw: String, tipEn: String, done: Boolean) {
         ) {
             Icon(
                 imageVector = if (done) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
-                contentDescription = null,
+                contentDescription = "Alama ya mkopo",
                 tint = if (done) colors.success else colors.onSurfaceVariant,
                 modifier = Modifier.size(24.dp)
             )
@@ -214,7 +214,7 @@ private fun ScoreBenefit(benefitSw: String, benefitEn: String, detail: String) {
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.Star, contentDescription = null, tint = colors.success, modifier = Modifier.size(24.dp))
+            Icon(Icons.Default.Star, contentDescription = "Alama", tint = colors.success, modifier = Modifier.size(24.dp))
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(benefitSw, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = colors.success)
@@ -280,7 +280,7 @@ private fun InsuranceItem(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.Shield, contentDescription = null, tint = color, modifier = Modifier.size(32.dp))
+            Icon(Icons.Default.Shield, contentDescription = "Ulinzi", tint = color, modifier = Modifier.size(32.dp))
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(type, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)

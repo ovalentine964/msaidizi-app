@@ -53,7 +53,7 @@ fun AdviceCard(
                 ) {
                     Icon(
                         imageVector = icon,
-                        contentDescription = null,
+                        contentDescription = "Ushauri icon",
                         tint = colors.info,
                         modifier = Modifier.size(22.dp)
                     )
@@ -102,7 +102,7 @@ fun AdviceCard(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Check,
-                                contentDescription = null,
+                                contentDescription = "Fuata ushauri",
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))

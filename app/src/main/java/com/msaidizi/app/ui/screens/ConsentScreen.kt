@@ -88,7 +88,7 @@ fun ConsentScreen(
                     Column(modifier = Modifier.padding(20.dp)) {
                         Icon(
                             Icons.Outlined.Shield,
-                            contentDescription = null,
+                            contentDescription = "Kibali icon",
                             tint = colors.primary,
                             modifier = Modifier.size(32.dp)
                         )
@@ -268,7 +268,7 @@ fun ConsentScreen(
                     ),
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Icon(Icons.Default.CheckCircle, contentDescription = null)
+                    Icon(Icons.Default.CheckCircle, contentDescription = "Imekamilika")
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = if (canProceed) "Endelea / Continue" else "Jaza inahitajika / Fill required",
@@ -359,7 +359,7 @@ private fun ConsentCard(
         ) {
             Icon(
                 icon,
-                contentDescription = null,
+                contentDescription = "Ridhaa",
                 tint = if (checked) colors.primary else colors.onSurfaceVariant,
                 modifier = Modifier
                     .size(24.dp)

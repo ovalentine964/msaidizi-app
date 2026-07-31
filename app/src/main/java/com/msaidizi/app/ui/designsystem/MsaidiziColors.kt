@@ -73,21 +73,21 @@ object MsaidiziPalette {
 // ── Light Theme Colors ───────────────────────
 @Immutable
 data class MsaidiziColors(
-    // Primary
+    // Primary — Orange with dark text for WCAG AA (contrast ≥ 4.5:1)
     val primary: Color = MsaidiziPalette.Orange600,
-    val onPrimary: Color = Color.White,
+    val onPrimary: Color = MsaidiziPalette.WarmGray900,  // Dark text on orange (was white — fixed for WCAG AA)
     val primaryContainer: Color = MsaidiziPalette.Orange100,
     val onPrimaryContainer: Color = MsaidiziPalette.Orange900,
 
-    // Secondary
+    // Secondary — Teal with white text (passes WCAG AA)
     val secondary: Color = MsaidiziPalette.Teal800,
     val onSecondary: Color = Color.White,
     val secondaryContainer: Color = MsaidiziPalette.Teal100,
     val onSecondaryContainer: Color = MsaidiziPalette.Teal900,
 
-    // Tertiary — warm gold accent
+    // Tertiary — Amber with dark text for WCAG AA
     val tertiary: Color = MsaidiziPalette.Amber600,
-    val onTertiary: Color = Color.White,
+    val onTertiary: Color = MsaidiziPalette.WarmGray900,  // Dark text on amber (was white — fixed for WCAG AA)
     val tertiaryContainer: Color = MsaidiziPalette.Amber100,
     val onTertiaryContainer: Color = MsaidiziPalette.Amber800,
 
@@ -96,7 +96,7 @@ data class MsaidiziColors(
     val onSuccess: Color = Color.White,
     val successContainer: Color = MsaidiziPalette.Green100,
     val warning: Color = MsaidiziPalette.Amber600,
-    val onWarning: Color = Color.White,
+    val onWarning: Color = MsaidiziPalette.WarmGray900,  // Dark text on amber warning (fixed for WCAG AA)
     val warningContainer: Color = MsaidiziPalette.Amber100,
     val error: Color = MsaidiziPalette.Red600,
     val onError: Color = Color.White,

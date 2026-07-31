@@ -73,7 +73,7 @@ fun VoiceInteractionScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.SmartToy,
-                                contentDescription = null,
+                                contentDescription = "Sauti icon",
                                 tint = Color.White,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -319,7 +319,7 @@ private fun ChatBubble(message: ChatMessage) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Default.Mic,
-                            contentDescription = null,
+                            contentDescription = "Sauti icon",
                             modifier = Modifier.size(12.dp),
                             tint = textColor.copy(alpha = 0.5f)
                         )

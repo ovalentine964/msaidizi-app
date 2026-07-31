@@ -251,7 +251,7 @@ fun ListItemCard(
             ) {
                 Icon(
                     imageVector = icon,
-                    contentDescription = null,
+                    contentDescription = "$label icon",
                     tint = statusColor,
                     modifier = Modifier.size(24.dp)
                 )
@@ -393,7 +393,7 @@ fun EmptyState(
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = null,
+            contentDescription = "$titleSw icon",
             modifier = Modifier.size(64.dp),
             tint = colors.onSurfaceVariant.copy(alpha = 0.4f)
         )
@@ -614,7 +614,7 @@ fun AlertBanner(
         ) {
             Icon(
                 imageVector = icon,
-                contentDescription = null,
+                contentDescription = "$severity alert icon",
                 tint = iconColor,
                 modifier = Modifier.size(24.dp)
             )

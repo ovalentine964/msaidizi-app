@@ -129,7 +129,7 @@ fun MamaMbogaRecordScreen(
                     ) {
                         Icon(
                             Icons.Default.Mic,
-                            contentDescription = null,
+                            contentDescription = "Rekodi mauzo",
                             tint = colors.primary,
                             modifier = Modifier.size(32.dp)
                         )

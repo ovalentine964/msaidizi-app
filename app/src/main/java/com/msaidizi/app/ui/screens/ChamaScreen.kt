@@ -55,7 +55,7 @@ fun ChamaScreen(
                 containerColor = colors.tertiary,
                 contentColor = colors.onTertiary
             ) {
-                Icon(Icons.Default.Add, contentDescription = null)
+                Icon(Icons.Default.Add, contentDescription = "Ongeza")
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Chama Jipya", fontWeight = FontWeight.SemiBold)
             }
@@ -228,7 +228,7 @@ private fun MemberItem(name: String, order: Int, hasPaid: Boolean) {
             Text(name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
             Icon(
                 imageVector = if (hasPaid) Icons.Default.CheckCircle else Icons.Default.Cancel,
-                contentDescription = null,
+                contentDescription = "Mchango icon",
                 tint = if (hasPaid) colors.success else colors.error,
                 modifier = Modifier.size(24.dp)
             )
@@ -265,7 +265,7 @@ private fun MeetingCard(date: String, time: String, location: String, type: Stri
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.Event, contentDescription = null, tint = colors.primary, modifier = Modifier.size(32.dp))
+            Icon(Icons.Default.Event, contentDescription = "Tukio", tint = colors.primary, modifier = Modifier.size(32.dp))
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(date, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)

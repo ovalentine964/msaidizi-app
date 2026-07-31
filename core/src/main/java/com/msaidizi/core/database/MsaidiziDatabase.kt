@@ -59,7 +59,7 @@ import com.msaidizi.core.model.*
         HirePurchaseAgreementEntity::class,
         HirePaymentEntity::class
     ],
-    version = 13,
+    version = 14,
     exportSchema = true
 )
 abstract class MsaidiziDatabase : RoomDatabase() {

@@ -55,7 +55,7 @@ fun ServicesScreen(
                 containerColor = colors.tertiary,
                 contentColor = colors.onTertiary
             ) {
-                Icon(Icons.Default.Add, contentDescription = null)
+                Icon(Icons.Default.Add, contentDescription = "Ongeza")
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Rekodi Huduma", fontWeight = FontWeight.SemiBold)
             }

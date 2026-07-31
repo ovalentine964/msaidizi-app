@@ -8,6 +8,8 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.ksp)
+    id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
 }
 
 android {
@@ -229,6 +231,11 @@ dependencies {
 
     // Logging
     implementation(libs.timber)
+
+    // T3: Firebase Crashlytics — crash reporting for production
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+    implementation("com.google.firebase:firebase-crashlytics-ktx")
+    implementation("com.google.firebase:firebase-analytics-ktx")
 
     // Gson (JNI interop)
     implementation(libs.gson)
