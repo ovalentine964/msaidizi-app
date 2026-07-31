@@ -1,5 +1,5 @@
-import com.msaidizi.agent.tools.financial.CFOEngine
 package com.msaidizi.agent.tools.credit
+import com.msaidizi.agent.tools.financial.CFOEngine
 
 import com.msaidizi.core.database.DailySummaryDao
 import com.msaidizi.core.database.DebtDao

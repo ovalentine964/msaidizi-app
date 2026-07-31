@@ -1,5 +1,6 @@
-import com.msaidizi.agent.tools.financial.TransactionRecorder
 package com.msaidizi.agent.tools.market
+
+import com.msaidizi.agent.tools.financial.TransactionRecorder
 
 import com.msaidizi.core.database.ProductDao
 import com.msaidizi.core.database.SaleDao
