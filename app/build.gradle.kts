@@ -130,6 +130,7 @@ android {
     packaging {
         jniLibs {
             useLegacyPackaging = true
+            keepDebugSymbols += listOf("**/*.so")
         }
         resources {
             excludes += listOf(
@@ -149,13 +150,6 @@ android {
     @Suppress("DEPRECATION")
     aaptOptions {
         noCompress("gguf", "onnx", "bin", "tflite", "vocab")
-    }
-
-    // Ensure native debug symbols are included for crash reporting
-    packaging {
-        jniLibs {
-            keepDebugSymbols += listOf("**/*.so")
-        }
     }
 }
 

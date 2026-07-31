@@ -7,6 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.msaidizi.agent.tools.core.*
 
 /**
  * FloatManager — M-Pesa float management for agents.

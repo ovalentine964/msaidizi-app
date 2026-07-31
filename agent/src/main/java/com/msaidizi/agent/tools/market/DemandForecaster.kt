@@ -9,6 +9,7 @@ import java.util.Calendar
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.*
+import com.msaidizi.agent.tools.core.*
 
 /**
  * DemandForecaster — Predict demand for perishable goods.

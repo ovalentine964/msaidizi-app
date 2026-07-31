@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.msaidizi.agent.tools.core.*
 
 /**
  * FishTripPlanner — Trip planning, catch tracking, and earnings for fishers.

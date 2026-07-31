@@ -2,6 +2,7 @@ package com.msaidizi.agent.tools.voice
 
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.msaidizi.agent.tools.core.*
 
 data class ReceiptItem(val name: String, val quantity: Int, val unitPrice: Double, val total: Double)
 data class ReceiptResult(val items: List<ReceiptItem>, val totalAmount: Double, val merchantName: String?)

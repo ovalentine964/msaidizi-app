@@ -280,7 +280,163 @@ object Migrations {
     }
 
     /**
-     * Migration 12 → 13: Performance indices on frequently queried columns.
+     * Migration 12 → 13: Boda boda, safety, hire-purchase, and M-Pesa tables.
+     * Adds mpesa_transactions, emergency_contacts, sos_events, boda_income,
+     * boda_expense, fuel_purchase, trip_kilometers, fare_record,
+     * hire_purchase_agreement, hire_payment tables.
+     */
+    val MIGRATION_12_13 = object : Migration(12, 13) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            // M-Pesa transactions
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS mpesa_transactions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    receipt TEXT NOT NULL,
+                    type TEXT NOT NULL,
+                    amount REAL NOT NULL,
+                    counterparty TEXT NOT NULL,
+                    phone TEXT NOT NULL,
+                    transactionDate TEXT NOT NULL,
+                    balance REAL,
+                    category TEXT NOT NULL,
+                    confidence REAL NOT NULL,
+                    rawSms TEXT NOT NULL,
+                    isReconciled INTEGER NOT NULL DEFAULT 0,
+                    reconciledRecordId INTEGER,
+                    createdAt INTEGER NOT NULL
+                )
+            """)
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_mpesa_transactions_receipt ON mpesa_transactions(receipt)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_mpesa_transactions_phone ON mpesa_transactions(phone)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_mpesa_transactions_transactionDate ON mpesa_transactions(transactionDate)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_mpesa_transactions_isReconciled ON mpesa_transactions(isReconciled)")
+
+            // Safety entities
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS emergency_contacts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    name TEXT NOT NULL,
+                    phone TEXT NOT NULL,
+                    relationship TEXT NOT NULL,
+                    isPrimary INTEGER NOT NULL DEFAULT 0,
+                    createdAt INTEGER NOT NULL
+                )
+            """)
+
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS sos_events (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    latitude REAL NOT NULL,
+                    longitude REAL NOT NULL,
+                    eventType TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'active',
+                    respondedBy TEXT,
+                    notes TEXT,
+                    timestamp INTEGER NOT NULL
+                )
+            """)
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_sos_events_status ON sos_events(status)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_sos_events_timestamp ON sos_events(timestamp)")
+
+            // Boda boda entities
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS boda_income (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    amount REAL NOT NULL,
+                    source TEXT NOT NULL DEFAULT 'fare',
+                    tripId TEXT,
+                    notes TEXT,
+                    timestamp INTEGER NOT NULL
+                )
+            """)
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_boda_income_timestamp ON boda_income(timestamp)")
+
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS boda_expense (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    amount REAL NOT NULL,
+                    category TEXT NOT NULL,
+                    description TEXT,
+                    timestamp INTEGER NOT NULL
+                )
+            """)
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_boda_expense_timestamp ON boda_expense(timestamp)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_boda_expense_category ON boda_expense(category)")
+
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS fuel_purchase (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    litres REAL NOT NULL,
+                    pricePerLitre REAL NOT NULL,
+                    totalCost REAL NOT NULL,
+                    station TEXT,
+                    odometerKm REAL,
+                    timestamp INTEGER NOT NULL
+                )
+            """)
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_fuel_purchase_timestamp ON fuel_purchase(timestamp)")
+
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS trip_kilometers (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    startKm REAL NOT NULL,
+                    endKm REAL NOT NULL,
+                    distanceKm REAL NOT NULL,
+                    tripId TEXT,
+                    timestamp INTEGER NOT NULL
+                )
+            """)
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_trip_kilometers_timestamp ON trip_kilometers(timestamp)")
+
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS fare_record (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    amount REAL NOT NULL,
+                    origin TEXT,
+                    destination TEXT,
+                    passengerCount INTEGER NOT NULL DEFAULT 1,
+                    paymentMethod TEXT NOT NULL DEFAULT 'cash',
+                    timestamp INTEGER NOT NULL
+                )
+            """)
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_fare_record_timestamp ON fare_record(timestamp)")
+
+            // Hire purchase entities
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS hire_purchase_agreement (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    assetDescription TEXT NOT NULL,
+                    assetValue REAL NOT NULL,
+                    deposit REAL NOT NULL,
+                    monthlyPayment REAL NOT NULL,
+                    totalInstallments INTEGER NOT NULL,
+                    paidInstallments INTEGER NOT NULL DEFAULT 0,
+                    startDate INTEGER NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'active',
+                    notes TEXT,
+                    createdAt INTEGER NOT NULL,
+                    updatedAt INTEGER NOT NULL
+                )
+            """)
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_hire_purchase_agreement_status ON hire_purchase_agreement(status)")
+
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS hire_payment (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    agreementId TEXT NOT NULL,
+                    amount REAL NOT NULL,
+                    paymentMethod TEXT NOT NULL DEFAULT 'cash',
+                    notes TEXT,
+                    timestamp INTEGER NOT NULL,
+                    FOREIGN KEY (agreementId) REFERENCES hire_purchase_agreement(id) ON DELETE CASCADE
+                )
+            """)
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_hire_payment_agreementId ON hire_payment(agreementId)")
+        }
+    }
+
+    /**
+     * Migration 13 → 14: Performance indices on frequently queried columns.
      * Adds composite and single-column indices for sales, products, expenses,
      * conversations, knowledge_entries, debts, and customer_visits.
      */
@@ -380,6 +536,7 @@ object Migrations {
         MIGRATION_9_10,
         MIGRATION_10_11,
         MIGRATION_11_12,
+        MIGRATION_12_13,
         MIGRATION_13_14,
         MIGRATION_14_15
     )

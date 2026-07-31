@@ -2,6 +2,7 @@ package com.msaidizi.agent.tools.financial
 
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.msaidizi.agent.tools.core.*
 
 data class MpesaTransaction(val amount: Double, val sender: String, val type: String, val reference: String)
 

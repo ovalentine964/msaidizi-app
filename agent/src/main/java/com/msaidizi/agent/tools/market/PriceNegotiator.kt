@@ -8,6 +8,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.ln
 import kotlin.math.pow
+import com.msaidizi.agent.tools.core.*
 
 /**
  * PriceNegotiator — Voice-based price negotiation assistant.

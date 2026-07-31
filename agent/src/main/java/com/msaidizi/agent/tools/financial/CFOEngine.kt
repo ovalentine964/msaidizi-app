@@ -10,11 +10,12 @@ import com.google.gson.Gson
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
 import com.msaidizi.agent.flywheel.FlywheelEngine
-import com.msaidizi.agent.tools.CFOReportReviewer
-import com.msaidizi.agent.tools.ReportType
+import com.msaidizi.agent.tools.financial.CFOReportReviewer
+import com.msaidizi.agent.tools.financial.ReportType
 import java.util.Calendar
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.msaidizi.agent.tools.core.*
 
 /**
  * CFOEngine — Daily briefings, cash flow predictions, savings advice.
@@ -69,10 +70,10 @@ class CFOEngine @Inject constructor(
                 else -> ReportType.DAILY_BRIEFING
             }
             val channel = when (deliveryChannel.lowercase()) {
-                "whatsapp" -> com.msaidizi.agent.tools.DeliveryChannel.WHATSAPP
-                "sms" -> com.msaidizi.agent.tools.DeliveryChannel.SMS
-                "email" -> com.msaidizi.agent.tools.DeliveryChannel.EMAIL
-                else -> com.msaidizi.agent.tools.DeliveryChannel.IN_APP
+                "whatsapp" -> DeliveryChannel.WHATSAPP
+                "sms" -> DeliveryChannel.SMS
+                "email" -> DeliveryChannel.EMAIL
+                else -> DeliveryChannel.IN_APP
             }
 
             val reviewRequest = reportReviewer.submitForReview(

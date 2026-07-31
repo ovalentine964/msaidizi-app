@@ -2,6 +2,7 @@ package com.msaidizi.agent.tools.agriculture
 
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.msaidizi.agent.tools.core.*
 
 /**
  * RestockPredictor — Predict when products need restocking based on sales history.

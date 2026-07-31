@@ -10,7 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.msaidizi.app.ui.navigation.AppNavigation
 import com.msaidizi.agent.harness.SuperagentHarness
-import com.msaidizi.agent.tools.VoicePipeline
+import com.msaidizi.agent.tools.voice.VoicePipeline
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 

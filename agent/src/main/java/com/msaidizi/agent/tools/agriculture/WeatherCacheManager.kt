@@ -8,6 +8,7 @@ import android.location.Location
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.msaidizi.agent.tools.core.*
 
 /**
  * WeatherCacheManager — Fix 4: Weather integration with offline caching for farmers.

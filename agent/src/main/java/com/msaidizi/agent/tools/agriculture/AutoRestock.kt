@@ -15,6 +15,7 @@ import javax.inject.Singleton
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.roundToInt
+import com.msaidizi.agent.tools.core.*
 
 /**
  * AutoRestock — Predicts restock quantities from sales history.

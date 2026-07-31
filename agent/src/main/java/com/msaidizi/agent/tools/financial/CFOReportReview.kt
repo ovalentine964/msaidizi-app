@@ -33,10 +33,10 @@ class CFOReportReview @Inject constructor(
 ) {
     // ─── Pending Reports ───
 
-    private val pendingReports = ConcurrentHashMap<String, PendingReport>()
+    private val pendingReports = ConcurrentHashMap<String, ReviewPendingReport>()
 
     /** Track corrections for harness improvement */
-    private val correctionHistory = mutableListOf<ReportCorrection>()
+    private val correctionHistory = mutableListOf<ReviewCorrection>()
 
     // ─── Core API ───
 
@@ -50,7 +50,7 @@ class CFOReportReview @Inject constructor(
     suspend fun generateForReview(
         reportType: ReportType,
         deliveryChannel: String = "whatsapp"
-    ): ReportReviewRequest {
+    ): ReviewRequest {
         // Generate the report via CFOEngine
         val reportResult = when (reportType) {
             ReportType.DAILY_BRIEFING -> cfoEngine.generateDailyBriefing()
@@ -60,7 +60,7 @@ class CFOReportReview @Inject constructor(
         }
 
         if (!reportResult.success) {
-            return ReportReviewRequest(
+            return ReviewRequest(
                 confirmationId = null,
                 reportType = reportType,
                 preview = null,
@@ -86,7 +86,7 @@ class CFOReportReview @Inject constructor(
             ?: java.util.UUID.randomUUID().toString()
 
         // Store pending report
-        pendingReports[confirmationId] = PendingReport(
+        pendingReports[confirmationId] = ReviewPendingReport(
             confirmationId = confirmationId,
             reportType = reportType,
             content = reportContent,
@@ -110,7 +110,7 @@ class CFOReportReview @Inject constructor(
         val prompt = confirmationRequest?.prompt
             ?: "Hii ni ripoti yako ya ${reportType.displayName}. Tuma kupitia $deliveryChannel?"
 
-        return ReportReviewRequest(
+        return ReviewRequest(
             confirmationId = confirmationId,
             reportType = reportType,
             preview = reportContent,
@@ -132,9 +132,9 @@ class CFOReportReview @Inject constructor(
         approved: Boolean,
         editedContent: String? = null,
         userComment: String? = null
-    ): ReportDeliveryResult {
+    ): ReviewDeliveryResult {
         val pending = pendingReports[confirmationId]
-            ?: return ReportDeliveryResult(
+            ?: return ReviewDeliveryResult(
                 delivered = false,
                 message = "Ripoti haikupatikana au tayari imeshughulikiwa."
             )
@@ -143,7 +143,7 @@ class CFOReportReview @Inject constructor(
 
         // Track correction if user edited
         if (editedContent != null && editedContent != pending.content) {
-            val correction = ReportCorrection(
+            val correction = ReviewCorrection(
                 reportType = pending.reportType,
                 originalContent = pending.content,
                 correctedContent = editedContent,
@@ -187,14 +187,14 @@ class CFOReportReview @Inject constructor(
         )
 
         return if (approved) {
-            ReportDeliveryResult(
+            ReviewDeliveryResult(
                 delivered = true,
                 message = "Ripoti imetumwa kupitia ${pending.deliveryChannel}.",
                 finalContent = finalContent,
                 wasEdited = editedContent != null
             )
         } else {
-            ReportDeliveryResult(
+            ReviewDeliveryResult(
                 delivered = false,
                 message = "Ripoti haijatuma."
             )
@@ -205,14 +205,14 @@ class CFOReportReview @Inject constructor(
      * Get correction statistics for harness improvement.
      * Shows which report types get corrected most → need better generation.
      */
-    fun getCorrectionStats(): ReportCorrectionStats {
+    fun getCorrectionStats(): ReviewCorrectionStats {
         synchronized(correctionHistory) {
             if (correctionHistory.isEmpty()) {
-                return ReportCorrectionStats()
+                return ReviewCorrectionStats()
             }
 
             val byType = correctionHistory.groupBy { it.reportType }
-            return ReportCorrectionStats(
+            return ReviewCorrectionStats(
                 totalCorrections = correctionHistory.size,
                 correctionsByType = byType.mapValues { it.value.size },
                 mostCorrectedType = byType.entries.maxByOrNull { it.value.size }?.key
@@ -223,9 +223,9 @@ class CFOReportReview @Inject constructor(
     /**
      * Get pending reports awaiting review.
      */
-    fun getPendingReports(): List<ReportReviewRequest> {
+    fun getPendingReports(): List<ReviewRequest> {
         return pendingReports.values.map { pending ->
-            ReportReviewRequest(
+            ReviewRequest(
                 confirmationId = pending.confirmationId,
                 reportType = pending.reportType,
                 preview = pending.content,
@@ -238,7 +238,7 @@ class CFOReportReview @Inject constructor(
 
 // ─── Data Classes ───
 
-data class ReportReviewRequest(
+data class ReviewRequest(
     val confirmationId: String?,
     val reportType: ReportType,
     val preview: String?,
@@ -246,27 +246,27 @@ data class ReportReviewRequest(
     val deliveryChannel: String = "whatsapp"
 )
 
-data class ReportDeliveryResult(
+data class ReviewDeliveryResult(
     val delivered: Boolean,
     val message: String,
     val finalContent: String? = null,
     val wasEdited: Boolean = false
 )
 
-data class ReportCorrection(
+data class ReviewCorrection(
     val reportType: ReportType,
     val originalContent: String,
     val correctedContent: String,
     val correctionTimestamp: Long
 )
 
-data class ReportCorrectionStats(
+data class ReviewCorrectionStats(
     val totalCorrections: Int = 0,
     val correctionsByType: Map<ReportType, Int> = emptyMap(),
     val mostCorrectedType: ReportType? = null
 )
 
-internal data class PendingReport(
+internal data class ReviewPendingReport(
     val confirmationId: String,
     val reportType: ReportType,
     val content: String,

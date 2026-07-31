@@ -16,6 +16,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import com.msaidizi.agent.tools.core.*
 
 /**
  * ReceiptScannerCV — CameraX + ML Kit powered receipt scanner.

@@ -16,6 +16,7 @@ import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.msaidizi.agent.tools.core.*
 
 /**
  * ProofOfIncome — Generate formal, shareable income documentation.

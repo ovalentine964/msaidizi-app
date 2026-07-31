@@ -2,6 +2,7 @@ package com.msaidizi.agent.tools.social
 
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.msaidizi.agent.tools.core.*
 
 data class Report(val type: String, val content: String, val recipientPhone: String?)
 

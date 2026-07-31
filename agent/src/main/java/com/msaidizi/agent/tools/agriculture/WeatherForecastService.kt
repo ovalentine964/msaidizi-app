@@ -22,6 +22,7 @@ import java.util.Locale
 import java.util.TimeZone
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.msaidizi.agent.tools.core.*
 
 /**
  * WeatherForecastService — Earth2Studio-powered weather forecasting for Kenyan agriculture.
