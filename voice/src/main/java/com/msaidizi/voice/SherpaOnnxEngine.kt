@@ -38,16 +38,15 @@ class SherpaOnnxEngine @Inject constructor() : SpeechEngine {
     }
 
     override suspend fun recognize(audioData: FloatArray, sampleRate: Int): String {
-        return recognize(audioData, sampleRate)
+        return recognizeAudio(audioData, sampleRate)
     }
 
     override suspend fun recognizeFromPcm16(pcmData: ByteArray, sampleRate: Int): String {
-        val floatData = AudioUtils.pcm16ToFloat(pcmData)
-        return recognize(floatData, sampleRate)
+        return recognizeFromPcm16Bytes(pcmData, sampleRate)
     }
 
     override suspend fun synthesize(text: String, language: String, speed: Float): ByteArray {
-        return synthesizeToPcm16(text, sid = 0, speed = speed)
+        return synthesizeToPcm16Bytes(text, sid = 0, speed = speed)
     }
 
     companion object AudioUtils {
@@ -213,7 +212,7 @@ class SherpaOnnxEngine @Inject constructor() : SpeechEngine {
      * @param sampleRate Sample rate of the audio (default 16000)
      * @return Recognised text, or empty string on failure
      */
-    fun recognize(audioData: FloatArray, sampleRate: Int = 16000): String {
+    fun recognizeAudio(audioData: FloatArray, sampleRate: Int = 16000): String {
         if (!recognizerCreated) {
             Timber.w("recognize called but no recognizer created")
             return ""
@@ -234,7 +233,7 @@ class SherpaOnnxEngine @Inject constructor() : SpeechEngine {
      * @param sampleRate Sample rate (default 16000)
      * @return Recognised text
      */
-    fun recognizeFromPcm16(pcmData: ByteArray, sampleRate: Int = 16000): String {
+    fun recognizeFromPcm16Bytes(pcmData: ByteArray, sampleRate: Int = 16000): String {
         val floatData = pcm16ToFloat(pcmData)
         return recognize(floatData, sampleRate)
     }
@@ -335,7 +334,7 @@ class SherpaOnnxEngine @Inject constructor() : SpeechEngine {
      * @param speed Speech rate
      * @return PCM 16-bit LE byte array at 22050 Hz
      */
-    fun synthesizeToPcm16(text: String, sid: Int = 0, speed: Float = 1.0f): ByteArray {
+    fun synthesizeToPcm16Bytes(text: String, sid: Int = 0, speed: Float = 1.0f): ByteArray {
         val floatSamples = synthesize(text, sid, speed)
         return floatToPcm16(floatSamples)
     }

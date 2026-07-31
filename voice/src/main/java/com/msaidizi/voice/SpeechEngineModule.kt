@@ -48,7 +48,7 @@ class LocalSpeechEngine(
     }
 
     override suspend fun recognize(audioData: FloatArray, sampleRate: Int): String {
-        return sherpaEngine.recognize(audioData, sampleRate)
+        return sherpaEngine.recognizeAudio(audioData, sampleRate)
     }
 
     override suspend fun recognizeFromPcm16(pcmData: ByteArray, sampleRate: Int): String {
@@ -56,7 +56,7 @@ class LocalSpeechEngine(
     }
 
     override suspend fun synthesize(text: String, language: String, speed: Float): ByteArray {
-        return sherpaEngine.synthesizeToPcm16(text, sid = 0, speed = speed)
+        return sherpaEngine.synthesizeToPcm16Bytes(text, sid = 0, speed = speed)
     }
 
     override fun release() {

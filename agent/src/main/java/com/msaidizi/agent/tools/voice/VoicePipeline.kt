@@ -574,7 +574,7 @@ class VoicePipeline @Inject constructor(
         return try {
             // Generate audio
             val pcmData = withContext(Dispatchers.Default) {
-                sherpaEngine.synthesizeToPcm16(text, sid = 0, speed = speed)
+                sherpaEngine.synthesizeToPcm16Bytes(text, sid = 0, speed = speed)
             }
 
             if (pcmData.isEmpty()) {
