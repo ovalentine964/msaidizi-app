@@ -68,15 +68,24 @@ class LanguageDetector @Inject constructor() : Tool {
         "rafiki", "jirani", "mwalimu", "daktari"
     )
 
-    /** Sheng (Kenyan urban slang) markers */
+    /** Sheng (Kenyan urban slang) markers — expanded with 2025-2026 vocabulary */
     private val shengWords = setOf(
+        // Greetings & discourse
         "sasa", "niaje", "mambo", "vipi", "poa", "sijui", "ata", "juu",
         "ndio", "sio", "si", "manze", "bro", "dude", "fam",
-        "kush", "kudinya", "kuchill", "kuvibe", "kupiga",
+        "maze", "aki", "eh", "eeh", "aai", "woiye",
+        "ati", "bas", "sasa hivi",
+        // People & things
         "mzing", "msee", "dem", "chali", "mresh",
-        "mbogi", "genje", "ka-quarter", "kuhepa", "kublack",
+        "mbogi", "genje",
+        // Verbs (Sheng + ku-English constructions)
+        "kush", "kudinya", "kuchill", "kuvibe", "kupiga",
         "kuoga", "kumess", "kucatch", "kudrop", "kupick",
-        "maze", "aki", "eh", "eeh", "aai", "woiye"
+        "kuhepa", "kublack",
+        // Money terms (critical for business)
+        "thao", "kibaki", "ngiri", "soo", "jaboya", "finje",
+        "ndovu", "gunia", "robo", "kichele", "doe", "chingwa",
+        "munde", "ngwizas", "ka-quarter"
     )
 
     /** English high-frequency words */
@@ -212,6 +221,35 @@ class LanguageDetector @Inject constructor() : Tool {
             englishScore = englishScore,
             shengScore = shengScore
         )
+    }
+
+    /**
+     * Detect dialect variant: sw-KE-urban, sw-KE-urban-sheng, sw-TZ, etc.
+     * Returns a dialect code from the taxonomy.
+     */
+    fun detectDialect(text: String): String {
+        val result = detectLanguage(text)
+        return when (result.primary) {
+            "sheng" -> "sw-KE-urban-sheng"
+            "mixed" -> {
+                val ratio = result.swahiliScore / (result.swahiliScore + result.englishScore + 0.01)
+                if (ratio > 0.6) "sw-KE-urban-mixed" else "sw-KE-urban-standard"
+            }
+            "sw" -> {
+                // Distinguish Kenyan vs Tanzanian patterns
+                val lower = text.lowercase()
+                val hasNiliPast = lower.contains("nili") && !lower.contains("niliwa")
+                val hasNimePast = lower.contains("nime")
+                val hasEnglishInserts = result.englishScore > result.swahiliScore * 0.15
+                when {
+                    hasNimePast && hasEnglishInserts -> "sw-KE-urban"
+                    hasNiliPast && !hasEnglishInserts -> "sw-TZ"
+                    else -> "sw-KE-urban"
+                }
+            }
+            "en" -> "en-KE"
+            else -> "sw-KE-urban"
+        }
     }
 
     /**

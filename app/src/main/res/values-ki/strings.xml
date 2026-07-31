@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Kikuyu (Gikuyu) string resources for Msaidizi -->
-<!-- Key greetings and financial terms -->
+<!-- Expanded with voice commands, error recovery, and M-Pesa terms -->
 <resources>
     <string name="app_name">Msaidizi</string>
     <string name="app_tagline">Mũteithia wa Bia</string>
@@ -30,15 +30,28 @@
     <string name="delete">Tharia</string>
     <string name="confirm">Ũhootane</string>
     <string name="retry">Ũngĩũra</string>
+    <string name="back">Rũga</string>
+    <string name="done">Nĩ ĩarĩkĩtie</string>
+    <string name="loading">Nĩ ĩathĩka…</string>
+    <string name="no_data">Gũtirĩ data</string>
+
+    <!-- Error messages -->
     <string name="error_generic">Kĩrĩ kĩakĩa. Ũraũgũũra.</string>
     <string name="error_network">Gũtirĩ intaneti. Ũtũũra thĩinĩ wa intaneti.</string>
+    <string name="error_permission_microphone">Mikrofoni ĩkenagwo.</string>
+    <string name="error_voice_not_heard">Ndĩkũiguĩte. Ũraũgũũra.</string>
+    <string name="error_voice_too_low">Mũgambo waku nĩ mũnini. Ũũre hau.</string>
+    <string name="error_voice_noisy">Gũkũ nĩ gũtuĩkũ. Ĩka handũ ha hingo ya thĩ.</string>
 
     <!-- Financial terms -->
+    <string name="dashboard_title">Bordi</string>
     <string name="dashboard_today_sales">Kũgũũra ũmũthĩ</string>
     <string name="dashboard_today_expenses">Kũheana ũmũthĩ</string>
     <string name="dashboard_profit">Wĩra</string>
+    <string name="dashboard_quick_actions">Haraka</string>
     <string name="dashboard_record_sale">Andĩka kũgũũra</string>
     <string name="dashboard_record_expense">Andĩka kũheana</string>
+    <string name="dashboard_view_stock">Tũũra irio</string>
     <string name="dashboard_ask_advice">Ũria ũtaaro</string>
 
     <!-- Sales -->
@@ -48,6 +61,8 @@
     <string name="sales_quantity">Mũiga</string>
     <string name="sales_price">Gĩa</string>
     <string name="sales_total">Ciothe</string>
+    <string name="sales_customer">Mũtũũri</string>
+    <string name="sales_payment_method">Njĩra ya kũhanda</string>
     <string name="sales_cash">Pesa</string>
     <string name="sales_mpesa">M-Pesa</string>
     <string name="sales_credit">Gũhĩtia</string>
@@ -58,7 +73,9 @@
     <string name="inventory_product_name">Rĩĩtwa rĩa kĩamũ</string>
     <string name="inventory_buying_price">Gĩa cia kũgũũra</string>
     <string name="inventory_selling_price">Gĩa cia kũheana</string>
+    <string name="inventory_quantity_in_stock">Mũiga ũrĩ thĩinĩ</string>
     <string name="inventory_low_stock">Irio cia gũkĩra</string>
+    <string name="inventory_out_of_stock">Irio cia gũthera</string>
 
     <!-- Credit -->
     <string name="credit_title">Alama ya gũhĩtia</string>
@@ -66,6 +83,21 @@
     <string name="credit_tier">Mũtũũrĩre</string>
     <string name="credit_explanation">Ũhoro</string>
     <string name="credit_improve">Mũromo wa gũthondeka</string>
+    <string name="credit_history">Ũhoro wa gũhĩtia</string>
+
+    <!-- Harvest -->
+    <string name="harvest_title">Kũgetha</string>
+    <string name="harvest_record">Andĩka kũgetha</string>
+    <string name="harvest_crop">Mũthemba</string>
+    <string name="harvest_quantity">Mũiga (kg)</string>
+    <string name="harvest_quality">Wega</string>
+    <string name="harvest_location">Handũ</string>
+
+    <!-- Customers -->
+    <string name="customers_title">Andũ a gũcũũra</string>
+    <string name="customers_add">Ongera mũtũũri</string>
+    <string name="customers_history">Ũhoro</string>
+    <string name="customers_debts">Gũhĩtia</string>
 
     <!-- Chama -->
     <string name="chama_title">Chama</string>
@@ -90,19 +122,43 @@
 
     <!-- Bootstrap -->
     <string name="bootstrap_welcome">Nĩ wega! Reke tũũre Msaidizi waku.</string>
+    <string name="bootstrap_name_prompt">Ũũrĩagwo nĩ nĩ atĩa Msaidizi waku?</string>
+    <string name="bootstrap_business_type">Ũũrĩagwo bia rĩu?</string>
+    <string name="bootstrap_business_options">Mama Mboga\nBoda Boda\nDuka ya M-Pesa\nDuka ya Irio\nSaloni/Barber\nMama Ntilie\nJua Kali\nĨngĩ</string>
     <string name="bootstrap_complete">Nĩ gwĩkĩka! Msaidizi waku nĩ arĩkĩtie.</string>
     <string name="bootstrap_next">Ĩnĩ</string>
     <string name="bootstrap_skip">Ũtigane</string>
     <string name="bootstrap_finish">Ambĩrĩria Gũtuĩka Msaidizi</string>
+
+    <!-- Voice Commands -->
+    <string name="voice_nimeuza">Nĩnjĩgĩtie</string>
+    <string name="voice_nimenunua">Nĩnthũkĩtie</string>
+    <string name="voice_ripoti">He ripoti</string>
+    <string name="voice_hesabu">Irio ciagũ</string>
+    <string name="voice_ushauri">He ũtaaro</string>
+    <string name="voice_bei">Gĩa cia soko</string>
 
     <!-- Approval prompts -->
     <string name="approval_approve">Ũhootane</string>
     <string name="approval_reject">Ara</string>
     <string name="approval_expired">Saa nĩ ĩarĩkĩtie.</string>
 
-    <!-- Loading -->
-    <string name="loading">Nĩ ĩathĩka…</string>
-    <string name="no_data">Gũtirĩ data</string>
-    <string name="back">Rũga</string>
-    <string name="done">Nĩ ĩarĩkĩtie</string>
+    <!-- Goals -->
+    <string name="goals_title">Mĩikariire</string>
+    <string name="goals_add">Ongera mũikariire</string>
+    <string name="goals_progress">Ũndũ</string>
+
+    <!-- Pricing -->
+    <string name="pricing_title">Gĩa</string>
+    <string name="pricing_advisor">Mũtaaro wa gĩa</string>
+
+    <!-- Jobs -->
+    <string name="jobs_title">Wĩra</string>
+    <string name="jobs_find">Caria wĩra</string>
+
+    <!-- M-Pesa terms -->
+    <string name="mpesa_balance">Salio ya M-Pesa</string>
+    <string name="mpesa_send">Tũma pesa</string>
+    <string name="mpesa_receive">Ĩhĩa pesa</string>
+    <string name="mpesa_pay">Handa</string>
 </resources>

@@ -98,7 +98,10 @@ object AppModule {
         creditDecisionApproval: CreditDecisionApproval,
         weatherCacheManager: WeatherCacheManager,
         weatherForecastService: WeatherForecastService,
-        bodaBodaRouter: BodaBodaRouter
+        bodaBodaRouter: BodaBodaRouter,
+        archetypeFinancialModel: ArchetypeFinancialModel,
+        pricingEngine: PricingEngine,
+        taxComplianceTool: TaxComplianceTool
     ): ToolRegistry {
         val registry = ToolRegistry(flywheelEngine)
         registry.register(transactionRecorder)
@@ -179,6 +182,10 @@ object AppModule {
         registry.register(weatherForecastService)
         // cuOpt GPU-accelerated routing
         registry.register(bodaBodaRouter)
+        // Per-archetype financial models, pricing, and tax compliance
+        registry.register(archetypeFinancialModel)
+        registry.register(pricingEngine)
+        registry.register(taxComplianceTool)
         return registry
     }
 }

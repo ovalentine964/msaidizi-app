@@ -20,70 +20,223 @@ data class BusinessProfile(
     val currency: String = "KES"
 )
 
+// ══════════════════════════════════════════════════════════
+// 12 Worker Archetypes — Primary classification system
+// ══════════════════════════════════════════════════════════
+
+@Serializable
+enum class ArchetypeType(
+    val displayName: String,
+    val swahiliName: String,
+    val icon: String
+) {
+    VENDOR("Vendor", "Mchina/Mchuuzi", "🏪"),
+    FOOD_SERVICE("Food Service", "Mama Lishe", "🍳"),
+    ARTISAN("Artisan/Maker", "Fundi/Mfua", "🔧"),
+    SERVICE_PROVIDER("Service Provider", "Mfundi", "✂️"),
+    TRANSPORT_OPERATOR("Transport Operator", "Dereva/Msafiri", "🏍️"),
+    CROP_FARMER("Crop Farmer", "Mkulima", "🌾"),
+    LIVESTOCK_KEEPER("Livestock Keeper", "Mfugaji", "🐄"),
+    FISHER("Fisher", "Mvuvi", "🎣"),
+    AGENT_BROKER("Agent/Broker", "Dalali/Agent", "🤝"),
+    DIGITAL_WORKER("Digital Worker", "Mfanyi Mtandaoni", "💻"),
+    CASUAL_LABORER("Casual Laborer", "Kibarua", "👷"),
+    COMMUNITY_CARE_WORKER("Community/Care Worker", "Mhudumu", "🤲")
+}
+
+/**
+ * Sub-type configuration within an archetype.
+ * Workers are classified by archetype first, then refined by sub-type.
+ */
+@Serializable
+data class SubTypeConfig(
+    val workerTypeId: String,          // Maps to taxonomy ID (e.g., "T-001")
+    val displayName: String,           // "Mama Mboga"
+    val localName: String,             // "Mama Mboga"
+    val inventoryType: String? = null, // "perishable_produce", "non_perishable", etc.
+    val incomePattern: String = "daily", // daily | weekly | seasonal | project
+    val perishableInventory: Boolean = false,
+    val vehicleOwned: Boolean? = null, // null for non-transport
+    val employees: Int = 0,
+    val customFields: Map<String, String> = emptyMap()
+)
+
+@Serializable
+data class WorkerArchetypeProfile(
+    val primaryArchetype: ArchetypeType,
+    val secondaryArchetypes: List<ArchetypeType> = emptyList(),
+    val subTypes: Map<ArchetypeType, SubTypeConfig> = emptyMap(),
+    val customTags: List<String> = emptyList()
+)
+
+// ══════════════════════════════════════════════════════════
+// BusinessType enum — Sub-type registry within archetypes
+// ══════════════════════════════════════════════════════════
+
 @Serializable
 enum class BusinessType(
     val displayName: String,
     val swahiliName: String,
-    val category: String
+    val category: String,
+    val archetype: ArchetypeType
 ) {
-    // ── Trade (7) ──
-    MAMA_MBOGA("Vegetable vendor", "Mama Mboga", "Trade"),
-    DUKA("Shop owner", "Dukawallah", "Trade"),
-    MACHINGA("Hawker", "Machinga", "Trade"),
-    MITUMBA("Second-hand clothes seller", "Mitumba", "Trade"),
-    PHONE_ACCESSORIES("Phone accessories", "Vifaa vya simu", "Trade"),
-    COSMETICS("Cosmetics seller", "Muuza urembo", "Trade"),
-    HARDWARE_STORE("Hardware store", "Duka la vifaa", "Trade"),
+    // ── Trade (Vendor archetype) ──
+    MAMA_MBOGA("Vegetable vendor", "Mama Mboga", "Trade", ArchetypeType.VENDOR),
+    DUKA("Shop owner", "Dukawallah", "Trade", ArchetypeType.VENDOR),
+    MACHINGA("Hawker", "Machinga", "Trade", ArchetypeType.VENDOR),
+    MITUMBA("Second-hand clothes seller", "Mitumba", "Trade", ArchetypeType.VENDOR),
+    PHONE_ACCESSORIES("Phone accessories", "Vifaa vya simu", "Trade", ArchetypeType.VENDOR),
+    COSMETICS("Cosmetics seller", "Muuza urembo", "Trade", ArchetypeType.VENDOR),
+    HARDWARE_STORE("Hardware store", "Duka la vifaa", "Trade", ArchetypeType.VENDOR),
+    FRUIT_VENDOR("Fruit vendor", "Muuza matunda", "Trade", ArchetypeType.VENDOR),
+    CEREAL_SELLER("Cereal seller", "Mchina", "Trade", ArchetypeType.VENDOR),
+    FISH_VENDOR("Fish vendor", "Muuza samaki", "Trade", ArchetypeType.VENDOR),
+    MEAT_VENDOR("Meat vendor", "Mchinjaji", "Trade", ArchetypeType.VENDOR),
+    EGG_VENDOR("Egg vendor", "Muuza mayai", "Trade", ArchetypeType.VENDOR),
+    FABRIC_SELLER("Fabric seller", "Muuza vitambaa", "Trade", ArchetypeType.VENDOR),
+    SHOE_SELLER("Shoe seller", "Muuza viatu", "Trade", ArchetypeType.VENDOR),
+    STATIONERY_SELLER("Stationery seller", "Muuza vifaa vya ofisi", "Trade", ArchetypeType.VENDOR),
+    MARKET_STALL("Market stall owner", "Mwenye kibanda", "Trade", ArchetypeType.VENDOR),
+    WHOLESALE_TRADER("Wholesale trader", "Mchina jumla", "Trade", ArchetypeType.VENDOR),
+    MOBILE_HAWKER("Mobile hawkler", "Machinga wa kutembea", "Trade", ArchetypeType.VENDOR),
+    HERB_SELLER("Herb/spice seller", "Muuza viungo", "Trade", ArchetypeType.VENDOR),
+    UTENSIL_SELLER("Utensil seller", "Muuza vyombo", "Trade", ArchetypeType.VENDOR),
+    ELECTRONICS_VENDOR("Electronics vendor", "Muuza elektroniki", "Trade", ArchetypeType.VENDOR),
 
-    // ── Transport (5) ──
-    BODA_BODA("Motorcycle taxi", "Boda Boda", "Transport"),
-    TUK_TUK("Tuk-tuk driver", "Dereva tuk-tuk", "Transport"),
-    MATATU("Matatu driver/conductor", "Matatu", "Transport"),
-    CART_PUSHER("Cart pusher", "Mkokoteni", "Transport"),
-    TRUCK_DRIVER("Truck driver", "Dereva wa lori", "Transport"),
+    // ── Transport (Transport Operator archetype) ──
+    BODA_BODA("Motorcycle taxi", "Boda Boda", "Transport", ArchetypeType.TRANSPORT_OPERATOR),
+    TUK_TUK("Tuk-tuk driver", "Dereva tuk-tuk", "Transport", ArchetypeType.TRANSPORT_OPERATOR),
+    MATATU("Matatu driver/conductor", "Matatu", "Transport", ArchetypeType.TRANSPORT_OPERATOR),
+    CART_PUSHER("Cart pusher", "Mkokoteni", "Transport", ArchetypeType.TRANSPORT_OPERATOR),
+    TRUCK_DRIVER("Truck driver", "Dereva wa lori", "Transport", ArchetypeType.TRANSPORT_OPERATOR),
+    DELIVERY_RIDER("Delivery rider", "Msafirishaji", "Transport", ArchetypeType.TRANSPORT_OPERATOR),
+    AUTO_RICKSHAW("Auto-rickshaw driver", "Bajaj", "Transport", ArchetypeType.TRANSPORT_OPERATOR),
+    MATATU_OWNER("Matatu owner", "Mwenye matatu", "Transport", ArchetypeType.TRANSPORT_OPERATOR),
+    INFORMAL_TAXI("Informal taxi driver", "Dereva teksi", "Transport", ArchetypeType.TRANSPORT_OPERATOR),
+    RIDE_HAIL_DRIVER("Ride-hail driver", "Dereva wa app", "Transport", ArchetypeType.TRANSPORT_OPERATOR),
 
-    // ── Food (5) ──
-    MAMA_LISHE("Food vendor", "Mama Lishe", "Food"),
-    HOTELI("Restaurant", "Hoteli", "Food"),
-    CHAPATI_SELLER("Chapati/bread seller", "Muuza chapati", "Food"),
-    WATER_SELLER("Water seller", "Muuza maji", "Food"),
-    TRADITIONAL_BREWER("Traditional brewer", "Mlevi wa kienyeji", "Food"),
+    // ── Food (Food Service archetype) ──
+    MAMA_LISHE("Food vendor", "Mama Lishe", "Food", ArchetypeType.FOOD_SERVICE),
+    HOTELI("Restaurant", "Hoteli", "Food", ArchetypeType.FOOD_SERVICE),
+    CHAPATI_SELLER("Chapati/bread seller", "Muuza chapati", "Food", ArchetypeType.FOOD_SERVICE),
+    WATER_SELLER("Water seller", "Muuza maji", "Food", ArchetypeType.VENDOR),
+    TRADITIONAL_BREWER("Traditional brewer", "Mlevi wa kienyeji", "Food", ArchetypeType.FOOD_SERVICE),
+    ROASTED_MAIZE("Roasted maize seller", "Muuza mahindi", "Food", ArchetypeType.FOOD_SERVICE),
+    MANDAZI_SELLER("Mandazi seller", "Muuza mandazi", "Food", ArchetypeType.FOOD_SERVICE),
+    JUICE_SELLER("Juice seller", "Muuza juisi", "Food", ArchetypeType.FOOD_SERVICE),
+    TEA_SELLER("Tea seller", "Muuza chai", "Food", ArchetypeType.FOOD_SERVICE),
+    BAKER("Baker", "Mkate wa keki", "Food", ArchetypeType.FOOD_SERVICE),
+    CAKE_DECORATOR("Cake decorator", "Mchapaji keki", "Food", ArchetypeType.FOOD_SERVICE),
+    CONFECTIONER("Confectioner", "Muuza vitafunwa", "Food", ArchetypeType.FOOD_SERVICE),
+    SNACK_MAKER("Snack maker", "Muuza vitafunwa", "Food", ArchetypeType.FOOD_SERVICE),
+    FRUIT_SALAD("Fruit salad seller", "Muuza matunda", "Food", ArchetypeType.FOOD_SERVICE),
+    NYAMA_CHOMA("Nyama choma vendor", "Muuza nyama choma", "Food", ArchetypeType.FOOD_SERVICE),
+    PORRIDGE_SELLER("Porridge seller", "Muuza uji", "Food", ArchetypeType.FOOD_SERVICE),
+    MUTURA_SELLER("Mutura seller", "Muuza mutura", "Food", ArchetypeType.FOOD_SERVICE),
+    SUGARCANE_VENDOR("Sugarcane vendor", "Muuza miwa", "Food", ArchetypeType.FOOD_SERVICE),
+    KIOSK_BAR("Kiosk bar owner", "Mwenye baa", "Food", ArchetypeType.FOOD_SERVICE),
 
-    // ── Services (7) ──
-    FUNDI("Repair technician", "Fundi", "Services"),
-    SALON("Salon owner", "Mwenye salon", "Services"),
-    BARBER("Barber", "Kinyozi", "Services"),
-    MAMA_FUO("Laundry", "Mama Fuo", "Services"),
-    TAILOR("Tailor", "Fundi Nguo", "Services"),
-    SHOE_SHINER("Shoe shiner", "Muuza kiatu", "Services"),
-    CAR_WASH("Car wash", "Car wash", "Services"),
+    // ── Services (Service Provider archetype) ──
+    FUNDI("Repair technician", "Fundi", "Services", ArchetypeType.SERVICE_PROVIDER),
+    SALON("Salon owner", "Mwenye salon", "Services", ArchetypeType.SERVICE_PROVIDER),
+    BARBER("Barber", "Kinyozi", "Services", ArchetypeType.SERVICE_PROVIDER),
+    MAMA_FUO("Laundry", "Mama Fuo", "Services", ArchetypeType.SERVICE_PROVIDER),
+    TAILOR("Tailor", "Fundi Nguo", "Services", ArchetypeType.ARTISAN),
+    SHOE_SHINER("Shoe shiner", "Muuza kiatu", "Services", ArchetypeType.SERVICE_PROVIDER),
+    CAR_WASH("Car wash", "Car wash", "Services", ArchetypeType.SERVICE_PROVIDER),
+    PLUMBER_SVC("Plumber", "Plumber", "Services", ArchetypeType.SERVICE_PROVIDER),
+    ELECTRICIAN_SVC("Electrician", "Mfundi umeme", "Services", ArchetypeType.SERVICE_PROVIDER),
+    LOCKSMITH("Locksmith", "Fundi ufunguo", "Services", ArchetypeType.SERVICE_PROVIDER),
+    CLEANER("Cleaner", "Msafishi", "Services", ArchetypeType.SERVICE_PROVIDER),
+    GARDENER("Gardener", "Mtu wa bustani", "Services", ArchetypeType.SERVICE_PROVIDER),
+    MECHANIC("Mechanic", "Mekaniki", "Services", ArchetypeType.SERVICE_PROVIDER),
+    PANEL_BEATER("Panel beater", "Fundi karakana", "Services", ArchetypeType.SERVICE_PROVIDER),
+    AUTO_ELECTRICIAN("Auto electrician", "Mfundi umeme wa gari", "Services", ArchetypeType.SERVICE_PROVIDER),
+    VULCANIZER("Vulcanizer", "Vulcanizer", "Services", ArchetypeType.SERVICE_PROVIDER),
+    COBBLER("Cobbler", "Fundi kiatu", "Services", ArchetypeType.SERVICE_PROVIDER),
+    PHONE_REPAIR_SVC("Phone repair", "Fundi simu", "Services", ArchetypeType.SERVICE_PROVIDER),
+    ELECTRONICS_REPAIR("Electronics repair", "Fundi elektroniki", "Services", ArchetypeType.SERVICE_PROVIDER),
 
-    // ── Agriculture (4) ──
-    MKULIMA("Farmer", "Mkulima", "Agriculture"),
-    MVUVI("Fisherman", "Mvuvi", "Agriculture"),
-    MFUGAJI("Livestock keeper", "Mfugaji", "Agriculture"),
-    PRODUCE_BROKER("Produce broker", "Dalali", "Agriculture"),
+    // ── Agriculture (Crop Farmer, Livestock Keeper, Fisher archetypes) ──
+    MKULIMA("Farmer", "Mkulima", "Agriculture", ArchetypeType.CROP_FARMER),
+    MVUVI("Fisherman", "Mvuvi", "Agriculture", ArchetypeType.FISHER),
+    MFUGAJI("Livestock keeper", "Mfugaji", "Agriculture", ArchetypeType.LIVESTOCK_KEEPER),
+    PRODUCE_BROKER("Produce broker", "Dalali", "Agriculture", ArchetypeType.AGENT_BROKER),
+    CASH_CROP_FARMER("Cash crop farmer", "Mkulima wa mazao", "Agriculture", ArchetypeType.CROP_FARMER),
+    HORTICULTURAL_FARMER("Horticultural farmer", "Mkulima wa mboga", "Agriculture", ArchetypeType.CROP_FARMER),
+    POULTRY_FARMER("Poultry farmer", "Mfugaji kuku", "Agriculture", ArchetypeType.LIVESTOCK_KEEPER),
+    DAIRY_FARMER("Dairy farmer", "Mfugaji ng'ombe", "Agriculture", ArchetypeType.LIVESTOCK_KEEPER),
+    GOAT_KEEPER("Goat/sheep keeper", "Mfugaji mbuzi", "Agriculture", ArchetypeType.LIVESTOCK_KEEPER),
+    PIG_FARMER("Pig farmer", "Mfugaji nguruwe", "Agriculture", ArchetypeType.LIVESTOCK_KEEPER),
+    BEE_KEEPER("Bee keeper", "Mfugaji nyuki", "Agriculture", ArchetypeType.LIVESTOCK_KEEPER),
+    FISH_FARMER("Fish farmer", "Mfugaji samaki", "Agriculture", ArchetypeType.FISHER),
+    FISH_DRIER("Fish drier/smoker", "Mukausha samaki", "Agriculture", ArchetypeType.FISHER),
+    FISHMONGER("Fishmonger", "Muuza samaki", "Agriculture", ArchetypeType.FISHER),
 
-    // ── Construction (4) ──
-    MJENGO("Construction worker", "Mjengo", "Construction"),
-    MASON("Mason", "Mjenzi", "Construction"),
-    PLUMBER("Plumber", "Plumber", "Construction"),
-    ELECTRICIAN("Electrician", "Mfundi umeme", "Construction"),
+    // ── Construction (Casual Laborer archetype) ──
+    MJENGO("Construction worker", "Mjengo", "Construction", ArchetypeType.CASUAL_LABORER),
+    MASON("Mason", "Mjenzi", "Construction", ArchetypeType.ARTISAN),
+    PLUMBER("Plumber", "Plumber", "Construction", ArchetypeType.SERVICE_PROVIDER),
+    ELECTRICIAN("Electrician", "Mfundi umeme", "Construction", ArchetypeType.SERVICE_PROVIDER),
+    ROOFER("Roofer", "Fundi paa", "Construction", ArchetypeType.ARTISAN),
+    PLASTERER("Plasterer", "Fundi plaster", "Construction", ArchetypeType.ARTISAN),
+    PAINTER("Painter", "Mchoraji", "Construction", ArchetypeType.ARTISAN),
+    TILE_SETTER("Tile setter", "Fundi tiles", "Construction", ArchetypeType.ARTISAN),
+    SCAFFOLDING_WORKER("Scaffolding worker", "Mtu wa scaffolding", "Construction", ArchetypeType.CASUAL_LABORER),
 
-    // ── Digital (4) ──
-    M_PESA("M-Pesa agent", "M-Pesa", "Digital"),
-    CYBER_CAFE("Cyber cafe", "Cyber cafe", "Digital"),
-    PHONE_REPAIR("Phone repair technician", "Fundi simu", "Digital"),
-    SOCIAL_MEDIA_RESELLER("Social media reseller", "Muuza mtandaoni", "Digital"),
+    // ── Digital (Digital Worker & Agent/Broker archetypes) ──
+    M_PESA("M-Pesa agent", "M-Pesa", "Digital", ArchetypeType.AGENT_BROKER),
+    CYBER_CAFE("Cyber cafe", "Cyber cafe", "Digital", ArchetypeType.DIGITAL_WORKER),
+    PHONE_REPAIR("Phone repair technician", "Fundi simu", "Digital", ArchetypeType.SERVICE_PROVIDER),
+    SOCIAL_MEDIA_RESELLER("Social media reseller", "Muuza mtandaoni", "Digital", ArchetypeType.DIGITAL_WORKER),
+    OTHER_MOBILE_MONEY("Other mobile money agent", "Agent wa pesa", "Digital", ArchetypeType.AGENT_BROKER),
+    FOREX_BUREAU("Forex bureau", "Forex", "Digital", ArchetypeType.AGENT_BROKER),
+    MONEY_LENDER("Money lender", "Mkopesha pesa", "Digital", ArchetypeType.AGENT_BROKER),
+    GRAPHIC_DESIGNER("Graphic designer", "Mbuni wa graphics", "Digital", ArchetypeType.DIGITAL_WORKER),
+    SOCIAL_MEDIA_MANAGER("Social media manager", "Meneja wa mitandao", "Digital", ArchetypeType.DIGITAL_WORKER),
+    CONTENT_CREATOR("Content creator", "Mtengenezaji maudhui", "Digital", ArchetypeType.DIGITAL_WORKER),
+    DATA_ENTRY("Data entry clerk", "Mhariri data", "Digital", ArchetypeType.DIGITAL_WORKER),
+    ONLINE_SELLER("Online seller", "Muuza mtandaoni", "Digital", ArchetypeType.DIGITAL_WORKER),
+    ONLINE_TUTOR("Online tutor", "Mwalimu mtandaoni", "Digital", ArchetypeType.DIGITAL_WORKER),
 
-    // ── Artisans (4) ──
-    JUA_KALI("Jua kali artisan", "Jua Kali", "Artisans"),
-    BASKET_WEAVER("Basket weaver", "Mfumaji kikapu", "Artisans"),
-    POTTER("Potter", "Mfinyanzi", "Artisans"),
-    WELDER("Welder", "Mfundi welder", "Artisans"),
+    // ── Artisans (Artisan archetype) ──
+    JUA_KALI("Jua kali artisan", "Jua Kali", "Artisans", ArchetypeType.ARTISAN),
+    BASKET_WEAVER("Basket weaver", "Mfumaji kikapu", "Artisans", ArchetypeType.ARTISAN),
+    POTTER("Potter", "Mfinyanzi", "Artisans", ArchetypeType.ARTISAN),
+    WELDER("Welder", "Mfundi welder", "Artisans", ArchetypeType.ARTISAN),
+    BLACKSMITH("Blacksmith", "Mfua chuma", "Artisans", ArchetypeType.ARTISAN),
+    METAL_FABRICATOR("Metal fabricator", "Mfua vyuma", "Artisans", ArchetypeType.ARTISAN),
+    CARPENTER("Carpenter", "Seremala", "Artisans", ArchetypeType.ARTISAN),
+    FURNITURE_MAKER("Furniture maker", "Mtengenezaji samani", "Artisans", ArchetypeType.ARTISAN),
+    CARVER("Carver", "Mchongaji", "Artisans", ArchetypeType.ARTISAN),
+    DRESSMAKER("Dressmaker", "Mshonaji nguo", "Artisans", ArchetypeType.ARTISAN),
+    EMBROIDERER("Embroiderer", "Mshoni mapambo", "Artisans", ArchetypeType.ARTISAN),
+    LEATHER_WORKER("Leather worker", "Mfua ngozi", "Artisans", ArchetypeType.ARTISAN),
+    SOAP_MAKER("Soap maker", "Mtengenezaji sabuni", "Artisans", ArchetypeType.ARTISAN),
+    CANDLE_MAKER("Candle maker", "Mtengenezaji mishumaa", "Artisans", ArchetypeType.ARTISAN),
+    BEAD_WORKER("Bead worker", "Mfashoni shanga", "Artisans", ArchetypeType.ARTISAN),
+    TIRE_SANDAL_MAKER("Tire sandal maker", "Mshoni viatu", "Artisans", ArchetypeType.ARTISAN),
+
+    // ── Community/Care Workers (Community/Care Worker archetype) ──
+    DOMESTIC_WORKER("Domestic worker", "Mtumishi wa nyumbani", "Other", ArchetypeType.CASUAL_LABORER),
+    NANNY("Nanny/caretaker", "Mdada", "Other", ArchetypeType.CASUAL_LABORER),
+    NIGHT_GUARD("Night guard", "Mlinzi wa usiku", "Other", ArchetypeType.COMMUNITY_CARE_WORKER),
+    MC_HOST("MC/Event host", "MC", "Other", ArchetypeType.COMMUNITY_CARE_WORKER),
+    DJ("DJ", "DJ", "Other", ArchetypeType.COMMUNITY_CARE_WORKER),
+    MUSICIAN("Musician", "Mwanamuziki", "Other", ArchetypeType.COMMUNITY_CARE_WORKER),
+    PHOTOGRAPHER("Photographer", "Mpiga picha", "Other", ArchetypeType.COMMUNITY_CARE_WORKER),
+    VIDEOGRAPHER("Videographer", "Mrekodi video", "Other", ArchetypeType.COMMUNITY_CARE_WORKER),
+    WASTE_PICKER("Waste picker", "Mkutaji taka", "Other", ArchetypeType.COMMUNITY_CARE_WORKER),
+    COMMUNITY_HEALTH_WORKER("Community health worker", "Mhudumu wa afya", "Other", ArchetypeType.COMMUNITY_CARE_WORKER),
+    HERBALIST("Herbalist", "Mganga wa kienyeji", "Other", ArchetypeType.COMMUNITY_CARE_WORKER),
+    PRIVATE_SECURITY("Private security guard", "Mlinzi binafsi", "Other", ArchetypeType.COMMUNITY_CARE_WORKER),
+    BOUNCER("Bouncer", "Bouncer", "Other", ArchetypeType.COMMUNITY_CARE_WORKER),
+    DRIVING_INSTRUCTOR("Driving instructor", "Mwalimu wa kuendesha", "Other", ArchetypeType.COMMUNITY_CARE_WORKER),
+    VOCATIONAL_TRAINER("Vocational trainer", "Mwalimu wa ufundi", "Other", ArchetypeType.COMMUNITY_CARE_WORKER),
+    QURAN_TEACHER("Quran teacher", "Mwalimu wa Quran", "Other", ArchetypeType.COMMUNITY_CARE_WORKER),
 
     // ── Fallback ──
-    OTHER("Other", "Nyingine", "Other")
+    OTHER("Other", "Nyingine", "Other", ArchetypeType.VENDOR)
 }
 
 @Serializable

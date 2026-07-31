@@ -92,6 +92,8 @@ object AppModule {
     @Provides fun provideHirePurchaseAgreementDao(db: MsaidiziDatabase): HirePurchaseAgreementDao = db.hirePurchaseAgreementDao()
     @Provides fun provideHirePaymentDao(db: MsaidiziDatabase): HirePaymentDao = db.hirePaymentDao()
     @Provides fun provideMpesaTransactionDao(db: MsaidiziDatabase): MpesaTransactionDao = db.mpesaTransactionDao()
+    @Provides fun provideGoalDao(db: MsaidiziDatabase): GoalDao = db.goalDao()
+    @Provides fun provideGoalContributionDao(db: MsaidiziDatabase): GoalContributionDao = db.goalContributionDao()
     // KgNodeDao, KgEdgeDao, KgFactDao are provided by GraphModule (superagent/graph/GraphModule.kt)
 
     // NOTE: provideToolRegistry removed from core — it belongs in app's AppModule

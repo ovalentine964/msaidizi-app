@@ -58,7 +58,7 @@ class CodeSwitchHandler @Inject constructor(
         "biashara" to "business",
         "duka" to "shop",
         "soko" to "market",
-        "stock" to "stock", // Already English, used in Swahili context
+        "stock" to "stock",
         "hisa" to "shares",
         "akiba" to "savings",
         "bili" to "bill",
@@ -71,9 +71,32 @@ class CodeSwitchHandler @Inject constructor(
         "meneja" to "manager",
         "mfanyakazi" to "employee",
         "mwenyewe" to "owner",
-        "kodi" to "tax",
         "usalama" to "security",
         "bima" to "insurance",
+        // M-Pesa ecosystem terms
+        "salio" to "balance",
+        "muamala" to "transaction",
+        "kutuma" to "send",
+        "kupokea" to "receive",
+        "kulipa" to "pay",
+        "kutoa" to "withdraw",
+        "kuweka" to "deposit",
+        "kurejesha" to "reversal",
+        "msimbo" to "confirmation_code",
+        "nambari" to "number",
+        "uthibitisho" to "confirmation",
+        "fuliza" to "overdraft",
+        "mshwari" to "savings_loan",
+        "jumla" to "wholesale",
+        "rejareja" to "retail",
+        "msambazaji" to "supplier",
+        "dhamana" to "collateral",
+        "mtaji" to "working_capital",
+        "mtiririko" to "cash_flow",
+        "mauzo" to "sales",
+        "manunuzi" to "purchases",
+        "lengo" to "goal",
+        "ripoti" to "report",
         // Numbers (Swahili)
         "moja" to "1",
         "mbili" to "2",
@@ -91,6 +114,45 @@ class CodeSwitchHandler @Inject constructor(
         "milioni" to "million"
     )
 
+    /**
+     * Sheng money terms — critical for Nairobi informal economy.
+     * Maps Sheng slang → standard Swahili equivalent and numeric value.
+     */
+    private val shengMoneyTerms = mapOf(
+        "thao" to ShengMoney("elfu moja", 1000),
+        "kibaki" to ShengMoney("elfu moja", 1000),
+        "ngiri" to ShengMoney("elfu moja", 1000),
+        "soo" to ShengMoney("mia moja", 100),
+        "jaboya" to ShengMoney("mia tano", 500),
+        "finje" to ShengMoney("mia tano", 500),
+        "ndovu" to ShengMoney("elfu kumi", 10000),
+        "gunia" to ShengMoney("laki moja", 100000),
+        "robo" to ShengMoney("mia mbili na hamsini", 250),
+        "ka-quarter" to ShengMoney("mia tano na ishirini", 525),
+        "kichele" to ShengMoney("pesa", -1), // general money, no fixed amount
+        "doe" to ShengMoney("pesa", -1),
+        "chingwa" to ShengMoney("pesa", -1),
+        "munde" to ShengMoney("pesa", -1),
+        "ngwizas" to ShengMoney("pesa nyingi", -1)
+    )
+
+    /** Sheng general vocabulary for classification */
+    private val shengVocabulary = setOf(
+        "sasa", "niaje", "mambo", "vipi", "poa", "sijui", "ata", "juu",
+        "ndio", "sio", "manze", "bro", "dude", "fam",
+        "mzing", "msee", "dem", "chali", "mresh",
+        "mbogi", "genje", "kuhepa", "kublack",
+        "maze", "aki", "eh", "eeh", "aai", "woiye",
+        "ati", "bas", "sasa hivi",
+        // Sheng verb constructions (ku- + English verb)
+        "kuchill", "kuvibe", "kupiga", "kudinya", "kush",
+        "kuoga", "kumess", "kucatch", "kudrop", "kupick",
+        "kuorder", "kuload", "kupost",
+        // Money terms
+        "thao", "kibaki", "ngiri", "soo", "jaboya", "finje",
+        "ndovu", "gunia", "robo", "kichele", "doe", "chingwa", "munde", "ngwizas"
+    )
+
     /** Reverse mapping: English → Swahili */
     private val reverseTermMap = businessTermMap.entries
         .filter { it.value != "stock" } // Skip "stock" which maps to itself
@@ -100,13 +162,63 @@ class CodeSwitchHandler @Inject constructor(
     val sharedTerms = setOf(
         "stock", "customer", "business", "market", "payment", "receipt",
         "profit", "loss", "cost", "price", "loan", "savings",
-        "bank", "mpesa", "mobile", "money", "cash"
+        "bank", "mpesa", "mobile", "money", "cash",
+        // M-Pesa terms used across languages
+        "fuliza", "mshwari", "stk", "push", "till", "paybill",
+        "float", "reversal", "balance"
+    )
+
+    /**
+     * Intent-preserving business phrase patterns (Tier 3).
+     * Maps common code-switched phrases to structured intents.
+     */
+    private val intentPatterns = listOf(
+        IntentPattern(
+            pattern = Regex("(?:nime|nimelipia|nimetuma|nimepata).*(?:stk|push|malipo).*([0-9]+)", RegexOption.IGNORE_CASE),
+            intent = "payment_received",
+            extractAmount = true
+        ),
+        IntentPattern(
+            pattern = Regex("(?:customer|mteja).*(?:amenilipia|amelipa|ametuma).*([0-9]+)", RegexOption.IGNORE_CASE),
+            intent = "payment_received",
+            extractAmount = true
+        ),
+        IntentPattern(
+            pattern = Regex("(?:nimeuza|niliuza|nimepiga).*(?:stock|bidhaa|genje)", RegexOption.IGNORE_CASE),
+            intent = "sale",
+            extractAmount = false
+        ),
+        IntentPattern(
+            pattern = Regex("(?:nimenunua|nimeweka).*(?:stock|bidhaa|genje)", RegexOption.IGNORE_CASE),
+            intent = "purchase",
+            extractAmount = false
+        ),
+        IntentPattern(
+            pattern = Regex("(?:stock|bidhaa).*(?:imepungua|zinaisha|imeisha)", RegexOption.IGNORE_CASE),
+            intent = "restock_needed",
+            extractAmount = false
+        ),
+        IntentPattern(
+            pattern = Regex("(?:deni|chung|ana deni|anaowe).*([0-9]+)", RegexOption.IGNORE_CASE),
+            intent = "debt_outstanding",
+            extractAmount = true
+        ),
+        IntentPattern(
+            pattern = Regex("(?:faida|profit|owinjo).*(?:ngapi|gani|leo)", RegexOption.IGNORE_CASE),
+            intent = "query_profit",
+            extractAmount = false
+        ),
+        IntentPattern(
+            pattern = Regex("(?:ripoti|report).*(?:siku|wiki|mwezi|leo|daily|weekly)", RegexOption.IGNORE_CASE),
+            intent = "request_report",
+            extractAmount = false
+        )
     )
 
     // ── Segmentation ─────────────────────────────────────────
 
     /**
-     * Segment code-switched text into language-homogeneous chunks.
+     * Tier 1: Segment code-switched text into language-homogeneous chunks.
      *
      * Example:
      *   Input:  "Nimeuza nyanya kilo 5, elfu moja for the tomatoes"
@@ -126,23 +238,20 @@ class CodeSwitchHandler @Inject constructor(
         var currentLang: String? = null
 
         for (word in words) {
-            val cleanWord = word.trim().lowercase().replace(Regex("[^a-z0-9]"), "")
+            val cleanWord = word.trim().lowercase().replace(Regex("[^a-z0-9-]"), "")
             if (cleanWord.isBlank()) {
-                currentSegment.add(word) // Keep punctuation/spaces
+                currentSegment.add(word)
                 continue
             }
 
             val wordLang = classifyWord(cleanWord)
 
             if (currentLang == null) {
-                // First word — start segment
                 currentLang = wordLang
                 currentSegment.add(word)
             } else if (wordLang == currentLang || wordLang == "shared" || wordLang == "number") {
-                // Same language or shared term — extend segment
                 currentSegment.add(word)
             } else {
-                // Language switch — finalize current segment
                 val segmentText = currentSegment.joinToString("").trim()
                 if (segmentText.isNotBlank()) {
                     segments.add(LanguageSegment(
@@ -157,7 +266,6 @@ class CodeSwitchHandler @Inject constructor(
             }
         }
 
-        // Finalize last segment
         val segmentText = currentSegment.joinToString("").trim()
         if (segmentText.isNotBlank() && currentLang != null) {
             segments.add(LanguageSegment(
@@ -167,8 +275,81 @@ class CodeSwitchHandler @Inject constructor(
             ))
         }
 
-        // Merge very short segments with neighbors
         return mergeSmallSegments(segments)
+    }
+
+    /**
+     * Tier 2: Phrase-level segmentation with intent grouping.
+     * Groups consecutive same-language words into phrases and detects
+     * language boundaries at the phrase level.
+     */
+    fun segmentPhrases(text: String): List<PhraseSegment> {
+        val wordSegments = segment(text)
+        val phrases = mutableListOf<PhraseSegment>()
+
+        for (seg in wordSegments) {
+            // Expand Sheng money terms inline
+            val expandedText = expandShengMoney(seg.text)
+            phrases.add(PhraseSegment(
+                text = seg.text,
+                expandedText = expandedText,
+                language = seg.language,
+                confidence = seg.confidence,
+                containsShengMoney = hasShengMoney(seg.text)
+            ))
+        }
+
+        return phrases
+    }
+
+    /**
+     * Tier 3: Intent-preserving normalization.
+     * Extracts business intent regardless of language mixing.
+     * "Customer amenilipia ya stock" → {intent: payment_received, item: stock}
+     */
+    fun extractIntent(text: String): IntentExtraction {
+        val normalized = normalizeText(text)
+        val lower = normalized.lowercase()
+
+        // Try intent patterns
+        for (pattern in intentPatterns) {
+            val match = pattern.pattern.find(lower)
+            if (match != null) {
+                val amount = if (pattern.extractAmount && match.groupValues.size > 1) {
+                    parseCompoundNumber(match.groupValues[1]) ?: match.groupValues[1].toLongOrNull()
+                } else null
+
+                return IntentExtraction(
+                    intent = pattern.intent,
+                    amount = amount,
+                    rawText = text,
+                    normalizedText = normalized,
+                    confidence = 0.85
+                )
+            }
+        }
+
+        // Fallback: keyword-based intent
+        val intent = when {
+            lower.containsAny("nimeuza", "niliuza", "nimepiga mauzo") -> "sale"
+            lower.containsAny("nimenunua", "nimelipia stock") -> "purchase"
+            lower.containsAny("deni", "chung", "ana deni") -> "debt"
+            lower.containsAny("faida", "profit", "owinjo") -> "query_profit"
+            lower.containsAny("hasara", "loss") -> "query_loss"
+            lower.containsAny("ripoti", "report") -> "request_report"
+            lower.containsAny("bei", "price", "ngapi") -> "query_price"
+            lower.containsAny("salio", "balance") -> "query_balance"
+            lower.containsAny("fuliza", "mshwari", "mkopo") -> "query_credit"
+            else -> "general"
+        }
+
+        return IntentExtraction(
+            intent = intent,
+            amount = null,
+            rawText = text,
+            normalizedText = normalized,
+            confidence = 0.6
+        )
     }
 
     /**
@@ -310,18 +491,18 @@ class CodeSwitchHandler @Inject constructor(
 
     /**
      * Classify a single word's language.
-     * Returns: "sw", "en", "shared", "number", or "unknown"
+     * Returns: "sw", "en", "sheng", "shared", "number", or "unknown"
      */
     private fun classifyWord(word: String): String {
         // Numbers
         if (word.all { it.isDigit() }) return "number"
 
+        // Sheng vocabulary (check first — Sheng overlaps with Swahili)
+        if (word in shengVocabulary) return "sheng"
+        if (word in shengMoneyTerms) return "sheng"
+
         // Swahili function words
-        if (word in languageDetector.let {
-            // Use LanguageDetector's word lists indirectly
-            // For direct classification, check our own lists
-            swahiliFunctionWords
-        }) return "sw"
+        if (word in swahiliFunctionWords) return "sw"
 
         // Swahili content words
         if (word in swahiliContentWords) return "sw"
@@ -339,8 +520,72 @@ class CodeSwitchHandler @Inject constructor(
         if (hasSwahiliPrefix(word) || hasSwahiliEnding(word)) return "sw"
         if (hasEnglishPattern(word)) return "en"
 
-        // Default: unknown (don't force a switch)
+        // Sheng verb pattern: ku- + English verb
+        if (word.startsWith("ku") && word.length > 4) {
+            val englishVerb = word.substring(2)
+            if (englishVerb in setOf("chill", "vibe", "dinya", "mess", "catch", "drop", "pick", "order", "load", "post", "black", "hepa")) {
+                return "sheng"
+            }
+        }
+
         return "unknown"
+    }
+
+    /**
+     * Parse compound Swahili numbers like "elfu tano mia tatu" → 5300.
+     * Handles: elfu N, laki N, mia N, and combinations with "na".
+     */
+    fun parseCompoundNumber(text: String): Long? {
+        val words = text.lowercase().trim().split(Regex("[\\s,]+"))
+        if (words.isEmpty()) return null
+
+        // Single digit word
+        if (words.size == 1) {
+            swahiliNumberWords[words[0]]?.let { return it }
+            words[0].toLongOrNull()?.let { return it }
+            shengMoneyTerms[words[0]]?.value?.takeIf { it > 0 }?.let { return it.toLong() }
+            return null
+        }
+
+        var total = 0L
+        var current = 0L
+
+        for (word in words) {
+            when {
+                word == "na" -> continue // conjunction, skip
+                word == "milioni" -> { current = if (current == 0L) 1_000_000L else current * 1_000_000L; total += current; current = 0L }
+                word == "laki" -> { current = if (current == 0L) 100_000L else current * 100_000L; total += current; current = 0L }
+                word == "elfu" -> { current = if (current == 0L) 1_000L else current * 1_000L; total += current; current = 0L }
+                word == "mia" -> { current = if (current == 0L) 100L else current * 100L; total += current; current = 0L }
+                word in swahiliNumberWords -> { current = swahiliNumberWords[word]!!.toLong() }
+                word.toLongOrNull() != null -> { current = word.toLong() }
+                word in shengMoneyTerms -> {
+                    shengMoneyTerms[word]?.value?.takeIf { it > 0 }?.let {
+                        current = it.toLong()
+                    }
+                }
+            }
+        }
+
+        total += current
+        return if (total > 0) total else null
+    }
+
+    /**
+     * Expand Sheng money terms in text to standard Swahili.
+     * "thao tatu" → "elfu tatu" (3000)
+     */
+    fun expandShengMoney(text: String): String {
+        var result = text.lowercase()
+        for ((sheng, info) in shengMoneyTerms) {
+            result = result.replace(sheng, info.standardSwahili)
+        }
+        return result
+    }
+
+    private fun hasShengMoney(text: String): Boolean {
+        val lower = text.lowercase()
+        return shengMoneyTerms.keys.any { lower.contains(it) }
     }
 
     /**
@@ -406,10 +651,7 @@ class CodeSwitchHandler @Inject constructor(
         "mtu", "watu", "rafiki"
     )
 
-    private val swahiliNumberWords = setOf(
-        "moja", "mbili", "tatu", "nne", "tano",
-        "sita", "saba", "nane", "tisa", "kumi"
-    )
+    // swahiliNumberWords moved to companion-level for reuse
 
     private val englishWords = setOf(
         "the", "is", "was", "are", "were", "be", "have", "has", "had",
@@ -471,4 +713,44 @@ data class BusinessTerm(
     val english: String,
     /** Language the original word was in */
     val language: String
+)
+
+/** Sheng money term info */
+data class ShengMoney(
+    val standardSwahili: String,
+    val value: Int // -1 means general money, no fixed amount
+)
+
+/** Intent pattern for Tier 3 code-switching */
+data class IntentPattern(
+    val pattern: Regex,
+    val intent: String,
+    val extractAmount: Boolean
+)
+
+/** Tier 2 phrase segment */
+data class PhraseSegment(
+    val text: String,
+    val expandedText: String,
+    val language: String,
+    val confidence: Double,
+    val containsShengMoney: Boolean
+)
+
+/** Tier 3 intent extraction result */
+data class IntentExtraction(
+    val intent: String,
+    val amount: Long?,
+    val rawText: String,
+    val normalizedText: String,
+    val confidence: Double
+)
+
+// Helper extension
+private fun String.containsAny(vararg terms: String): Boolean =
+    terms.any { this.contains(it) }
+
+private val swahiliNumberWords = mapOf(
+    "moja" to 1, "mbili" to 2, "tatu" to 3, "nne" to 4, "tano" to 5,
+    "sita" to 6, "saba" to 7, "nane" to 8, "tisa" to 9, "kumi" to 10
 )

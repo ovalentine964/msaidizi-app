@@ -75,6 +75,15 @@ class OnboardingController @Inject constructor(
             OnboardingPhase.PERSONAL_CONNECTION -> {
                 handlePersonalConnection(response)
             }
+            OnboardingPhase.ARCHETYPE_SELECTION -> {
+                handleArchetypeSelection(response)
+            }
+            OnboardingPhase.SUBTYPE_REFINEMENT -> {
+                handleSubTypeRefinement(response)
+            }
+            OnboardingPhase.MULTI_ARCHETYPE -> {
+                handleMultiArchetype(response)
+            }
             OnboardingPhase.BUSINESS_DISCOVERY -> {
                 handleBusinessDiscovery(response)
             }
@@ -105,15 +114,48 @@ class OnboardingController @Inject constructor(
         val phase = current.currentPhase
 
         when (phase) {
+            OnboardingPhase.ARCHETYPE_SELECTION -> {
+                // Archetype selected from 12 cards
+                val archetype = com.msaidizi.core.model.ArchetypeType.entries.find { it.name == choiceId }
+                if (archetype != null) {
+                    _state.value = current.copy(
+                        business = current.business.copy(archetype = archetype)
+                    )
+                    Timber.d("OnboardingController: archetype selected: %s", archetype)
+                    advanceToPhase(OnboardingPhase.SUBTYPE_REFINEMENT)
+                }
+            }
+            OnboardingPhase.SUBTYPE_REFINEMENT -> {
+                // Sub-type selected within archetype
+                val businessType = BusinessType.entries.find { it.name == choiceId }
+                if (businessType != null) {
+                    _state.value = current.copy(
+                        business = current.business.copy(type = businessType)
+                    )
+                    Timber.d("OnboardingController: sub-type selected: %s", businessType)
+                    advanceToPhase(OnboardingPhase.MULTI_ARCHETYPE)
+                }
+            }
+            OnboardingPhase.MULTI_ARCHETYPE -> {
+                // "Do you have other businesses?"
+                when (choiceId) {
+                    "yes" -> {
+                        // Go back to archetype selection for secondary
+                        advanceToPhase(OnboardingPhase.ARCHETYPE_SELECTION)
+                    }
+                    "no" -> {
+                        advanceToPhase(OnboardingPhase.OPERATIONS_DEEP_DIVE)
+                    }
+                }
+            }
             OnboardingPhase.BUSINESS_DISCOVERY -> {
-                // Business type selected
+                // Legacy business type selected
                 val businessType = BusinessType.entries.find { it.name == choiceId }
                 if (businessType != null) {
                     _state.value = current.copy(
                         business = current.business.copy(type = businessType)
                     )
                     Timber.d("OnboardingController: business type selected: %s", businessType)
-                    // Move to operations deep dive with type-specific questions
                     advanceToPhase(OnboardingPhase.OPERATIONS_DEEP_DIVE)
                 }
             }
@@ -122,8 +164,8 @@ class OnboardingController @Inject constructor(
                 _state.value = current.copy(
                     worker = current.worker.copy(msaidiziName = choiceId)
                 )
-                // Move to business discovery
-                advanceToPhase(OnboardingPhase.BUSINESS_DISCOVERY)
+                // Move to archetype selection
+                advanceToPhase(OnboardingPhase.ARCHETYPE_SELECTION)
             }
             else -> {
                 Timber.d("OnboardingController: choice in unexpected phase: %s", phase)
@@ -188,6 +230,9 @@ class OnboardingController @Inject constructor(
                 phase = phase
             )
             OnboardingPhase.PERSONAL_CONNECTION -> personalConnectionMessage()
+            OnboardingPhase.ARCHETYPE_SELECTION -> archetypeSelectionMessage()
+            OnboardingPhase.SUBTYPE_REFINEMENT -> subTypeRefinementMessage()
+            OnboardingPhase.MULTI_ARCHETYPE -> multiArchetypeMessage()
             OnboardingPhase.BUSINESS_DISCOVERY -> businessDiscoveryMessage()
             OnboardingPhase.OPERATIONS_DEEP_DIVE -> operationsDeepDiveMessage()
             OnboardingPhase.FINANCIAL_SITUATION -> financialSituationMessage()
@@ -234,6 +279,60 @@ class OnboardingController @Inject constructor(
         }
     }
 
+    private fun archetypeSelectionMessage(): OnboardingMessage {
+        val choices = com.msaidizi.core.model.ArchetypeType.entries.map { archetype ->
+            OnboardingChoice(
+                id = archetype.name,
+                label = archetype.displayName,
+                swahiliLabel = archetype.swahiliName,
+                icon = archetype.icon
+            )
+        }
+        return OnboardingMessage(
+            role = MessageRole.MSAIDIZI,
+            text = "What kind of business do you do? Tap to select:",
+            swahiliText = "Biashara yako ni ya aina gani? Bonyeza kuchagua:",
+            expectsChoice = true,
+            choices = choices,
+            phase = OnboardingPhase.ARCHETYPE_SELECTION
+        )
+    }
+
+    private fun subTypeRefinementMessage(): OnboardingMessage {
+        val archetype = _state.value.business.archetype
+            ?: return businessDiscoveryMessage()
+        val choices = ArchetypeRegistry.getSubTypeChoices(archetype).map { st ->
+            OnboardingChoice(
+                id = st.id,
+                label = st.label,
+                swahiliLabel = st.swahiliLabel,
+                icon = st.icon
+            )
+        }
+        return OnboardingMessage(
+            role = MessageRole.MSAIDIZI,
+            text = "What specifically? Tap to select:",
+            swahiliText = "Ni ya aina gani hasa? Bonyeza kuchagua:",
+            expectsChoice = true,
+            choices = choices,
+            phase = OnboardingPhase.SUBTYPE_REFINEMENT
+        )
+    }
+
+    private fun multiArchetypeMessage(): OnboardingMessage {
+        return OnboardingMessage(
+            role = MessageRole.MSAIDIZI,
+            text = "Do you have any other businesses or income sources?",
+            swahiliText = "Una biashara nyingine pia?",
+            expectsChoice = true,
+            choices = listOf(
+                OnboardingChoice("yes", "Yes, I have another business", "Ndiyo, nina biashara nyingine", "✅"),
+                OnboardingChoice("no", "No, just this one", "Hapana, hii pekee", "❌")
+            ),
+            phase = OnboardingPhase.MULTI_ARCHETYPE
+        )
+    }
+
     private fun businessDiscoveryMessage(): OnboardingMessage {
         return OnboardingMessage(
             role = MessageRole.MSAIDIZI,
@@ -263,6 +362,25 @@ class OnboardingController @Inject constructor(
     }
 
     private fun operationsDeepDiveMessage(): OnboardingMessage {
+        // Use archetype-based questions from ArchetypeRegistry
+        val archetype = _state.value.business.archetype
+        if (archetype != null) {
+            val questions = ArchetypeRegistry.getOnboardingQuestions(archetype)
+            if (questions.isNotEmpty()) {
+                val firstQuestion = questions.first()
+                return OnboardingMessage(
+                    role = MessageRole.MSAIDIZI,
+                    text = firstQuestion.english,
+                    swahiliText = firstQuestion.swahili,
+                    expectsChoice = firstQuestion.choices.isNotEmpty(),
+                    choices = firstQuestion.choices.mapIndexed { idx, choice ->
+                        OnboardingChoice("q0_$idx", choice, choice, null)
+                    },
+                    phase = OnboardingPhase.OPERATIONS_DEEP_DIVE
+                )
+            }
+        }
+        // Fallback to legacy business type questions
         val businessType = _state.value.business.type ?: BusinessType.OTHER
         return when (businessType) {
             BusinessType.MAMA_MBOGA -> OnboardingMessage(
@@ -276,20 +394,6 @@ class OnboardingController @Inject constructor(
                 role = MessageRole.MSAIDIZI,
                 text = "How many hours do you work per day?",
                 swahiliText = "Unafanya kazi masaa ngapi kwa siku?",
-                expectsVoice = true,
-                phase = OnboardingPhase.OPERATIONS_DEEP_DIVE
-            )
-            BusinessType.JUA_KALI -> OnboardingMessage(
-                role = MessageRole.MSAIDIZI,
-                text = "What products do you make? (e.g., furniture, metalwork)",
-                swahiliText = "Unatengeneza bidhaa gani? (mf. samani, kazi za chuma)",
-                expectsVoice = true,
-                phase = OnboardingPhase.OPERATIONS_DEEP_DIVE
-            )
-            BusinessType.MKULIMA -> OnboardingMessage(
-                role = MessageRole.MSAIDIZI,
-                text = "What crops do you grow?",
-                swahiliText = "Unalima mazao gani?",
                 expectsVoice = true,
                 phase = OnboardingPhase.OPERATIONS_DEEP_DIVE
             )
@@ -376,7 +480,45 @@ class OnboardingController @Inject constructor(
             _state.value = current.copy(
                 worker = current.worker.copy(msaidiziName = response.trim())
             )
-            advanceToPhase(OnboardingPhase.BUSINESS_DISCOVERY)
+            advanceToPhase(OnboardingPhase.ARCHETYPE_SELECTION)
+        }
+    }
+
+    private fun handleArchetypeSelection(response: String) {
+        // Voice response — try to match to an archetype
+        val archetype = matchArchetype(response)
+        if (archetype != null) {
+            _state.value = _state.value.copy(
+                business = _state.value.business.copy(archetype = archetype)
+            )
+            advanceToPhase(OnboardingPhase.SUBTYPE_REFINEMENT)
+        } else {
+            generateMessageForPhase(OnboardingPhase.ARCHETYPE_SELECTION)
+        }
+    }
+
+    private fun handleSubTypeRefinement(response: String) {
+        val matchedType = matchBusinessType(response)
+        if (matchedType != null) {
+            _state.value = _state.value.copy(
+                business = _state.value.business.copy(type = matchedType)
+            )
+            advanceToPhase(OnboardingPhase.MULTI_ARCHETYPE)
+        } else {
+            generateMessageForPhase(OnboardingPhase.SUBTYPE_REFINEMENT)
+        }
+    }
+
+    private fun handleMultiArchetype(response: String) {
+        val lower = response.lowercase()
+        when {
+            lower.contains("yes") || lower.contains("ndiyo") || lower.contains("nina") -> {
+                // Save current archetype as primary, go back for secondary
+                advanceToPhase(OnboardingPhase.ARCHETYPE_SELECTION)
+            }
+            else -> {
+                advanceToPhase(OnboardingPhase.OPERATIONS_DEEP_DIVE)
+            }
         }
     }
 
@@ -428,6 +570,29 @@ class OnboardingController @Inject constructor(
     // ═══════════════════════════════════════════════════════════
     //  PRIVATE: Helpers
     // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Match a voice/text response to an ArchetypeType.
+     * Uses keyword matching for common Kenyan business terms.
+     */
+    private fun matchArchetype(input: String): com.msaidizi.core.model.ArchetypeType? {
+        val lower = input.lowercase()
+        return when {
+            lower.contains("mboga") || lower.contains("vendor") || lower.contains("duka") || lower.contains("machinga") || lower.contains("mitumba") -> com.msaidizi.core.model.ArchetypeType.VENDOR
+            lower.contains("lishe") || lower.contains("food") || lower.contains("hotel") || lower.contains("chapati") || lower.contains("chips") -> com.msaidizi.core.model.ArchetypeType.FOOD_SERVICE
+            lower.contains("fundi") || lower.contains("artisan") || lower.contains("jua kali") || lower.contains("welder") || lower.contains("carpenter") || lower.contains("tailor") -> com.msaidizi.core.model.ArchetypeType.ARTISAN
+            lower.contains("salon") || lower.contains("barber") || lower.contains("hair") || lower.contains("mechanic") || lower.contains("plumber") || lower.contains("repair") -> com.msaidizi.core.model.ArchetypeType.SERVICE_PROVIDER
+            lower.contains("boda") || lower.contains("pikipiki") || lower.contains("matatu") || lower.contains("tuk tuk") || lower.contains("taxi") || lower.contains("transport") -> com.msaidizi.core.model.ArchetypeType.TRANSPORT_OPERATOR
+            lower.contains("kulima") || lower.contains("farmer") || lower.contains("farming") || lower.contains("crop") || lower.contains("shamba") -> com.msaidizi.core.model.ArchetypeType.CROP_FARMER
+            lower.contains("fugaji") || lower.contains("livestock") || lower.contains("cow") || lower.contains("chicken") || lower.contains("goat") || lower.contains("ng'ombe") -> com.msaidizi.core.model.ArchetypeType.LIVESTOCK_KEEPER
+            lower.contains("mvuvi") || lower.contains("fish") || lower.contains("samaki") || lower.contains("fishing") -> com.msaidizi.core.model.ArchetypeType.FISHER
+            lower.contains("mpesa") || lower.contains("agent") || lower.contains("broker") || lower.contains("dalali") || lower.contains("forex") -> com.msaidizi.core.model.ArchetypeType.AGENT_BROKER
+            lower.contains("digital") || lower.contains("online") || lower.contains("mtandaoni") || lower.contains("cyber") || lower.contains("design") -> com.msaidizi.core.model.ArchetypeType.DIGITAL_WORKER
+            lower.contains("mjen") || lower.contains("construct") || lower.contains("mjengo") || lower.contains("labor") || lower.contains("kibarua") -> com.msaidizi.core.model.ArchetypeType.CASUAL_LABORER
+            lower.contains("event") || lower.contains("dj") || lower.contains("music") || lower.contains("photo") || lower.contains("security") || lower.contains("guard") -> com.msaidizi.core.model.ArchetypeType.COMMUNITY_CARE_WORKER
+            else -> null
+        }
+    }
 
     /**
      * Match a voice/text response to a BusinessType.

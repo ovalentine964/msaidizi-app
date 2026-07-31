@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Luo (Dholuo) string resources for Msaidizi -->
-<!-- Key greetings and financial terms -->
+<!-- Expanded with voice commands, error recovery, and M-Pesa terms -->
 <resources>
     <string name="app_name">Msaidizi</string>
     <string name="app_tagline">Japuonj gi Biro</string>
@@ -30,15 +30,28 @@
     <string name="delete">Gol</string>
     <string name="confirm">Aseyi</string>
     <string name="retry">Dog malo</string>
+    <string name="back">Dok</string>
+    <string name="done">Otimo</string>
+    <string name="loading">Loade…</string>
+    <string name="no_data">Data en tich</string>
+
+    <!-- Error messages -->
     <string name="error_generic">Ng\'ato osekore. Kawo dog malo.</string>
     <string name="error_network">Koro gi intanet. Otiro e yo ma ok iye.</string>
+    <string name="error_permission_microphone">Mikrofoni dwaro chunya.</string>
+    <string name="error_voice_not_heard">Ok iwuonyo maber. Kawo dog malo.</string>
+    <string name="error_voice_too_low">Wuoyo mar nade. Med ng\'wono.</string>
+    <string name="error_voice_noisy">Piny nyalo gi rem. Kel e piny ma chuth.</string>
 
     <!-- Financial terms -->
+    <string name="dashboard_title">Biro</string>
     <string name="dashboard_today_sales">Tija ma ich</string>
     <string name="dashboard_today_expenses">Yudo ich</string>
     <string name="dashboard_profit">Owinjo</string>
+    <string name="dashboard_quick_actions">Yot</string>
     <string name="dashboard_record_sale">Kwanyo tija</string>
     <string name="dashboard_record_expense">Kwanyo yudo</string>
+    <string name="dashboard_view_stock">Neel thur</string>
     <string name="dashboard_ask_advice">Peny siego</string>
 
     <!-- Sales -->
@@ -48,6 +61,8 @@
     <string name="sales_quantity">Pong\'</string>
     <string name="sales_price">Nengo</string>
     <string name="sales_total">Piny</string>
+    <string name="sales_customer">Odiero</string>
+    <string name="sales_payment_method">Yo mar chung</string>
     <string name="sales_cash">Pesa</string>
     <string name="sales_mpesa">M-Pesa</string>
     <string name="sales_credit">Chung</string>
@@ -58,7 +73,9 @@
     <string name="inventory_product_name">Nying thur</string>
     <string name="inventory_buying_price">Nengo ne ng\'iewo</string>
     <string name="inventory_selling_price">Nengo ne tijo</string>
+    <string name="inventory_quantity_in_stock">Pong\' ma nog</string>
     <string name="inventory_low_stock">Thur ma oyae</string>
+    <string name="inventory_out_of_stock">Thur ma osehero</string>
 
     <!-- Credit -->
     <string name="credit_title">Alama mar chung</string>
@@ -66,6 +83,21 @@
     <string name="credit_tier">Kata</string>
     <string name="credit_explanation">Wach</string>
     <string name="credit_improve">Yiero mak nene</string>
+    <string name="credit_history">Jopuruka mar chung</string>
+
+    <!-- Harvest -->
+    <string name="hero_title">Kwanyo</string>
+    <string name="harvest_record">Kwanyo chike</string>
+    <string name="hero_crop">Chike</string>
+    <string name="harvest_quantity">Pong\' (kg)</string>
+    <string name="harvest_quality">Ber</string>
+    <string name="harvest_location">Piny</string>
+
+    <!-- Customers -->
+    <string name="customers_title">Odiero</string>
+    <string name="customers_add">Med odiero</string>
+    <string name="customers_history">Jopuruka</string>
+    <string name="customers_debts">Chung</string>
 
     <!-- Chama -->
     <string name="chama_title">Chama</string>
@@ -90,19 +122,43 @@
 
     <!-- Bootstrap -->
     <string name="bootstrap_welcome">Oyawore! Ka bi Msaidizi mara.</string>
+    <string name="bootstrap_name_prompt">En ng\'at iwuoro Msaidizi mara?</string>
+    <string name="bootstrap_business_type">Iwacho biro mar ariyo?</string>
+    <string name="bootstrap_business_options">Mama Mboga\nBoda Boda\nDuka mar M-Pesa\nDuka mar Thur\nSaloni/Barber\nMama Ntilie\nJua Kali\nMang\'eny</string>
     <string name="bootstrap_complete">Asayi! Msaidizi mara otimoro.</string>
     <string name="bootstrap_next">Malchiel</string>
     <string name="bootstrap_skip">Char</string>
     <string name="bootstrap_finish">Chakri Yudo Msaidizi</string>
+
+    <!-- Voice Commands -->
+    <string name="voice_nimeuza">Atigo</string>
+    <string name="voice_nimenunua">Aweyo</string>
+    <string name="voice_ripoti">Mi ripoti</string>
+    <string name="voice_hesabu">Yie thura</string>
+    <string name="voice_ushauri">Mi siego</string>
+    <string name="voice_bei">Nengo mar soko</string>
 
     <!-- Approval prompts -->
     <string name="approval_approve">Aseyi</string>
     <string name="approval_reject">Alos</string>
     <string name="approval_expired">Saa osekore.</string>
 
-    <!-- Loading -->
-    <string name="loading">Loade…</string>
-    <string name="no_data">Data en tich</string>
-    <string name="back">Dok</string>
-    <string name="done">Otimo</string>
+    <!-- Goals -->
+    <string name="goals_title">Mikayi</string>
+    <string name="goals_add">Med mikayi</string>
+    <string name="goals_progress">Chike</string>
+
+    <!-- Pricing -->
+    <string name="pricing_title">Nengo</string>
+    <string name="pricing_advisor">Siego mar nengo</string>
+
+    <!-- Jobs -->
+    <string name="jobs_title">Tich</string>
+    <string name="jobs_find">Yudo tich</string>
+
+    <!-- M-Pesa terms -->
+    <string name="mpesa_balance">Salio mar M-Pesa</string>
+    <string name="mpesa_send">Oro pesa</string>
+    <string name="mpesa_receive">Nyam pesa</string>
+    <string name="mpesa_pay">Chung</string>
 </resources>

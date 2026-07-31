@@ -1,5 +1,6 @@
 package com.msaidizi.agent.onboarding
 
+import com.msaidizi.core.model.ArchetypeType
 import com.msaidizi.core.model.BusinessType
 
 /**
@@ -12,11 +13,12 @@ import com.msaidizi.core.model.BusinessType
  * - Guardrails: per-type thresholds
  * - Contextual questions: per-type onboarding deep dive
  *
- * This is the structured specification that connects WorkerTypeDetector
- * to tool activation (G2) and agent behavior (G3).
+ * Now also includes archetype-based classification (12 archetypes)
+ * alongside the original BusinessType sub-type system.
  */
 data class WorkerTypeProfile(
     val workerType: BusinessType,
+    val archetype: ArchetypeType,
     val displayName: String,
     val swahiliName: String,
     val description: String,
@@ -75,6 +77,13 @@ object WorkerTypeRegistry {
     }
 
     /**
+     * Get tools for an archetype (combines archetype registry + worker type registry).
+     */
+    fun getToolsForArchetype(archetype: ArchetypeType): Set<String> {
+        return ArchetypeRegistry.getAllTools(archetype)
+    }
+
+    /**
      * Get tools that are read-only for a worker type.
      */
     fun getReadOnlyTools(type: BusinessType): Set<String> {
@@ -102,6 +111,13 @@ object WorkerTypeRegistry {
         return getProfile(type).guardrails
     }
 
+    /**
+     * Get the archetype for a business type.
+     */
+    fun getArchetype(type: BusinessType): ArchetypeType {
+        return type.archetype
+    }
+
     // ═══════════════════════════════════════════════════════════
     //  PROFILE DEFINITIONS
     // ═══════════════════════════════════════════════════════════
@@ -117,6 +133,7 @@ object WorkerTypeRegistry {
             // ── Mama Mboga (Vegetable Vendor) ──
             BusinessType.MAMA_MBOGA to WorkerTypeProfile(
                 workerType = BusinessType.MAMA_MBOGA,
+                archetype = ArchetypeType.VENDOR,
                 displayName = "Vegetable Vendor",
                 swahiliName = "Mama Mboga",
                 description = "Sells fresh vegetables at market or roadside stall. Perishable inventory, daily restocking, price-sensitive customers.",
@@ -163,6 +180,7 @@ object WorkerTypeRegistry {
             // ── Boda Boda (Motorcycle Taxi) ──
             BusinessType.BODA_BODA to WorkerTypeProfile(
                 workerType = BusinessType.BODA_BODA,
+                archetype = ArchetypeType.TRANSPORT_OPERATOR,
                 displayName = "Motorcycle Taxi",
                 swahiliName = "Boda Boda",
                 description = "Motorcycle taxi operator. Daily income from fares, fuel costs, hire purchase payments, insurance.",
@@ -207,6 +225,7 @@ object WorkerTypeRegistry {
             // ── Jua Kali (Artisan/Mechanic) ──
             BusinessType.JUA_KALI to WorkerTypeProfile(
                 workerType = BusinessType.JUA_KALI,
+                archetype = ArchetypeType.ARTISAN,
                 displayName = "Jua Kali Artisan",
                 swahiliName = "Jua Kali",
                 description = "Informal sector artisan — mechanic, carpenter, metalworker, tailor. Project-based income, material costs, skill premiums.",
@@ -251,6 +270,7 @@ object WorkerTypeRegistry {
             // ── Mkulima (Farmer) ──
             BusinessType.MKULIMA to WorkerTypeProfile(
                 workerType = BusinessType.MKULIMA,
+                archetype = ArchetypeType.CROP_FARMER,
                 displayName = "Farmer",
                 swahiliName = "Mkulima",
                 description = "Smallholder farmer. Seasonal income, crop cycles, input costs, weather dependency.",
@@ -297,6 +317,7 @@ object WorkerTypeRegistry {
             // ── M-Pesa Agent ──
             BusinessType.M_PESA to WorkerTypeProfile(
                 workerType = BusinessType.M_PESA,
+                archetype = ArchetypeType.AGENT_BROKER,
                 displayName = "M-Pesa Agent",
                 swahiliName = "M-Pesa",
                 description = "Mobile money agent. Float management, commission income, high transaction volume.",
@@ -307,7 +328,9 @@ object WorkerTypeRegistry {
                     "High transaction volume makes tracking hard"
                 ),
                 availableTools = commonTools + setOf(
-                    "mpesa_auto_logger", "anomaly_detector", "customer_insights"
+                    "mpesa_auto_logger", "anomaly_detector", "customer_insights",
+                    "float_monitor", "commission_calculator", "daily_reconciliation",
+                    "transaction_analytics"
                 ),
                 readOnlyTools = emptySet(),
                 mission = "Help the M-Pesa agent maximize commission income by: " +
@@ -334,6 +357,233 @@ object WorkerTypeRegistry {
                     fuelCostReasonableness = 0.0,
                     maxDebtRatio = 0.20
                 )
+            ),
+
+            // ── Mama Lishe (Food Service) ──
+            BusinessType.MAMA_LISHE to WorkerTypeProfile(
+                workerType = BusinessType.MAMA_LISHE,
+                archetype = ArchetypeType.FOOD_SERVICE,
+                displayName = "Food Vendor",
+                swahiliName = "Mama Lishe",
+                description = "Prepares and sells cooked food. Recipe-based costing, fuel costs, food safety.",
+                commonChallenges = listOf(
+                    "Recipe costing — most don't know cost per plate",
+                    "Fuel costs (charcoal/gas) fluctuate",
+                    "Food safety and spoilage risk",
+                    "Thin margins in competitive market"
+                ),
+                availableTools = commonTools + setOf(
+                    "recipe_cost_calculator", "ingredient_tracker", "fuel_cost_tracker",
+                    "menu_profitability", "food_safety_alerts", "delivery_order_tracker",
+                    "spoilage_tracker", "inventory_tracker", "pricing_advisor",
+                    "customer_insights", "demand_forecaster"
+                ),
+                readOnlyTools = emptySet(),
+                mission = "Help the food vendor maximize profit by: " +
+                        "1) Calculating true cost per plate, " +
+                        "2) Tracking ingredients and fuel costs, " +
+                        "3) Identifying most profitable menu items, " +
+                        "4) Reducing food waste.",
+                financialGoals = listOf(
+                    "Know cost per plate (ingredients + fuel)",
+                    "Identify most profitable menu items",
+                    "Reduce food waste by 30%",
+                    "Track daily profit accurately"
+                ),
+                contextualQuestions = listOf(
+                    ContextualQuestion("What food do you cook?", "Unapika chakula gani?", "menuType"),
+                    ContextualQuestion("What fuel do you use?", "Unapika na nini?", "fuelType"),
+                    ContextualQuestion("Do you know cost per plate?", "Unajua bei ya chakula kimoja?", "knowsCostPerPlate"),
+                    ContextualQuestion("Do you sell via delivery apps?", "Unauza kupitia Glovo au Bolt Food?", "deliveryApps")
+                ),
+                guardrails = WorkerTypeGuardrails(
+                    maxSingleTransaction = 200_000.0,
+                    spoilageAlertThreshold = 0.15,
+                    priceSanityRange = 0.40,
+                    fuelCostReasonableness = 0.15,
+                    maxDebtRatio = 0.30
+                )
+            ),
+
+            // ── Mvuvi (Fisher) ──
+            BusinessType.MVUVI to WorkerTypeProfile(
+                workerType = BusinessType.MVUVI,
+                archetype = ArchetypeType.FISHER,
+                displayName = "Fisher",
+                swahiliName = "Mvuvi",
+                description = "Catches or raises fish. High perishability, seasonal patterns, equipment costs.",
+                commonChallenges = listOf(
+                    "Catch uncertainty — income is highly variable",
+                    "Fish spoils in hours without cold chain",
+                    "Equipment (boats, nets) are expensive",
+                    "Middleman exploitation at landing sites"
+                ),
+                availableTools = commonTools + setOf(
+                    "fishing_log", "catch_tracker", "equipment_maintenance_log",
+                    "weather_alerts", "market_price_broadcaster", "preservation_tracker",
+                    "crew_payment_tracker", "seasonal_planner"
+                ),
+                readOnlyTools = setOf("weather_forecast_service"),
+                mission = "Help the fisher maximize catch value by: " +
+                        "1) Tracking every catch and trip, " +
+                        "2) Comparing prices across landing sites, " +
+                        "3) Predicting best fishing days, " +
+                        "4) Managing equipment costs.",
+                financialGoals = listOf(
+                    "Track catch by species, weight, and price",
+                    "Find best-priced landing sites",
+                    "Reduce fuel cost per kg of catch",
+                    "Plan around seasonal bans"
+                ),
+                contextualQuestions = listOf(
+                    ContextualQuestion("Wild catch or fish farming?", "Unavua samaki au unafuga?", "fishingType"),
+                    ContextualQuestion("Where do you fish?", "Unavua wapi?", "fishingLocation"),
+                    ContextualQuestion("What species?", "Samaki wako wa aina gani?", "species"),
+                    ContextualQuestion("Do you own a boat?", "Una boti yako?", "boatOwnership")
+                ),
+                guardrails = WorkerTypeGuardrails(
+                    maxSingleTransaction = 500_000.0,
+                    spoilageAlertThreshold = 0.25,
+                    priceSanityRange = 0.50,
+                    fuelCostReasonableness = 0.30,
+                    maxDebtRatio = 0.30
+                )
+            ),
+
+            // ── Mfugaji (Livestock Keeper) ──
+            BusinessType.MFUGAJI to WorkerTypeProfile(
+                workerType = BusinessType.MFUGAJI,
+                archetype = ArchetypeType.LIVESTOCK_KEEPER,
+                displayName = "Livestock Keeper",
+                swahiliName = "Mfugaji",
+                description = "Raises animals for income — dairy, poultry, goats, cattle. Daily care, feed costs, veterinary needs.",
+                commonChallenges = listOf(
+                    "Feed costs dominate — 30-60% of revenue",
+                    "Disease risk can kill entire flock/herd",
+                    "Veterinary access is expensive and scarce",
+                    "Production variability with health/feed changes"
+                ),
+                availableTools = commonTools + setOf(
+                    "production_tracker", "feed_cost_tracker", "animal_health_log",
+                    "mortality_tracker", "breeding_calendar", "vet_schedule_reminder",
+                    "profit_per_animal", "market_price_broadcaster"
+                ),
+                readOnlyTools = emptySet(),
+                mission = "Help the livestock keeper maximize profit by: " +
+                        "1) Tracking daily production (milk, eggs), " +
+                        "2) Managing feed costs per animal, " +
+                        "3) Monitoring animal health and vaccination schedules, " +
+                        "4) Tracking mortality and breeding cycles.",
+                financialGoals = listOf(
+                    "Know daily production income",
+                    "Track feed cost per animal",
+                    "Never miss a vaccination",
+                    "Reduce mortality rates"
+                ),
+                contextualQuestions = listOf(
+                    ContextualQuestion("What animals do you keep?", "Unafuga wanyama gani?", "animals"),
+                    ContextualQuestion("How many animals?", "Una wanyama wangapi?", "animalCount"),
+                    ContextualQuestion("Do you buy feed or graze?", "Unanunua chakula au unachungisha?", "feedSource"),
+                    ContextualQuestion("Do you use a vet?", "Unatumia daktari wa mifugo?", "usesVet")
+                ),
+                guardrails = WorkerTypeGuardrails(
+                    maxSingleTransaction = 1_000_000.0,
+                    spoilageAlertThreshold = 0.0,
+                    priceSanityRange = 0.40,
+                    fuelCostReasonableness = 0.0,
+                    maxDebtRatio = 0.30
+                )
+            ),
+
+            // ── Salon/Barber (Service Provider) ──
+            BusinessType.SALON to WorkerTypeProfile(
+                workerType = BusinessType.SALON,
+                archetype = ArchetypeType.SERVICE_PROVIDER,
+                displayName = "Salon Owner",
+                swahiliName = "Mwenye Salon",
+                description = "Beauty service provider — hair styling, braiding, manicure. Appointment-based, repeat customers.",
+                commonChallenges = listOf(
+                    "Inconsistent job flow — some days zero clients",
+                    "Undercharging from fear of losing clients",
+                    "No appointment system — walk-in model",
+                    "Product costs for cosmetics and supplies"
+                ),
+                availableTools = commonTools + setOf(
+                    "service_menu", "booking_scheduler", "service_price_advisor",
+                    "customer_matcher", "customer_insights", "rating_system",
+                    "competitor_tracker", "service_history", "customer_retention",
+                    "tool_inventory"
+                ),
+                readOnlyTools = emptySet(),
+                mission = "Help the salon owner grow their business by: " +
+                        "1) Managing appointments and reducing no-shows, " +
+                        "2) Tracking service history per customer, " +
+                        "3) Pricing services fairly, " +
+                        "4) Building customer loyalty.",
+                financialGoals = listOf(
+                    "Fill appointment slots consistently",
+                    "Know which services are most profitable",
+                    "Build repeat customer base",
+                    "Track product costs accurately"
+                ),
+                contextualQuestions = listOf(
+                    ContextualQuestion("What services do you offer?", "Unatoa huduma gani?", "services"),
+                    ContextualQuestion("Do you have employees?", "Una wafanyakazi?", "employees"),
+                    ContextualQuestion("How do clients find you?", "Unapata wateja wapi?", "clientSource"),
+                    ContextualQuestion("Do you use appointments?", "Unatumia miadi?", "usesAppointments")
+                ),
+                guardrails = WorkerTypeGuardrails(
+                    maxSingleTransaction = 100_000.0,
+                    spoilageAlertThreshold = 0.0,
+                    priceSanityRange = 0.40,
+                    fuelCostReasonableness = 0.0,
+                    maxDebtRatio = 0.25
+                )
+            ),
+
+            // ── Mjengo (Casual Laborer) ──
+            BusinessType.MJENGO to WorkerTypeProfile(
+                workerType = BusinessType.MJENGO,
+                archetype = ArchetypeType.CASUAL_LABORER,
+                displayName = "Construction Worker",
+                swahiliName = "Mjengo",
+                description = "Casual construction laborer. Daily wages, irregular work, no contracts, no benefits.",
+                commonChallenges = listOf(
+                    "Zero income security — no work = no pay",
+                    "Payment delays — employers may delay or refuse",
+                    "No savings — living hand-to-mouth",
+                    "Health risks — accidents, physical strain"
+                ),
+                availableTools = commonTools + setOf(
+                    "daily_wage_tracker", "work_calendar", "payment_reminder",
+                    "savings_micro", "employer_database", "health_risk_alerts",
+                    "emergency_fund", "job_matcher", "wage_calculator"
+                ),
+                readOnlyTools = emptySet(),
+                mission = "Help the construction worker stabilize income by: " +
+                        "1) Tracking every day's work and earnings, " +
+                        "2) Identifying work patterns (good weeks vs bad), " +
+                        "3) Reminding about unpaid wages, " +
+                        "4) Building micro-savings for idle days.",
+                financialGoals = listOf(
+                    "Track days worked vs idle",
+                    "Know weekly earning patterns",
+                    "Build emergency fund for idle periods",
+                    "Never lose track of unpaid wages"
+                ),
+                contextualQuestions = listOf(
+                    ContextualQuestion("What kind of construction work?", "Unafanya kazi gani ya ujenzi?", "workType"),
+                    ContextualQuestion("How do you find work?", "Unapata kazi vipi?", "jobSource"),
+                    ContextualQuestion("What's your daily rate?", "Bei yako ya kwa siku ni ngapi?", "dailyRate"),
+                    ContextualQuestion("Days worked per week?", "Siku ngapi kwa wiki?", "daysPerWeek")
+                ),
+                guardrails = WorkerTypeGuardrails(
+                    maxSingleTransaction = 50_000.0,
+                    spoilageAlertThreshold = 0.0,
+                    priceSanityRange = 0.30,
+                    fuelCostReasonableness = 0.0,
+                    maxDebtRatio = 0.20
+                )
             )
         )
     }
@@ -347,6 +597,7 @@ object WorkerTypeRegistry {
 
         return WorkerTypeProfile(
             workerType = BusinessType.OTHER,
+            archetype = ArchetypeType.VENDOR,
             displayName = "Business Owner",
             swahiliName = "Mwenye Biashara",
             description = "General business owner. Msaidizi will learn the specific business type through daily interactions.",

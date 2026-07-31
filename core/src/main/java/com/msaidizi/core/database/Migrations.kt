@@ -334,11 +334,53 @@ object Migrations {
      *       .addMigrations(*ALL_MIGRATIONS)
      *       .build()
      */
+    /**
+     * Migration 14 → 15: Goal tracker persistence
+     * Adds goals and goal_contributions tables for persistent savings goals.
+     */
+    val MIGRATION_14_15 = object : Migration(14, 15) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS goals (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    targetAmount REAL NOT NULL,
+                    currentAmount REAL NOT NULL DEFAULT 0.0,
+                    deadline INTEGER NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'active',
+                    goalType TEXT NOT NULL DEFAULT 'savings',
+                    notes TEXT,
+                    createdAt INTEGER NOT NULL,
+                    updatedAt INTEGER NOT NULL
+                )
+            """)
+
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_goals_status ON goals(status)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_goals_deadline ON goals(deadline)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_goals_status_deadline ON goals(status, deadline)")
+
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS goal_contributions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    goalId TEXT NOT NULL,
+                    amount REAL NOT NULL,
+                    source TEXT NOT NULL DEFAULT 'manual',
+                    notes TEXT,
+                    timestamp INTEGER NOT NULL
+                )
+            """)
+
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_goal_contributions_goalId ON goal_contributions(goalId)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_goal_contributions_timestamp ON goal_contributions(timestamp)")
+        }
+    }
+
     val ALL_MIGRATIONS = arrayOf(
         MIGRATION_8_9,
         MIGRATION_9_10,
         MIGRATION_10_11,
         MIGRATION_11_12,
-        MIGRATION_13_14
+        MIGRATION_13_14,
+        MIGRATION_14_15
     )
 }

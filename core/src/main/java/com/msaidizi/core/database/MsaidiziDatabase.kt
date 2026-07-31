@@ -3,6 +3,8 @@ package com.msaidizi.core.database
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.msaidizi.core.model.*
+import com.msaidizi.core.model.GoalEntity
+import com.msaidizi.core.model.GoalContributionEntity
 // Graph entities in core.database.GraphEntities
 // MpesaTransactionEntity in core.database.MpesaTransactionEntity
 
@@ -57,9 +59,11 @@ import com.msaidizi.core.model.*
         TripKilometersEntity::class,
         FareRecordEntity::class,
         HirePurchaseAgreementEntity::class,
-        HirePaymentEntity::class
+        HirePaymentEntity::class,
+        GoalEntity::class,
+        GoalContributionEntity::class
     ],
-    version = 14,
+    version = 15,
     exportSchema = true
 )
 abstract class MsaidiziDatabase : RoomDatabase() {
@@ -114,4 +118,6 @@ abstract class MsaidiziDatabase : RoomDatabase() {
     abstract fun fareRecordDao(): FareRecordDao
     abstract fun hirePurchaseAgreementDao(): HirePurchaseAgreementDao
     abstract fun hirePaymentDao(): HirePaymentDao
+    abstract fun goalDao(): GoalDao
+    abstract fun goalContributionDao(): GoalContributionDao
 }

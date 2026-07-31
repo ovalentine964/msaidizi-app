@@ -19,11 +19,15 @@ import com.msaidizi.core.model.Language
 
 /**
  * States in the onboarding conversation flow.
+ * Now includes archetype-first classification.
  */
 enum class OnboardingPhase {
     INTRODUCTION,        // Msaidizi introduces herself
     PERSONAL_CONNECTION, // "Unaitwa nani?" + Msaidizi naming
-    BUSINESS_DISCOVERY,  // Business type selection with visual cards
+    ARCHETYPE_SELECTION, // Select primary archetype (12 archetype cards)
+    SUBTYPE_REFINEMENT,  // Select sub-type within archetype
+    MULTI_ARCHETYPE,     // "Do you have other businesses?" → secondary archetype
+    BUSINESS_DISCOVERY,  // Business type selection with visual cards (legacy)
     OPERATIONS_DEEP_DIVE,// Contextual questions per worker type
     FINANCIAL_SITUATION, // Income, expenses, debt, savings
     CFO_ASSESSMENT,      // Summary of what was learned
@@ -99,6 +103,8 @@ data class WorkerInfo(
 
 data class BusinessInfo(
     val type: BusinessType? = null,
+    val archetype: com.msaidizi.core.model.ArchetypeType? = null,
+    val secondaryArchetypes: List<com.msaidizi.core.model.ArchetypeType> = emptyList(),
     val subType: String = "",
     val yearsInBusiness: Int = 0,
     val description: String = "",
