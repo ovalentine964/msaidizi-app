@@ -1,5 +1,7 @@
 package com.msaidizi.agent.guardrails
 
+import com.msaidizi.agent.onboarding.WorkerTypeRegistry
+import com.msaidizi.core.model.BusinessType
 import timber.log.Timber
 import java.security.MessageDigest
 import java.security.SecureRandom
@@ -11,6 +13,10 @@ import javax.inject.Singleton
  * AccessControlManager — Pillar 4: Access Control.
  *
  * Implements RBAC with 6 roles and scope-based tool tokens.
+ * Additionally supports per-worker-type tool filtering (G2):
+ *   - Mama Mboga gets inventory/spoilage tools
+ *   - Boda Boda gets fuel/route tools
+ *   - Jua Kali gets material/job costing tools
  *
  * Roles:
  * - worker: Basic operations (record sales/expenses, check stock)
@@ -20,7 +26,7 @@ import javax.inject.Singleton
  * - DPO: Data protection oversight, privacy audit access
  * - engineer: System configuration, model management, debugging
  *
- * Each tool call is validated against the caller's role and scope.
+ * Each tool call is validated against the caller's role, scope, AND worker type.
  * Scope tokens are time-limited and capability-scoped.
  */
 @Singleton
@@ -44,6 +50,38 @@ class AccessControlManager @Inject constructor() {
      */
     fun canAccessTool(role: Role, toolName: String): Boolean {
         return toolName in getAllowedTools(role)
+    }
+
+    /**
+     * Check if a worker type can access a specific tool.
+     * This is the G2 integration: per-worker-type tool activation.
+     *
+     * WorkerTypeRegistry defines which tools each worker type gets.
+     * This method intersects role-based and worker-type-based access.
+     */
+    fun canAccessToolForWorkerType(role: Role, toolName: String, workerType: BusinessType?): Boolean {
+        // First check role-based access
+        if (!canAccessTool(role, toolName)) return false
+
+        // If worker type is known, also check worker-type-based access
+        if (workerType != null) {
+            val allowedTools = WorkerTypeRegistry.getAllowedTools(workerType)
+            return toolName in allowedTools
+        }
+
+        // No worker type restriction — role check is sufficient
+        return true
+    }
+
+    /**
+     * Get the intersection of role-allowed and worker-type-allowed tools.
+     */
+    fun getEffectiveTools(role: Role, workerType: BusinessType?): Set<String> {
+        val roleTools = getAllowedTools(role)
+        if (workerType == null) return roleTools
+
+        val typeTools = WorkerTypeRegistry.getAllowedTools(workerType)
+        return roleTools.intersect(typeTools)
     }
 
     /**
