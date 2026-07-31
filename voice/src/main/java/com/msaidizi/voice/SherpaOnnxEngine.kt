@@ -235,7 +235,7 @@ class SherpaOnnxEngine @Inject constructor() : SpeechEngine {
      */
     fun recognizeFromPcm16Bytes(pcmData: ByteArray, sampleRate: Int = 16000): String {
         val floatData = pcm16ToFloat(pcmData)
-        return recognize(floatData, sampleRate)
+        return recognizeAudio(floatData, sampleRate)
     }
 
     /**
@@ -360,7 +360,7 @@ class SherpaOnnxEngine @Inject constructor() : SpeechEngine {
     /**
      * Release all native resources.
      */
-    fun release() {
+    override fun release() {
         destroyRecognizer()
         destroySynthesizer()
     }
