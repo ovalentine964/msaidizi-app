@@ -139,7 +139,7 @@ Java_com_msaidizi_voice_VadEngine_nativeCreateVad(
     vad_config.sample_rate = 16000;
     vad_config.num_threads = 2;
 
-    vh->vad = SherpaOnnxCreateVoiceActivityDetector(&vad_config, 30.0f /* buffer size in seconds */);
+    vh->vad = const_cast<SherpaOnnxVoiceActivityDetector*>(SherpaOnnxCreateVoiceActivityDetector(&vad_config, 30.0f /* buffer size in seconds */));
     if (!vh->vad) {
         LOGE("Failed to create VAD");
         throw_rte(env, "Failed to create VAD detector");
