@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface GoalDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(goal: GoalEntity): String
+    suspend fun insert(goal: GoalEntity)
 
     @Update
     suspend fun update(goal: GoalEntity)
