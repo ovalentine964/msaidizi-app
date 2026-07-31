@@ -25,7 +25,30 @@ import javax.inject.Singleton
  * ```
  */
 @Singleton
-class SherpaOnnxEngine @Inject constructor() {
+class SherpaOnnxEngine @Inject constructor() : SpeechEngine {
+    override val engineName = "sherpa-onnx (on-device)"
+
+    override suspend fun isAvailable(): Boolean {
+        return try {
+            getStatus()["recognizerCreated"] as? Boolean ?: false ||
+            getStatus()["synthesizerCreated"] as? Boolean ?: false
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    override suspend fun recognize(audioData: FloatArray, sampleRate: Int): String {
+        return recognize(audioData, sampleRate)
+    }
+
+    override suspend fun recognizeFromPcm16(pcmData: ByteArray, sampleRate: Int): String {
+        val floatData = AudioUtils.pcm16ToFloat(pcmData)
+        return recognize(floatData, sampleRate)
+    }
+
+    override suspend fun synthesize(text: String, language: String, speed: Float): ByteArray {
+        return synthesizeToPcm16(text, sid = 0, speed = speed)
+    }
 
     companion object AudioUtils {
         init {

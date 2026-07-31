@@ -287,7 +287,7 @@ object Migrations {
      */
     val MIGRATION_12_13 = object : Migration(12, 13) {
         override fun migrate(db: SupportSQLiteDatabase) {
-            // M-Pesa transactions
+            // M-Pesa transactions — columns match MpesaTransactionEntity in core.database
             db.execSQL("""
                 CREATE TABLE IF NOT EXISTS mpesa_transactions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -311,127 +311,154 @@ object Migrations {
             db.execSQL("CREATE INDEX IF NOT EXISTS index_mpesa_transactions_transactionDate ON mpesa_transactions(transactionDate)")
             db.execSQL("CREATE INDEX IF NOT EXISTS index_mpesa_transactions_isReconciled ON mpesa_transactions(isReconciled)")
 
-            // Safety entities
+            // Emergency contacts — matches EmergencyContactEntity (tableName = emergency_contacts)
             db.execSQL("""
                 CREATE TABLE IF NOT EXISTS emergency_contacts (
                     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                     name TEXT NOT NULL,
                     phone TEXT NOT NULL,
-                    relationship TEXT NOT NULL,
-                    isPrimary INTEGER NOT NULL DEFAULT 0,
+                    relationship TEXT NOT NULL DEFAULT '',
+                    isActive INTEGER NOT NULL DEFAULT 1,
                     createdAt INTEGER NOT NULL
                 )
             """)
 
+            // SOS events — matches SOSEventEntity (tableName = sos_events)
             db.execSQL("""
                 CREATE TABLE IF NOT EXISTS sos_events (
-                    id TEXT NOT NULL PRIMARY KEY,
-                    latitude REAL NOT NULL,
-                    longitude REAL NOT NULL,
-                    eventType TEXT NOT NULL,
-                    status TEXT NOT NULL DEFAULT 'active',
-                    respondedBy TEXT,
-                    notes TEXT,
-                    timestamp INTEGER NOT NULL
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    triggeredAt INTEGER NOT NULL,
+                    latitude REAL,
+                    longitude REAL,
+                    locationAccuracy REAL,
+                    audioFilePath TEXT,
+                    contactsNotified INTEGER NOT NULL DEFAULT 0,
+                    smsMessage TEXT NOT NULL DEFAULT '',
+                    status TEXT NOT NULL DEFAULT 'triggered',
+                    resolvedAt INTEGER,
+                    notes TEXT NOT NULL DEFAULT ''
                 )
             """)
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_sos_events_status ON sos_events(status)")
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_sos_events_timestamp ON sos_events(timestamp)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_sos_events_triggeredAt ON sos_events(triggeredAt)")
 
-            // Boda boda entities
+            // Boda income — matches BodaIncomeEntity (tableName = boda_income)
             db.execSQL("""
                 CREATE TABLE IF NOT EXISTS boda_income (
                     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                     amount REAL NOT NULL,
-                    source TEXT NOT NULL DEFAULT 'fare',
-                    tripId TEXT,
-                    notes TEXT,
-                    timestamp INTEGER NOT NULL
+                    route TEXT NOT NULL DEFAULT '',
+                    tripType TEXT NOT NULL DEFAULT 'fare',
+                    paymentMethod TEXT NOT NULL DEFAULT 'cash',
+                    passengerCount INTEGER NOT NULL DEFAULT 1,
+                    date TEXT NOT NULL DEFAULT '',
+                    timestamp INTEGER NOT NULL,
+                    needsSync INTEGER NOT NULL DEFAULT 1
                 )
             """)
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_boda_income_timestamp ON boda_income(timestamp)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_boda_income_date ON boda_income(date)")
 
+            // Boda expense — matches BodaExpenseEntity (tableName = boda_expenses)
             db.execSQL("""
-                CREATE TABLE IF NOT EXISTS boda_expense (
+                CREATE TABLE IF NOT EXISTS boda_expenses (
                     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                     amount REAL NOT NULL,
                     category TEXT NOT NULL,
-                    description TEXT,
-                    timestamp INTEGER NOT NULL
+                    description TEXT NOT NULL DEFAULT '',
+                    date TEXT NOT NULL DEFAULT '',
+                    timestamp INTEGER NOT NULL,
+                    needsSync INTEGER NOT NULL DEFAULT 1
                 )
             """)
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_boda_expense_timestamp ON boda_expense(timestamp)")
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_boda_expense_category ON boda_expense(category)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_boda_expenses_date ON boda_expenses(date)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_boda_expenses_category ON boda_expenses(category)")
 
+            // Fuel purchases — matches FuelPurchaseEntity (tableName = fuel_purchases)
             db.execSQL("""
-                CREATE TABLE IF NOT EXISTS fuel_purchase (
+                CREATE TABLE IF NOT EXISTS fuel_purchases (
                     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                    litres REAL NOT NULL,
-                    pricePerLitre REAL NOT NULL,
+                    liters REAL NOT NULL,
+                    costPerLiter REAL NOT NULL,
                     totalCost REAL NOT NULL,
-                    station TEXT,
-                    odometerKm REAL,
-                    timestamp INTEGER NOT NULL
+                    stationName TEXT NOT NULL DEFAULT '',
+                    odometer REAL,
+                    date TEXT NOT NULL DEFAULT '',
+                    timestamp INTEGER NOT NULL,
+                    needsSync INTEGER NOT NULL DEFAULT 1
                 )
             """)
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_fuel_purchase_timestamp ON fuel_purchase(timestamp)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_fuel_purchases_date ON fuel_purchases(date)")
 
+            // Trip kilometers — matches TripKilometersEntity (tableName = trip_kilometers)
             db.execSQL("""
                 CREATE TABLE IF NOT EXISTS trip_kilometers (
                     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                    startKm REAL NOT NULL,
-                    endKm REAL NOT NULL,
-                    distanceKm REAL NOT NULL,
-                    tripId TEXT,
-                    timestamp INTEGER NOT NULL
-                )
-            """)
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_trip_kilometers_timestamp ON trip_kilometers(timestamp)")
-
-            db.execSQL("""
-                CREATE TABLE IF NOT EXISTS fare_record (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                    amount REAL NOT NULL,
-                    origin TEXT,
-                    destination TEXT,
-                    passengerCount INTEGER NOT NULL DEFAULT 1,
-                    paymentMethod TEXT NOT NULL DEFAULT 'cash',
-                    timestamp INTEGER NOT NULL
-                )
-            """)
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_fare_record_timestamp ON fare_record(timestamp)")
-
-            // Hire purchase entities
-            db.execSQL("""
-                CREATE TABLE IF NOT EXISTS hire_purchase_agreement (
-                    id TEXT NOT NULL PRIMARY KEY,
-                    assetDescription TEXT NOT NULL,
-                    assetValue REAL NOT NULL,
-                    deposit REAL NOT NULL,
-                    monthlyPayment REAL NOT NULL,
-                    totalInstallments INTEGER NOT NULL,
-                    paidInstallments INTEGER NOT NULL DEFAULT 0,
-                    startDate INTEGER NOT NULL,
-                    status TEXT NOT NULL DEFAULT 'active',
-                    notes TEXT,
-                    createdAt INTEGER NOT NULL,
-                    updatedAt INTEGER NOT NULL
-                )
-            """)
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_hire_purchase_agreement_status ON hire_purchase_agreement(status)")
-
-            db.execSQL("""
-                CREATE TABLE IF NOT EXISTS hire_payment (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                    agreementId TEXT NOT NULL,
-                    amount REAL NOT NULL,
-                    paymentMethod TEXT NOT NULL DEFAULT 'cash',
-                    notes TEXT,
+                    kilometers REAL NOT NULL,
+                    route TEXT NOT NULL DEFAULT '',
+                    tripType TEXT NOT NULL DEFAULT 'regular',
+                    date TEXT NOT NULL DEFAULT '',
                     timestamp INTEGER NOT NULL,
-                    FOREIGN KEY (agreementId) REFERENCES hire_purchase_agreement(id) ON DELETE CASCADE
+                    needsSync INTEGER NOT NULL DEFAULT 1
                 )
             """)
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_hire_payment_agreementId ON hire_payment(agreementId)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_trip_kilometers_date ON trip_kilometers(date)")
+
+            // Fare records — matches FareRecordEntity (tableName = fare_records)
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS fare_records (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    fare REAL NOT NULL,
+                    route TEXT NOT NULL,
+                    fromLocation TEXT NOT NULL,
+                    toLocation TEXT NOT NULL,
+                    distanceKm REAL,
+                    hourOfDay INTEGER NOT NULL DEFAULT 0,
+                    dayOfWeek INTEGER NOT NULL DEFAULT 0,
+                    weather TEXT NOT NULL DEFAULT 'clear',
+                    passengerCount INTEGER NOT NULL DEFAULT 1,
+                    date TEXT NOT NULL DEFAULT '',
+                    timestamp INTEGER NOT NULL,
+                    needsSync INTEGER NOT NULL DEFAULT 1
+                )
+            """)
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_fare_records_route ON fare_records(route)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_fare_records_date ON fare_records(date)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_fare_records_hourOfDay ON fare_records(hourOfDay)")
+
+            // Hire purchase agreements — matches HirePurchaseAgreementEntity (tableName = hire_purchase_agreements)
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS hire_purchase_agreements (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    ownerName TEXT NOT NULL,
+                    ownerPhone TEXT NOT NULL DEFAULT '',
+                    motorcycleDescription TEXT NOT NULL DEFAULT '',
+                    dailyFee REAL NOT NULL,
+                    depositPaid REAL NOT NULL DEFAULT 0.0,
+                    startDate TEXT NOT NULL DEFAULT '',
+                    endDate TEXT,
+                    totalPurchasePrice REAL,
+                    isActive INTEGER NOT NULL DEFAULT 1,
+                    notes TEXT NOT NULL DEFAULT '',
+                    createdAt INTEGER NOT NULL,
+                    needsSync INTEGER NOT NULL DEFAULT 1
+                )
+            """)
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_hire_purchase_agreements_isActive ON hire_purchase_agreements(isActive)")
+
+            // Hire payments — matches HirePaymentEntity (tableName = hire_payments)
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS hire_payments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    agreementId INTEGER NOT NULL,
+                    amount REAL NOT NULL,
+                    paymentType TEXT NOT NULL DEFAULT 'daily_fee',
+                    date TEXT NOT NULL DEFAULT '',
+                    timestamp INTEGER NOT NULL,
+                    needsSync INTEGER NOT NULL DEFAULT 1,
+                    FOREIGN KEY (agreementId) REFERENCES hire_purchase_agreements(id) ON DELETE CASCADE
+                )
+            """)
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_hire_payments_agreementId ON hire_payments(agreementId)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_hire_payments_agreementId_date ON hire_payments(agreementId, date)")
         }
     }
 
