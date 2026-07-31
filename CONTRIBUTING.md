@@ -98,9 +98,20 @@ git push origin feature/my-feature
 
 - **SuperagentHarness** is the single entry point for all AI processing
 - Tools are registered in `ToolRegistry` — don't bypass it
+- Tools are organized into **9 domain packages** under `agent/src/main/java/com/msaidizi/agent/tools/`:
+  - `core/` — ToolRegistry, ToolResult, GuardrailsTool, SyncEngine, AnomalyDetector, SecurityGuard
+  - `financial/` — TransactionRecorder, DebtTracker, CFOEngine, MpesaAutoLogger, GoalTracker
+  - `market/` — MarketPriceBroadcaster, PricingAdvisor, DemandForecaster, CompetitorTracker
+  - `voice/` — VoicePipeline, ServiceVoiceCommands, LanguageDetector, ReceiptScanner
+  - `agriculture/` — HarvestTracker, YieldPredictor, WeatherForecastService, SpoilageTracker
+  - `transport/` — BodaBodaRouter, FareIntelligence, FuelEfficiencyTracker, RideShare
+  - `social/` — ChamaManager, CustomerMatcher, JobMatcher, GamificationEngine
+  - `credit/` — AlamaScore, CreditReadiness, LoanComparison, InsuranceMatcher
+  - `inventory/` — InventoryTracker, SupplierMatcher
 - All database access goes through DAOs (no raw SQL)
 - Models are loaded lazily and cached as singletons
 - Voice pipeline is separate from the text pipeline (they converge at `processInput`)
+- Voice Activity Detection uses Silero VAD when available, falls back to RMS-based amplitude
 
 ### UI Guidelines
 
@@ -115,6 +126,12 @@ git push origin feature/my-feature
 - Integration tests for database operations
 - UI tests for critical user flows
 - Test on an emulator with 2GB RAM limit
+- **M-Pesa parser tests:** 20+ tests covering all 9 transaction types, Swahili format, confidence scoring
+- **Intent router tests:** 15+ tests for pattern matching, amount extraction, edge cases
+- **Top tools tests:** CFOEngine, DebtTracker, GoalTracker, BusinessHealthDashboard, AutoRestock
+- **AlamaScore tests:** Score range (300-850), perfect business, no-data minimum
+- **Encryption tests:** AES-256-GCM roundtrip, PBKDF2 consistency
+- Firebase Crashlytics is enabled in release builds — add `google-services.json` to `app/` for local release builds
 
 ## 🏷️ Pull Request Guidelines
 

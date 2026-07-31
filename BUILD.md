@@ -146,12 +146,26 @@ msaidizi-app/
 
 ## Build Variants
 
-| Variant | Debug | Release | Description |
-|---------|-------|---------|-------------|
-| **Stub** | ✅ | ✅ | No native libs — AI features return placeholders |
-| **Source** | ✅ | ✅ | llama.cpp + sherpa-onnx built from source |
-| **With Models** | ✅ | ✅ | Models bundled in APK (~555MB) |
-| **Without Models** | ✅ | ✅ | Models downloaded on first launch (~15MB APK) |
+| Variant | Description | APK Size |
+|---------|-------------|----------|
+| **cloud-debug** | Models downloaded on first launch via WorkManager | ~44MB |
+| **cloud-release** | Same as cloud-debug, signed for release | ~44MB |
+| **full-debug** | All models bundled (Qwen 0.8B + Whisper + Piper) | ~550MB |
+| **full-release** | Same as full-debug, signed for release | ~550MB |
+| **Stub** | No native libs — AI features return placeholders | ~15MB |
+
+Product flavors are defined in `app/build.gradle.kts`:
+- `cloud` — Small APK, models downloaded on first launch
+- `full` — All models bundled for offline use
+
+### Model Bundling
+
+| Model | Size | Purpose |
+|-------|------|--------|
+| Qwen3.5 0.8B (Q4_K_M) | ~500MB | On-device LLM |
+| Whisper Tiny (ONNX) | ~40MB | Speech-to-text |
+| Piper Swahili (ONNX) | ~15MB | Text-to-speech |
+| Silero VAD (ONNX) | ~2MB | Voice activity detection |
 
 ---
 
@@ -238,12 +252,12 @@ Run the native dependency setup script:
 
 Same as above — run `./scripts/setup_native_deps.sh`.
 
-### APK is too large (~555MB)
+### APK is too large (~550MB)
 
-Models are bundled in the APK. To reduce size:
-1. Don't run `./scripts/download_models.sh` before building
+You're building the `full` flavor with bundled models. To reduce size:
+1. Build the `cloud` flavor: `./gradlew assembleCloudDebug`
 2. Models will be downloaded on first launch via WorkManager
-3. APK size without models: ~15-20MB
+3. Cloud APK size: ~44MB
 
 ### Gradle daemon OOM
 
@@ -266,6 +280,12 @@ java -version
 2. Verify models are present: `adb shell ls /data/data/com.msaidizi.app/files/models/`
 3. Check model status in app: Settings → Model Status
 
+### Database migration errors
+
+The database is at version 14. If you see migration errors after pulling:
+1. Clear app data: `adb shell pm clear com.msaidizi.app`
+2. Or uninstall and reinstall the APK
+
 ---
 
 ## CI/CD
@@ -274,8 +294,17 @@ java -version
 
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
-| `ci.yml` | PR, push to main | Lint, test, security, compile, build with models |
-| `build-apk.yml` | Push to main, tags | Full APK build + release |
+| `build-apk.yml` | Push to main, `v*` tags, PRs | Matrix build (debug × cloud, debug × full, release × cloud, release × full), model caching, verification, GitHub Release |
+| `ci.yml` | PR, push to main | Lint, test, security, compile |
+
+### Build Pipeline
+
+1. **prepare-models** — Downloads & caches AI models (Qwen, Whisper, Piper)
+2. **build** — Matrix build of all 4 APK variants (cloud/full × debug/release)
+   - Gradle signing via secrets for release builds
+   - Model placement with cloud/full flavor handling
+3. **verify** — Smoke test: validates APK as ZIP, checks native libs and model assets
+4. **release** — On `v*` tags: creates GitHub Release with all 4 APK variants + changelog
 
 ### CI Build Steps
 
