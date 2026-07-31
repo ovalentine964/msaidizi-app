@@ -1,5 +1,6 @@
-import com.msaidizi.agent.tools.social.GamificationEngine
 package com.msaidizi.agent.tools.transport
+
+import com.msaidizi.agent.tools.social.GamificationEngine
 
 import android.content.Context
 import android.database.Cursor
