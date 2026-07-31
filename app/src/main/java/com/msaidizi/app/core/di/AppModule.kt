@@ -2,6 +2,19 @@ package com.msaidizi.app.core.di
 
 import com.msaidizi.agent.flywheel.FlywheelEngine
 import com.msaidizi.agent.tools.core.*
+import com.msaidizi.agent.tools.agriculture.FishTripPlanner
+import com.msaidizi.agent.tools.agriculture.LivestockManager
+import com.msaidizi.agent.tools.transport.DailyEarningsTracker
+import com.msaidizi.agent.tools.transport.VehicleMaintenanceTracker
+import com.msaidizi.agent.tools.financial.CommissionTracker
+import com.msaidizi.agent.tools.financial.DailyWageTracker
+import com.msaidizi.agent.tools.financial.FloatManager
+import com.msaidizi.agent.tools.services.AppointmentManager
+import com.msaidizi.agent.tools.services.ServiceHistory
+import com.msaidizi.agent.tools.services.FundiJobQuoter
+import com.msaidizi.agent.tools.services.MaterialCostCalculator
+import com.msaidizi.agent.tools.services.CustomerRetention
+import com.msaidizi.agent.tools.food.RecipeCostCalculator
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -101,7 +114,21 @@ object AppModule {
         bodaBodaRouter: BodaBodaRouter,
         archetypeFinancialModel: ArchetypeFinancialModel,
         pricingEngine: PricingEngine,
-        taxComplianceTool: TaxComplianceTool
+        taxComplianceTool: TaxComplianceTool,
+        // Build council tools
+        fishTripPlanner: FishTripPlanner,
+        livestockManager: LivestockManager,
+        dailyEarningsTracker: DailyEarningsTracker,
+        vehicleMaintenanceTracker: VehicleMaintenanceTracker,
+        commissionTracker: CommissionTracker,
+        dailyWageTracker: DailyWageTracker,
+        floatManager: FloatManager,
+        appointmentManager: AppointmentManager,
+        serviceHistory: ServiceHistory,
+        fundiJobQuoter: FundiJobQuoter,
+        materialCostCalculator: MaterialCostCalculator,
+        customerRetention: CustomerRetention,
+        recipeCostCalculator: RecipeCostCalculator
     ): ToolRegistry {
         val registry = ToolRegistry(flywheelEngine)
         registry.register(transactionRecorder)
@@ -186,6 +213,20 @@ object AppModule {
         registry.register(archetypeFinancialModel)
         registry.register(pricingEngine)
         registry.register(taxComplianceTool)
+        // Build council tools
+        registry.register(fishTripPlanner)
+        registry.register(livestockManager)
+        registry.register(dailyEarningsTracker)
+        registry.register(vehicleMaintenanceTracker)
+        registry.register(commissionTracker)
+        registry.register(dailyWageTracker)
+        registry.register(floatManager)
+        registry.register(appointmentManager)
+        registry.register(serviceHistory)
+        registry.register(fundiJobQuoter)
+        registry.register(materialCostCalculator)
+        registry.register(customerRetention)
+        registry.register(recipeCostCalculator)
         return registry
     }
 }
