@@ -1,7 +1,7 @@
 package com.msaidizi.agent.harness
 
 import android.content.Context
-import com.msaidizi.agent.tools.ToolResult
+import com.msaidizi.agent.tools.core.ToolResult
 import com.msaidizi.voice.LlamaCppEngine
 import com.google.gson.Gson
 import dagger.hilt.android.qualifiers.ApplicationContext

@@ -1,7 +1,7 @@
 package com.msaidizi.agent.harness
 
-import com.msaidizi.agent.tools.ToolArgSchema
-import com.msaidizi.agent.tools.ToolRegistry
+import com.msaidizi.agent.tools.core.ToolArgSchema
+import com.msaidizi.agent.tools.core.ToolRegistry
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser

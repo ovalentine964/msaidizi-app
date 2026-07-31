@@ -8,7 +8,7 @@ import com.msaidizi.core.model.UserProfileEntity
 import com.msaidizi.agent.flywheel.FlywheelEngine
 import com.msaidizi.agent.harness.*
 import com.msaidizi.agent.memory.MemoryManager
-import com.msaidizi.agent.tools.AlamaScore
+import com.msaidizi.agent.tools.credit.AlamaScore
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first

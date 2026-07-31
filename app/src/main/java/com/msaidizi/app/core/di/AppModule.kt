@@ -1,7 +1,7 @@
 package com.msaidizi.app.core.di
 
 import com.msaidizi.agent.flywheel.FlywheelEngine
-import com.msaidizi.agent.tools.*
+import com.msaidizi.agent.tools.core.*
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

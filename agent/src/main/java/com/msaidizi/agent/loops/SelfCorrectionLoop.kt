@@ -1,7 +1,7 @@
 package com.msaidizi.agent.loops
 
-import com.msaidizi.agent.tools.ToolRegistry
-import com.msaidizi.agent.tools.ToolResult
+import com.msaidizi.agent.tools.core.ToolRegistry
+import com.msaidizi.agent.tools.core.ToolResult
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton

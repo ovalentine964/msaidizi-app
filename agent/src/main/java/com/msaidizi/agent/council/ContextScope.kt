@@ -4,7 +4,7 @@ import com.msaidizi.core.model.BusinessProfile
 import com.msaidizi.core.model.UserProfileEntity
 import com.msaidizi.agent.harness.AssembledContext
 import com.msaidizi.agent.harness.OodaPhase
-import com.msaidizi.agent.tools.AlamaScoreResult
+import com.msaidizi.agent.tools.credit.AlamaScoreResult
 import timber.log.Timber
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject

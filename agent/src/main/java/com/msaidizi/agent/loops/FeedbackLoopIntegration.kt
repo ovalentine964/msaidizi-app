@@ -6,7 +6,7 @@ import com.msaidizi.agent.harness.IntentType
 import com.msaidizi.agent.harness.IntentRouter
 import com.msaidizi.agent.harness.UserIntent
 import com.msaidizi.agent.memory.MemoryManager
-import com.msaidizi.agent.tools.ToolResult
+import com.msaidizi.agent.tools.core.ToolResult
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.first
 import timber.log.Timber

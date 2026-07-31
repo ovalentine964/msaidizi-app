@@ -2,8 +2,8 @@ package com.msaidizi.agent.council
 
 import com.msaidizi.agent.harness.IntentType
 import com.msaidizi.agent.harness.UserIntent
-import com.msaidizi.agent.tools.ToolRegistry
-import com.msaidizi.agent.tools.ToolResult
+import com.msaidizi.agent.tools.core.ToolRegistry
+import com.msaidizi.agent.tools.core.ToolResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber

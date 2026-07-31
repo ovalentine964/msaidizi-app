@@ -7,7 +7,7 @@ import com.msaidizi.agent.council.CouncilEvent
 import com.msaidizi.agent.council.CouncilEventBus
 import com.msaidizi.agent.council.CouncilEventType
 import com.msaidizi.agent.council.CouncilType
-import com.msaidizi.agent.tools.ToolRegistry
+import com.msaidizi.agent.tools.core.ToolRegistry
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow

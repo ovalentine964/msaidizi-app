@@ -5,7 +5,7 @@ import com.msaidizi.agent.harness.IntentType
 import com.msaidizi.agent.trace.IntentTier
 import com.msaidizi.agent.harness.UserIntent
 import com.msaidizi.agent.loops.OODAResult
-import com.msaidizi.agent.tools.ToolResult
+import com.msaidizi.agent.tools.core.ToolResult
 import com.msaidizi.core.database.TraceDao
 import com.msaidizi.core.model.TraceEntity
 import timber.log.Timber

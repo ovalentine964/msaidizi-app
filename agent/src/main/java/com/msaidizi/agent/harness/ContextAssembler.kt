@@ -10,7 +10,7 @@ import com.msaidizi.agent.flywheel.FlywheelEngine
 import com.msaidizi.agent.memory.LAYER_DAILY
 import com.msaidizi.agent.memory.LAYER_PATTERNS
 import com.msaidizi.agent.memory.MemoryManager
-import com.msaidizi.agent.tools.AlamaScore
+import com.msaidizi.agent.tools.credit.AlamaScore
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first

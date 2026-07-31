@@ -7,8 +7,8 @@ import com.msaidizi.agent.harness.AssembledContext
 import com.msaidizi.agent.harness.IntentType
 import com.msaidizi.agent.harness.LlmEngine
 import com.msaidizi.agent.harness.UserIntent
-import com.msaidizi.agent.tools.CFOEngine
-import com.msaidizi.agent.tools.ToolResult
+import com.msaidizi.agent.tools.financial.CFOEngine
+import com.msaidizi.agent.tools.core.ToolResult
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton

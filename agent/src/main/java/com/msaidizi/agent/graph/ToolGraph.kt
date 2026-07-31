@@ -1,8 +1,8 @@
 package com.msaidizi.agent.graph
 
-import com.msaidizi.agent.tools.Tool
-import com.msaidizi.agent.tools.ToolRegistry
-import com.msaidizi.agent.tools.ToolResult
+import com.msaidizi.agent.tools.core.Tool
+import com.msaidizi.agent.tools.core.ToolRegistry
+import com.msaidizi.agent.tools.core.ToolResult
 import kotlinx.coroutines.*
 import timber.log.Timber
 import java.util.concurrent.ConcurrentHashMap

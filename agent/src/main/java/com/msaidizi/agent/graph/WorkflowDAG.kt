@@ -3,7 +3,7 @@ package com.msaidizi.agent.graph
 import androidx.room.*
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.msaidizi.agent.tools.ToolResult
+import com.msaidizi.agent.tools.core.ToolResult
 import kotlinx.coroutines.*
 import timber.log.Timber
 import java.util.UUID

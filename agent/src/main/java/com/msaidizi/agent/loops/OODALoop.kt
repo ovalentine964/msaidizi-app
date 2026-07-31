@@ -4,8 +4,8 @@ import com.msaidizi.agent.flywheel.FlywheelEngine
 import com.msaidizi.agent.guardrails.GuardrailsEngine
 import com.msaidizi.agent.harness.*
 import com.msaidizi.agent.memory.MemoryManager
-import com.msaidizi.agent.tools.ToolRegistry
-import com.msaidizi.agent.tools.ToolResult
+import com.msaidizi.agent.tools.core.ToolRegistry
+import com.msaidizi.agent.tools.core.ToolResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber

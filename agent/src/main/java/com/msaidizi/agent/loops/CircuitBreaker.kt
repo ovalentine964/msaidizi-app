@@ -1,6 +1,6 @@
 package com.msaidizi.agent.loops
 
-import com.msaidizi.agent.tools.ToolResult
+import com.msaidizi.agent.tools.core.ToolResult
 import timber.log.Timber
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject

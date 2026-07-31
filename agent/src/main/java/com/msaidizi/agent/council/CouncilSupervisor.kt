@@ -3,7 +3,7 @@ package com.msaidizi.agent.council
 import com.msaidizi.agent.harness.AssembledContext
 import com.msaidizi.agent.harness.IntentType
 import com.msaidizi.agent.harness.UserIntent
-import com.msaidizi.agent.tools.ToolResult
+import com.msaidizi.agent.tools.core.ToolResult
 import timber.log.Timber
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject

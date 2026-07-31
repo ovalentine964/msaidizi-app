@@ -11,8 +11,8 @@ import com.msaidizi.agent.guardrails.SensitiveActionGuard
 import com.msaidizi.agent.guardrails.HumanApprovalInterceptor
 import com.msaidizi.agent.guardrails.InterceptionAction
 import com.msaidizi.agent.memory.MemoryManager
-import com.msaidizi.agent.tools.ToolRegistry
-import com.msaidizi.agent.tools.ToolResult
+import com.msaidizi.agent.tools.core.ToolRegistry
+import com.msaidizi.agent.tools.core.ToolResult
 import com.msaidizi.agent.flywheel.FlywheelEngine
 import com.msaidizi.agent.graph.GraphContextStats
 import com.msaidizi.agent.trace.TraceCollector

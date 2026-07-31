@@ -6,7 +6,7 @@ import com.msaidizi.core.database.KgFactEntity
 import com.msaidizi.core.util.DateTimeUtil
 import com.msaidizi.core.model.KnowledgeEntity
 import com.msaidizi.agent.harness.UserIntent
-import com.msaidizi.agent.tools.ToolResult
+import com.msaidizi.agent.tools.core.ToolResult
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.first
 import timber.log.Timber

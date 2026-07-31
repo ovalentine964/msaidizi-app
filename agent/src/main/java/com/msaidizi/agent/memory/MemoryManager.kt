@@ -3,14 +3,14 @@ package com.msaidizi.agent.memory
 import com.msaidizi.core.database.ConversationDao
 import com.msaidizi.core.database.KnowledgeDao
 import com.msaidizi.core.database.UserProfileDao
-import com.msaidizi.agent.tools.argSchema
+import com.msaidizi.agent.tools.core.argSchema
 import com.msaidizi.core.util.DateTimeUtil
 import com.msaidizi.core.model.ConversationEntity
 import com.msaidizi.core.model.KnowledgeEntity
 import com.msaidizi.agent.harness.IntentType
 import com.msaidizi.agent.harness.UserIntent
-import com.msaidizi.agent.tools.Tool
-import com.msaidizi.agent.tools.ToolResult
+import com.msaidizi.agent.tools.core.Tool
+import com.msaidizi.agent.tools.core.ToolResult
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
