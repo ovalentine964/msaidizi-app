@@ -76,10 +76,13 @@ Models downloaded:
 | Model | Size | Purpose |
 |-------|------|---------|
 | Qwen3.5 0.8B (GGUF Q4_K_M) | ~500MB | On-device LLM |
-| Whisper Tiny (ONNX) | ~40MB | Speech-to-text |
+| Whisper Tiny (ONNX) | ~40MB | Speech-to-text (offline fallback) |
+| Streaming Zipformer (ONNX) | ~45MB | Streaming STT (real-time partial transcription) |
 | Piper Swahili (ONNX) | ~15MB | Text-to-speech |
 
 Models are placed in `app/src/main/assets/models/` and bundled into the APK.
+
+**Note:** The `DeviceCapabilityDetector` automatically selects the optimal Whisper model variant (tiny/small/large-v3-turbo) based on device RAM, CPU cores, and SDK version.
 
 ### Step 3: Build
 
@@ -163,7 +166,8 @@ Product flavors are defined in `app/build.gradle.kts`:
 | Model | Size | Purpose |
 |-------|------|--------|
 | Qwen3.5 0.8B (Q4_K_M) | ~500MB | On-device LLM |
-| Whisper Tiny (ONNX) | ~40MB | Speech-to-text |
+| Whisper Tiny (ONNX) | ~40MB | Speech-to-text (offline fallback) |
+| Streaming Zipformer (ONNX) | ~45MB | Streaming STT (real-time) |
 | Piper Swahili (ONNX) | ~15MB | Text-to-speech |
 | Silero VAD (ONNX) | ~2MB | Voice activity detection |
 
@@ -295,7 +299,7 @@ The database is at version 14. If you see migration errors after pulling:
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
 | `build-apk.yml` | Push to main, `v*` tags, PRs | Matrix build (debug × cloud, debug × full, release × cloud, release × full), model caching, verification, GitHub Release |
-| `ci.yml` | PR, push to main | Lint, test, security, compile |
+| `ci.yml` | PR, push to main | Lint, test, security, compile, Firebase Distribution |
 
 ### Build Pipeline
 
@@ -313,6 +317,8 @@ The database is at version 14. If you see migration errors after pulling:
 3. **Security** — Dependency scan, secret detection, CodeQL
 4. **Compile Check** — Quick Kotlin compilation
 5. **Build with Models** — Full APK with native libs + AI models
+6. **Firebase Distribution** — Upload to internal-testers group on main branch push
+7. **OTA Model Check** — Validate model_versions.json integrity
 
 ### Model Cache
 
@@ -375,6 +381,21 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ---
 
+## Database Migrations
+
+The database is at **version 16** (upgraded from v15 in this release):
+- v16: Added `SyncQueueEntity` for persisted sync queue (survives app restarts)
+- New Room `@Index` annotations on anomaly_history, learned_vocabulary, business_patterns, hire_purchase_agreements, emergency_contacts, ride_users
+
+## OTA Model Updates
+
+Models can be updated without app updates via `scripts/model_versions.json`:
+- Device-tier-aware manifests (BUDGET/MID_RANGE/FLAGSHIP)
+- SHA-256 checksums for integrity verification
+- Version tracking per model
+
+---
+
 ## FAQ
 
 **Q: Can I build without Android Studio?**
@@ -391,3 +412,9 @@ A: Yes. Place any GGUF file in `app/src/main/assets/models/gguf/` and update `Mo
 
 **Q: Can I run on an x86 emulator?**
 A: Not currently. The app targets `arm64-v8a` and `armeabi-v7a` only. Use a physical ARM device or ARM emulator image.
+
+**Q: What is streaming STT?**
+A: Real-time speech-to-text that shows partial transcription as you speak (20ms audio chunks). Falls back to offline Whisper if streaming models aren't available.
+
+**Q: How does battery saver mode work?**
+A: `BatterySaverManager` has 3 modes: OFF (full performance), LITE (reduced LLM/TTS), FULL (minimal AI, sync paused). Automatically activates at low battery.
