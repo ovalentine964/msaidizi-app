@@ -7,6 +7,7 @@ import com.msaidizi.core.model.GoalEntity
 import com.msaidizi.core.model.GoalContributionEntity
 // Graph entities in core.database.GraphEntities
 // MpesaTransactionEntity in core.database.MpesaTransactionEntity
+// SyncQueueEntity in core.database.SyncQueueDao
 
 @Database(
     entities = [
@@ -61,9 +62,10 @@ import com.msaidizi.core.model.GoalContributionEntity
         HirePurchaseAgreementEntity::class,
         HirePaymentEntity::class,
         GoalEntity::class,
-        GoalContributionEntity::class
+        GoalContributionEntity::class,
+        SyncQueueEntity::class
     ],
-    version = 15,
+    version = 16,
     exportSchema = true
 )
 abstract class MsaidiziDatabase : RoomDatabase() {
@@ -120,4 +122,5 @@ abstract class MsaidiziDatabase : RoomDatabase() {
     abstract fun hirePaymentDao(): HirePaymentDao
     abstract fun goalDao(): GoalDao
     abstract fun goalContributionDao(): GoalContributionDao
+    abstract fun syncQueueDao(): SyncQueueDao
 }

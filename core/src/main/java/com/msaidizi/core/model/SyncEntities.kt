@@ -7,7 +7,13 @@ import androidx.room.PrimaryKey
 // Anomaly Detection History (persisted)
 // ──────────────────────────────────────────────
 
-@Entity(tableName = "anomaly_history")
+@Entity(
+    tableName = "anomaly_history",
+    indices = [
+        Index(value = ["timestamp"]),
+        Index(value = ["isAnomaly"])
+    ]
+)
 data class AnomalyHistoryEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val amount: Double,
@@ -22,7 +28,12 @@ data class AnomalyHistoryEntity(
 // Learned Vocabulary (persisted)
 // ──────────────────────────────────────────────
 
-@Entity(tableName = "learned_vocabulary")
+@Entity(
+    tableName = "learned_vocabulary",
+    indices = [
+        Index(value = ["language"])
+    ]
+)
 data class LearnedVocabularyEntity(
     @PrimaryKey val word: String,       // lowercase
     val language: String,               // sw, en, sheng, etc.
@@ -36,7 +47,14 @@ data class LearnedVocabularyEntity(
 // Business Patterns (persisted)
 // ──────────────────────────────────────────────
 
-@Entity(tableName = "business_patterns")
+@Entity(
+    tableName = "business_patterns",
+    indices = [
+        Index(value = ["patternType"]),
+        Index(value = ["category"]),
+        Index(value = ["patternType", "category"])
+    ]
+)
 data class BusinessPatternEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val patternType: String,            // "consistent_sales", "growing_sales", etc.

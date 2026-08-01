@@ -46,12 +46,16 @@
 #if __has_include("sherpa-onnx/c-api/c-api.h")
 #include "sherpa-onnx/c-api/c-api.h"
 #define HAVE_SHERPA 1
+#define HAVE_SHERPA_STREAMING 1
 #else
 #define HAVE_SHERPA 0
+#define HAVE_SHERPA_STREAMING 0
 // Stub types so the file compiles without the library
 typedef void SherpaOnnxOfflineRecognizer;
 typedef void SherpaOnnxOfflineTts;
 typedef void SherpaOnnxOfflineStream;
+typedef void SherpaOnnxOnlineRecognizer;
+typedef void SherpaOnnxOnlineStream;
 struct SherpaOnnxGeneratedAudio {
     const float* samples;
     int32_t n;
@@ -163,6 +167,42 @@ static jlong g_recog_next = 1;
 static std::mutex g_tts_mu;
 static std::unordered_map<jlong, std::unique_ptr<SynthesizerHandle>> g_synthesizers;
 static jlong g_tts_next = 1;
+
+// ── Streaming recognizer handles ────────────────────────────
+struct StreamingRecognizerHandle {
+#if HAVE_SHERPA_STREAMING
+    const SherpaOnnxOnlineRecognizer* recognizer = nullptr;
+    const SherpaOnnxOnlineStream* stream = nullptr;
+#endif
+    std::mutex mu;
+    bool valid = false;
+    ~StreamingRecognizerHandle() {
+#if HAVE_SHERPA_STREAMING
+        if (stream) SherpaOnnxDestroyOnlineStream(stream);
+        if (recognizer) SherpaOnnxDestroyOnlineRecognizer(recognizer);
+#endif
+    }
+};
+
+static std::mutex g_stream_mu;
+static std::unordered_map<jlong, std::unique_ptr<StreamingRecognizerHandle>> g_stream_recognizers;
+static jlong g_stream_next = 1;
+
+static jlong reg_stream(std::unique_ptr<StreamingRecognizerHandle> h) {
+    std::lock_guard<std::mutex> lock(g_stream_mu);
+    jlong id = g_stream_next++;
+    g_stream_recognizers[id] = std::move(h);
+    return id;
+}
+static StreamingRecognizerHandle* get_stream(jlong h) {
+    std::lock_guard<std::mutex> lock(g_stream_mu);
+    auto it = g_stream_recognizers.find(h);
+    return it != g_stream_recognizers.end() ? it->second.get() : nullptr;
+}
+static void del_stream(jlong h) {
+    std::lock_guard<std::mutex> lock(g_stream_mu);
+    g_stream_recognizers.erase(h);
+}
 
 static jlong reg_recog(std::unique_ptr<RecognizerHandle> h) {
     std::lock_guard<std::mutex> lock(g_recog_mu);
@@ -503,6 +543,259 @@ Java_com_msaidizi_voice_SherpaOnnxEngine_nativeDestroySynthesizer(
 }
 
 // ─────────────────────────────────────────────────────────────
+// ── STREAMING RECOGNIZER (Online ASR) JNI ──────────────────
+// ─────────────────────────────────────────────────────────────
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_msaidizi_voice_StreamingSttEngine_nativeCreateStreamingRecognizer(
+        JNIEnv* env, jobject /* thiz */,
+        jstring jConfigJson) {
+
+#if !HAVE_SHERPA_STREAMING
+    LOGW("sherpa-onnx streaming not compiled — returning stub");
+    auto sh = std::make_unique<StreamingRecognizerHandle>();
+    sh->valid = false;
+    return reg_stream(std::move(sh));
+#else
+    std::string cfg = jstr(env, jConfigJson);
+    LOGI("Creating streaming recogniser with config: %s", cfg.c_str());
+
+    const char* json = cfg.c_str();
+    auto sh = std::make_unique<StreamingRecognizerHandle>();
+
+    SherpaOnnxOnlineRecognizerConfig config;
+    memset(&config, 0, sizeof(config));
+
+    // Feature config
+    config.feat_config.sample_rate = json_int(json, "sample_rate", 16000);
+    config.feat_config.feature_dim = json_int(json, "feature_dim", 80);
+
+    // Model config — support transducer models (encoder/decoder/joiner)
+    std::string encoder  = json_str(json, "encoder");
+    std::string decoder  = json_str(json, "decoder");
+    std::string joiner   = json_str(json, "joiner");
+    std::string tokens   = json_str(json, "tokens");
+    std::string language = json_str(json, "language");
+    std::string model_type = json_str(json, "model_type");
+
+    // Transducer model (streaming uses encoder/decoder/joiner)
+    if (!encoder.empty()) config.model_config.transducer.encoder = encoder.c_str();
+    if (!decoder.empty()) config.model_config.transducer.decoder = decoder.c_str();
+    if (!joiner.empty())  config.model_config.transducer.joiner  = joiner.c_str();
+
+    // Paraformer streaming model
+    std::string paraformer_encoder = json_str(json, "paraformer_encoder");
+    std::string paraformer_decoder = json_str(json, "paraformer_decoder");
+    if (!paraformer_encoder.empty()) {
+        config.model_config.paraformer.encoder = paraformer_encoder.c_str();
+        config.model_config.paraformer.decoder = paraformer_decoder.c_str();
+    }
+
+    // Zipformer2 CTC streaming model
+    std::string zipformer2_ctc = json_str(json, "zipformer2_ctc");
+    if (!zipformer2_ctc.empty()) {
+        config.model_config.zipformer2_ctc.model = zipformer2_ctc.c_str();
+    }
+
+    // NeMo CTC streaming model
+    std::string nemo_ctc = json_str(json, "nemo_ctc");
+    if (!nemo_ctc.empty()) {
+        config.model_config.nemo_ctc.model = nemo_ctc.c_str();
+    }
+
+    if (!tokens.empty()) config.model_config.tokens = tokens.c_str();
+    config.model_config.num_threads = json_int(json, "num_threads", 2);
+    config.model_config.debug = json_int(json, "debug", 0);
+    if (!model_type.empty()) config.model_config.model_type = model_type.c_str();
+
+    // Decoding method (greedy_search recommended for streaming)
+    std::string decoding = json_str(json, "decoding_method");
+    config.decoding_method = decoding.empty() ? "greedy_search" : decoding.c_str();
+
+    // Enable endpoint detection (for automatic utterance segmentation)
+    config.enable_endpoint = 1;
+    config.rule1.min_trailing_silence = json_float(json, "rule1_min_trailing_silence", 2.4f);
+    config.rule2.min_trailing_silence = json_float(json, "rule2_min_trailing_silence", 1.2f);
+    config.rule3.min_utterance_length = json_float(json, "rule3_min_utterance_length", 20.0f);
+
+    // Hot words (optional)
+    config.hotwords_file = nullptr;
+    config.hotwords_score = json_float(json, "hotwords_score", 1.5f);
+
+    // Create recognizer
+    sh->recognizer = SherpaOnnxCreateOnlineRecognizer(&config);
+    if (!sh->recognizer) {
+        LOGE("Failed to create streaming recogniser");
+        throw_rte(env, "Failed to create sherpa-onnx streaming recogniser");
+        return 0;
+    }
+
+    // Create stream
+    sh->stream = SherpaOnnxCreateOnlineStream(sh->recognizer);
+    if (!sh->stream) {
+        LOGE("Failed to create online stream");
+        SherpaOnnxDestroyOnlineRecognizer(sh->recognizer);
+        throw_rte(env, "Failed to create online stream");
+        return 0;
+    }
+
+    sh->valid = true;
+    jlong handle = reg_stream(std::move(sh));
+    LOGI("Streaming recogniser created — handle=%lld", (long long)handle);
+    return handle;
+#endif
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_msaidizi_voice_StreamingSttEngine_nativeAcceptWaveform(
+        JNIEnv* env, jobject /* thiz */,
+        jlong handle, jfloatArray jAudioData, jint sampleRate) {
+
+#if !HAVE_SHERPA_STREAMING
+    return;
+#else
+    StreamingRecognizerHandle* sh = get_stream(handle);
+    if (!sh || !sh->valid) return;
+
+    std::lock_guard<std::mutex> lock(sh->mu);
+
+    jsize len = env->GetArrayLength(jAudioData);
+    jfloat* audio = env->GetFloatArrayElements(jAudioData, nullptr);
+    if (!audio) return;
+
+    SherpaOnnxOnlineStreamAcceptWaveform(sh->stream, sampleRate, audio, len);
+    env->ReleaseFloatArrayElements(jAudioData, audio, JNI_ABORT);
+#endif
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_msaidizi_voice_StreamingSttEngine_nativeAcceptWaveformPcm16(
+        JNIEnv* env, jobject /* thiz */,
+        jlong handle, jbyteArray jPcmData, jint sampleRate) {
+
+#if !HAVE_SHERPA_STREAMING
+    return;
+#else
+    StreamingRecognizerHandle* sh = get_stream(handle);
+    if (!sh || !sh->valid) return;
+
+    std::lock_guard<std::mutex> lock(sh->mu);
+
+    jsize len = env->GetArrayLength(jPcmData);
+    jbyte* pcm = env->GetByteArrayElements(jPcmData, nullptr);
+    if (!pcm) return;
+
+    // Convert PCM16 bytes to float samples
+    int nSamples = len / 2;
+    std::vector<float> floatSamples(nSamples);
+    const int16_t* pcm16 = reinterpret_cast<const int16_t*>(pcm);
+    for (int i = 0; i < nSamples; i++) {
+        floatSamples[i] = pcm16[i] / 32768.0f;
+    }
+
+    SherpaOnnxOnlineStreamAcceptWaveform(sh->stream, sampleRate,
+                                          floatSamples.data(), nSamples);
+    env->ReleaseByteArrayElements(jPcmData, pcm, JNI_ABORT);
+#endif
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_msaidizi_voice_StreamingSttEngine_nativeIsReady(
+        JNIEnv* /* env */, jobject /* thiz */,
+        jlong handle) {
+
+#if !HAVE_SHERPA_STREAMING
+    return JNI_FALSE;
+#else
+    StreamingRecognizerHandle* sh = get_stream(handle);
+    if (!sh || !sh->valid) return JNI_FALSE;
+    return SherpaOnnxIsOnlineStreamReady(sh->recognizer, sh->stream) ? JNI_TRUE : JNI_FALSE;
+#endif
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_msaidizi_voice_StreamingSttEngine_nativeDecode(
+        JNIEnv* /* env */, jobject /* thiz */,
+        jlong handle) {
+
+#if !HAVE_SHERPA_STREAMING
+    return;
+#else
+    StreamingRecognizerHandle* sh = get_stream(handle);
+    if (!sh || !sh->valid) return;
+
+    std::lock_guard<std::mutex> lock(sh->mu);
+    SherpaOnnxOnlineStreamDecode(sh->recognizer, sh->stream);
+#endif
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_msaidizi_voice_StreamingSttEngine_nativeGetResult(
+        JNIEnv* env, jobject /* thiz */,
+        jlong handle) {
+
+#if !HAVE_SHERPA_STREAMING
+    return env->NewStringUTF("");
+#else
+    StreamingRecognizerHandle* sh = get_stream(handle);
+    if (!sh || !sh->valid) return env->NewStringUTF("");
+
+    std::lock_guard<std::mutex> lock(sh->mu);
+    const SherpaOnnxOnlineRecognizerResult* result =
+        SherpaOnnxGetOnlineStreamResult(sh->recognizer, sh->stream);
+
+    std::string text;
+    if (result && result->text) {
+        text = result->text;
+    }
+    if (result) SherpaOnnxDestroyOnlineRecognizerResult(result);
+
+    return env->NewStringUTF(text.c_str());
+#endif
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_msaidizi_voice_StreamingSttEngine_nativeIsEndpoint(
+        JNIEnv* /* env */, jobject /* thiz */,
+        jlong handle) {
+
+#if !HAVE_SHERPA_STREAMING
+    return JNI_FALSE;
+#else
+    StreamingRecognizerHandle* sh = get_stream(handle);
+    if (!sh || !sh->valid) return JNI_FALSE;
+    return SherpaOnnxOnlineStreamIsEndpoint(sh->stream) ? JNI_TRUE : JNI_FALSE;
+#endif
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_msaidizi_voice_StreamingSttEngine_nativeReset(
+        JNIEnv* /* env */, jobject /* thiz */,
+        jlong handle) {
+
+#if !HAVE_SHERPA_STREAMING
+    return;
+#else
+    StreamingRecognizerHandle* sh = get_stream(handle);
+    if (!sh || !sh->valid) return;
+
+    std::lock_guard<std::mutex> lock(sh->mu);
+    SherpaOnnxOnlineStreamReset(sh->stream);
+#endif
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_msaidizi_voice_StreamingSttEngine_nativeDestroy(
+        JNIEnv* /* env */, jobject /* thiz */,
+        jlong handle) {
+    StreamingRecognizerHandle* sh = get_stream(handle);
+    if (sh) {
+        LOGI("Destroying streaming recogniser handle=%lld", (long long)handle);
+        del_stream(handle);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
 // JNI_OnLoad
 // ─────────────────────────────────────────────────────────────
 
@@ -511,6 +804,7 @@ extern "C" JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* /* reserved */) {
     if (vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK) {
         return JNI_ERR;
     }
-    LOGI("sherpa_jni loaded — HAVE_SHERPA=%d", HAVE_SHERPA);
+    LOGI("sherpa_jni loaded — HAVE_SHERPA=%d, HAVE_SHERPA_STREAMING=%d",
+         HAVE_SHERPA, HAVE_SHERPA_STREAMING);
     return JNI_VERSION_1_6;
 }

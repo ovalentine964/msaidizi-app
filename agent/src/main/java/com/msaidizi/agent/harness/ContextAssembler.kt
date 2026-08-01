@@ -79,8 +79,14 @@ class ContextAssembler @Inject constructor(
 
     // ── Token Budget Constants ──────────────────────────────────────
     companion object {
-        /** Default max context tokens (conservative for most LLMs) */
-        const val MAX_CONTEXT_TOKENS = 4000
+        /** Default max context tokens */
+        const val DEFAULT_CONTEXT_TOKENS = 4096
+
+        /** Extended context for advice/report intents */
+        const val ADVICE_CONTEXT_TOKENS = 8192
+
+        /** Max context for budget phone safety */
+        const val MAX_CONTEXT_TOKENS = 8192
     }
 
     /**
@@ -126,12 +132,29 @@ class ContextAssembler @Inject constructor(
      * Layers are populated in priority order; each layer is truncated
      * to fit the overall token budget, with recent context prioritized.
      */
+    /**
+     * Determine the appropriate token budget for the given intent.
+     * Advice and report intents get more context for richer analysis.
+     */
+    private fun tokenBudgetForIntent(intent: UserIntent): Int {
+        return when (intent.type) {
+            IntentType.ASK_ADVICE,
+            IntentType.DAILY_REPORT,
+            IntentType.WEEKLY_REPORT,
+            IntentType.MONTHLY_REPORT,
+            IntentType.ASK_PROFIT,
+            IntentType.VIEW_DASHBOARD -> ADVICE_CONTEXT_TOKENS
+            else -> DEFAULT_CONTEXT_TOKENS
+        }
+    }
+
     suspend fun assemble(
         intent: UserIntent,
         sessionId: String,
         recentConversation: Flow<List<ConversationEntity>>,
-        maxContextTokens: Int = MAX_CONTEXT_TOKENS
+        maxContextTokens: Int = 0  // 0 = auto-select based on intent
     ): AssembledContext {
+        val effectiveMaxTokens = if (maxContextTokens > 0) maxContextTokens else tokenBudgetForIntent(intent)
         // ── Layer 1: System Identity (static, cached) ───────────────
         val identity = buildOrGetIdentity()
 
@@ -159,7 +182,7 @@ class ContextAssembler @Inject constructor(
         // ── Token Budget Allocation ─────────────────────────────────
         // Allocate tokens per layer by priority. Higher-priority layers get
         // more budget; lower-priority layers get the remainder.
-        var remainingTokens = maxContextTokens
+        var remainingTokens = effectiveMaxTokens
 
         // L1: System identity — always include fully (small, rarely changes)
         val identityTexts = listOfNotNull(
@@ -200,7 +223,7 @@ class ContextAssembler @Inject constructor(
             estimateTokensList(truncatedConversation) + estimateTokensList(truncatedSummaries),
             estimateTokensList(truncatedKnowledge),
             estimateTokensList(truncatedPatterns),
-            maxContextTokens
+            effectiveMaxTokens
         ))
 
         return AssembledContext(

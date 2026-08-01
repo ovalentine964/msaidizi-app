@@ -167,12 +167,30 @@ fun VoiceInteractionScreen(
                         containerColor = colors.surfaceVariant
                     )
                 ) {
-                    Text(
-                        text = voiceState.partialText,
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(12.dp),
-                        color = colors.onSurfaceVariant
-                    )
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        if (voiceState.isStreaming) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Hearing,
+                                    contentDescription = "Streaming",
+                                    modifier = Modifier.size(14.dp),
+                                    tint = colors.success
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Nasikiliza live... — Listening live...",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = colors.success
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                        }
+                        Text(
+                            text = voiceState.partialText,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = colors.onSurfaceVariant
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
             }
@@ -474,6 +492,7 @@ private fun VoiceInputBar(
 
 private fun voiceStatusText(state: VoiceState): String {
     return when {
+        state.isListening && state.isStreaming -> "Nasikiliza live... — Listening live..."
         state.isListening -> "Nasikiliza... — Listening..."
         state.isProcessing -> "Nafikiri... — Processing..."
         state.isSpeaking -> "Nasema... — Speaking..."

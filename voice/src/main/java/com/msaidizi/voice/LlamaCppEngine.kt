@@ -76,6 +76,8 @@ class LlamaCppEngine @Inject constructor() {
 
     private var modelHandle: Long = 0L
     private var isLoaded = false
+    private var currentModelPath: String? = null
+    private var currentContextSize: Int = 2048
 
     /**
      * Check if the native library was loaded successfully.
@@ -97,9 +99,21 @@ class LlamaCppEngine @Inject constructor() {
     fun loadModel(modelPath: String): Boolean {
         return loadModel(
             path = modelPath,
-            nCtx = 2048,
+            nCtx = 4096,
             nThreads = Runtime.getRuntime().availableProcessors().coerceIn(2, 4)
         )
+    }
+
+    /**
+     * Reload the model with a different context size.\     * Unloads the current model and reloads with the new context.
+     * @param nCtx New context window size
+     * @return true if the model was reloaded successfully
+     */
+    fun reloadWithContextSize(nCtx: Int): Boolean {
+        val path = currentModelPath ?: return false
+        if (nCtx == currentContextSize && isLoaded) return true
+        unloadModel()
+        return loadModel(path, nCtx)
     }
 
     /**
@@ -121,7 +135,9 @@ class LlamaCppEngine @Inject constructor() {
             isLoaded = modelHandle != 0L
 
             if (isLoaded) {
-                Timber.i("Model loaded — handle=%d", modelHandle)
+                currentModelPath = path
+                currentContextSize = nCtx
+                Timber.i("Model loaded — handle=%d, ctx=%d", modelHandle, nCtx)
             } else {
                 Timber.e("Model load returned null handle")
             }

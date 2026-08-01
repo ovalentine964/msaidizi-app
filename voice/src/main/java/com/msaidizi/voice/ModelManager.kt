@@ -48,7 +48,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class ModelManager @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val deviceCapabilityDetector: DeviceCapabilityDetector
 ) {
     companion object {
         private const val MODELS_DIR = "models"
@@ -77,7 +78,13 @@ class ModelManager @Inject constructor(
             storagePath = ".",  // filesDir/models/Qwen3.5-0.8B-Q4_K_M.gguf
             requiredFiles = listOf("Qwen3.5-0.8B-Q4_K_M.gguf")
         ),
-        // STT — Whisper
+        // STT — Streaming (preferred)
+        AssetMapping(
+            assetPath = "onnx-streaming",
+            storagePath = "sherpa-onnx/streaming",
+            requiredFiles = listOf("tokens.txt")
+        ),
+        // STT — Whisper (offline fallback)
         AssetMapping(
             assetPath = "onnx-whisper",
             storagePath = "sherpa-onnx/whisper",
@@ -163,6 +170,35 @@ class ModelManager @Inject constructor(
     }
 
     /**
+     * P1: Get the optimal Whisper model directory based on device capability.
+     * Returns the best model variant for this device's hardware tier.
+     * Falls back to standard whisper dir if device-specific variant not found.
+     */
+    fun getOptimalWhisperModelDir(): String? {
+        val capabilities = deviceCapabilityDetector.detect()
+        val variantDir = File(modelsDir, "sherpa-onnx/${capabilities.recommendedWhisperModel}")
+        if (variantDir.exists() && hasRequiredOnnxFiles(variantDir)) {
+            Timber.d("Using device-optimal Whisper model: %s", capabilities.recommendedWhisperModel)
+            return variantDir.absolutePath
+        }
+        // Fallback to default whisper dir
+        return getWhisperModelDir()
+    }
+
+    /**
+     * Get the directory for streaming STT models.
+     * @return Directory path, or null if not available.
+     */
+    fun getStreamingModelDir(): String? {
+        val dir = File(modelsDir, "sherpa-onnx/streaming")
+        return if (dir.exists() && hasRequiredOnnxFiles(dir)) {
+            dir.absolutePath
+        } else {
+            null
+        }
+    }
+
+    /**
      * Get the directory for Piper TTS models for a given language.
      * @param language "sw" or "en"
      * @return Directory path, or null if not available.
@@ -181,12 +217,14 @@ class ModelManager @Inject constructor(
      */
     fun getModelStatus(): ModelStatus {
         val llmFile = File(modelsDir, "Qwen3.5-0.8B-Q4_K_M.gguf")
+        val streamingDir = File(modelsDir, "sherpa-onnx/streaming")
         val whisperDir = File(modelsDir, "sherpa-onnx/whisper")
         val piperSwDir = File(modelsDir, "sherpa-onnx/piper-sw")
         val piperEnDir = File(modelsDir, "sherpa-onnx/piper-en")
 
         return ModelStatus(
             llm = checkModelFile(llmFile, MIN_GGUF_SIZE),
+            sttStreaming = checkModelDir(streamingDir, listOf("tokens.txt")),
             sttWhisper = checkModelDir(whisperDir, listOf("tokens.txt")),
             ttsPiperSw = checkModelDir(piperSwDir, listOf("model.onnx")),
             ttsPiperEn = checkModelDir(piperEnDir, listOf("model.onnx")),
@@ -410,6 +448,7 @@ data class ModelFileInfo(
 
 data class ModelStatus(
     val llm: ModelFileInfo,
+    val sttStreaming: ModelFileInfo,
     val sttWhisper: ModelFileInfo,
     val ttsPiperSw: ModelFileInfo,
     val ttsPiperEn: ModelFileInfo,
@@ -417,17 +456,18 @@ data class ModelStatus(
     val modelsBaseDir: String
 ) {
     val allRequiredPresent: Boolean
-        get() = llm.isReady && sttWhisper.isReady
+        get() = llm.isReady && (sttStreaming.isReady || sttWhisper.isReady)
 
     val allPresent: Boolean
-        get() = llm.isReady && sttWhisper.isReady && ttsPiperSw.isReady
+        get() = llm.isReady && (sttStreaming.isReady || sttWhisper.isReady) && ttsPiperSw.isReady
 
     val totalSizeMb: Double
-        get() = (llm.sizeBytes + sttWhisper.sizeBytes + ttsPiperSw.sizeBytes + ttsPiperEn.sizeBytes) / (1024.0 * 1024.0)
+        get() = (llm.sizeBytes + sttStreaming.sizeBytes + sttWhisper.sizeBytes + ttsPiperSw.sizeBytes + ttsPiperEn.sizeBytes) / (1024.0 * 1024.0)
 
     fun toSummaryString(): String = buildString {
         appendLine("Model Status:")
         appendLine("  LLM (Qwen3.5 0.8B): ${llm.status} (${String.format("%.1f", llm.sizeMb)} MB)")
+        appendLine("  STT (Streaming):   ${sttStreaming.status} (${String.format("%.1f", sttStreaming.sizeMb)} MB)")
         appendLine("  STT (Whisper):     ${sttWhisper.status} (${String.format("%.1f", sttWhisper.sizeMb)} MB)")
         appendLine("  TTS (Piper SW):    ${ttsPiperSw.status} (${String.format("%.1f", ttsPiperSw.sizeMb)} MB)")
         appendLine("  TTS (Piper EN):    ${ttsPiperEn.status} (${String.format("%.1f", ttsPiperEn.sizeMb)} MB)")

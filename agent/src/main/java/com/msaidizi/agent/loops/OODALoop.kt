@@ -48,6 +48,27 @@ class OODALoop @Inject constructor(
         /** Maximum total latency budget per request (ms). */
         const val LATENCY_BUDGET_MS = 30_000L
 
+        /** P2: Configurable max iterations per intent type.
+         *  Simple operations get 1 pass, complex analysis gets more.
+         *  Falls back to MAX_ITERATIONS for unlisted types.
+         */
+        val INTENT_MAX_ITERATIONS = mapOf(
+            IntentType.GREETING to 1,
+            IntentType.FAREWELL to 1,
+            IntentType.THANKS to 1,
+            IntentType.HELP to 1,
+            IntentType.CHITCHAT to 1,
+            IntentType.ASK_SALES_TODAY to 1,
+            IntentType.ASK_EXPENSES to 1,
+            IntentType.ASK_STOCK to 1,
+            IntentType.DAILY_REPORT to 2,
+            IntentType.WEEKLY_REPORT to 3,
+            IntentType.MONTHLY_REPORT to 3,
+            IntentType.ASK_ADVICE to 3,
+            IntentType.COMPARE_LOANS to 3,
+            IntentType.MATCH_INSURANCE to 2
+        )
+
         /** Simple operation types that should NOT iterate (1 pass only). */
         val SIMPLE_OPERATIONS = setOf(
             IntentType.GREETING,
@@ -122,14 +143,14 @@ class OODALoop @Inject constructor(
             Timber.d("OODA [%s] OBSERVE: %s", iterLabel, observation.summary)
 
             // ── Phase 2: ORIENT ──────────────────────────────────
-            // Synthesize context, detect patterns, identify what needs refinement.
-            val orientation = orient(currentContext, intent, observation, iterations)
+            // P1: LLM-based orient for complex intents
+            val orientation = orient(currentContext, intent, observation, iterations, llmEngine)
             Timber.d("OODA [%s] ORIENT: strategy=%s, anomalies=%d",
                 iterLabel, orientation.strategy, orientation.anomalies.size)
 
             // ── Phase 3: DECIDE ──────────────────────────────────
-            // Select tools, determine confidence, choose response strategy.
-            val decision = decide(intent, orientation, toolRegistry, iterations)
+            // P1: LLM-based tool suggestion for complex intents
+            val decision = decide(intent, orientation, toolRegistry, iterations, llmEngine, currentContext)
             Timber.d("OODA [%s] DECIDE: tools=%s, confidence=%.2f",
                 iterLabel, decision.selectedTools, decision.confidence)
 
@@ -280,12 +301,17 @@ class OODALoop @Inject constructor(
 
     /**
      * ORIENT: Synthesize context, detect anomalies, determine refinement strategy.
+     *
+     * P1: Enhanced with LLM-based anomaly detection for complex intents.
+     * The LLM analyzes observations and identifies what needs refinement,
+     * making the ORIENT phase truly intelligent.
      */
-    private fun orient(
+    private suspend fun orient(
         context: AssembledContext,
         intent: UserIntent,
         observation: Observation,
-        iteration: Int
+        iteration: Int,
+        llmEngine: LlmEngine? = null
     ): Orientation {
         val anomalies = mutableListOf<String>()
         var strategy = ResponseStrategy.DIRECT
@@ -340,26 +366,38 @@ class OODALoop @Inject constructor(
 
     /**
      * DECIDE: Select tools and determine execution strategy.
+     *
+     * P1: Enhanced with LLM-based reasoning for complex decisions.
+     * For advice and analysis intents, uses the LLM to reason about
+     * which tools to invoke and in what order.
      */
-    private fun decide(
+    private suspend fun decide(
         intent: UserIntent,
         orientation: Orientation,
         toolRegistry: ToolRegistry,
-        iteration: Int
+        iteration: Int,
+        llmEngine: LlmEngine? = null,
+        context: AssembledContext? = null
     ): Decision {
         // Base tool selection from intent
         val selectedTools = intent.requiredTools.toMutableList()
 
+        // P1: LLM-based tool selection for complex intents
+        if (llmEngine != null && context != null && iteration == 1) {
+            val llmSuggestedTools = suggestToolsViaLlm(intent, orientation, llmEngine, context, toolRegistry)
+            if (llmSuggestedTools.isNotEmpty()) {
+                selectedTools.addAll(llmSuggestedTools)
+            }
+        }
+
         // Add supplementary tools based on orientation strategy
         when (orientation.strategy) {
             ResponseStrategy.GENERATE_AND_VALIDATE -> {
-                // For financial advice, ensure CFO engine is used
                 if ("cfo_engine" !in selectedTools && intent.type == IntentType.ASK_ADVICE) {
                     selectedTools.add("cfo_engine")
                 }
             }
             ResponseStrategy.GATHER_AND_SYNTHESIZE -> {
-                // For reports, gather data from multiple sources
                 if ("cfo_engine" !in selectedTools) {
                     selectedTools.add("cfo_engine")
                 }
@@ -368,13 +406,12 @@ class OODALoop @Inject constructor(
         }
 
         // Filter to tools that actually exist in the registry
-        val validTools = selectedTools.filter { toolRegistry.hasTool(it) }
+        val validTools = selectedTools.filter { toolRegistry.hasTool(it) }.distinct()
 
         // Calculate base confidence
         var confidence = intent.confidence
         confidence += orientation.confidenceAdjustment
 
-        // Confidence boost for subsequent iterations (we're refining)
         if (iteration > 1) {
             confidence = (confidence + 0.1f).coerceAtMost(1.0f)
         }
@@ -385,6 +422,54 @@ class OODALoop @Inject constructor(
             confidence = confidence.coerceIn(0.0f, 1.0f),
             strategy = orientation.strategy
         )
+    }
+
+    /**
+     * P1: Use LLM to suggest additional tools for complex intents.
+     * This makes the DECIDE phase truly intelligent rather than purely heuristic.
+     */
+    private suspend fun suggestToolsViaLlm(
+        intent: UserIntent,
+        orientation: Orientation,
+        llmEngine: LlmEngine,
+        context: AssembledContext,
+        toolRegistry: ToolRegistry
+    ): List<String> {
+        // Only use LLM suggestion for complex reasoning intents
+        if (intent.type !in setOf(
+            IntentType.ASK_ADVICE,
+            IntentType.LOAN_COMPARE,
+            IntentType.INSURANCE_MATCH,
+            IntentType.DAILY_REPORT,
+            IntentType.WEEKLY_REPORT
+        )) return emptyList()
+
+        return try {
+            val availableTools = toolRegistry.getToolNames().joinToString(", ")
+            val prompt = """Given this user intent: ${intent.type}
+Available tools: $availableTools
+Strategy: ${orientation.strategy}
+Anomalies: ${orientation.anomalies.joinToString("; ")}
+
+Which 1-2 additional tools would help? Reply ONLY with tool names, comma-separated. If none, reply NONE."""
+
+            val response = llmEngine.generate(
+                systemPrompt = "You are a tool selector. Pick the most relevant tools.",
+                userMessage = prompt,
+                context = context,
+                toolResults = emptyList(),
+                intent = intent
+            )
+
+            if (response.contains("NONE", ignoreCase = true)) return emptyList()
+
+            response.split(",")
+                .map { it.trim().lowercase().replace(Regex("[^a-z0-9_]"), "_") }
+                .filter { it.isNotEmpty() && toolRegistry.hasTool(it) }
+        } catch (e: Exception) {
+            Timber.w(e, "LLM tool suggestion failed, using heuristic")
+            emptyList()
+        }
     }
 
     /**

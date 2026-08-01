@@ -12,11 +12,33 @@ import timber.log.Timber
  * Interface that all tools must implement.
  * Each tool MUST declare an [argsSchema] so the LLM knows the exact
  * parameter names, types, and which are required.
+ *
+ * P2: Tools now support versioning and capability declaration for
+ * tool capability negotiation and compatibility checking.
  */
 interface Tool {
     val name: String
     val description: String
     val requiredPermissions: List<String> get() = emptyList()
+
+    /**
+     * P2: Tool version for capability negotiation.
+     * Format: "major.minor" (e.g., "1.0", "2.1").
+     * Defaults to "1.0" for backward compatibility.
+     */
+    val version: String get() = "1.0"
+
+    /**
+     * P2: Whether this tool performs read-only operations.
+     * Read-only tools can skip confirmation in auto mode.
+     */
+    val isReadOnly: Boolean get() = false
+
+    /**
+     * P2: Capability tags for tool discovery and matching.
+     * Example: ["finance", "mpesa", "offline"]
+     */
+    val capabilities: List<String> get() = emptyList()
 
     /**
      * JSON Schema for this tool's arguments.
@@ -181,5 +203,46 @@ class ToolRegistry(
         } catch (e: Exception) {
             null
         }
+    }
+
+    // ── P2: Tool versioning and capability negotiation ──
+
+    /**
+     * Get the version of a specific tool.
+     * Returns null if the tool doesn't exist.
+     */
+    fun getToolVersion(toolName: String): String? {
+        return tools[toolName]?.version
+    }
+
+    /**
+     * Find tools by capability tag.
+     * Example: findByCapability("finance") returns all finance-related tools.
+     */
+    fun findByCapability(capability: String): List<Tool> {
+        return tools.values.filter { tool ->
+            tool.capabilities.any { it.equals(capability, ignoreCase = true) }
+        }
+    }
+
+    /**
+     * Get all read-only tools (can skip confirmation in auto mode).
+     */
+    fun getReadOnlyTools(): List<Tool> {
+        return tools.values.filter { it.isReadOnly }
+    }
+
+    /**
+     * Get tool metadata including version and capabilities.
+     */
+    fun getToolMetadata(toolName: String): Map<String, Any>? {
+        val tool = tools[toolName] ?: return null
+        return mapOf(
+            "name" to tool.name,
+            "version" to tool.version,
+            "isReadOnly" to tool.isReadOnly,
+            "capabilities" to tool.capabilities,
+            "paramCount" to tool.argsSchema.getProperties().size
+        )
     }
 }

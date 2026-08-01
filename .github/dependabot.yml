@@ -1,0 +1,66 @@
+# Dependabot configuration for automated dependency updates.
+# P1: M12 — Keeps dependencies up-to-date for security and compatibility.
+#
+# Configuration:
+# - Gradle dependencies: weekly checks
+# - GitHub Actions: weekly checks
+# - Grouped updates for less noise
+# - Auto-merge for minor/patch updates (via GitHub rules)
+
+version: 2
+
+updates:
+  # ── Gradle (Android/Kotlin) dependencies ──
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Africa/Nairobi"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "msaidizi-team"
+    labels:
+      - "dependencies"
+      - "gradle"
+    groups:
+      # Group Compose updates together
+      compose:
+        patterns:
+          - "androidx.compose*"
+          - "androidx.compose.*"
+      # Group Hilt updates
+      hilt:
+        patterns:
+          - "com.google.dagger*"
+      # Group Room updates
+      room:
+        patterns:
+          - "androidx.room*"
+      # Group Firebase updates
+      firebase:
+        patterns:
+          - "com.google.firebase*"
+      # Group Kotlin updates
+      kotlin:
+        patterns:
+          - "org.jetbrains.kotlin*"
+          - "org.jetbrains.kotlinx*"
+
+  # ── GitHub Actions ──
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Africa/Nairobi"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+    groups:
+      actions:
+        patterns:
+          - "*"

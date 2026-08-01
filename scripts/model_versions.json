@@ -1,0 +1,59 @@
+{
+  "version": "1.0.0",
+  "updated_at": "2026-08-01T00:00:00Z",
+  "models": {
+    "llm": {
+      "name": "Qwen3.5-0.8B-Q4_K_M.gguf",
+      "version": "3.5-0.8B-v1",
+      "size_bytes": 524288000,
+      "checksum_sha256": "placeholder_hash_will_be_replaced",
+      "download_url": "https://models.msaidizi.app/llm/Qwen3.5-0.8B-Q4_K_M.gguf",
+      "min_app_version": "0.1.0",
+      "required": true
+    },
+    "stt_streaming": {
+      "name": "streaming-stt",
+      "version": "moonshine-v2-v1",
+      "size_bytes": 41943040,
+      "checksum_sha256": "placeholder_hash_will_be_replaced",
+      "download_url": "https://models.msaidizi.app/stt/streaming/",
+      "min_app_version": "0.2.0",
+      "required": false
+    },
+    "stt_whisper": {
+      "name": "whisper-tiny",
+      "version": "tiny-v3-v1",
+      "size_bytes": 41943040,
+      "checksum_sha256": "placeholder_hash_will_be_replaced",
+      "download_url": "https://models.msaidizi.app/stt/whisper-tiny/",
+      "min_app_version": "0.1.0",
+      "required": true
+    },
+    "tts_piper_sw": {
+      "name": "piper-sw",
+      "version": "sw-v1",
+      "size_bytes": 15728640,
+      "checksum_sha256": "placeholder_hash_will_be_replaced",
+      "download_url": "https://models.msaidizi.app/tts/piper-sw/",
+      "min_app_version": "0.1.0",
+      "required": false
+    }
+  },
+  "device_tiers": {
+    "budget": {
+      "max_model_size_bytes": 104857600,
+      "recommended_llm": "Qwen3-0.6B-Q4_K_M.gguf",
+      "recommended_stt": "whisper-tiny"
+    },
+    "mid_range": {
+      "max_model_size_bytes": 629145600,
+      "recommended_llm": "Qwen3.5-0.8B-Q4_K_M.gguf",
+      "recommended_stt": "whisper-small"
+    },
+    "flagship": {
+      "max_model_size_bytes": 1073741824,
+      "recommended_llm": "Qwen3.5-0.8B-Q4_K_M.gguf",
+      "recommended_stt": "whisper-large-v3-turbo"
+    }
+  }
+}

@@ -1,7 +1,10 @@
 package com.msaidizi.agent.loops
 
+import com.msaidizi.core.database.KnowledgeDao
 import com.msaidizi.agent.tools.core.ToolRegistry
 import com.msaidizi.agent.tools.core.ToolResult
+import com.google.gson.Gson
+import kotlinx.coroutines.flow.first
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -24,7 +27,10 @@ import javax.inject.Singleton
  * Reference: loop_engineering_report.md §3.1 (Reflexion), §4.2 (Circuit Breaker)
  */
 @Singleton
-class SelfCorrectionLoop @Inject constructor() {
+class SelfCorrectionLoop @Inject constructor(
+    private val knowledgeDao: KnowledgeDao,
+    private val gson: Gson
+) {
 
     companion object {
         /** Maximum retry attempts per tool call. */
@@ -113,9 +119,15 @@ class SelfCorrectionLoop @Inject constructor() {
     /**
      * Analyze failure and adjust parameters for retry.
      *
+     * P1: Memory-augmented Reflexion — when a failure pattern matches a stored
+     * reflection, inject that reflection into the retry context.
+     * "Last time this tool failed with VALIDATION_ERROR, the fix was to
+     *  normalize the amount format."
+     *
      * Returns adjusted params, or null to retry with same params.
      */
-    private fun adjustParamsForRetry(
+    @Suppress("RedundantSuspendModifier")
+    private suspend fun adjustParamsForRetry(
         toolName: String,
         params: Map<String, String>,
         failedResult: ToolResult,
@@ -123,32 +135,127 @@ class SelfCorrectionLoop @Inject constructor() {
     ): Map<String, String>? {
         val errorCode = failedResult.errorCode ?: return null
 
+        // Check for stored reflections that match this failure pattern
+        val storedReflection = findStoredReflection(toolName, errorCode)
+        if (storedReflection != null) {
+            Timber.d("SelfCorrection [%s]: Found stored reflection for %s: %s",
+                toolName, errorCode, storedReflection.suggestion)
+            // Apply the stored fix suggestion
+            val reflected = applyReflection(params, storedReflection)
+            if (reflected != null) return reflected
+        }
+
         return when (errorCode) {
             "VALIDATION_ERROR" -> {
-                // Parameter validation failed — try fixing obvious issues
                 fixValidationErrors(params, failedResult.message)
             }
             "MISSING_AMOUNT" -> {
-                // Amount parsing failed — try different format
                 params.toMutableMap().apply {
                     val amount = this["amount"]
                     if (amount != null) {
-                        // Try removing commas, currency symbols
                         this["amount"] = amount
                             .replace(",", "")
                             .replace(Regex("[^\\d.]"), "")
                     }
                 }
             }
-            "DB_ERROR" -> {
-                // Database error — retry with same params (transient)
-                null
+            "DB_ERROR" -> null
+            "NO_WIFI", "LOW_BATTERY" -> null
+            else -> null
+        }
+    }
+
+    /**
+     * P1: Find a stored reflection matching this tool + error code pattern.
+     * Reflections are learned from past failures and stored in the knowledge base.
+     */
+    private suspend fun findStoredReflection(
+        toolName: String,
+        errorCode: String
+    ): StoredReflection? {
+        return try {
+            val key = "reflection_${toolName}_${errorCode.lowercase()}"
+            val entry = knowledgeDao.getEntry("reflections", key) ?: return null
+            val data = gson.fromJson(entry.value, Map::class.java) as? Map<*, *> ?: return null
+            StoredReflection(
+                toolName = toolName,
+                errorCode = errorCode,
+                suggestion = data["suggestion"]?.toString() ?: return null,
+                paramAdjustments = (data["paramAdjustments"] as? Map<*, *>)?.mapKeys { it.key.toString() }
+                    ?.mapValues { it.value.toString() } ?: emptyMap(),
+                successCount = (data["successCount"] as? Number)?.toInt() ?: 0,
+                confidence = entry.confidence
+            )
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Apply a stored reflection's parameter adjustments.
+     */
+    private fun applyReflection(
+        params: Map<String, String>,
+        reflection: StoredReflection
+    ): Map<String, String>? {
+        if (reflection.paramAdjustments.isEmpty()) return null
+        if (reflection.confidence < 0.5f) return null // Don't apply low-confidence reflections
+
+        val adjusted = params.toMutableMap()
+        for ((key, value) in reflection.paramAdjustments) {
+            adjusted[key] = value
+        }
+        return adjusted
+    }
+
+    /**
+     * P1: Store a reflection after a successful retry.
+     * This enables the Reflexion pattern — learning from past failures.
+     */
+    suspend fun storeReflection(
+        toolName: String,
+        errorCode: String,
+        suggestion: String,
+        paramAdjustments: Map<String, String>
+    ) {
+        try {
+            val key = "reflection_${toolName}_${errorCode.lowercase()}"
+            val existing = knowledgeDao.getEntry("reflections", key)
+
+            if (existing != null) {
+                // Update existing reflection with higher confidence
+                val data = gson.fromJson(existing.value, Map::class.java) as? Map<*, *> ?: emptyMap<Any, Any>()
+                val currentSuccessCount = (data["successCount"] as? Number)?.toInt() ?: 0
+                knowledgeDao.update(existing.copy(
+                    value = gson.toJson(mapOf(
+                        "suggestion" to suggestion,
+                        "paramAdjustments" to paramAdjustments,
+                        "successCount" to currentSuccessCount + 1,
+                        "lastUsed" to System.currentTimeMillis()
+                    )),
+                    confidence = (existing.confidence + 0.1f).coerceAtMost(1.0f),
+                    usageCount = existing.usageCount + 1,
+                    updatedAt = System.currentTimeMillis()
+                ))
+            } else {
+                knowledgeDao.insert(
+                    com.msaidizi.core.model.KnowledgeEntity(
+                        category = "reflections",
+                        key = key,
+                        value = gson.toJson(mapOf(
+                            "suggestion" to suggestion,
+                            "paramAdjustments" to paramAdjustments,
+                            "successCount" to 1,
+                            "lastUsed" to System.currentTimeMillis()
+                        )),
+                        confidence = 0.6f,
+                        usageCount = 1
+                    )
+                )
             }
-            "NO_WIFI", "LOW_BATTERY" -> {
-                // External condition — no point retrying immediately
-                null
-            }
-            else -> null // Retry with same params
+            Timber.d("SelfCorrection: Stored reflection for %s/%s", toolName, errorCode)
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to store reflection")
         }
     }
 
@@ -313,4 +420,18 @@ data class FailureStats(
     val totalFailures: Int,
     val recentFailures: Int,
     val topErrorCodes: Map<String, Int>
+)
+
+/**
+ * P1: Stored reflection from past failures (Reflexion pattern).
+ * When a tool fails, we check if we've seen this exact failure before
+ * and apply the learned fix.
+ */
+data class StoredReflection(
+    val toolName: String,
+    val errorCode: String,
+    val suggestion: String,
+    val paramAdjustments: Map<String, String>,
+    val successCount: Int,
+    val confidence: Float
 )

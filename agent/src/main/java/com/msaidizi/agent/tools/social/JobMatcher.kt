@@ -287,17 +287,27 @@ class JobMatcher @Inject constructor(
     // SEARCH WORKERS — Customer finds available workers
     // ──────────────────────────────────────────────
 
+    /**
+     * P1: Weighted two-sided matching for workers.
+     *
+     * Scoring weights (from M10 research):
+     *   skill_match × 0.30 + proximity × 0.25 + rating × 0.20 +
+     *   availability × 0.15 + price_fit × 0.10
+     *
+     * This produces much better matches than simple SQL queries.
+     */
     private fun searchWorkers(params: Map<String, String>): ToolResult {
         val skill = params["skill"]
             ?: return ToolResult.error(name, "Skill required. Try: skill=fundi_tiles", "MISSING_SKILL")
         val location = params["location"]
+        val priceRange = params["price_range"]
         val limit = params["limit"]?.toIntOrNull() ?: 10
 
         val db = dbHelper.readableDatabase
         try {
-            val results = queryWorkers(db, skill, location, limit)
+            val candidates = queryWorkers(db, skill, location, limit * 3) // Get more candidates for scoring
 
-            if (results.isEmpty()) {
+            if (candidates.isEmpty()) {
                 return ToolResult.success(
                     name,
                     message = "🔍 Hakuna ${skillToSwahili(skill)} waliopatikana${if (location != null) " hapa $location" else ""}.\n\n" +
@@ -305,12 +315,20 @@ class JobMatcher @Inject constructor(
                 )
             }
 
+            // P1: Score and rank candidates using weighted matching
+            val scoredCandidates = candidates.map { worker ->
+                val score = calculateMatchScore(worker, skill, location, priceRange)
+                worker to score
+            }
+                .sortedByDescending { it.second }
+                .take(limit)
+
             val output = buildString {
                 appendLine("🔍 *${skillToSwahili(skill)} Waliopatikana${if (location != null) " — $location" else ""}*")
                 appendLine("━━━━━━━━━━━━━━━━━━━━━━")
                 appendLine()
 
-                results.forEachIndexed { i, worker ->
+                scoredCandidates.forEachIndexed { i, (worker, score) ->
                     val rating = (worker["avg_rating"] as? Number)?.toDouble() ?: 0.0
                     val completedJobs = (worker["completed_jobs"] as? Number)?.toInt() ?: 0
                     val price = worker["price_range"]?.toString()
@@ -319,8 +337,9 @@ class JobMatcher @Inject constructor(
 
                     val ratingStars = if (rating > 0) "⭐ ${"%.1f".format(rating)}/5" else "⭐ Bado haijaratediwa"
                     val availEmoji = if (isAvailable) "🟢" else "🔴"
+                    val matchPct = (score * 100).toInt()
 
-                    appendLine("${i + 1}. $availEmoji *${worker["worker_id"]}*")
+                    appendLine("${i + 1}. $availEmoji *${worker["worker_id"]}* (Match: $matchPct%)")
                     appendLine("   $ratingStars ($completedJobs kazi zilizokamilika)")
                     appendLine("   📍 ${worker["location_area"]}")
                     if (price != null) appendLine("   💰 KES $price")
@@ -332,10 +351,102 @@ class JobMatcher @Inject constructor(
                 appendLine("💡 Usikubali kulipa kabla ya kazi kuanza!")
             }
 
-            return ToolResult.success(name, data = results, message = output.trim())
+            return ToolResult.success(name, data = scoredCandidates.map { it.first }, message = output.trim())
         } catch (e: Exception) {
             Timber.e(e, "Search workers failed")
             return ToolResult.error(name, "Failed: ${e.message}", "DB_ERROR")
+        }
+    }
+
+    /**
+     * P1: Calculate weighted match score between a worker and job requirements.
+     *
+     * Weights:
+     *   skill_match:   0.30 — exact skill match is critical
+     *   proximity:     0.25 — closer workers get higher scores
+     *   rating:        0.20 — higher-rated workers preferred
+     *   availability:  0.15 — available workers score higher
+     *   price_fit:     0.10 — price within budget range
+     */
+    private fun calculateMatchScore(
+        worker: Map<String, Any?>,
+        requiredSkill: String,
+        targetLocation: String?,
+        priceRange: String?
+    ): Float {
+        var score = 0f
+
+        // Skill match (0.30)
+        val workerSkill = worker["skills"]?.toString()?.lowercase() ?: ""
+        val skillMatch = when {
+            workerSkill == requiredSkill.lowercase() -> 1.0f
+            workerSkill.contains(requiredSkill.lowercase()) -> 0.8f
+            requiredSkill.lowercase().contains(workerSkill) -> 0.6f
+            else -> 0.0f
+        }
+        score += skillMatch * 0.30f
+
+        // Proximity (0.25) — exact location match vs fuzzy
+        val workerLocation = worker["location_area"]?.toString()?.lowercase() ?: ""
+        val proximityScore = when {
+            targetLocation == null -> 0.5f // No preference
+            workerLocation == targetLocation.lowercase() -> 1.0f
+            workerLocation.contains(targetLocation.lowercase()) ||
+                targetLocation.lowercase().contains(workerLocation) -> 0.7f
+            else -> 0.2f // Different area
+        }
+        score += proximityScore * 0.25f
+
+        // Rating (0.20)
+        val rating = (worker["avg_rating"] as? Number)?.toDouble() ?: 0.0
+        val completedJobs = (worker["completed_jobs"] as? Number)?.toInt() ?: 0
+        val ratingScore = when {
+            rating >= 4.5 -> 1.0f
+            rating >= 4.0 -> 0.8f
+            rating >= 3.0 -> 0.6f
+            rating > 0 -> 0.4f
+            completedJobs > 0 -> 0.3f // Has done jobs but no rating
+            else -> 0.2f // New worker
+        }
+        score += ratingScore * 0.20f
+
+        // Availability (0.15)
+        val isAvailable = (worker["is_available"] as? Number)?.toInt() == 1
+        score += (if (isAvailable) 1.0f else 0.0f) * 0.15f
+
+        // Price fit (0.10)
+        if (priceRange != null) {
+            val workerPrice = worker["price_range"]?.toString()
+            if (workerPrice != null) {
+                val priceFit = calculatePriceFit(workerPrice, priceRange)
+                score += priceFit * 0.10f
+            } else {
+                score += 0.5f * 0.10f // Unknown price — neutral
+            }
+        } else {
+            score += 0.5f * 0.10f // No price preference — neutral
+        }
+
+        return score.coerceIn(0f, 1f)
+    }
+
+    /**
+     * Calculate how well a worker's price fits the customer's budget.
+     */
+    private fun calculatePriceFit(workerPrice: String, customerBudget: String): Float {
+        return try {
+            val workerLow = workerPrice.split("-").firstOrNull()?.replace(Regex("[^0-9]"), "")?.toDoubleOrNull() ?: return 0.5f
+            val budgetHigh = customerBudget.split("-").lastOrNull()?.replace(Regex("[^0-9]"), "")?.toDoubleOrNull()
+                ?: customerBudget.replace(Regex("[^0-9]"), "").toDoubleOrNull()
+                ?: return 0.5f
+
+            when {
+                workerLow <= budgetHigh -> 1.0f // Within budget
+                workerLow <= budgetHigh * 1.2 -> 0.6f // Slightly over
+                else -> 0.2f // Way over budget
+            }
+        } catch (e: Exception) {
+            0.5f // Can't parse — neutral
         }
     }
 

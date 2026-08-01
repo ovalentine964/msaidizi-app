@@ -1,5 +1,8 @@
 package com.msaidizi.agent.council
 
+import com.msaidizi.core.database.KgFactDao
+import com.msaidizi.core.database.KgFactEntity
+import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -33,7 +36,10 @@ import javax.inject.Singleton
  * @see CouncilEventType for the full event taxonomy
  */
 @Singleton
-class CouncilEventBus @Inject constructor() {
+class CouncilEventBus @Inject constructor(
+    private val kgFactDao: KgFactDao,
+    private val gson: Gson
+) {
 
     /**
      * Internal coroutine scope for event dispatch.
@@ -71,13 +77,70 @@ class CouncilEventBus @Inject constructor() {
      * Broadcast an event to all subscribers.
      * Non-blocking: emits to SharedFlow buffer. If buffer is full,
      * oldest event is dropped (conflation behavior).
+     *
+     * P1: Event sourcing — all events are persisted to SQLite for
+     * audit trail, replay, and debugging.
      */
     fun publish(event: CouncilEvent) {
         val emitted = _events.tryEmit(event)
         if (!emitted) {
             Timber.w("EventBus buffer full, dropping event: ${event.type}")
         }
+        // P1: Persist event for audit/replay (async, non-blocking)
+        scope.launch { persistEvent(event) }
         Timber.d("Event published: ${event.type} from=${event.sourceCouncil}")
+    }
+
+    /**
+     * P1: Persist an event to the knowledge graph for audit trail.
+     * Events are stored as facts with category "council_events".
+     */
+    private suspend fun persistEvent(event: CouncilEvent) {
+        try {
+            kgFactDao.upsert(KgFactEntity(
+                subject = "event:${event.type.name}",
+                predicate = event.sourceCouncil.name,
+                obj = gson.toJson(event.payload),
+                confidence = 1.0f,
+                source = "council_event_bus"
+            ))
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to persist council event: ${event.type}")
+        }
+    }
+
+    /**
+     * P1: Replay events from the audit log for debugging.
+     * Returns events filtered by type and time range.
+     */
+    suspend fun replayEvents(
+        eventType: CouncilEventType? = null,
+        sinceTimestamp: Long = 0L
+    ): List<CouncilEvent> {
+        return try {
+            val facts = if (eventType != null) {
+                kgFactDao.getBySubject("event:${eventType.name}")
+            } else {
+                kgFactDao.getBySubjectPrefix("event:")
+            }
+            facts.filter { it.updatedAt >= sinceTimestamp }
+                .mapNotNull { fact ->
+                    try {
+                        val payload = gson.fromJson(fact.obj, Map::class.java) as? Map<String, Any> ?: emptyMap()
+                        CouncilEvent(
+                            type = CouncilEventType.valueOf(fact.subject.removePrefix("event:")),
+                            sourceCouncil = CouncilType.valueOf(fact.predicate),
+                            payload = payload.mapValues { it.value.toString() },
+                            timestamp = fact.updatedAt
+                        )
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to replay council events")
+            emptyList()
+        }
     }
 
     /**

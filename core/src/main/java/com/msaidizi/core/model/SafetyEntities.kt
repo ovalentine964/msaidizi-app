@@ -6,7 +6,12 @@ import androidx.room.*
 // Emergency Contact Entity
 // ──────────────────────────────────────────────
 
-@Entity(tableName = "emergency_contacts")
+@Entity(
+    tableName = "emergency_contacts",
+    indices = [
+        Index(value = ["isActive"])
+    ]
+)
 data class EmergencyContactEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,

@@ -15,7 +15,13 @@ fun nowIso(): String =
  * A registered ride-share user — either a rider (boda boda) or passenger.
  * Trust score builds over time through completed trips and ratings.
  */
-@Entity(tableName = "ride_users")
+@Entity(
+    tableName = "ride_users",
+    indices = [
+        Index(value = ["userType"]),
+        Index(value = ["stageName"])
+    ]
+)
 data class RideUserEntity(
     @PrimaryKey val userId: String,          // phone or device ID
     val userType: String,                     // "rider" | "passenger"

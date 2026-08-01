@@ -362,3 +362,61 @@ jobs:
           name: msaidizi-full-debug
           path: app/build/outputs/apk/full/debug/*.apk
           retention-days: 7
+
+  # ──────────────────────────────────────────────────────────
+  # 6. Firebase App Distribution (beta testing)
+  # ──────────────────────────────────────────────────────────
+  firebase-distribute:
+    name: Firebase Distribution
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: build-with-models
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download cloud APK
+        uses: actions/download-artifact@v4
+        with:
+          name: msaidizi-cloud-debug
+          path: ./artifacts
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Upload to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: ${{ secrets.FIREBASE_APP_ID }}
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          groups: internal-testers
+          file: ./artifacts/*.apk
+          releaseNotes: |
+            Build: ${{ github.sha }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.event.head_commit.message }}
+
+  # ──────────────────────────────────────────────────────────
+  # 7. OTA Model Update Check
+  # ──────────────────────────────────────────────────────────
+  ota-model-check:
+    name: OTA Model Update
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check model versions
+        run: |
+          echo "Checking for model updates..."
+          echo "Current model versions:"
+          cat scripts/model_versions.json 2>/dev/null || echo "No model_versions.json found"
+          echo ""
+          echo "Model update manifest would be generated here."
+          echo "In production, this triggers WorkManager download on client devices."

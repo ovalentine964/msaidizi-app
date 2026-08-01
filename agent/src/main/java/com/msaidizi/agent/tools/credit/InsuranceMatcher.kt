@@ -363,6 +363,69 @@ class InsuranceMatcher @Inject constructor(
             descriptionSw = "Linda mazao yako dhidi ya ukame na mafuriko."
         ),
 
+        // ── Livestock Insurance (P1: M9 agriculture integration) ──
+        InsuranceProduct(
+            id = "britam_livestock",
+            provider = "Britam",
+            name = "Mifugo Insurance Cover",
+            type = InsuranceType.CROP,
+            targetBusinessTypes = listOf("farmer", "mfugaji", "livestock_keeper"),
+            premiumDaily = 20.0,
+            premiumMonthly = 600.0,
+            maxCoverage = 50_000.0,
+            deductible = 2_000.0,
+            whatIsCovered = listOf(
+                "Animal death from disease",
+                "Animal death from accident",
+                "Theft of livestock",
+                "Veterinary emergency costs"
+            ),
+            exclusions = listOf(
+                "Pre-existing conditions",
+                "Negligence",
+                "Animals over 8 years old"
+            ),
+            waitingPeriodDays = 14,
+            claimSettlementDays = 14,
+            claimPaidRate = 0.80,
+            enrollmentMethod = "agent",
+            enrollmentCode = "Piga simu 0700BRITAM or tembelea agent wa Britam",
+            swahiliName = "Bima ya Mifugo",
+            description = "Protect your livestock from disease, accident, and theft.",
+            descriptionSw = "Linda mifugo yako dhidi ya magonjwa, ajali, na wizi."
+        ),
+
+        // ── Weather Index Insurance (P1: M9) ──
+        InsuranceProduct(
+            id = "aice_weather_index",
+            provider = "AICE Africa",
+            name = "Weather Index Insurance",
+            type = InsuranceType.CROP,
+            targetBusinessTypes = listOf("farmer", "mkulima"),
+            premiumDaily = 5.0,
+            premiumMonthly = 150.0,
+            maxCoverage = 15_000.0,
+            deductible = 0.0,
+            whatIsCovered = listOf(
+                "Drought — automatic payout when rainfall below threshold",
+                "Excess rainfall — automatic payout when flooding occurs",
+                "No paperwork needed — satellite data triggers payout"
+            ),
+            exclusions = listOf(
+                "Pest damage",
+                "Market price drops",
+                "Farms outside monitored regions"
+            ),
+            waitingPeriodDays = 0,
+            claimSettlementDays = 7,
+            claimPaidRate = 0.90,
+            enrollmentMethod = "mpesa",
+            enrollmentCode = "M-Pesa → Pay Bill → 222333 → Farmer ID",
+            swahiliName = "Bima ya Hali ya Hewa",
+            description = "Automatic payout when weather hurts your farm. No paperwork!",
+            descriptionSw = "Lipotwa moja kwa moja hali ya hewa inapodhuru shamba lako. Hakua karatasi!"
+        ),
+
         // ── Liability ──
         InsuranceProduct(
             id = "biashara_liability",

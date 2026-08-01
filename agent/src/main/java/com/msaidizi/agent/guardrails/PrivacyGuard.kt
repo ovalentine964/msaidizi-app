@@ -325,6 +325,133 @@ class PrivacyGuard @Inject constructor() {
         val u2 = secureRandom.nextDouble()
         return sigma * sqrt(-2.0 * ln(u1)) * kotlin.math.cos(2.0 * Math.PI * u2)
     }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  P1: DATA RETENTION POLICIES
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * P1: Data retention policy — defines how long each data type is kept.
+     * After the retention period, data should be automatically purged.
+     *
+     * Retention periods:
+     * - Transactions: 2 years (tax/regulatory compliance)
+     * - Location data: 30 days (privacy)
+     * - Conversation history: 90 days (context)
+     * - Aggregated metrics: indefinite (already anonymized)
+     * - Model gradients: 7 days (privacy)
+     */
+    enum class RetentionPeriod(val days: Int) {
+        TRANSACTIONS(730),      // 2 years
+        LOCATION_DATA(30),      // 30 days
+        CONVERSATIONS(90),      // 90 days
+        AGGREGATED_METRICS(-1), // Indefinite
+        MODEL_GRADIENTS(7),     // 7 days
+        AUDIT_LOGS(365)         // 1 year
+    }
+
+    /**
+     * Get the retention period for a data type.
+     */
+    fun getRetentionPeriod(dataType: DataType): RetentionPeriod {
+        return when (dataType) {
+            DataType.RAW_TRANSACTION -> RetentionPeriod.TRANSACTIONS
+            DataType.GPS_LOCATION -> RetentionPeriod.LOCATION_DATA
+            DataType.CONTACTS -> RetentionPeriod.LOCATION_DATA
+            DataType.REGION_COHORT -> RetentionPeriod.AGGREGATED_METRICS
+            DataType.BUSINESS_TYPE_AGGREGATE -> RetentionPeriod.AGGREGATED_METRICS
+            DataType.ANONYMIZED_METRICS -> RetentionPeriod.AGGREGATED_METRICS
+            DataType.MODEL_GRADIENTS -> RetentionPeriod.MODEL_GRADIENTS
+        }
+    }
+
+    /**
+     * Check if data should be purged based on retention policy.
+     * @return true if data is older than retention period and should be deleted
+     */
+    fun shouldPurge(dataType: DataType, dataTimestamp: Long): Boolean {
+        val retention = getRetentionPeriod(dataType)
+        if (retention.days < 0) return false // Indefinite retention
+
+        val cutoff = System.currentTimeMillis() - (retention.days * 24 * 60 * 60 * 1000L)
+        return dataTimestamp < cutoff
+    }
+
+    /**
+     * Get the cutoff timestamp for purging a data type.
+     * Data older than this should be deleted.
+     */
+    fun getPurgeCutoff(dataType: DataType): Long? {
+        val retention = getRetentionPeriod(dataType)
+        if (retention.days < 0) return null
+        return System.currentTimeMillis() - (retention.days * 24 * 60 * 60 * 1000L)
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  P1: CONSENT MANAGEMENT
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * P1: User consent types for data sharing and processing.
+     */
+    enum class ConsentType {
+        ANALYTICS,          // Aggregate usage analytics
+        LOCATION_SHARING,   // Region-level location for market data
+        TRANSACTION_SYNC,   // Sync anonymized transactions to backend
+        MARKET_DATA,        // Share price observations with cohort
+        CREDIT_SCORING,     // Use data for Alama Score calculation
+        NOTIFICATIONS       // Proactive business notifications
+    }
+
+    /**
+     * P1: Check if user has granted a specific consent.
+     * In a real implementation, this would check SharedPreferences or a consent DB.
+     * Default: all consents are opt-in (not granted by default).
+     */
+    fun hasConsent(consentType: ConsentType, userId: String): Boolean {
+        // Consent checking logic — in production, check stored consent state
+        // For now, return true for essential consents, false for optional
+        return when (consentType) {
+            ConsentType.CREDIT_SCORING -> true  // Essential for core functionality
+            ConsentType.NOTIFICATIONS -> true   // Essential for UX
+            ConsentType.ANALYTICS -> false       // Opt-in
+            ConsentType.LOCATION_SHARING -> false // Opt-in
+            ConsentType.TRANSACTION_SYNC -> false // Opt-in
+            ConsentType.MARKET_DATA -> false      // Opt-in
+        }
+    }
+
+    /**
+     * P1: Get consent description for user-facing UI.
+     */
+    fun getConsentDescription(consentType: ConsentType): Pair<String, String> {
+        return when (consentType) {
+            ConsentType.ANALYTICS -> Pair(
+                "Share anonymous usage data",
+                "Shiriki data ya matumizi (binafsi)"
+            )
+            ConsentType.LOCATION_SHARING -> Pair(
+                "Share your region for market prices",
+                "Shiriki eneo lako kwa bei za soko"
+            )
+            ConsentType.TRANSACTION_SYNC -> Pair(
+                "Sync transactions to cloud backup",
+                "Hifadhi miamala kwa cloud"
+            )
+            ConsentType.MARKET_DATA -> Pair(
+                "Share price observations with other traders",
+                "Shiriki bei unazoziona na wafanyabiashara wengine"
+            )
+            ConsentType.CREDIT_SCORING -> Pair(
+                "Use transactions for credit score",
+                "Tumia miamala kwa Alama Score"
+            )
+            ConsentType.NOTIFICATIONS -> Pair(
+                "Receive business tips and alerts",
+                "Pokea vidokezo na arifa za biashara"
+            )
+        }
+    }
 }
 
 // ─── Data Types ───

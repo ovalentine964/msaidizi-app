@@ -271,7 +271,77 @@ class CircuitBreaker @Inject constructor() {
         val elapsed = System.currentTimeMillis() - state.lastFailureTime
         return elapsed < config.cooldownMs
     }
+
+    // ── P2: Adaptive circuit breaker configuration ──
+
+    /**
+     * Failure history for learning optimal thresholds.
+     * Key: tool name, Value: list of (timestamp, failure_count_at_open) pairs.
+     */
+    private val failureHistory = ConcurrentHashMap<String, MutableList<FailureEvent>>()
+
+    /**
+     * Record a failure event for adaptive learning.
+     */
+    private fun recordFailureEvent(toolName: String, failureCount: Int) {
+        val events = failureHistory.getOrPut(toolName) { mutableListOf() }
+        events.add(FailureEvent(System.currentTimeMillis(), failureCount))
+        // Keep only last 50 events per tool
+        if (events.size > 50) {
+            events.removeAt(0)
+        }
+    }
+
+    /**
+     * P2: Learn optimal cooldown from failure patterns.
+     * If a tool frequently fails right after recovery, increase cooldown.
+     * If recoveries are consistently successful, decrease cooldown.
+     *
+     * @return Suggested cooldown in ms, or null if insufficient data.
+     */
+    fun suggestCooldown(toolName: String): Long? {
+        val events = failureHistory[toolName] ?: return null
+        if (events.size < 5) return null // Need at least 5 data points
+
+        // Calculate average time between failures
+        val intervals = events.zipWithNext().map { (a, b) -> b.timestamp - a.timestamp }
+        if (intervals.isEmpty()) return null
+
+        val avgInterval = intervals.average().toLong()
+        val config = toolConfigs[toolName] ?: return null
+
+        // If failures are rapid (interval < 2× cooldown), increase cooldown
+        // If failures are sparse (interval > 5× cooldown), can decrease
+        return when {
+            avgInterval < config.cooldownMs * 2 -> (config.cooldownMs * 1.5).toLong()
+            avgInterval > config.cooldownMs * 5 -> (config.cooldownMs * 0.75).toLong()
+            else -> config.cooldownMs
+        }
+    }
+
+    /**
+     * P2: Learn optimal failure threshold from patterns.
+     * If tools recover quickly after N failures, N is a good threshold.
+     * If tools need more failures before real issues, increase threshold.
+     *
+     * @return Suggested failure threshold, or null if insufficient data.
+     */
+    fun suggestFailureThreshold(toolName: String): Int? {
+        val events = failureHistory[toolName] ?: return null
+        if (events.size < 3) return null
+
+        // Average failure count when circuit opened
+        val avgFailures = events.map { it.failureCountAtOpen }.average()
+        val suggested = (avgFailures * 0.8).toInt().coerceIn(2, 10)
+
+        return suggested
+    }
 }
+
+data class FailureEvent(
+    val timestamp: Long,
+    val failureCountAtOpen: Int
+)
 
 // ═══════════════════════════════════════════════════════════════════
 // DATA CLASSES

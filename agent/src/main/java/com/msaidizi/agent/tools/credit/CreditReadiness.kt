@@ -55,7 +55,7 @@ class CreditReadiness @Inject constructor(
         enum(
             "action",
             "Credit readiness action to perform",
-            listOf("check", "simulate", "compare", "improve", "history"),
+            listOf("check", "simulate", "compare", "improve", "history", "debt_trap_check"),
             required = false
         )
         number("target_amount", "Target loan amount in KES (for simulate/compare)", required = false)
@@ -352,9 +352,10 @@ class CreditReadiness @Inject constructor(
             "compare" -> compareOffers(params)
             "improve" -> showImprovements(params)
             "history" -> showHistory(params)
+            "debt_trap_check" -> detectDebtTrap(params)
             else -> ToolResult.error(
                 name,
-                "Unknown action: $action. Use: check, simulate, compare, improve, history",
+                "Unknown action: $action. Use: check, simulate, compare, improve, history, debt_trap_check",
                 "INVALID_ACTION"
             )
         }
@@ -1653,6 +1654,152 @@ class CreditReadiness @Inject constructor(
         }
 
         return path
+    }
+
+    // ──────────────────────────────────────────────
+    // P1: DEBT TRAP DETECTION
+    // ──────────────────────────────────────────────
+
+    /**
+     * P1: Detect debt trap patterns before they become critical.
+     *
+     * Alerts when:
+     * - Fuliza usage > 3x/week (dependency pattern)
+     * - Debt-to-income ratio > 40% (over-indebtedness)
+     * - Multiple concurrent loans (debt stacking)
+     * - Declining Alama Score trend (financial stress)
+     *
+     * Voice: "Je, niko kwenye debt trap?" or "Am I in a debt trap?"
+     */
+    private suspend fun detectDebtTrap(params: Map<String, String>): ToolResult {
+        return try {
+            val scoreResult = alamaScore.calculateScore()
+            val score = scoreResult.score
+
+            // Pull recent financial data
+            val summaries = dailySummaryDao.getRecentSummaries(30).first()
+            val avgMonthlyRevenue = if (summaries.isNotEmpty()) {
+                summaries.map { it.totalSales }.average() * 30
+            } else 0.0
+
+            // Check Fuliza usage pattern
+            val recentDebts = debtDao.getAll().first()
+            val activeDebtTotal = recentDebts.filter { it.status == "active" }.sumOf { it.amount }
+            val debtToIncomeRatio = if (avgMonthlyRevenue > 0) activeDebtTotal / avgMonthlyRevenue else 0.0
+
+            // Count Fuliza-like transactions (repeated small loans)
+            val fulizaPattern = detectFulizaPattern(summaries)
+
+            // Assess risk level
+            val riskFactors = mutableListOf<String>()
+            var riskScore = 0
+
+            if (debtToIncomeRatio > 0.40) {
+                riskFactors.add("Deni ni ${"%.0f".format(debtToIncomeRatio * 100)}% ya mapato yako (juu ya 40%)")
+                riskScore += 3
+            } else if (debtToIncomeRatio > 0.25) {
+                riskFactors.add("Deni ni ${"%.0f".format(debtToIncomeRatio * 100)}% ya mapato yako (kukaribia kikomo)")
+                riskScore += 1
+            }
+
+            if (fulizaPattern.weeklyUses > 3) {
+                riskFactors.add("Unatumia Fuliza mara ${fulizaPattern.weeklyUses} kwa wiki — kuna hatari ya kuzoea")
+                riskScore += 2
+            }
+
+            if (recentDebts.filter { it.status == "active" }.size > 2) {
+                riskFactors.add("Una mikopo ${recentDebts.filter { it.status == "active" }.size} inayoendesha — stacking")
+                riskScore += 2
+            }
+
+            if (score < 400) {
+                riskFactors.add("Alama yako ni $score — chini ya 400")
+                riskScore += 2
+            }
+
+            val riskLevel = when {
+                riskScore >= 5 -> "JUU" // HIGH
+                riskScore >= 3 -> "WASTANI" // MEDIUM
+                else -> "CHINI" // LOW
+            }
+
+            val message = buildString {
+                appendLine("🔍 Uchunguzi wa Deni (Debt Trap Check)")
+                appendLine()
+                appendLine("Alama ya Alama: $score")
+                appendLine("Deni la sasa: KES ${"%,.0f".format(activeDebtTotal)}")
+                appendLine("Mapato ya mwezi: KES ${"%,.0f".format(avgMonthlyRevenue)}")
+                appendLine("Ratio ya deni/mapato: ${"%.0f".format(debtToIncomeRatio * 100)}%")
+                appendLine()
+
+                if (riskFactors.isEmpty()) {
+                    appendLine("✅ Huna dalili za debt trap. Endelea vizuri!")
+                    appendLine()
+                    appendLine("Vidokezo:")
+                    appendLine("- Weka akiba ya dharura (wiki 2-4 za gharama)")
+                    appendLine("- Epuka Fuliza — tumia kama njia ya mwisho")
+                } else {
+                    appendLine("⚠️ Hatari: $riskLevel")
+                    appendLine()
+                    appendLine("Dalili:")
+                    riskFactors.forEach { appendLine("  ❌ $it") }
+                    appendLine()
+                    appendLine("\U0001f4a1 Mapendekezo:")
+                    if (debtToIncomeRatio > 0.40) {
+                        appendLine("  1. Simama na mikopo mipya — lipa deni la sasa kwanza")
+                    }
+                    if (fulizaPattern.weeklyUses > 3) {
+                        appendLine("  2. Punguza Fuliza — weka akiba ya KES 500-1000 kwa wiki")
+                    }
+                    if (recentDebts.filter { it.status == "active" }.size > 2) {
+                        appendLine("  3. Lipa deni dogo kwanza (snowball method)")
+                    }
+                    appendLine("  4. Ongeza mapato — angalia fursa mpya za biashara")
+                    appendLine("  5. Zungumza na Msaidizi kwa ushauri wa kibinafsi")
+                }
+            }
+
+            ToolResult.success(name, message, mapOf(
+                "risk_level" to riskLevel,
+                "risk_score" to riskScore,
+                "debt_to_income" to debtToIncomeRatio,
+                "active_debt" to activeDebtTotal,
+                "monthly_revenue" to avgMonthlyRevenue,
+                "risk_factors" to riskFactors
+            ))
+        } catch (e: Exception) {
+            Timber.e(e, "Debt trap detection failed")
+            ToolResult.error(name, "Failed to analyze debt pattern: ${e.message}", "DEBT_TRAP_ERROR")
+        }
+    }
+
+    private data class FulizaPattern(
+        val weeklyUses: Int,
+        val avgAmount: Double,
+        val isRecurring: Boolean
+    )
+
+    /**
+     * Detect Fuliza-like usage patterns from transaction history.
+     * Fuliza shows as negative M-Pesa balance / overdraft transactions.
+     */
+    private fun detectFulizaPattern(summaries: List<com.msaidizi.core.database.DailySummaryEntity>): FulizaPattern {
+        // Heuristic: count days with expenses > 120% of sales (overdraft indicator)
+        val overSpendDays = summaries.count { day ->
+            day.totalExpenses > day.totalSales * 1.2 && day.totalSales > 0
+        }
+        val weeklyUses = (overSpendDays * 7.0 / summaries.size.coerceAtLeast(1)).toInt()
+        val avgAmount = if (summaries.isNotEmpty()) {
+            summaries.filter { it.totalExpenses > it.totalSales * 1.2 }
+                .map { it.totalExpenses - it.totalSales }
+                .average()
+        } else 0.0
+
+        return FulizaPattern(
+            weeklyUses = weeklyUses,
+            avgAmount = avgAmount.coerceAtLeast(0.0),
+            isRecurring = weeklyUses > 2
+        )
     }
 
     // ──────────────────────────────────────────────

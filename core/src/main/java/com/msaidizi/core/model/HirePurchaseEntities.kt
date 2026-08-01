@@ -6,7 +6,13 @@ import androidx.room.*
 // Hire-Purchase Agreement Entity
 // ──────────────────────────────────────────────
 
-@Entity(tableName = "hire_purchase_agreements")
+@Entity(
+    tableName = "hire_purchase_agreements",
+    indices = [
+        Index(value = ["isActive"]),
+        Index(value = ["ownerPhone"])
+    ]
+)
 data class HirePurchaseAgreementEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val ownerName: String,                 // who owns the motorcycle

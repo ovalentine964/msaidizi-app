@@ -21,6 +21,7 @@ import com.msaidizi.agent.loops.AdviceRefinementLoop
 import com.msaidizi.agent.loops.FeedbackLoopIntegration
 import com.msaidizi.agent.loops.OODALoop
 import com.msaidizi.agent.loops.OODAResult
+import com.msaidizi.agent.graph.WorkflowDAG
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
@@ -59,6 +60,7 @@ class SuperagentHarness @Inject constructor(
     private val escalationManager: EscalationManager,
     private val sensitiveActionGuard: SensitiveActionGuard,
     private val humanApprovalInterceptor: HumanApprovalInterceptor,
+    private val workflowDAG: WorkflowDAG,
     private val gson: Gson
 ) {
     private val sessionId = UUID.randomUUID().toString()
@@ -132,14 +134,35 @@ class SuperagentHarness @Inject constructor(
                 )
             }
 
-            // 5. EXECUTE via OODA LOOP (replaces linear pipeline)
+            // 5. EXECUTE via OODA LOOP or WorkflowDAG (replaces linear pipeline)
             _processingState.value = ProcessingState.EXECUTING
 
             // 5.1. RECORD TOOL SELECTION in trace
             traceCollector.recordToolSelection(intent.requiredTools, intent.toolParams)
             val toolExecStart = System.currentTimeMillis()
 
-            val oodaResult: OODAResult = if (intent.type == IntentType.ASK_ADVICE) {
+            // P1: Route multi-step intents through WorkflowDAG for checkpointing
+            val oodaResult: OODAResult = if (isWorkflowIntent(intent.type)) {
+                val workflowResult = workflowDAG.execute(
+                    workflowName = workflowNameForIntent(intent.type),
+                    initialState = mapOf(
+                        "intent" to intent.type.name,
+                        "input" to input,
+                        "sessionId" to sessionId
+                    )
+                )
+                OODAResult(
+                    response = workflowResult.finalState["final_report"]?.toString()
+                        ?: workflowResult.finalState["weekly_advice"]?.toString()
+                        ?: workflowResult.error
+                        ?: "Ripoti imeandaliwa.",
+                    confidence = if (workflowResult.success) 0.9f else 0.5f,
+                    iterations = 1,
+                    totalDurationMs = 0L,
+                    iterationLogs = emptyList(),
+                    terminatedBy = com.msaidizi.agent.loops.TerminationReason.CONFIDENCE_MET
+                )
+            } else if (intent.type == IntentType.ASK_ADVICE) {
                 // ── Advice path: Use AdviceRefinementLoop ──────────────
                 val adviceResult = adviceRefinementLoop.generateRefinedAdvice(
                     intent = intent,
@@ -352,6 +375,32 @@ class SuperagentHarness @Inject constructor(
             // ═══ Response Guidelines ═══
             appendLine("Respond naturally. Use ${context.businessProfile?.language?.displayName ?: "Kiswahili"} unless the user speaks another language.")
             appendLine("Keep responses short — 1-3 sentences for simple queries.")
+        }
+    }
+
+    // ── Workflow routing helpers ────────────────────────────────
+
+    /**
+     * P1: Determine if an intent should be routed through WorkflowDAG
+     * for checkpointed multi-step execution.
+     */
+    private fun isWorkflowIntent(type: IntentType): Boolean {
+        return type in setOf(
+            IntentType.DAILY_REPORT,
+            IntentType.WEEKLY_REPORT,
+            IntentType.MONTHLY_REPORT
+        )
+    }
+
+    /**
+     * Map an intent type to a WorkflowDAG workflow name.
+     */
+    private fun workflowNameForIntent(type: IntentType): String {
+        return when (type) {
+            IntentType.DAILY_REPORT -> "daily_report"
+            IntentType.WEEKLY_REPORT -> "weekly_analysis"
+            IntentType.MONTHLY_REPORT -> "weekly_analysis" // Reuse weekly for monthly
+            else -> "daily_report"
         }
     }
 }

@@ -996,6 +996,7 @@ data class VoiceState(
     val isListening: Boolean = false,
     val isSpeaking: Boolean = false,
     val isProcessing: Boolean = false,
+    val isStreaming: Boolean = false,
     val partialText: String = "",
     val error: String? = null
 )
