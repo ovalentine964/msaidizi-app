@@ -51,5 +51,97 @@ data class SyncResponse(
     val syncedCount: Int,
     val serverTimestamp: Long,
     val conflictsResolved: Int = 0,
-    val message: String? = null
+    val message: String? = null,
+    // Bidirectional: data flowing back from server
+    val protocolVersion: Int? = null,
+    val alamaScoreUpdate: AlamaScoreUpdate? = null,
+    val modelDelta: ModelDelta? = null,
+    val marketIntelligence: MarketIntelligence? = null,
+    val alerts: List<SyncAlert> = emptyList(),
+    val freshness: FreshnessMetadata? = null,
+    val verification: VerificationResult? = null
+)
+
+@Serializable
+data class AlamaScoreUpdate(
+    val score: Int,                 // 300-850
+    val factors: List<ScoreFactorUpdate> = emptyList(),
+    val confidence: Double = 0.0,
+    val computedAt: Long = 0
+)
+
+@Serializable
+data class ScoreFactorUpdate(
+    val name: String,
+    val impact: Double,
+    val weight: Double,
+    val description: String
+)
+
+@Serializable
+data class ModelDelta(
+    val targetVersion: String,
+    val isFullModel: Boolean = false,
+    val downloadUrl: String,
+    val checksum: String,
+    val sizeBytes: Long = 0,
+    val minProtocolVersion: Int = 1
+)
+
+@Serializable
+data class MarketIntelligence(
+    val ward: String,
+    val priceTrends: Map<String, PriceTrend> = emptyMap(),
+    val demandSignals: List<DemandSignal> = emptyList(),
+    val dataTimestamp: Long = 0,
+    val ttlSeconds: Long = 3600
+)
+
+@Serializable
+data class PriceTrend(
+    val category: String,
+    val currentAvgPrice: Double,
+    val weekOverWeekChange: Double,
+    val direction: String           // "rising", "falling", "stable"
+)
+
+@Serializable
+data class DemandSignal(
+    val category: String,
+    val demandLevel: String,        // "high", "medium", "low"
+    val confidence: Double
+)
+
+@Serializable
+data class SyncAlert(
+    val alertType: String,
+    val severity: String,           // "info", "warning", "critical"
+    val title: String,
+    val body: String,
+    val timestamp: Long,
+    val actionUrl: String? = null
+)
+
+@Serializable
+data class FreshnessMetadata(
+    val serverTimestamp: Long,
+    val marketDataFresh: Boolean = false,
+    val scoreDataFresh: Boolean = false,
+    val staleness: String = "unknown"
+)
+
+@Serializable
+data class VerificationResult(
+    val allValid: Boolean = true,
+    val acceptedCount: Int = 0,
+    val rejectedCount: Int = 0,
+    val duplicateCount: Int = 0,
+    val rejectionReasons: List<RejectionReason> = emptyList()
+)
+
+@Serializable
+data class RejectionReason(
+    val transactionIndex: Int,
+    val reason: String,
+    val severity: String
 )

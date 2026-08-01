@@ -118,4 +118,10 @@ object NetworkModule {
     fun provideSyncApi(retrofit: Retrofit): SyncApi {
         return retrofit.create(SyncApi::class.java)
     }
+
+    @Provides
+    @Singleton
+    fun provideGraphSyncApi(retrofit: Retrofit): GraphSyncApi {
+        return retrofit.create(GraphSyncApi::class.java)
+    }
 }
