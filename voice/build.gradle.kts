@@ -14,7 +14,7 @@ android {
 
         // NDK targets for llama.cpp and sherpa-onnx JNI
         ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+            abiFilters += listOf("arm64-v8a")  // Match app ABI filter
         }
 
         // Native build — compiles sherpa_jni, llama_jni, vad_jni
