@@ -170,11 +170,6 @@ dependencies {
     implementation(project(":feature:agriculture"))
     implementation(project(":feature:market"))
     implementation(project(":feature:credit"))
-    implementation(project(":feature:cultural"))
-    implementation(project(":feature:health"))
-    implementation(project(":feature:economics"))
-    implementation(project(":feature:governance"))
-    implementation(project(":feature:practical"))
 
     // AndroidX Core
     implementation(libs.androidx.core.ktx)
