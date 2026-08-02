@@ -65,8 +65,8 @@ class OODALoop @Inject constructor(
             IntentType.WEEKLY_REPORT to 3,
             IntentType.MONTHLY_REPORT to 3,
             IntentType.ASK_ADVICE to 3,
-            IntentType.COMPARE_LOANS to 3,
-            IntentType.MATCH_INSURANCE to 2
+            IntentType.LOAN_COMPARE to 3,
+            IntentType.INSURANCE_MATCH to 2
         )
 
         /** Simple operation types that should NOT iterate (1 pass only). */

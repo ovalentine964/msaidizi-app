@@ -220,7 +220,7 @@ class LlmEngine @Inject constructor(
      * Thinking mode outputs <think>...</think> before the actual response.
      */
     private fun stripThinkingTags(text: String): String {
-        val thinkPattern = Regex("<think>[\s\S]*?</think>", RegexOption.DOT_MATCHES_ALL)
+        val thinkPattern = Regex("""<think>[\s\S]*?</think>""", RegexOption.DOT_MATCHES_ALL)
         return thinkPattern.replace(text, "").trim()
     }
 
@@ -289,7 +289,7 @@ class LlmEngine @Inject constructor(
 
     fun release() {
         isInitialized = false
-        llamaCppEngine.release()
+        llamaCppEngine.unloadModel()
         Timber.i("LLM engine released")
     }
 }

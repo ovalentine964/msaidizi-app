@@ -306,7 +306,7 @@ class FeedbackLoopIntegration @Inject constructor(
                     "lastActual" to actualValue,
                     "timestamp" to System.currentTimeMillis()
                 )),
-                confidence = (1.0 - kotlin.math.abs(newAvgError)).coerceIn(0.0f, 1.0f),
+                confidence = (1.0 - kotlin.math.abs(newAvgError)).coerceIn(0.0, 1.0).toFloat(),
                 usageCount = sampleCount + 1,
                 updatedAt = System.currentTimeMillis()
             ))
@@ -325,7 +325,7 @@ class FeedbackLoopIntegration @Inject constructor(
                         "lastActual" to actualValue,
                         "timestamp" to System.currentTimeMillis()
                     )),
-                    confidence = (1.0 - kotlin.math.abs(error)).coerceIn(0.0f, 1.0f),
+                    confidence = (1.0 - kotlin.math.abs(error)).coerceIn(0.0, 1.0).toFloat(),
                     usageCount = 1
                 )
             )

@@ -186,7 +186,7 @@ class ContextAssembler @Inject constructor(
 
         // L1: System identity — always include fully (small, rarely changes)
         val identityTexts = listOfNotNull(
-            identity.userProfile?.let { "Profile: ${it.name}" },
+            identity.userProfile?.let { "Profile: ${it.userName}" },
             identity.businessProfile?.let { "Business: ${it.businessType}" },
             identity.alamaScore?.let { "Alama Score: ${it.score}" }
         )
