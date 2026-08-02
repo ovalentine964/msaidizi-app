@@ -1,6 +1,8 @@
 package com.msaidizi.agent.guardrails
 
 import com.msaidizi.agent.tools.core.*
+import com.msaidizi.agent.harness.UserIntent
+import com.msaidizi.agent.harness.IntentType
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton

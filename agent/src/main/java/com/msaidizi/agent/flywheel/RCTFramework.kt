@@ -396,7 +396,7 @@ class RCTFramework @Inject constructor(
                 ((v1 / n1).let { it * it } / (n1 - 1) + (v2 / n2).let { it * it } / (n2 - 1))
 
         // Approximate p-value using normal distribution for large samples
-        val pValue = approximatePValue(t.abs())
+        val pValue = approximatePValue(abs(t))
 
         return TTestResult(tStatistic = t, pValue = pValue, degreesOfFreedom = df)
     }
