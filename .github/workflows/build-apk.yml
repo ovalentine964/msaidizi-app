@@ -57,9 +57,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .model-cache
-          key: ai-models-${{ env.MODEL_CACHE_VERSION }}-${{ hashFiles('scripts/download_models.sh') }}
+          key: ai-models-${{ env.MODEL_CACHE_VERSION }}-${{ hashFiles('scripts/download_models.sh') }}-${{ hashFiles('scripts/model_checksums.sha256') }}
           restore-keys: |
-            ai-models-${{ env.MODEL_CACHE_VERSION }}-
+            ai-models-${{ env.MODEL_CACHE_VERSION }}-${{ hashFiles('scripts/download_models.sh') }}-
 
       - name: Download AI models
         run: |
@@ -105,7 +105,7 @@ jobs:
           path: voice/src/main/cpp/third_party
           key: native-deps-${{ hashFiles('scripts/setup_native_deps.sh') }}
           restore-keys: |
-            native-deps-
+            native-deps-${{ hashFiles('scripts/setup_native_deps.sh') }}-
 
       - name: Setup native dependencies (llama.cpp + sherpa-onnx)
         run: |
@@ -120,9 +120,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .model-cache
-          key: ai-models-${{ env.MODEL_CACHE_VERSION }}-${{ hashFiles('scripts/download_models.sh') }}
+          key: ai-models-${{ env.MODEL_CACHE_VERSION }}-${{ hashFiles('scripts/download_models.sh') }}-${{ hashFiles('scripts/model_checksums.sha256') }}
           restore-keys: |
-            ai-models-${{ env.MODEL_CACHE_VERSION }}-
+            ai-models-${{ env.MODEL_CACHE_VERSION }}-${{ hashFiles('scripts/download_models.sh') }}-
 
       - name: Place cached models in assets
         run: |

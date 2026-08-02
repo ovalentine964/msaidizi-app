@@ -1,0 +1,11 @@
+# ──────────────────────────────────────────────────────────────
+# Model checksums (SHA-256) for download integrity verification.
+#
+# Generate/update this file by running:
+#   ./scripts/download_models.sh --generate-checksums
+#
+# After downloading models, the script will compute SHA-256 hashes
+# and write them here. Commit this file to lock model versions.
+# ──────────────────────────────────────────────────────────────
+# Format: <sha256>  <filename>
+# Entries below are generated automatically — do not edit by hand.

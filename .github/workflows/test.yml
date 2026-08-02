@@ -1,12 +1,69 @@
+# ──────────────────────────────────────────────────────────────
+# Msaidizi Test Build — quick Gradle verification on push to main
+# Validates that the project compiles and unit tests pass.
+# ──────────────────────────────────────────────────────────────
 name: Test Build
 
 on:
   push:
     branches: [main]
 
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+  JAVA_VERSION: "17"
+
+permissions:
+  contents: read
+
 jobs:
-  test:
+  verify:
+    name: Gradle Build Verification
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - run: echo "Build works!"
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+
+      - name: Compile debug build
+        run: ./gradlew compileFullDebugKotlin
+
+      - name: Run unit tests
+        run: ./gradlew testFullDebugUnitTest --continue
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: app/build/test-results/testFullDebugUnitTest/
+          retention-days: 7
+
+      - name: Parse test summary
+        if: always()
+        run: |
+          RESULTS_DIR="app/build/test-results/testFullDebugUnitTest"
+          if [ -d "$RESULTS_DIR" ]; then
+            TOTAL=$(grep -rh 'tests=' "$RESULTS_DIR"/*.xml 2>/dev/null | sed 's/.*tests="\([0-9]*\)".*/\1/' | paste -sd+ | bc 2>/dev/null || echo "0")
+            FAILURES=$(grep -rh 'failures=' "$RESULTS_DIR"/*.xml 2>/dev/null | sed 's/.*failures="\([0-9]*\)".*/\1/' | paste -sd+ | bc 2>/dev/null || echo "0")
+            ERRORS=$(grep -rh 'errors=' "$RESULTS_DIR"/*.xml 2>/dev/null | sed 's/.*errors="\([0-9]*\)".*/\1/' | paste -sd+ | bc 2>/dev/null || echo "0")
+            echo "📊 Tests: $TOTAL total, $FAILURES failures, $ERRORS errors"
+            if [ "$FAILURES" -gt 0 ] || [ "$ERRORS" -gt 0 ]; then
+              echo "::error::Test failures detected"
+              exit 1
+            fi
+          fi

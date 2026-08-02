@@ -41,17 +41,48 @@ PIPER_SW_URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models
 # Default: auto-detect based on available disk space
 MODEL_TIER="${MODEL_TIER:-auto}"
 
-# Expected checksums (SHA-256) — update after first download ──
-# These are placeholders; the script will compute and display checksums
-# on first run. Fill in after verifying downloads.
-declare -A EXPECTED_SHA256=(
-    # ["Qwen3.5-0.5B-Q4_0.gguf"]="sha256hash"
-    # ["Qwen3.5-0.8B-Q4_K_M.gguf"]="sha256hash"
-    # ["Qwen3.5-0.8B-Q5_K_M.gguf"]="sha256hash"
-    # ["sherpa-onnx-whisper-tiny.tar.bz2"]="sha256hash"
-    # ["sherpa-onnx-whisper-small.tar.bz2"]="sha256hash"
-    # ["vits-piper-sw_CD-lanfrica-medium.tar.bz2"]="sha256hash"
-)
+# Expected checksums (SHA-256) — loaded from scripts/model_checksums.sha256
+CHECKSUM_FILE="$SCRIPT_DIR/model_checksums.sha256"
+declare -A EXPECTED_SHA256=()
+
+# Load checksums from file if it exists
+load_checksums() {
+    if [ ! -f "$CHECKSUM_FILE" ]; then
+        warn "No checksum file found at $CHECKSUM_FILE"
+        warn "Run: $0 --generate-checksums after downloading models"
+        return 0
+    fi
+    while IFS='  ' read -r hash filename; do
+        # Skip comments and empty lines
+        [[ "$hash" =~ ^#.*$ ]] && continue
+        [[ -z "$hash" ]] && continue
+        [[ -z "$filename" ]] && continue
+        EXPECTED_SHA256["$filename"]="$hash"
+    done < "$CHECKSUM_FILE"
+    log "Loaded ${#EXPECTED_SHA256[@]} checksum(s) from $CHECKSUM_FILE"
+}
+
+# Generate checksums file from downloaded models
+generate_checksums() {
+    log "Generating checksums for downloaded models..."
+    mkdir -p "$(dirname "$CHECKSUM_FILE")"
+    {
+        echo "# Model checksums (SHA-256) — auto-generated $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        echo "# Format: <sha256>  <filename>"
+        echo ""
+        for f in "$CACHE_DIR"/*.gguf "$CACHE_DIR"/*.tar.bz2; do
+            [ -f "$f" ] || continue
+            local hash
+            hash="$(sha256sum "$f" | cut -d' ' -f1)"
+            echo "$hash  $(basename "$f")"
+        done
+    } > "$CHECKSUM_FILE"
+    ok "Checksums written to $CHECKSUM_FILE"
+    log "Contents:"
+    cat "$CHECKSUM_FILE"
+    log ""
+    log "Commit this file to lock model versions."
+}
 
 # ── Model version tracking for delta updates ────────────────
 VERSION_FILE="$CACHE_DIR/model_versions.json"
@@ -381,6 +412,7 @@ main() {
             --stt-only)  do_llm=false; do_tts=false ;;
             --tts-only)  do_llm=false; do_stt=false ;;
             --verify)    verify_only=true ;;
+            --generate-checksums) generate_checksums; exit $? ;;
             --tier-lite)     llm_tier="lite" ;;
             --tier-standard) llm_tier="standard" ;;
             --tier-pro)      llm_tier="pro" ;;
@@ -409,6 +441,7 @@ main() {
     done
 
     mkdir -p "$CACHE_DIR" "$ASSETS_DIR"
+    load_checksums
 
     if $verify_only; then
         verify_assets

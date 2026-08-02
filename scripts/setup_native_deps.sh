@@ -34,17 +34,17 @@ THIRD_PARTY_DIR="$PROJECT_ROOT/voice/src/main/cpp/third_party"
 
 # ── Versions ─────────────────────────────────────────────────
 # Pin to known-good commits for reproducible builds.
+# Update these periodically and verify builds still pass.
 LLAMA_CPP_URL="https://github.com/ggerganov/llama.cpp.git"
-LLAMA_CPP_BRANCH="master"
-LLAMA_CPP_TAG=""  # Set to a tag like "b4000" for reproducible builds
+LLAMA_CPP_COMMIT="f5919bf458ef190468b5c329bb293f8a54a1e69c"  # 2026-08-02
 
 SHERPA_ONNX_URL="https://github.com/k2-fsa/sherpa-onnx.git"
-SHERPA_ONNX_BRANCH="master"
-SHERPA_ONNX_TAG=""  # Set to a tag like "v1.10.0" for reproducible builds
+SHERPA_ONNX_COMMIT="116a44e72c5bb631dcdbdb9c176f0304f5fc6fb0"  # 2026-08-02, v1.13.4
 
 # Pre-built release URLs (for --prebuilt mode)
 SHERPA_ONNX_VERSION="v1.13.4"
 SHERPA_ONNX_AAR_URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/${SHERPA_ONNX_VERSION}/sherpa-onnx-${SHERPA_ONNX_VERSION#v}.aar"
+SHERPA_ONNX_HEADER_URL="https://raw.githubusercontent.com/k2-fsa/sherpa-onnx/${SHERPA_ONNX_COMMIT}/sherpa-onnx/c-api/c-api.h"
 
 # ── Colours ──────────────────────────────────────────────────
 RED='\033[0;31m'
@@ -104,25 +104,24 @@ setup_llama() {
         return 0
     fi
 
-    log "Cloning llama.cpp..."
+    log "Cloning llama.cpp (commit: ${LLAMA_CPP_COMMIT:0:12})..."
     mkdir -p "$THIRD_PARTY_DIR"
 
-    local clone_args=(
-        --depth 1
-        --single-branch
-        --branch "$LLAMA_CPP_BRANCH"
-    )
-
-    if [ -n "$LLAMA_CPP_TAG" ]; then
-        clone_args+=(--branch "$LLAMA_CPP_TAG")
-    fi
-
-    git clone "${clone_args[@]}" "$LLAMA_CPP_URL" "$dest" 2>&1 || {
+    git clone --depth 1 "$LLAMA_CPP_URL" "$dest" 2>&1 || {
         err "Failed to clone llama.cpp"
         return 1
     }
 
-    ok "llama.cpp cloned to $dest"
+    (
+        cd "$dest"
+        git fetch --depth 1 origin "$LLAMA_CPP_COMMIT" 2>&1
+        git checkout "$LLAMA_CPP_COMMIT" 2>&1
+    ) || {
+        err "Failed to checkout llama.cpp at $LLAMA_CPP_COMMIT"
+        return 1
+    }
+
+    ok "llama.cpp cloned to $dest (pinned to ${LLAMA_CPP_COMMIT:0:12})"
 
     # Disable Metal and OpenMP for Android
     if [ -f "$dest/CMakeLists.txt" ]; then
@@ -141,25 +140,24 @@ setup_sherpa() {
         return 0
     fi
 
-    log "Cloning sherpa-onnx..."
+    log "Cloning sherpa-onnx (commit: ${SHERPA_ONNX_COMMIT:0:12})..."
     mkdir -p "$THIRD_PARTY_DIR"
 
-    local clone_args=(
-        --depth 1
-        --single-branch
-        --branch "$SHERPA_ONNX_BRANCH"
-    )
-
-    if [ -n "$SHERPA_ONNX_TAG" ]; then
-        clone_args+=(--branch "$SHERPA_ONNX_TAG")
-    fi
-
-    git clone "${clone_args[@]}" "$SHERPA_ONNX_URL" "$dest" 2>&1 || {
+    git clone --depth 1 "$SHERPA_ONNX_URL" "$dest" 2>&1 || {
         err "Failed to clone sherpa-onnx"
         return 1
     }
 
-    ok "sherpa-onnx cloned to $dest"
+    (
+        cd "$dest"
+        git fetch --depth 1 origin "$SHERPA_ONNX_COMMIT" 2>&1
+        git checkout "$SHERPA_ONNX_COMMIT" 2>&1
+    ) || {
+        err "Failed to checkout sherpa-onnx at $SHERPA_ONNX_COMMIT"
+        return 1
+    }
+
+    ok "sherpa-onnx cloned to $dest (pinned to ${SHERPA_ONNX_COMMIT:0:12})"
 
     if [ -f "$dest/CMakeLists.txt" ]; then
         log "sherpa-onnx CMakeLists.txt found — will be built from source by NDK"
@@ -217,7 +215,7 @@ setup_prebuilt() {
         mkdir -p "$include_dir"
         # Download the C API header from the source repo
         log "Downloading sherpa-onnx C API header..."
-        curl -sL "https://raw.githubusercontent.com/k2-fsa/sherpa-onnx/refs/heads/master/sherpa-onnx/c-api/c-api.h" -o "$include_dir/c-api.h" 2>/dev/null || true
+        curl -sL "$SHERPA_ONNX_HEADER_URL" -o "$include_dir/c-api.h" 2>/dev/null || true
 
         # Cleanup extracted AAR
         rm -rf "$sherpa_dir/aar-extracted"
