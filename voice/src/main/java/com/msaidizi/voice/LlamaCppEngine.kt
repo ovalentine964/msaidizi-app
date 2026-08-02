@@ -113,7 +113,7 @@ class LlamaCppEngine @Inject constructor() {
         val path = currentModelPath ?: return false
         if (nCtx == currentContextSize && isLoaded) return true
         unloadModel()
-        return loadModel(path, nCtx)
+        return loadModel(path, nCtx, Runtime.getRuntime().availableProcessors().coerceIn(2, 4))
     }
 
     /**
