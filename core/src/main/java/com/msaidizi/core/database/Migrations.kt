@@ -558,6 +558,33 @@ object Migrations {
         }
     }
 
+    /**
+     * Migration 15 → 16: Offline sync queue table
+     * Adds sync_queue table for persisting offline operations across app restarts.
+     */
+    val MIGRATION_15_16 = object : Migration(15, 16) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS sync_queue (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    operationId TEXT NOT NULL,
+                    operationType TEXT NOT NULL,
+                    payloadJson TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'pending',
+                    retryCount INTEGER NOT NULL DEFAULT 0,
+                    maxRetries INTEGER NOT NULL DEFAULT 3,
+                    lastError TEXT,
+                    createdAt INTEGER NOT NULL,
+                    updatedAt INTEGER NOT NULL
+                )
+            """)
+
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_sync_queue_operationType ON sync_queue(operationType)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_sync_queue_createdAt ON sync_queue(createdAt)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_sync_queue_status ON sync_queue(status)")
+        }
+    }
+
     val ALL_MIGRATIONS = arrayOf(
         MIGRATION_8_9,
         MIGRATION_9_10,
@@ -565,6 +592,7 @@ object Migrations {
         MIGRATION_11_12,
         MIGRATION_12_13,
         MIGRATION_13_14,
-        MIGRATION_14_15
+        MIGRATION_14_15,
+        MIGRATION_15_16
     )
 }
