@@ -621,7 +621,7 @@ data class OodaState(
 data class SystemIdentity(
     val userProfile: UserProfileEntity?,
     val businessProfile: BusinessProfile?,
-    val alamaScore: com.msaidizi.agent.tools.AlamaScoreResult?
+    val alamaScore: com.msaidizi.agent.tools.credit.AlamaScoreResult?
 )
 
 /**

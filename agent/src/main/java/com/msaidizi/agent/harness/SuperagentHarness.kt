@@ -500,7 +500,7 @@ data class AssembledContext(
     // Layer 1: System Identity (static, cached)
     val userProfile: com.msaidizi.core.model.UserProfileEntity? = null,
     val businessProfile: com.msaidizi.core.model.BusinessProfile? = null,
-    val alamaScore: com.msaidizi.agent.tools.AlamaScoreResult? = null,
+    val alamaScore: com.msaidizi.agent.tools.credit.AlamaScoreResult? = null,
 
     // Layer 2: Working Memory (OODA state)
     val oodaPhase: OodaPhase = OodaPhase.OBSERVE,

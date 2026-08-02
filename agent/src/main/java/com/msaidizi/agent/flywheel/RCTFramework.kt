@@ -8,6 +8,8 @@ import timber.log.Timber
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.abs
+import kotlin.math.exp
 import kotlin.math.sqrt
 
 /**

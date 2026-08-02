@@ -127,7 +127,7 @@ class DialectFeatureExtractor @Inject constructor() {
         val triggers = current.codeSwitchTriggers.toMutableMap()
 
         for ((marker, tense) in dfv.tenseMarkers) {
-            patterns.merge(tense, 1f) { a, b -> a + b }
+            patterns.merge(marker, 1f) { a, b -> a + b }
         }
 
         // Track code-switch trigger words

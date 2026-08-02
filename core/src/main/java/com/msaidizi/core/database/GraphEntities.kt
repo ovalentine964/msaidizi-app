@@ -86,6 +86,12 @@ interface KgNodeDao {
 
     @Query("DELETE FROM kg_nodes WHERE updatedAt < :cutoff")
     suspend fun deleteOlderThan(cutoff: Long): Int
+
+    @Query("SELECT * FROM kg_nodes")
+    suspend fun getAll(): List<KgNodeEntity>
+
+    @Query("DELETE FROM kg_nodes WHERE id = :id")
+    suspend fun deleteById(id: String): Int
 }
 
 @Dao
@@ -113,6 +119,15 @@ interface KgEdgeDao {
 
     @Query("DELETE FROM kg_edges WHERE updatedAt < :cutoff")
     suspend fun deleteOlderThan(cutoff: Long): Int
+
+    @Query("SELECT COUNT(*) FROM kg_edges WHERE fromId = :nodeId OR toId = :nodeId")
+    suspend fun countForNode(nodeId: String): Int
+
+    @Query("DELETE FROM kg_edges WHERE fromId = :nodeId OR toId = :nodeId")
+    suspend fun deleteForNode(nodeId: String): Int
+
+    @Query("DELETE FROM kg_edges WHERE updatedAt < :cutoff AND weight < :maxWeight")
+    suspend fun deleteLowWeightOlderThan(cutoff: Long, maxWeight: Float): Int
 }
 
 @Dao
@@ -134,4 +149,10 @@ interface KgFactDao {
 
     @Query("DELETE FROM kg_facts WHERE updatedAt < :cutoff")
     suspend fun deleteOlderThan(cutoff: Long): Int
+
+    @Query("SELECT * FROM kg_facts WHERE subject LIKE :prefix || '%'")
+    suspend fun getBySubjectPrefix(prefix: String): List<KgFactEntity>
+
+    @Query("SELECT COUNT(*) FROM kg_facts WHERE subject = :subject")
+    suspend fun countForSubject(subject: String): Int
 }
