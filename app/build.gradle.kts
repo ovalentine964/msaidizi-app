@@ -115,10 +115,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-    }
-
     buildFeatures {
         compose = true
         buildConfig = true
@@ -150,6 +146,12 @@ android {
     @Suppress("DEPRECATION")
     aaptOptions {
         noCompress("gguf", "onnx", "bin", "tflite", "vocab")
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 }
 

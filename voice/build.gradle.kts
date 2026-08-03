@@ -31,10 +31,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-    }
-
     // Point to the CMakeLists.txt that builds sherpa_jni, llama_jni, vad_jni
     externalNativeBuild {
         cmake {
@@ -55,6 +51,12 @@ android {
     @Suppress("DEPRECATION")
     aaptOptions {
         noCompress("gguf", "onnx", "bin", "tflite", "vocab")
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 }
 
