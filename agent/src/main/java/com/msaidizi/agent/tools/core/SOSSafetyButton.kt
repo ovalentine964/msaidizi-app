@@ -16,6 +16,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 import javax.inject.Inject
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Singleton
 
 // ══════════════════════════════════════════════
@@ -60,7 +61,7 @@ import javax.inject.Singleton
 class SOSSafetyButton @Inject constructor(
     private val emergencyContactDao: EmergencyContactDao,
     private val sosEventDao: SOSEventDao,
-    private val appContext: Context
+    @ApplicationContext private val appContext: Context
 ) : Tool {
 
     override val name = "sos_safety"
