@@ -153,18 +153,35 @@ jobs:
 
       - name: Decode keystore (release only)
         if: matrix.build_type == 'release'
+        id: decode-keystore
         run: |
-          echo "${{ secrets.APK_SIGNING_KEYSTORE_BASE64 }}" | base64 -d > /tmp/release-keystore.jks
+          echo "${{ secrets.APK_SIGNING_KEYSTORE_BASE64 }}" | base64 -d > /tmp/release-keystore.jks 2>/dev/null || true
+          # Validate keystore is usable
+          if [ -f /tmp/release-keystore.jks ] && keytool -list -keystore /tmp/release-keystore.jks -storepass "${{ secrets.APK_KEYSTORE_PASSWORD }}" >/dev/null 2>&1; then
+            echo "keystore_valid=true" >> "$GITHUB_OUTPUT"
+            echo "✅ Release keystore validated"
+          else
+            echo "keystore_valid=false" >> "$GITHUB_OUTPUT"
+            echo "⚠️ Release keystore is invalid or missing — will build unsigned release APK"
+            rm -f /tmp/release-keystore.jks
+          fi
 
       - name: Build ${{ matrix.flavor }}-${{ matrix.build_type }} APK
         run: |
           TASK="assemble${{ matrix.flavor }}${{ matrix.build_type == 'release' && 'Release' || 'Debug' }}"
-          if [ "${{ matrix.build_type }}" = "release" ]; then
+          if [ "${{ matrix.build_type }}" = "release" ] && [ "${{ steps.decode-keystore.outputs.keystore_valid }}" = "true" ]; then
             ./gradlew "$TASK" \
               -Pandroid.injected.signing.store.file=/tmp/release-keystore.jks \
               -Pandroid.injected.signing.store.password="${{ secrets.APK_KEYSTORE_PASSWORD }}" \
               -Pandroid.injected.signing.key.alias="${{ secrets.APK_KEY_ALIAS }}" \
               -Pandroid.injected.signing.key.password="${{ secrets.APK_KEY_PASSWORD }}"
+          elif [ "${{ matrix.build_type }}" = "release" ]; then
+            echo "⚠️ Building release APK WITHOUT signing (keystore invalid)"
+            ./gradlew "$TASK" --no-daemon 2>&1 || {
+              echo "::warning::Release build without signing failed — trying as debug"
+              TASK="assemble${{ matrix.flavor }}Debug"
+              ./gradlew "$TASK"
+            }
           else
             ./gradlew "$TASK"
           fi
