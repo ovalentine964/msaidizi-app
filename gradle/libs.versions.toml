@@ -29,7 +29,7 @@ timber = "5.0.1"
 gson = "2.11.0"
 cameraX = "1.4.1"
 mlkitTextRecognition = "16.0.1"
-mockk = "1.13.13"
+mockk = "1.14.11"
 turbine = "1.2.0"
 
 [libraries]
