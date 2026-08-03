@@ -9,6 +9,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import javax.inject.Inject
 import javax.inject.Singleton
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlin.math.abs
 import com.msaidizi.agent.tools.core.*
 

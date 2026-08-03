@@ -18,6 +18,7 @@ import java.util.Locale
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import dagger.hilt.android.qualifiers.ApplicationContext
 import com.msaidizi.agent.tools.core.*
 
 /**
