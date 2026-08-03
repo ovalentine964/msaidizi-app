@@ -130,6 +130,6 @@ class ServiceHistory @Inject constructor(private val context: Context) : Tool {
                 }
             }
         }
-        return ToolResult.success(name, mapOf(), msg)
+        return ToolResult.success(name, emptyMap<String, Any>(), msg)
     }
 }

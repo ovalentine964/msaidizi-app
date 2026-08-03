@@ -171,7 +171,7 @@ class DailyEarningsTracker @Inject constructor(
                 return ToolResult.success(name, mapOf("trips" to trips, "fare" to fare, "fuel" to fuel), msg)
             }
         }
-        return ToolResult.success(name, mapOf(), "Hakuna data ya wiki.")
+        return ToolResult.success(name, emptyMap<String, Any>(), "Hakuna data ya wiki.")
     }
 
     private fun byRoute(params: Map<String, String>): ToolResult {
@@ -191,7 +191,7 @@ class DailyEarningsTracker @Inject constructor(
             }
         }
 
-        if (routes.isEmpty()) return ToolResult.success(name, mapOf(), "Hakuna data ya routes.")
+        if (routes.isEmpty()) return ToolResult.success(name, emptyMap<String, Any>(), "Hakuna data ya routes.")
 
         val msg = buildString {
             append("🗺️ Routes bora wiki hii:\n")
@@ -219,7 +219,7 @@ class DailyEarningsTracker @Inject constructor(
             }
         }
 
-        if (hours.isEmpty()) return ToolResult.success(name, mapOf(), "Hakuna data ya saa.")
+        if (hours.isEmpty()) return ToolResult.success(name, emptyMap<String, Any>(), "Hakuna data ya saa.")
 
         val msg = buildString {
             append("⏰ Saa bora wiki hii:\n")

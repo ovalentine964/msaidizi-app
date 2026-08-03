@@ -97,7 +97,7 @@ class VehicleMaintenanceTracker @Inject constructor(private val context: Context
             }
         }
 
-        if (overdue.isEmpty()) return ToolResult.success(name, mapOf(), "✅ Matengenezo yote yako sawa!")
+        if (overdue.isEmpty()) return ToolResult.success(name, emptyMap<String, Any>(), "✅ Matengenezo yote yako sawa!")
 
         val msg = buildString {
             append("⚠️ Matengenezo yanayohitajika:\n")
@@ -139,6 +139,6 @@ class VehicleMaintenanceTracker @Inject constructor(private val context: Context
                     "🛡️ Bima:\n• Gharama: KES $cost\n• Siku zilizobaki: $daysRemaining")
             }
         }
-        return ToolResult.success(name, mapOf(), "Hakuna data ya bima.")
+        return ToolResult.success(name, emptyMap<String, Any>(), "Hakuna data ya bima.")
     }
 }
