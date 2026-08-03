@@ -170,7 +170,7 @@ class FloatManager @Inject constructor(
         val msg = buildString {
             append("📊 Muhtasari wa leo:\n")
             summary.forEach { (type, data) ->
-                append("• $type: ${data.first} miamala, KES ${formatP(data.second.abs())}")
+                append("• $type: ${data.first} miamala, KES ${formatP(abs(data.second))}")
                 if (data.third > 0) append(" (kamisheni: KES ${formatP(data.third)})")
                 append("\n")
             }

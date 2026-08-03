@@ -478,7 +478,8 @@ class CreditReadiness @Inject constructor(
                     // Group by type for readability
                     val grouped = eligible.groupBy { it["type"] }
                     for ((type, products) in grouped) {
-                        appendLine("   ${typeEmoji(type)} ${typeLabel(type)}:")
+                        val typeStr = type as? String ?: "other"
+                        appendLine("   ${typeEmoji(typeStr)} ${typeLabel(typeStr)}:")
                         for (p in products) {
                             val maxAmt = p["max_amount"] as Double
                             val apr = (p["effective_apr"] as Double * 100)
@@ -1266,6 +1267,15 @@ class CreditReadiness @Inject constructor(
             val totalDebt = debtDao.getTotalOutstanding().first() ?: 0.0
             val activeDebts = debtDao.getActiveDebtCount().first()
 
+            val milestones = listOf(
+                400 to "Building — Anza kujenga historia",
+                500 to "Good — Fungua mikopo ya M-Shwari/KCB",
+                550 to "Good+ — Fungua SACCO emergency loan",
+                650 to "Strong — Fungua mikopo ya benki",
+                700 to "Strong+ — Fungua mikopo ya SME",
+                750 to "Excellent — Mikopo yote inapatikana"
+            )
+
             val message = buildString {
                 appendLine("📜 HISTORIA YA CREDIT READINESS")
                 appendLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -1297,14 +1307,6 @@ class CreditReadiness @Inject constructor(
 
                 // Score milestones
                 appendLine("🏁 MILELE ZA ALAMA SCORE:")
-                val milestones = listOf(
-                    400 to "Building — Anza kujenga historia",
-                    500 to "Good — Fungua mikopo ya M-Shwari/KCB",
-                    550 to "Good+ — Fungua SACCO emergency loan",
-                    650 to "Strong — Fungua mikopo ya benki",
-                    700 to "Strong+ — Fungua mikopo ya SME",
-                    750 to "Excellent — Mikopo yote inapatikana"
-                )
                 for ((threshold, label) in milestones) {
                     val status = if (currentScore >= threshold) "✅" else "⬜"
                     appendLine("   $status $threshold: $label")
@@ -1683,7 +1685,7 @@ class CreditReadiness @Inject constructor(
             } else 0.0
 
             // Check Fuliza usage pattern
-            val recentDebts = debtDao.getAll().first()
+            val recentDebts = debtDao.getAll()
             val activeDebtTotal = recentDebts.filter { it.status == "active" }.sumOf { it.amount }
             val debtToIncomeRatio = if (avgMonthlyRevenue > 0) activeDebtTotal / avgMonthlyRevenue else 0.0
 
@@ -1744,7 +1746,7 @@ class CreditReadiness @Inject constructor(
                     appendLine("Dalili:")
                     riskFactors.forEach { appendLine("  ❌ $it") }
                     appendLine()
-                    appendLine("\U0001f4a1 Mapendekezo:")
+                    appendLine("💡 Mapendekezo:")
                     if (debtToIncomeRatio > 0.40) {
                         appendLine("  1. Simama na mikopo mipya — lipa deni la sasa kwanza")
                     }
@@ -1759,14 +1761,18 @@ class CreditReadiness @Inject constructor(
                 }
             }
 
-            ToolResult.success(name, message, mapOf(
-                "risk_level" to riskLevel,
-                "risk_score" to riskScore,
-                "debt_to_income" to debtToIncomeRatio,
-                "active_debt" to activeDebtTotal,
-                "monthly_revenue" to avgMonthlyRevenue,
-                "risk_factors" to riskFactors
-            ))
+            ToolResult.success(
+                toolName = name,
+                data = mapOf(
+                    "risk_level" to riskLevel,
+                    "risk_score" to riskScore,
+                    "debt_to_income" to debtToIncomeRatio,
+                    "active_debt" to activeDebtTotal,
+                    "monthly_revenue" to avgMonthlyRevenue,
+                    "risk_factors" to riskFactors
+                ),
+                message = message
+            )
         } catch (e: Exception) {
             Timber.e(e, "Debt trap detection failed")
             ToolResult.error(name, "Failed to analyze debt pattern: ${e.message}", "DEBT_TRAP_ERROR")

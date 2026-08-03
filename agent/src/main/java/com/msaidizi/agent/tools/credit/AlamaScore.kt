@@ -166,7 +166,7 @@ class AlamaScore @Inject constructor(
         val cov = Array(p) { i -> DoubleArray(p) { j -> standardized.sumOf { it[i] * it[j] } / (n - 1) } }
 
         // Power iteration for eigenvectors
-        val components = mutableListOf<Pair<DoubleArray, Double>>() ; var residual = cov.map { it.copyOf() }
+        val components = mutableListOf<Pair<DoubleArray, Double>>() ; var residual = cov.map { it.copyOf() }.toTypedArray()
         for (c in 0 until minOf(nComp, p)) { val (vec, val_) = powerIteration(residual); components.add(vec to val_); residual = deflateMatrix(residual, vec, val_) }
         val totalVar = (0 until p).sumOf { cov[it][it] }
         val explained = components.map { it.second / totalVar }
@@ -195,7 +195,7 @@ class AlamaScore @Inject constructor(
         val standardized = matrix.map { row -> DoubleArray(p) { j -> (row[j] - means[j]) / stds[j] } }
         val corr = Array(p) { i -> DoubleArray(p) { j -> standardized.sumOf { it[i] * it[j] } / (n - 1) } }
 
-        val factors = mutableListOf<DoubleArray>(); var residual = corr.map { it.copyOf() }
+        val factors = mutableListOf<DoubleArray>(); var residual = corr.map { it.copyOf() }.toTypedArray()
         for (f in 0 until minOf(nFactors, p)) { val (vec, val_) = powerIteration(residual); factors.add(DoubleArray(p) { i -> vec[i] * sqrt(val_) }); residual = deflateMatrix(residual, vec, val_) }
         val communality = DoubleArray(p) { j -> factors.sumOf { it[j].pow(2) } }
 

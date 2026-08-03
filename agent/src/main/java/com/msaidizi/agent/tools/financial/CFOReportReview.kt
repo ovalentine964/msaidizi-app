@@ -57,6 +57,11 @@ class CFOReportReview @Inject constructor(
             ReportType.CASHFLOW_FORECAST -> cfoEngine.predictCashFlow()
             ReportType.WEEKLY_REPORT -> cfoEngine.generateWeeklyReport()
             ReportType.SAVINGS_ADVICE -> cfoEngine.getSavingsAdvice()
+            ReportType.PROOF_OF_INCOME, ReportType.CREDIT_READINESS -> {
+                com.msaidizi.agent.tools.core.ToolResult.error(
+                    name, "Report type $reportType not yet supported", "UNSUPPORTED"
+                )
+            }
         }
 
         if (!reportResult.success) {

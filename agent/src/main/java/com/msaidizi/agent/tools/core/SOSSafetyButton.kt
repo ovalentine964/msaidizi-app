@@ -182,7 +182,7 @@ class SOSSafetyButton @Inject constructor(
                 data = mapOf(
                     "event_id" to eventId,
                     "latitude" to lat,
-                    "longitude" to longitude,
+                    "longitude" to lon,
                     "accuracy" to accuracy,
                     "contacts_notified" to sentCount,
                     "audio_recording" to (audioPath != null),

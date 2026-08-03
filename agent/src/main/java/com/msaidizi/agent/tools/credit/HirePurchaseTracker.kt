@@ -227,7 +227,8 @@ class HirePurchaseTracker @Inject constructor(
                 appendLine("   💸 Umefanya: KES ${"%,.0f".format(totalPaid)}")
                 appendLine("   📅 Siku: $daysPaid")
                 if (agreement.totalPurchasePrice != null) {
-                    val remaining = agreement.totalPurchasePrice - totalPaid
+                    val purchasePrice = agreement.totalPurchasePrice!!
+                    val remaining = purchasePrice - totalPaid
                     if (remaining > 0) {
                         appendLine("   🏷️ Imebaki: KES ${"%,.0f".format(remaining)} ya kununua")
                     } else {
@@ -317,10 +318,11 @@ class HirePurchaseTracker @Inject constructor(
                 appendLine("   📊 Kiwango cha malipo: ${"%.0f".format(paymentRate)}%")
 
                 if (agreement.totalPurchasePrice != null) {
-                    val remaining = agreement.totalPurchasePrice - totalPaid
+                    val purchasePrice = agreement.totalPurchasePrice!!
+                    val remaining = purchasePrice - totalPaid
                     appendLine()
                     appendLine("── Kununua ──")
-                    appendLine("   🏷️ Bei: KES ${"%,.0f".format(agreement.totalPurchasePrice)}")
+                    appendLine("   🏷️ Bei: KES ${"%,.0f".format(purchasePrice)}")
                     if (remaining > 0) {
                         appendLine("   📉 Imebaki: KES ${"%,.0f".format(remaining)}")
                         val daysToPayoff = if (agreement.dailyFee > 0) (remaining / agreement.dailyFee).toInt() else 0

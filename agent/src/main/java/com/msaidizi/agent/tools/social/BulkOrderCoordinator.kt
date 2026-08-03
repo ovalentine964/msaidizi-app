@@ -782,15 +782,13 @@ class BulkOrderCoordinator @Inject constructor(
 
     private fun parseDeadline(input: String): Long {
         val now = System.currentTimeMillis()
-        return when {
-            input.endsWith("d") -> now + input.removeSuffix("d").toLongOrNull()
-                ?.let { it * 24 * 60 * 60 * 1000 } ?: (3 * 24 * 60 * 60 * 1000)
-            input.endsWith("w") -> now + input.removeSuffix("w").toLongOrNull()
-                ?.let { it * 7 * 24 * 60 * 60 * 1000 } ?: (7 * 24 * 60 * 60 * 1000)
-            input.endsWith("h") -> now + input.removeSuffix("h").toLongOrNull()
-                ?.let { it * 60 * 60 * 1000 } ?: (24 * 60 * 60 * 1000)
-            else -> now + 3 * 24 * 60 * 60 * 1000 // default 3 days
+        val multiplier = when {
+            input.endsWith("d") -> input.removeSuffix("d").toLongOrNull()?.let { it * 24L * 60 * 60 * 1000 }
+            input.endsWith("w") -> input.removeSuffix("w").toLongOrNull()?.let { it * 7L * 24 * 60 * 60 * 1000 }
+            input.endsWith("h") -> input.removeSuffix("h").toLongOrNull()?.let { it * 60L * 60 * 1000 }
+            else -> null
         }
+        return now + (multiplier ?: (3L * 24 * 60 * 60 * 1000))
     }
 
     private fun formatTimestamp(ts: Long): String {

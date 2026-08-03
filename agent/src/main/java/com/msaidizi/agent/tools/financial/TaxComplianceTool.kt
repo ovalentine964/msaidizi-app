@@ -70,7 +70,7 @@ class TaxComplianceTool @Inject constructor(
                 "annual_estimate", "filing_reminder"), required = false)
         number("annual_revenue", "Annual revenue for manual calculation (KES)", required = false)
         number("monthly_revenue", "Monthly revenue for manual calculation (KES)", required = false)
-        integer("employee_count", "Number of employees (for NHIF/NSSF)", required = false, default = "0")
+        integer("employee_count", "Number of employees (for NHIF/NSSF)", required = false, default = 0)
     }
 
     override suspend fun execute(params: Map<String, String>): ToolResult {

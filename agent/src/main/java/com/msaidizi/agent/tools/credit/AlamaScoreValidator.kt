@@ -397,21 +397,21 @@ class AlamaScoreValidator @Inject constructor(
         if (positives.isEmpty() || negatives.isEmpty()) return null
 
         // Simple AUC: probability that a random positive is ranked higher than a random negative
-        var concordant = 0
+        var concordant = 0.0
         var total = 0
 
         for (pos in positives) {
             for (neg in negatives) {
                 total++
                 if (pos.predictedDefaultProb > neg.predictedDefaultProb) {
-                    concordant++
+                    concordant += 1.0
                 } else if (pos.predictedDefaultProb == neg.predictedDefaultProb) {
                     concordant += 0.5
                 }
             }
         }
 
-        return if (total > 0) concordant.toDouble() / total else null
+        return if (total > 0) concordant / total else null
     }
 
     private fun generateCalibrationWarnings(

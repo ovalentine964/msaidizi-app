@@ -519,7 +519,7 @@ class SeasonalBudgetPlanner @Inject constructor(
             else -> 10_000.0
         }
 
-        val runwayMonths = if (monthlyExpenses > 0) (currentSavings / monthlyExpenses) else 99
+        val runwayMonths = if (monthlyExpenses > 0) (currentSavings / monthlyExpenses).toInt() else 99
         val monthsUntilHarvest = monthsUntilNextHarvest(calendar, currentMonth)
         val willSurvive = runwayMonths >= monthsUntilHarvest
 

@@ -483,7 +483,7 @@ class ChamaManager @Inject constructor(
                 return ToolResult.success(name, message = "No chamas yet. Create one with 'create chama'.")
             }
 
-            val list = chamas.joinToString("\n") { chama ->
+            val list = chamas.map { chama ->
                 val memberCount = chamaMemberDao.getMemberCount(chama.id)
                 val totalSaved = chamaContributionDao.getTotalContributed(chama.id) ?: 0.0
                 val goalStr = if (chama.savingsTarget > 0) {
@@ -493,7 +493,7 @@ class ChamaManager @Inject constructor(
                 "👥 ${chama.name} (id: ${chama.id}) — " +
                         "${memberCount} members, Ksh ${"%,.0f".format(chama.contributionAmount)} ${chama.frequency}" +
                         " | Saved: Ksh ${"%,.0f".format(totalSaved)}$goalStr"
-            }
+            }.joinToString("\n")
 
             ToolResult.success(name, message = list)
         } catch (e: Exception) {

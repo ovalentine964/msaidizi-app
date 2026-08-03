@@ -54,7 +54,7 @@ class PricingAdvisor @Inject constructor(
         }
     }
 
-    fun advise(product: String, currentPrice: Double): ToolResult {
+    suspend fun advise(product: String, currentPrice: Double): ToolResult {
         val marketPrice = marketPrices[product] ?: currentPrice
         val diff = ((currentPrice - marketPrice) / marketPrice * 100)
 

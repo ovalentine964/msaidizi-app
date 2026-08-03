@@ -1,0 +1,85 @@
+agent/src/main/java/com/msaidizi/agent/loops/OODALoop.kt:448:47 Unresolved reference 'getToolNames'.
+agent/src/main/java/com/msaidizi/agent/mpesa/MpesaSmsParser.kt:190:44 Unresolved reference 'value'.
+agent/src/main/java/com/msaidizi/agent/mpesa/MpesaSmsReconciler.kt:72:22 'when' expression must be exhaustive. Add the 'EXPENSE_AIRTIME' branch or an 'else' branch.
+agent/src/main/java/com/msaidizi/agent/mpesa/MpesaSmsReconciler.kt:114:37 Argument type mismatch: actual type is 'kotlin.Long', but 'kotlin.String' was expected.
+agent/src/main/java/com/msaidizi/agent/mpesa/MpesaSmsReconciler.kt:114:37 No value passed for parameter 'recordId'.
+agent/src/main/java/com/msaidizi/agent/mpesa/MpesaSmsReconciler.kt:118:18 Unresolved reference 'updateConfidence'.
+agent/src/main/java/com/msaidizi/agent/mpesa/MpesaSmsReconciler.kt:145:21 Unresolved reference 'recordRepayment'.
+agent/src/main/java/com/msaidizi/agent/mpesa/MpesaSmsReconciler.kt:286:40 Unresolved reference 'findByPhone'.
+agent/src/main/java/com/msaidizi/agent/mpesa/MpesaSmsReconciler.kt:288:66 Unresolved reference 'name'.
+agent/src/main/java/com/msaidizi/agent/mpesa/MpesaSmsReconciler.kt:289:42 Unresolved reference 'firstOrNull'.
+agent/src/main/java/com/msaidizi/agent/mpesa/MpesaSmsReconciler.kt:289:56 Unresolved reference 'it'.
+agent/src/main/java/com/msaidizi/agent/mpesa/MpesaSmsReconciler.kt:290:50 Return type mismatch: expected 'com.msaidizi.core.model.DebtEntity?', actual 'kotlin.Any'.
+agent/src/main/java/com/msaidizi/agent/mpesa/MpesaSmsReconciler.kt:297:38 Unresolved reference 'firstOrNull'.
+agent/src/main/java/com/msaidizi/agent/mpesa/MpesaSmsReconciler.kt:297:52 Unresolved reference 'it'.
+agent/src/main/java/com/msaidizi/agent/mpesa/MpesaSmsReconciler.kt:298:46 Return type mismatch: expected 'com.msaidizi.core.model.DebtEntity?', actual 'kotlin.Any'.
+agent/src/main/java/com/msaidizi/agent/mpesa/MpesaSmsReconciler.kt:321:35 Unresolved reference 'getAll'.
+agent/src/main/java/com/msaidizi/agent/mpesa/MpesaSmsReconciler.kt:322:39 Cannot infer type for this parameter. Please specify it explicitly.
+agent/src/main/java/com/msaidizi/agent/mpesa/MpesaSmsReconciler.kt:323:55 Unresolved reference 'name'.
+agent/src/main/java/com/msaidizi/agent/onboarding/OnboardingController.kt:202:24 Unresolved reference 'upsert'.
+agent/src/main/java/com/msaidizi/agent/tools/agriculture/FishingLog.kt:526:94 Unresolved reference 'catch'.
+agent/src/main/java/com/msaidizi/agent/tools/agriculture/PostHarvestLossTracker.kt:140:13 'public' property exposes its 'private-in-class' type argument 'StorageTip'.
+agent/src/main/java/com/msaidizi/agent/tools/agriculture/WasteReducer.kt:173:25 Operator '==' cannot be applied to 'kotlin.Int' and 'kotlin.Double'.
+agent/src/main/java/com/msaidizi/agent/tools/agriculture/WeatherCacheManager.kt:860:80 Argument type mismatch: actual type is 'kotlin.Boolean', but 'kotlin.Pair<K, V>' was expected.
+agent/src/main/java/com/msaidizi/agent/tools/agriculture/WeatherCacheManager.kt:860:80 Operator '==' cannot be applied to 'kotlin.Pair<kotlin.String, kotlin.Int>' and 'kotlin.Int'.
+agent/src/main/java/com/msaidizi/agent/tools/core/GuardrailsTool.kt:78:67 Unsupported escape sequence.
+agent/src/main/java/com/msaidizi/agent/tools/core/SOSSafetyButton.kt:185:36 Unresolved reference 'longitude'.
+agent/src/main/java/com/msaidizi/agent/tools/core/SyncEngine.kt:177:40 Cannot access class 'retrofit2.Response'. Check your module classpath for missing or conflicting dependencies.
+agent/src/main/java/com/msaidizi/agent/tools/core/SyncEngine.kt:179:21 Cannot access class 'retrofit2.Response'. Check your module classpath for missing or conflicting dependencies.
+agent/src/main/java/com/msaidizi/agent/tools/core/SyncEngine.kt:179:30 Unresolved reference 'isSuccessful'.
+agent/src/main/java/com/msaidizi/agent/tools/core/SyncEngine.kt:180:32 Cannot access class 'retrofit2.Response'. Check your module classpath for missing or conflicting dependencies.
+agent/src/main/java/com/msaidizi/agent/tools/core/SyncEngine.kt:180:41 Unresolved reference 'body'.
+agent/src/main/java/com/msaidizi/agent/tools/core/SyncEngine.kt:216:41 Cannot access class 'retrofit2.Response'. Check your module classpath for missing or conflicting dependencies.
+agent/src/main/java/com/msaidizi/agent/tools/core/SyncEngine.kt:216:59 Cannot access class 'retrofit2.Response'. Check your module classpath for missing or conflicting dependencies.
+agent/src/main/java/com/msaidizi/agent/tools/core/SyncEngine.kt:216:68 Unresolved reference 'message'.
+agent/src/main/java/com/msaidizi/agent/tools/core/SyncEngine.kt:220:25 Cannot access class 'retrofit2.Response'. Check your module classpath for missing or conflicting dependencies.
+agent/src/main/java/com/msaidizi/agent/tools/core/SyncEngine.kt:220:54 Cannot access class 'retrofit2.Response'. Check your module classpath for missing or conflicting dependencies.
+agent/src/main/java/com/msaidizi/agent/tools/credit/AlamaScore.kt:170:79 Argument type mismatch: actual type is 'kotlin.collections.List<kotlin.DoubleArray>', but 'kotlin.Array<kotlin.DoubleArray>' was expected.
+agent/src/main/java/com/msaidizi/agent/tools/credit/AlamaScore.kt:170:130 Assignment type mismatch: actual type is 'kotlin.Array<kotlin.DoubleArray>', but 'kotlin.collections.List<kotlin.DoubleArray>' was expected.
+agent/src/main/java/com/msaidizi/agent/tools/credit/AlamaScore.kt:170:144 Argument type mismatch: actual type is 'kotlin.collections.List<kotlin.DoubleArray>', but 'kotlin.Array<kotlin.DoubleArray>' was expected.
+agent/src/main/java/com/msaidizi/agent/tools/credit/AlamaScore.kt:199:82 Argument type mismatch: actual type is 'kotlin.collections.List<kotlin.DoubleArray>', but 'kotlin.Array<kotlin.DoubleArray>' was expected.
+agent/src/main/java/com/msaidizi/agent/tools/credit/AlamaScore.kt:199:162 Assignment type mismatch: actual type is 'kotlin.Array<kotlin.DoubleArray>', but 'kotlin.collections.List<kotlin.DoubleArray>' was expected.
+agent/src/main/java/com/msaidizi/agent/tools/credit/AlamaScore.kt:199:176 Argument type mismatch: actual type is 'kotlin.collections.List<kotlin.DoubleArray>', but 'kotlin.Array<kotlin.DoubleArray>' was expected.
+agent/src/main/java/com/msaidizi/agent/tools/credit/AlamaScoreValidator.kt:409:21 Assignment type mismatch: actual type is 'kotlin.Double', but 'kotlin.Int' was expected.
+agent/src/main/java/com/msaidizi/agent/tools/credit/CreditReadiness.kt:481:52 Argument type mismatch: actual type is 'kotlin.Any?', but 'kotlin.String' was expected.
+agent/src/main/java/com/msaidizi/agent/tools/credit/CreditReadiness.kt:481:71 Argument type mismatch: actual type is 'kotlin.Any?', but 'kotlin.String' was expected.
+agent/src/main/java/com/msaidizi/agent/tools/credit/CreditReadiness.kt:1333:42 Unresolved reference 'milestones'.
+agent/src/main/java/com/msaidizi/agent/tools/credit/CreditReadiness.kt:1333:82 Unresolved reference 'it'.
+agent/src/main/java/com/msaidizi/agent/tools/credit/CreditReadiness.kt:1333:85 Cannot infer type for this parameter. Please specify it explicitly.
+agent/src/main/java/com/msaidizi/agent/tools/credit/CreditReadiness.kt:1333:85 Suspension functions can only be called within coroutine body.
+agent/src/main/java/com/msaidizi/agent/tools/credit/CreditReadiness.kt:1333:94 Function invocation 'first()' expected.
+agent/src/main/java/com/msaidizi/agent/tools/credit/CreditReadiness.kt:1686:39 Unresolved reference 'getAll'.
+agent/src/main/java/com/msaidizi/agent/tools/credit/CreditReadiness.kt:1686:48 Cannot infer type for this parameter. Please specify it explicitly.
+agent/src/main/java/com/msaidizi/agent/tools/credit/CreditReadiness.kt:1687:56 Unresolved reference 'it'.
+agent/src/main/java/com/msaidizi/agent/tools/credit/CreditReadiness.kt:1687:88 Unresolved reference 'it'.
+agent/src/main/java/com/msaidizi/agent/tools/credit/CreditReadiness.kt:1710:38 Unresolved reference 'it'.
+agent/src/main/java/com/msaidizi/agent/tools/credit/CreditReadiness.kt:1710:62 Unresolved reference 'size'.
+agent/src/main/java/com/msaidizi/agent/tools/credit/CreditReadiness.kt:1711:68 Unresolved reference 'it'.
+agent/src/main/java/com/msaidizi/agent/tools/credit/CreditReadiness.kt:1711:92 Unresolved reference 'size'.
+agent/src/main/java/com/msaidizi/agent/tools/credit/CreditReadiness.kt:1747:33 Unsupported escape sequence.
+agent/src/main/java/com/msaidizi/agent/tools/credit/CreditReadiness.kt:1754:46 Unresolved reference 'it'.
+agent/src/main/java/com/msaidizi/agent/tools/credit/CreditReadiness.kt:1754:70 Unresolved reference 'size'.
+agent/src/main/java/com/msaidizi/agent/tools/credit/CreditReadiness.kt:1762:47 Argument type mismatch: actual type is 'kotlin.collections.Map<K, V>', but 'kotlin.String' was expected.
+agent/src/main/java/com/msaidizi/agent/tools/credit/HirePurchaseTracker.kt:230:37 Smart cast to 'kotlin.Double' is impossible, because 'totalPurchasePrice' is a public API property declared in different module.
+agent/src/main/java/com/msaidizi/agent/tools/credit/HirePurchaseTracker.kt:320:37 Smart cast to 'kotlin.Double' is impossible, because 'totalPurchasePrice' is a public API property declared in different module.
+agent/src/main/java/com/msaidizi/agent/tools/financial/CFOReportReview.kt:55:28 'when' expression must be exhaustive. Add the 'PROOF_OF_INCOME', 'CREDIT_READINESS' branches or an 'else' branch.
+agent/src/main/java/com/msaidizi/agent/tools/financial/DebtTracker.kt:320:39 Smart cast to 'kotlin.Long' is impossible, because 'dueDate' is a public API property declared in different module.
+agent/src/main/java/com/msaidizi/agent/tools/financial/DebtTracker.kt:574:63 Smart cast to 'kotlin.Long' is impossible, because 'dueDate' is a public API property declared in different module.
+agent/src/main/java/com/msaidizi/agent/tools/financial/DebtTracker.kt:587:39 Smart cast to 'kotlin.Long' is impossible, because 'dueDate' is a public API property declared in different module.
+agent/src/main/java/com/msaidizi/agent/tools/financial/DebtTracker.kt:900:25 Smart cast to 'kotlin.Long' is impossible, because 'dueDate' is a public API property declared in different module.
+agent/src/main/java/com/msaidizi/agent/tools/financial/DebtTracker.kt:901:25 Smart cast to 'kotlin.Long' is impossible, because 'dueDate' is a public API property declared in different module.
+agent/src/main/java/com/msaidizi/agent/tools/financial/FloatManager.kt:173:83 Unresolved reference 'abs'.
+agent/src/main/java/com/msaidizi/agent/tools/financial/PricingEngine.kt:65:97 Argument type mismatch: actual type is 'kotlin.String', but 'kotlin.Int?' was expected.
+agent/src/main/java/com/msaidizi/agent/tools/financial/ProofOfIncome.kt:808:9 'public' function exposes its 'private-in-class' parameter type argument 'MonthlyFinancial'.
+agent/src/main/java/com/msaidizi/agent/tools/financial/SeasonalBudgetPlanner.kt:524:43 Argument type mismatch: actual type is 'kotlin.Int', but 'CapturedType(*)' was expected.
+agent/src/main/java/com/msaidizi/agent/tools/financial/TaxComplianceTool.kt:73:102 Argument type mismatch: actual type is 'kotlin.String', but 'kotlin.Int?' was expected.
+agent/src/main/java/com/msaidizi/agent/tools/market/PricingAdvisor.kt:63:46 Suspend function 'suspend fun getMarketIntelligence(): List<LearnedPattern>' should be called only from a coroutine or another suspend function.
+agent/src/main/java/com/msaidizi/agent/tools/social/BulkOrderCoordinator.kt:786:40 None of the following candidates is applicable:
+agent/src/main/java/com/msaidizi/agent/tools/social/BulkOrderCoordinator.kt:788:40 None of the following candidates is applicable:
+agent/src/main/java/com/msaidizi/agent/tools/social/BulkOrderCoordinator.kt:790:40 None of the following candidates is applicable:
+agent/src/main/java/com/msaidizi/agent/tools/social/ChamaManager.kt:487:50 Suspension functions can only be called within coroutine body.
+agent/src/main/java/com/msaidizi/agent/tools/social/ChamaManager.kt:488:55 Suspension functions can only be called within coroutine body.
+agent/src/main/java/com/msaidizi/agent/tools/social/CustomerInsights.kt:144:75 Too many characters in a character literal.
+agent/src/main/java/com/msaidizi/agent/tools/social/CustomerInsights.kt:145:74 Too many characters in a character literal.
+agent/src/main/java/com/msaidizi/agent/tools/social/CustomerInsights.kt:153:63 Smart cast to 'kotlin.Long' is impossible, because 'dueDate' is a public API property declared in different module.
+agent/src/main/java/com/msaidizi/agent/tools/voice/CodeSwitchHandler.kt:545:56 Return type mismatch: expected 'kotlin.Long?', actual 'kotlin.Int'.

@@ -170,7 +170,7 @@ class WasteReducer @Inject constructor(
                 if (useVoice) {
                     val dayText = when {
                         daysLeft <= 0 -> "imekaribia kuoza!"
-                        daysLeft == 1.0 -> "siku 1 kabla ya kuoza"
+                        daysLeft == 1 -> "siku 1 kabla ya kuoza"
                         else -> "siku $daysLeft kabla ya kuoza"
                     }
                     "$riskEmoji $productName: ${remaining.toInt()} $unit — $dayText (imenunuliwa $purchaseDate)"

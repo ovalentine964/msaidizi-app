@@ -199,7 +199,7 @@ class OnboardingController @Inject constructor(
             createdAt = System.currentTimeMillis(),
             updatedAt = System.currentTimeMillis()
         )
-        userProfileDao.upsert(profile)
+        userProfileDao.insert(profile)
 
         // Store full onboarding data in knowledge base for progressive profiling
         // (Flywheel will use this for Loop 1: Vocabulary learning)

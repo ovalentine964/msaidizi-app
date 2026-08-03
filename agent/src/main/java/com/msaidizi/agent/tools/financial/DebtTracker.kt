@@ -317,7 +317,8 @@ class DebtTracker @Inject constructor(
 
             val totalOwed = debts.sumOf { it.outstandingBalance }
             val overdueDebts = debts.filter {
-                it.dueDate != null && it.dueDate < System.currentTimeMillis()
+                val due = it.dueDate
+                due != null && due < System.currentTimeMillis()
             }
 
             val now = System.currentTimeMillis()
@@ -571,7 +572,8 @@ class DebtTracker @Inject constructor(
                     totalRepaymentDays += daysToSettle
                     repaymentCount++
 
-                    if (debt.dueDate != null && lastPayment > debt.dueDate) {
+                    val dueDate = debt.dueDate
+                    if (dueDate != null && lastPayment > dueDate) {
                         latePayments++
                     } else {
                         onTimePayments++
@@ -584,7 +586,8 @@ class DebtTracker @Inject constructor(
             // Check current overdue exposure
             val now = System.currentTimeMillis()
             val overdueActive = activeDebts.filter {
-                it.dueDate != null && it.dueDate < now && it.outstandingBalance > 0
+                val due = it.dueDate
+                due != null && due < now && it.outstandingBalance > 0
             }
             val overdueAmount = overdueActive.sumOf { it.outstandingBalance }
 
@@ -895,10 +898,11 @@ class DebtTracker @Inject constructor(
                 appendLine()
 
                 debts.forEach { debt ->
+                    val dueDate = debt.dueDate
                     val statusEmoji = when {
-                        debt.dueDate == null -> "📋"
-                        debt.dueDate < now -> "🔴"
-                        debt.dueDate < now + TimeUnit.DAYS.toMillis(7) -> "🟡"
+                        dueDate == null -> "📋"
+                        dueDate < now -> "🔴"
+                        dueDate < now + TimeUnit.DAYS.toMillis(7) -> "🟡"
                         else -> "🟢"
                     }
                     val dueStr = debt.dueDate?.let { " — due ${DateTimeUtil.formatDate(it)}" } ?: ""

@@ -62,7 +62,7 @@ class PricingEngine @Inject constructor() : Tool {
                 "DIGITAL_WORKER", "CASUAL_LABORER", "FOOD_SERVICE", "COMMUNITY_CARE_WORKER"),
             required = false)
         integer("monthly_income", "Worker's monthly income in KES (for recommendation)", required = false)
-        integer("user_count", "Total users for revenue projection", required = false, default = "100000")
+        integer("user_count", "Total users for revenue projection", required = false, default = 100000)
     }
 
     override suspend fun execute(params: Map<String, String>): ToolResult {

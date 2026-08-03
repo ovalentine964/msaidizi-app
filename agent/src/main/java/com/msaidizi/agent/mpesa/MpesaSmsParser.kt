@@ -187,7 +187,7 @@ object MpesaSmsParser {
     private fun extractPhone(sms: String): String {
         val pattern = Pattern.compile("(?:\\+?254|0)[17]\\d{8}")
         val matcher = pattern.matcher(sms)
-        return if (matcher.find()) matcher.value else ""
+        return if (matcher.find()) matcher.group() else ""
     }
 
     /**

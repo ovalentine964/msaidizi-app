@@ -445,7 +445,7 @@ class OODALoop @Inject constructor(
         )) return emptyList()
 
         return try {
-            val availableTools = toolRegistry.getToolNames().joinToString(", ")
+            val availableTools = toolRegistry.getAllTools().map { it.name }.joinToString(", ")
             val prompt = """Given this user intent: ${intent.type}
 Available tools: $availableTools
 Strategy: ${orientation.strategy}

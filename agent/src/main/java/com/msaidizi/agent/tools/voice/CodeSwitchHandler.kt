@@ -542,7 +542,7 @@ class CodeSwitchHandler @Inject constructor(
 
         // Single digit word
         if (words.size == 1) {
-            swahiliNumberWords[words[0]]?.let { return it }
+            swahiliNumberWords[words[0]]?.let { return it.toLong() }
             words[0].toLongOrNull()?.let { return it }
             shengMoneyTerms[words[0]]?.value?.takeIf { it > 0 }?.let { return it.toLong() }
             return null

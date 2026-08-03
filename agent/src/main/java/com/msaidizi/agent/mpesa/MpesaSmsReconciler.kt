@@ -3,6 +3,7 @@ package com.msaidizi.agent.mpesa
 import com.msaidizi.core.database.*
 import com.msaidizi.core.model.*
 import com.msaidizi.agent.events.TransactionEventBus
+import kotlinx.coroutines.flow.first
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -34,6 +35,7 @@ class MpesaSmsReconciler @Inject constructor(
     private val expenseDao: ExpenseDao,
     private val customerDao: CustomerDao,
     private val debtDao: DebtDao,
+    private val debtRepaymentDao: DebtRepaymentDao,
     private val productDao: ProductDao,
     private val eventBus: TransactionEventBus,
     private val mpesaDao: MpesaTransactionDao
@@ -98,6 +100,14 @@ class MpesaSmsReconciler @Inject constructor(
                     recordId = recordId
                 )
             }
+            TransactionCategory.EXPENSE_AIRTIME -> {
+                ReconciliationResult(
+                    success = true,
+                    action = "recorded",
+                    message = "Airtime purchase of KES ${transaction.amount} recorded",
+                    recordId = recordId
+                )
+            }
             TransactionCategory.UNKNOWN -> {
                 ReconciliationResult(
                     success = true,
@@ -142,7 +152,7 @@ class MpesaSmsReconciler @Inject constructor(
         val matchedDebt = matchToDebt(tx)
         if (matchedDebt != null) {
             // Record as debt repayment, not a new sale
-            debtDao.recordRepayment(
+            debtRepaymentDao.insert(
                 DebtRepaymentEntity(
                     debtId = matchedDebt.id,
                     amount = tx.amount,
@@ -285,7 +295,7 @@ class MpesaSmsReconciler @Inject constructor(
         if (tx.phone.isNotEmpty()) {
             val customer = customerDao.findByPhone(tx.phone)
             if (customer != null) {
-                val debts = debtDao.getActiveByCustomer(customer.name)
+                val debts = debtDao.getActiveByCustomer(customer.name).first()
                 val matchingDebt = debts.firstOrNull { it.outstandingBalance > 0 }
                 if (matchingDebt != null) return matchingDebt
             }
@@ -293,7 +303,7 @@ class MpesaSmsReconciler @Inject constructor(
 
         // Try name match
         if (tx.counterparty.isNotEmpty()) {
-            val debts = debtDao.getActiveByCustomer(tx.counterparty)
+            val debts = debtDao.getActiveByCustomer(tx.counterparty).first()
             val matchingDebt = debts.firstOrNull { it.outstandingBalance > 0 }
             if (matchingDebt != null) return matchingDebt
         }

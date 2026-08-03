@@ -75,7 +75,7 @@ class GuardrailsTool @Inject constructor(
     private val piiPatterns = listOf(
         Regex("(?:\\+?254|0)[17]\\d{8}"),
         Regex("[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}"),
-        Regex("(?i)(?:national|id|passport)\\s*(?:no|number|#)?[.:\s]*\\d{7,9}"),
+        Regex("(?i)(?:national|id|passport)\\s*(?:no|number|#)?[.:\\s]*\\d{7,9}"),
         Regex("\\b(?:\\d{4}[\\s-]?){3}\\d{1,7}\\b"),
     )
 

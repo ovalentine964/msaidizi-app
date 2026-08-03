@@ -141,8 +141,8 @@ class CustomerInsights @Inject constructor(
                 appendLine("💰 *Matumizi mwezi huu:* KES ${"%,.0f".format(profile.spendThisMonth)}")
                 appendLine("💰 *Wastani kwa ziara:* KES ${"%,.0f".format(profile.avgSpendPerVisit)}")
                 appendLine()
-                appendLine("📆 *Ziara ya kwanza:* ${profile.firstVisit ?: 'N/A'}")
-                appendLine("📆 *Ziara ya mwisho:* ${profile.lastVisit ?: 'N/A'}")
+                appendLine("📆 *Ziara ya kwanza:* ${profile.firstVisit ?: "N/A"}")
+                appendLine("📆 *Ziara ya mwisho:* ${profile.lastVisit ?: "N/A"}")
                 appendLine("⏰ *Siku tangu ziara ya mwisho:* ${profile.daysSinceLastVisit}")
                 appendLine()
 
@@ -150,7 +150,8 @@ class CustomerInsights @Inject constructor(
                 if (creditOutstanding > 0) {
                     appendLine("💳 *Deni:* KES ${"%,.0f".format(creditOutstanding)}")
                     creditDebts.forEach { debt ->
-                        val overdue = debt.dueDate != null && debt.dueDate < System.currentTimeMillis()
+                        val dueDate = debt.dueDate
+                        val overdue = dueDate != null && dueDate < System.currentTimeMillis()
                         val statusEmoji = if (overdue) "🔴" else "🟡"
                         appendLine("   $statusEmoji ${debt.product}: KES ${"%,.0f".format(debt.outstandingBalance)}")
                     }

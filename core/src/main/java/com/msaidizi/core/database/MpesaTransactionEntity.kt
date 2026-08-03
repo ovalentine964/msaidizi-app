@@ -60,4 +60,10 @@ interface MpesaTransactionDao {
 
     @Query("SELECT SUM(amount) FROM mpesa_transactions WHERE type = :type AND transactionDate BETWEEN :startDate AND :endDate")
     suspend fun sumByTypeAndDateRange(type: String, startDate: String, endDate: String): Double?
+
+    @Query("UPDATE mpesa_transactions SET confidence = :confidence WHERE id = :id")
+    suspend fun updateConfidence(id: Long, confidence: Float)
+
+    @Query("UPDATE mpesa_transactions SET isReconciled = 1 WHERE id = :id")
+    suspend fun markReconciled(id: Long)
 }

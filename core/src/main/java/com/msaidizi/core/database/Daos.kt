@@ -76,6 +76,9 @@ interface ProductDao {
 
     @Delete
     suspend fun delete(product: ProductEntity)
+
+    @Query("SELECT * FROM products WHERE isActive = 1 ORDER BY name ASC")
+    suspend fun getAll(): List<ProductEntity>
 }
 
 // ──────────────────────────────────────────────
@@ -131,6 +134,9 @@ interface CustomerDao {
 
     @Query("UPDATE customers SET creditBalance = creditBalance - :amount WHERE id = :customerId")
     suspend fun reduceCredit(customerId: Long, amount: Double)
+
+    @Query("SELECT * FROM customers WHERE phone = :phone LIMIT 1")
+    suspend fun findByPhone(phone: String): CustomerEntity?
 }
 
 // ──────────────────────────────────────────────
@@ -545,6 +551,9 @@ interface DebtDao {
 
     @Query("SELECT SUM(amount - outstandingBalance) FROM debts WHERE updatedAt BETWEEN :start AND :end")
     fun getRepaymentsBetween(start: Long, end: Long): Flow<Double?>
+
+    @Query("SELECT * FROM debts ORDER BY createdAt DESC")
+    suspend fun getAll(): List<DebtEntity>
 }
 
 // ──────────────────────────────────────────────

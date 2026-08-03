@@ -857,7 +857,7 @@ class WeatherCacheManager @Inject constructor(
 
         return ToolResult.success(
             name,
-            mapOf("location" to location.first, "cached_count" to cachedCount, "needs_network" to cachedCount == 0),
+            mapOf("location" to location.first, "cached_count" to cachedCount, "needs_network" to (cachedCount == 0)),
             message
         )
     }

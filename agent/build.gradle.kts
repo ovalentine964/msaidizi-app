@@ -68,6 +68,10 @@ dependencies {
     // Gson (tool schema building)
     implementation(libs.gson)
 
+    // Retrofit (sync API)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.serialization)
+
     // CameraX (for receipt scanning)
     implementation(libs.camera.camera2)
     implementation(libs.camera.lifecycle)

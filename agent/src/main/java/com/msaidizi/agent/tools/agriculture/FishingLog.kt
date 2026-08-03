@@ -523,7 +523,7 @@ class FishingLog @Inject constructor(
             }
         } else {
             buildString {
-                append("Catch summary ($period):\nTotal: ${formatQty(totalWeight)}kg across $catch catches\n\n")
+                append("Catch summary ($period):\nTotal: ${formatQty(totalWeight)}kg across $totalCatch catches\n\n")
                 summaries.forEach { s ->
                     append("• ${s.species}: ${formatQty(s.totalWeight)}kg (${s.catchCount} catches)\n")
                 }
