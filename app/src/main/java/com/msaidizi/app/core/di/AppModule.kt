@@ -1,6 +1,7 @@
 package com.msaidizi.app.core.di
 
 import com.msaidizi.agent.flywheel.FlywheelEngine
+import com.msaidizi.agent.guardrails.*
 import com.msaidizi.agent.tools.core.*
 import com.msaidizi.agent.tools.agriculture.*
 import com.msaidizi.agent.tools.credit.*
