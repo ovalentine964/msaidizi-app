@@ -227,7 +227,7 @@ dependencies {
     implementation(libs.timber)
 
     // T3: Firebase Crashlytics — crash reporting for production
-    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+    implementation(platform("com.google.firebase:firebase-bom:34.17.0"))
     implementation("com.google.firebase:firebase-crashlytics-ktx")
     implementation("com.google.firebase:firebase-analytics-ktx")
 
