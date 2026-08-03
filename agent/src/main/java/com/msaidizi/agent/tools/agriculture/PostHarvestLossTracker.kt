@@ -137,7 +137,7 @@ class PostHarvestLossTracker @Inject constructor(
         )
 
         // Storage tips database — Swahili-first
-        val STORAGE_ADVICE = mapOf(
+        private val STORAGE_ADVICE = mapOf(
             "maize" to listOf(
                 StorageTip("spoilage", "Kausha mahindi kabla ya kuhifadhi. Unyevu unapaswa kuwa chini ya 13%.", "Dry maize before storage. Moisture should be below 13%."),
                 StorageTip("spoilage", "Hifadhi kwenye mifuko ya kavu, si plastiki. Plastiki inazuia hewa.", "Store in dry bags, not plastic. Plastic blocks air circulation."),
