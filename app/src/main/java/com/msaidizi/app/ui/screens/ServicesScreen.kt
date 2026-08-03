@@ -144,8 +144,8 @@ fun ServicesScreen(
                             colors = CardDefaults.cardColors(containerColor = colors.infoContainer)
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
-                                Text("📅 Nafasi za Wiki Hii", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = colors.onInfoContainer)
-                                Text("This Week's Bookings", style = MaterialTheme.typography.bodySmall, color = colors.onInfoContainer.copy(alpha = 0.7f))
+                                Text("📅 Nafasi za Wiki Hii", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = colors.onSecondaryContainer)
+                                Text("This Week's Bookings", style = MaterialTheme.typography.bodySmall, color = colors.onSecondaryContainer.copy(alpha = 0.7f))
                                 Spacer(modifier = Modifier.height(12.dp))
                                 BookingItem("Jumatatu 10:00", "Kupiga Nywele — Mama Njeri", "KES 500")
                                 BookingItem("Jumanne 14:00", "Kusuka — Amina", "KES 1,200")
@@ -212,8 +212,8 @@ private fun BookingItem(time: String, service: String, price: String) {
             .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(time, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = colors.onInfoContainer, modifier = Modifier.width(100.dp))
-        Text(service, style = MaterialTheme.typography.bodyMedium, color = colors.onInfoContainer, modifier = Modifier.weight(1f))
-        Text(price, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = colors.onInfoContainer)
+        Text(time, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = colors.onSecondaryContainer, modifier = Modifier.width(100.dp))
+        Text(service, style = MaterialTheme.typography.bodyMedium, color = colors.onSecondaryContainer, modifier = Modifier.weight(1f))
+        Text(price, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = colors.onSecondaryContainer)
     }
 }
