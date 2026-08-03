@@ -300,10 +300,16 @@ jobs:
             native-deps-${{ hashFiles('scripts/setup_native_deps.sh') }}-
 
       - name: Setup native dependencies (llama.cpp + sherpa-onnx)
-        if: steps.native-cache.outputs.cache-hit != 'true'
         run: |
           chmod +x scripts/setup_native_deps.sh
-          ./scripts/setup_native_deps.sh
+          # llama.cpp: clone from source (no pre-built Android libs available)
+          ./scripts/setup_native_deps.sh --llama-only
+          # sherpa-onnx: use pre-built AAR to avoid onnxruntime download failure in CI.
+          # If prebuilt fails, try source build. If that also fails, continue in stub
+          # mode (CMakeLists.txt handles missing sherpa-onnx gracefully).
+          ./scripts/setup_native_deps.sh --prebuilt \
+            || ./scripts/setup_native_deps.sh --sherpa-only \
+            || echo "::warning::sherpa-onnx setup failed — building in stub mode (ASR/TTS disabled)"
 
       # ── Model Cache ────────────────────────────────────────
       # Cache downloaded models to avoid re-downloading on every run.

@@ -614,9 +614,9 @@ Java_com_msaidizi_voice_StreamingSttEngine_nativeCreateStreamingRecognizer(
 
     // Enable endpoint detection (for automatic utterance segmentation)
     config.enable_endpoint = 1;
-    config.rule1.min_trailing_silence = json_float(json, "rule1_min_trailing_silence", 2.4f);
-    config.rule2.min_trailing_silence = json_float(json, "rule2_min_trailing_silence", 1.2f);
-    config.rule3.min_utterance_length = json_float(json, "rule3_min_utterance_length", 20.0f);
+    config.rule1_min_trailing_silence = json_float(json, "rule1_min_trailing_silence", 2.4f);
+    config.rule2_min_trailing_silence = json_float(json, "rule2_min_trailing_silence", 1.2f);
+    config.rule3_min_utterance_length = json_float(json, "rule3_min_utterance_length", 20.0f);
 
     // Hot words (optional)
     config.hotwords_file = nullptr;
@@ -725,7 +725,7 @@ Java_com_msaidizi_voice_StreamingSttEngine_nativeDecode(
     if (!sh || !sh->valid) return;
 
     std::lock_guard<std::mutex> lock(sh->mu);
-    SherpaOnnxOnlineStreamDecode(sh->recognizer, sh->stream);
+    SherpaOnnxDecodeOnlineStream(sh->recognizer, sh->stream);
 #endif
 }
 
@@ -764,7 +764,7 @@ Java_com_msaidizi_voice_StreamingSttEngine_nativeIsEndpoint(
 #else
     StreamingRecognizerHandle* sh = get_stream(handle);
     if (!sh || !sh->valid) return JNI_FALSE;
-    return SherpaOnnxOnlineStreamIsEndpoint(sh->stream) ? JNI_TRUE : JNI_FALSE;
+    return SherpaOnnxOnlineStreamIsEndpoint(sh->recognizer, sh->stream) ? JNI_TRUE : JNI_FALSE;
 #endif
 }
 
@@ -780,7 +780,7 @@ Java_com_msaidizi_voice_StreamingSttEngine_nativeReset(
     if (!sh || !sh->valid) return;
 
     std::lock_guard<std::mutex> lock(sh->mu);
-    SherpaOnnxOnlineStreamReset(sh->stream);
+    SherpaOnnxOnlineStreamReset(sh->recognizer, sh->stream);
 #endif
 }
 
