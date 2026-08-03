@@ -144,7 +144,7 @@ object AppModule {
         registry.register(modelDownloader)
         registry.register(adaptiveLearner)
         registry.register(memoryManager)
-        registry.register(guardrailsEngine)
+        // guardrailsEngine is not a Tool — used internally by SuperagentHarness
         registry.register(anomalyDetector)
         registry.register(mpesaParser)
         registry.register(pricingAdvisor)
@@ -199,10 +199,8 @@ object AppModule {
         registry.register(harvestTimingOptimizer)
         registry.register(storageDecisionCalculator)
         registry.register(seasonalBudgetPlanner)
-        registry.register(cfoReportReview)
-        registry.register(cfoReportReviewer)
-        registry.register(chamaApprovalWorkflow)
-        registry.register(creditDecisionApproval)
+        // cfoReportReview, cfoReportReviewer, chamaApprovalWorkflow, creditDecisionApproval
+        // are internal engine classes, not Tools — used by SuperagentHarness directly
         registry.register(weatherCacheManager)
         registry.register(weatherForecastService)
         // cuOpt GPU-accelerated routing

@@ -251,7 +251,7 @@ fun ListItemCard(
             ) {
                 Icon(
                     imageVector = icon,
-                    contentDescription = "$label icon",
+                    contentDescription = "$title icon",
                     tint = statusColor,
                     modifier = Modifier.size(24.dp)
                 )
@@ -595,10 +595,10 @@ fun AlertBanner(
     val colors = MsaidiziThemeTokens.colors
 
     val (bgColor, iconColor, icon) = when (severity) {
-        AlertSeverity.SUCCESS -> Quadruple(colors.successContainer, colors.success, Icons.Default.CheckCircle)
-        AlertSeverity.WARNING -> Quadruple(colors.warningContainer, colors.warning, Icons.Default.Warning)
-        AlertSeverity.ERROR -> Quadruple(colors.errorContainer, colors.error, Icons.Default.Error)
-        AlertSeverity.INFO -> Quadruple(colors.infoContainer, colors.info, Icons.Default.Info)
+        AlertSeverity.SUCCESS -> Triple(colors.successContainer, colors.success, Icons.Default.CheckCircle)
+        AlertSeverity.WARNING -> Triple(colors.warningContainer, colors.warning, Icons.Default.Warning)
+        AlertSeverity.ERROR -> Triple(colors.errorContainer, colors.error, Icons.Default.Error)
+        AlertSeverity.INFO -> Triple(colors.infoContainer, colors.info, Icons.Default.Info)
     }
 
     Card(
