@@ -5,7 +5,9 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import timber.log.Timber
 import javax.inject.Inject
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Singleton
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlin.math.sqrt
 import com.msaidizi.agent.tools.core.*
 import com.msaidizi.agent.tools.market.ProducePriceTracker

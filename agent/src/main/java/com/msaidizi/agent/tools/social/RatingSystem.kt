@@ -7,7 +7,9 @@ import android.database.sqlite.SQLiteOpenHelper
 import com.google.gson.Gson
 import timber.log.Timber
 import javax.inject.Inject
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Singleton
+import dagger.hilt.android.qualifiers.ApplicationContext
 import com.msaidizi.agent.tools.core.*
 
 /**
