@@ -14,6 +14,9 @@ import com.msaidizi.voice.ModelDownloadManager
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @HiltAndroidApp
 class MsaidiziApp : Application(), Configuration.Provider {
@@ -45,7 +48,7 @@ class MsaidiziApp : Application(), Configuration.Provider {
         scheduleModelDownload()
 
         // Run memory consolidation pipeline on startup (L1→L2→L3→L4)
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             try {
                 memoryManager.runConsolidationPipeline()
                 // Run confidence decay to prevent inflation

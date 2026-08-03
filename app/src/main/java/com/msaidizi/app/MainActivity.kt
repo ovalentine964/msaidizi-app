@@ -13,6 +13,9 @@ import com.msaidizi.agent.harness.SuperagentHarness
 import com.msaidizi.agent.tools.voice.VoicePipeline
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -28,15 +31,21 @@ class MainActivity : ComponentActivity() {
                     AppNavigation(
                         onRecordSale = {
                             // TODO: navigate to record sale
-                            harness.processInput("Rekodi mpya ya mauzo")
+                            CoroutineScope(Dispatchers.Main).launch {
+                                harness.processInput("Rekodi mpya ya mauzo")
+                            }
                         },
                         onCheckInventory = {
                             // TODO: navigate to inventory
-                            harness.processInput("Onyesha hifadhi ya bidhaa")
+                            CoroutineScope(Dispatchers.Main).launch {
+                                harness.processInput("Onyesha hifadhi ya bidhaa")
+                            }
                         },
                         onViewDebts = {
                             // TODO: navigate to debts
-                            harness.processInput("Onyesha deni zote")
+                            CoroutineScope(Dispatchers.Main).launch {
+                                harness.processInput("Onyesha deni zote")
+                            }
                         }
                     )
                 }
