@@ -47,7 +47,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Android Lint
-        run: ./gradlew lint --continue
+        run: ./gradlew lintFullDebug --continue
 
       - name: Upload lint report
         if: always()
