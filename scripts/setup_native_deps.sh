@@ -180,14 +180,28 @@ setup_prebuilt() {
         if command -v wget &>/dev/null; then
             wget --tries=3 --timeout=120 --show-progress -O "$aar_file" "$SHERPA_ONNX_AAR_URL" || {
                 err "Failed to download sherpa-onnx AAR"
+                rm -f "$aar_file"
                 return 1
             }
         elif command -v curl &>/dev/null; then
             curl -L --retry 3 --retry-delay 5 --progress-bar -o "$aar_file" "$SHERPA_ONNX_AAR_URL" || {
                 err "Failed to download sherpa-onnx AAR"
+                rm -f "$aar_file"
                 return 1
             }
+        else
+            err "Neither wget nor curl available — cannot download AAR"
+            return 1
         fi
+    fi
+
+    # Validate AAR file (must be a valid ZIP > 1MB)
+    local aar_size
+    aar_size=$(stat -c%s "$aar_file" 2>/dev/null || stat -f%z "$aar_file" 2>/dev/null || echo 0)
+    if [ "$aar_size" -lt 1000000 ]; then
+        err "AAR file is too small (${aar_size} bytes) — likely a failed download"
+        rm -f "$aar_file"
+        return 1
     fi
 
     # Extract sherpa-onnx AAR (it's a ZIP file)
@@ -196,7 +210,12 @@ setup_prebuilt() {
         log "Extracting sherpa-onnx AAR..."
         mkdir -p "$sherpa_dir"
         # AAR is a ZIP file
-        unzip -q "$aar_file" -d "$sherpa_dir/aar-extracted" 2>/dev/null || true
+        unzip -q "$aar_file" -d "$sherpa_dir/aar-extracted" || {
+            err "Failed to extract AAR — file may be corrupt"
+            rm -rf "$sherpa_dir"
+            rm -f "$aar_file"
+            return 1
+        }
 
         # AAR contains jni/ with pre-built .so files for each ABI
         if [ -d "$sherpa_dir/aar-extracted/jni" ]; then
@@ -209,18 +228,80 @@ setup_prebuilt() {
             done
         fi
 
-        # Set up include directory for CMake pre-built path
-        # CMakeLists.txt expects: sherpa-onnx/include/sherpa-onnx/c-api/c-api.h
-        local include_dir="$sherpa_dir/include/sherpa-onnx/c-api"
-        mkdir -p "$include_dir"
-        # Download the C API header from the source repo
-        log "Downloading sherpa-onnx C API header..."
-        curl -sL "$SHERPA_ONNX_HEADER_URL" -o "$include_dir/c-api.h" 2>/dev/null || true
-
         # Cleanup extracted AAR
         rm -rf "$sherpa_dir/aar-extracted"
 
-        ok "sherpa-onnx extracted"
+        # Verify critical .so was extracted
+        if [ ! -f "$sherpa_dir/lib/arm64-v8a/libsherpa-onnx-c-api.so" ]; then
+            err "AAR did not contain libsherpa-onnx-c-api.so for arm64-v8a"
+            rm -rf "$sherpa_dir"
+            return 1
+        fi
+
+        ok "sherpa-onnx libraries extracted from AAR"
+    fi
+
+    # Always ensure the C API header is present and valid.
+    # This handles both fresh installs and cache restores that have
+    # the .so files but lost the header.
+    local include_dir="$sherpa_dir/include/sherpa-onnx/c-api"
+    local header_file="$include_dir/c-api.h"
+    local need_header=false
+
+    if [ ! -f "$header_file" ]; then
+        need_header=true
+    else
+        # Validate header content (must start with C/C++, not HTML error page)
+        local first_bytes
+        first_bytes=$(head -c 20 "$header_file" 2>/dev/null || true)
+        if ! echo "$first_bytes" | grep -qE '^(/\*|//|#)'; then
+            warn "Header file is corrupted (not a valid C header) — re-downloading"
+            rm -f "$header_file"
+            need_header=true
+        fi
+    fi
+
+    if $need_header; then
+        mkdir -p "$include_dir"
+        log "Downloading sherpa-onnx C API header..."
+        if command -v curl &>/dev/null; then
+            curl -sL "$SHERPA_ONNX_HEADER_URL" -o "$header_file" || {
+                err "Failed to download C API header"
+                rm -f "$header_file"
+                return 1
+            }
+        elif command -v wget &>/dev/null; then
+            wget -q -O "$header_file" "$SHERPA_ONNX_HEADER_URL" || {
+                err "Failed to download C API header"
+                rm -f "$header_file"
+                return 1
+            }
+        fi
+
+        # Validate downloaded header is a real C header, not an HTML error page
+        if [ -f "$header_file" ]; then
+            local first_bytes
+            first_bytes=$(head -c 20 "$header_file" 2>/dev/null || true)
+            if ! echo "$first_bytes" | grep -qE '^(/\*|//|#)'; then
+                err "Downloaded header is not a valid C header (got HTML error page?)"
+                rm -f "$header_file"
+                rm -rf "$sherpa_dir/include"
+                return 1
+            fi
+            ok "sherpa-onnx C API header downloaded"
+        else
+            err "Header file was not created"
+            return 1
+        fi
+    fi
+
+    # Final verification
+    if [ -f "$sherpa_dir/lib/arm64-v8a/libsherpa-onnx-c-api.so" ] && \
+       [ -f "$sherpa_dir/include/sherpa-onnx/c-api/c-api.h" ]; then
+        ok "sherpa-onnx pre-built setup complete"
+    else
+        err "sherpa-onnx pre-built setup incomplete"
+        return 1
     fi
 
     # For llama.cpp, we still need to build from source since pre-built

@@ -74,19 +74,29 @@ if(EXISTS "${SHERPA_DIR}/CMakeLists.txt")
     set(SHERPA_ENABLE_C_API ON CACHE BOOL "" FORCE)
     set(SHERPA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
     set(SHERPA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    # The JNI code uses #include "sherpa-onnx/c-api/c-api.h" so the
+    # include root must be the repo root (not the c-api subdirectory).
+    set(SHERPA_INCLUDE_DIR "${SHERPA_DIR}")
+    # Source build — may fail if onnxruntime cannot be downloaded.
+    # The CI workflow allows this to fail gracefully (falls back to stub mode).
     add_subdirectory("${SHERPA_DIR}" sherpa_build EXCLUDE_FROM_ALL)
-    set(SHERPA_INCLUDE_DIR "${SHERPA_DIR}/sherpa-onnx/c-api")
     set(SHERPA_LINK_LIBS sherpa-onnx-c-api)
     message(STATUS "sherpa-onnx: building from source")
 elseif(EXISTS "${SHERPA_DIR}/include/sherpa-onnx/c-api/c-api.h")
     # ── Pre-built shared library ─────────────────────────────
-    set(SHERPA_INCLUDE_DIR "${SHERPA_DIR}/include")
-    add_library(sherpa-onnx-c-api SHARED IMPORTED)
-    set_target_properties(sherpa-onnx-c-api PROPERTIES
-        IMPORTED_LOCATION "${SHERPA_DIR}/lib/${ANDROID_ABI}/libsherpa-onnx-c-api.so"
-    )
-    set(SHERPA_LINK_LIBS sherpa-onnx-c-api)
-    message(STATUS "sherpa-onnx: using pre-built library for ${ANDROID_ABI}")
+    if(EXISTS "${SHERPA_DIR}/lib/${ANDROID_ABI}/libsherpa-onnx-c-api.so")
+        set(SHERPA_INCLUDE_DIR "${SHERPA_DIR}/include")
+        add_library(sherpa-onnx-c-api SHARED IMPORTED)
+        set_target_properties(sherpa-onnx-c-api PROPERTIES
+            IMPORTED_LOCATION "${SHERPA_DIR}/lib/${ANDROID_ABI}/libsherpa-onnx-c-api.so"
+        )
+        set(SHERPA_LINK_LIBS sherpa-onnx-c-api)
+        message(STATUS "sherpa-onnx: using pre-built library for ${ANDROID_ABI}")
+    else()
+        message(WARNING "sherpa-onnx: header found but libsherpa-onnx-c-api.so missing for ${ANDROID_ABI} — building in stub mode")
+        set(SHERPA_INCLUDE_DIR "")
+        set(SHERPA_LINK_LIBS "")
+    endif()
 else()
     message(WARNING "sherpa-onnx not found at ${SHERPA_DIR} — ASR/TTS will be stub-only")
     set(SHERPA_INCLUDE_DIR "")
