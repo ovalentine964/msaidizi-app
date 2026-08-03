@@ -13,7 +13,7 @@ import com.msaidizi.agent.tools.core.*
  * Oil changes, tire replacement, insurance renewal, inspections.
  */
 @Singleton
-class VehicleMaintenanceTracker @Inject constructor(private val context: Context) : Tool {
+class VehicleMaintenanceTracker @Inject constructor(@ApplicationContext private val context: Context) : Tool {
     override val name = "vehicle_maintenance"
     override val description = "Track vehicle maintenance — oil changes, tires, insurance, repairs. Get overdue alerts."
 

@@ -13,7 +13,7 @@ import com.msaidizi.agent.tools.core.*
  * Identify lapsed customers, track loyalty, manage follow-ups.
  */
 @Singleton
-class CustomerRetention @Inject constructor(private val context: Context) : Tool {
+class CustomerRetention @Inject constructor(@ApplicationContext private val context: Context) : Tool {
     override val name = "customer_retention"
     override val description = "Track customer loyalty, identify lapsed customers, manage follow-ups and discounts."
 

@@ -13,7 +13,7 @@ import com.msaidizi.agent.tools.core.*
  * Record each day's work: employer, rate, hours, payment status.
  */
 @Singleton
-class DailyWageTracker @Inject constructor(private val context: Context) : Tool {
+class DailyWageTracker @Inject constructor(@ApplicationContext private val context: Context) : Tool {
     override val name = "daily_wage_tracker"
     override val description = "Track daily wages for casual laborers — employer, rate, hours, payment status, weekly patterns."
 

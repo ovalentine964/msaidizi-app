@@ -13,7 +13,7 @@ import com.msaidizi.agent.tools.core.*
  * Extends BookingScheduler with reminders, no-show recovery, walk-in tracking.
  */
 @Singleton
-class AppointmentManager @Inject constructor(private val context: Context) : Tool {
+class AppointmentManager @Inject constructor(@ApplicationContext private val context: Context) : Tool {
     override val name = "appointment_manager"
     override val description = "Manage appointments — book, cancel, track no-shows, walk-ins, daily summary."
 

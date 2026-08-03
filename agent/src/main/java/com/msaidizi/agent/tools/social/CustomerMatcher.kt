@@ -47,7 +47,7 @@ import com.msaidizi.agent.tools.core.*
  */
 @Singleton
 class CustomerMatcher @Inject constructor(
-    private val context: Context,
+    @ApplicationContext private val context: Context,
     private val profileDao: CustomerProfileDao,
     private val saleDao: SaleDao,
     private val customerDao: CustomerDao,

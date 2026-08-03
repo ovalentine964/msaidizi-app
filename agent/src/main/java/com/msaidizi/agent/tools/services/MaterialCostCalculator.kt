@@ -13,7 +13,7 @@ import com.msaidizi.agent.tools.core.*
  * Track prices, suggest alternatives, generate quotes.
  */
 @Singleton
-class MaterialCostCalculator @Inject constructor(private val context: Context) : Tool {
+class MaterialCostCalculator @Inject constructor(@ApplicationContext private val context: Context) : Tool {
     override val name = "material_cost_calculator"
     override val description = "Calculate material costs for artisan jobs — track prices, suggest alternatives, waste allowance."
 

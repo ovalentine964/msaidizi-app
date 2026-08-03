@@ -29,7 +29,7 @@ import com.msaidizi.agent.tools.core.*
  */
 @Singleton
 class ServicePriceAdvisor @Inject constructor(
-    private val context: Context
+    @ApplicationContext private val context: Context
 ) : Tool {
 
     override val name = "service_price_advisor"

@@ -48,7 +48,7 @@ import com.msaidizi.agent.tools.core.*
  */
 @Singleton
 class WeatherForecastService @Inject constructor(
-    private val context: Context,
+    @ApplicationContext private val context: Context,
     private val weatherCacheManager: WeatherCacheManager
 ) : Tool {
 

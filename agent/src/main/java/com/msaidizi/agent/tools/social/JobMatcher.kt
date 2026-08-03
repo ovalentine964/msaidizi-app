@@ -40,7 +40,7 @@ import com.msaidizi.agent.tools.core.*
  */
 @Singleton
 class JobMatcher @Inject constructor(
-    private val context: Context,
+    @ApplicationContext private val context: Context,
     private val knowledgeDao: KnowledgeDao,
     private val gamificationEngine: GamificationEngine,
     private val gson: Gson

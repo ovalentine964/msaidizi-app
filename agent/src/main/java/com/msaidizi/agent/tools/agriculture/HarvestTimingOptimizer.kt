@@ -30,7 +30,7 @@ import com.msaidizi.agent.tools.core.*
  */
 @Singleton
 class HarvestTimingOptimizer @Inject constructor(
-    private val context: Context
+    @ApplicationContext private val context: Context
 ) : Tool {
 
     override val name = "harvest_timing_optimizer"

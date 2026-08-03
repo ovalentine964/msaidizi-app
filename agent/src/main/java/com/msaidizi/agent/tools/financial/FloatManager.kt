@@ -21,7 +21,7 @@ import com.msaidizi.agent.tools.core.*
  */
 @Singleton
 class FloatManager @Inject constructor(
-    private val context: Context
+    @ApplicationContext private val context: Context
 ) : Tool {
 
     override val name = "float_manager"

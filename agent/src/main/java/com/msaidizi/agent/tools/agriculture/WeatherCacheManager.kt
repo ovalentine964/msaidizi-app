@@ -31,7 +31,7 @@ import com.msaidizi.agent.tools.core.*
  */
 @Singleton
 class WeatherCacheManager @Inject constructor(
-    private val context: Context
+    @ApplicationContext private val context: Context
 ) : Tool {
 
     override val name = "weather_cache_manager"

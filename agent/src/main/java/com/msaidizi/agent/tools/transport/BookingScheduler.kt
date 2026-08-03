@@ -46,7 +46,7 @@ import com.msaidizi.agent.tools.core.*
  */
 @Singleton
 class BookingScheduler @Inject constructor(
-    private val context: Context,
+    @ApplicationContext private val context: Context,
     private val gamificationEngine: GamificationEngine,
     private val gson: Gson
 ) : Tool {

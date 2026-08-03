@@ -29,7 +29,7 @@ import com.msaidizi.agent.tools.market.ProducePriceTracker
  */
 @Singleton
 class YieldPredictor @Inject constructor(
-    private val context: Context,
+    @ApplicationContext private val context: Context,
     private val harvestTracker: HarvestTracker,
     private val producePriceTracker: ProducePriceTracker
 ) : Tool {

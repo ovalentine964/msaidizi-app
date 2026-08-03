@@ -35,7 +35,7 @@ import com.msaidizi.agent.tools.core.*
  */
 @Singleton
 class ServiceMenu @Inject constructor(
-    private val context: Context,
+    @ApplicationContext private val context: Context,
     private val knowledgeDao: KnowledgeDao,
     private val gson: Gson
 ) : Tool {

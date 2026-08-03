@@ -13,7 +13,7 @@ import com.msaidizi.agent.tools.core.*
  * Track ingredients, fuel, labor cost per menu item.
  */
 @Singleton
-class RecipeCostCalculator @Inject constructor(private val context: Context) : Tool {
+class RecipeCostCalculator @Inject constructor(@ApplicationContext private val context: Context) : Tool {
     override val name = "recipe_cost_calculator"
     override val description = "Calculate cost per plate — ingredients + fuel + labor. Track menu profitability."
 

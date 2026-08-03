@@ -15,7 +15,7 @@ import com.msaidizi.agent.tools.core.*
  *        "Gharama ya chakula ni ngapi?" → feed_costs
  */
 @Singleton
-class LivestockManager @Inject constructor(private val context: Context) : Tool {
+class LivestockManager @Inject constructor(@ApplicationContext private val context: Context) : Tool {
     override val name = "livestock_manager"
     override val description = "Track livestock production (milk, eggs), feed costs, animal health, mortality."
 

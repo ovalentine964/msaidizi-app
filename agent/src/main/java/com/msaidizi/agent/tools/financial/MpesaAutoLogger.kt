@@ -112,7 +112,7 @@ private fun android.database.Cursor.getDoubleOrNull(columnIndex: Int): Double? {
  * Uses android.database.sqlite directly — no Room annotations needed.
  * This keeps the tool self-contained and avoids schema migration complexity.
  */
-class MpesaDatabase(private val context: Context) {
+class MpesaDatabase(@ApplicationContext private val context: Context) {
 
     private val db by lazy {
         android.database.sqlite.SQLiteDatabase.openOrCreateDatabase(
@@ -968,7 +968,7 @@ object ProfileBuilder {
  * ```
  */
 class MpesaSmsReceiver(
-    private val context: Context,
+    @ApplicationContext private val context: Context,
     private val onTransaction: (MpesaAutoTransaction) -> Unit
 ) : BroadcastReceiver() {
 
@@ -1045,7 +1045,7 @@ class MpesaSmsReceiver(
  */
 @Singleton
 class MpesaAutoLogger @Inject constructor(
-    private val context: Context,
+    @ApplicationContext private val context: Context,
     private val gson: Gson
 ) : Tool {
 

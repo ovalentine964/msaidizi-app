@@ -13,7 +13,7 @@ import com.msaidizi.agent.tools.core.*
  * Materials + labor + margin = quote. Track job profitability.
  */
 @Singleton
-class FundiJobQuoter @Inject constructor(private val context: Context) : Tool {
+class FundiJobQuoter @Inject constructor(@ApplicationContext private val context: Context) : Tool {
     override val name = "fundi_job_quoter"
     override val description = "Build job quotes for artisans — materials + labor + margin. Track actual vs. quoted profit."
 

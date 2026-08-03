@@ -13,7 +13,7 @@ import com.msaidizi.agent.tools.core.*
  * Extends FishingLog with trip-level planning and cost analysis.
  */
 @Singleton
-class FishTripPlanner @Inject constructor(private val context: Context) : Tool {
+class FishTripPlanner @Inject constructor(@ApplicationContext private val context: Context) : Tool {
     override val name = "fish_trip_planner"
     override val description = "Plan fishing trips, track catch vs. costs, compare landing site prices, predict best days."
 

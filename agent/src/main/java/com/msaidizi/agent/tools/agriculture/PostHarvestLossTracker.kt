@@ -25,7 +25,7 @@ import com.msaidizi.agent.tools.core.*
  */
 @Singleton
 class PostHarvestLossTracker @Inject constructor(
-    private val context: Context
+    @ApplicationContext private val context: Context
 ) : Tool {
 
     override val name = "post_harvest_loss_tracker"

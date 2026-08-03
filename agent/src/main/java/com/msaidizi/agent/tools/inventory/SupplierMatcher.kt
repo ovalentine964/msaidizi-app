@@ -22,7 +22,7 @@ import com.msaidizi.agent.tools.core.*
  */
 @Singleton
 class SupplierMatcher @Inject constructor(
-    private val context: Context,
+    @ApplicationContext private val context: Context,
     private val gson: Gson
 ) : Tool {
 

@@ -57,6 +57,7 @@ object AppModule {
     @Provides fun provideLearnedVocabularyDao(db: MsaidiziDatabase): LearnedVocabularyDao = db.learnedVocabularyDao()
     @Provides fun provideBusinessPatternDao(db: MsaidiziDatabase): BusinessPatternDao = db.businessPatternDao()
     @Provides fun provideSyncStateDao(db: MsaidiziDatabase): SyncStateDao = db.syncStateDao()
+    @Provides fun provideTraceDao(db: MsaidiziDatabase): TraceDao = db.traceDao()
     @Provides fun provideDebtDao(db: MsaidiziDatabase): DebtDao = db.debtDao()
     @Provides fun provideDebtRepaymentDao(db: MsaidiziDatabase): DebtRepaymentDao = db.debtRepaymentDao()
     @Provides fun provideChamaDao(db: MsaidiziDatabase): ChamaDao = db.chamaDao()

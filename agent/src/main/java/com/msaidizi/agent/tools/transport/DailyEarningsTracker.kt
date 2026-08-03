@@ -22,7 +22,7 @@ import com.msaidizi.agent.tools.core.*
  */
 @Singleton
 class DailyEarningsTracker @Inject constructor(
-    private val context: Context
+    @ApplicationContext private val context: Context
 ) : Tool {
 
     override val name = "daily_earnings_tracker"

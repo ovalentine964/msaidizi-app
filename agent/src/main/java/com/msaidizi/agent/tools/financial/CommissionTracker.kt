@@ -13,7 +13,7 @@ import com.msaidizi.agent.tools.core.*
  * For M-Pesa agents, brokers, delivery riders, freelancers.
  */
 @Singleton
-class CommissionTracker @Inject constructor(private val context: Context) : Tool {
+class CommissionTracker @Inject constructor(@ApplicationContext private val context: Context) : Tool {
     override val name = "commission_tracker"
     override val description = "Track commissions — by service, by platform, daily/weekly/monthly summaries."
 

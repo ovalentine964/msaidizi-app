@@ -23,7 +23,7 @@ import com.msaidizi.agent.tools.core.*
  */
 @Singleton
 class StorageDecisionCalculator @Inject constructor(
-    private val context: Context
+    @ApplicationContext private val context: Context
 ) : Tool {
 
     override val name = "storage_decision_calculator"

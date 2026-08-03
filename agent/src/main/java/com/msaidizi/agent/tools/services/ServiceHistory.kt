@@ -13,7 +13,7 @@ import com.msaidizi.agent.tools.core.*
  * Enables personalized service and repeat customer retention.
  */
 @Singleton
-class ServiceHistory @Inject constructor(private val context: Context) : Tool {
+class ServiceHistory @Inject constructor(@ApplicationContext private val context: Context) : Tool {
     override val name = "service_history"
     override val description = "Track service history per customer — what was done, when, how much, follow-up reminders."
 

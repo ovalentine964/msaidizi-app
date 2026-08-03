@@ -30,7 +30,7 @@ import com.msaidizi.agent.tools.core.*
  */
 @Singleton
 class MarketDayPlanner @Inject constructor(
-    private val context: Context
+    @ApplicationContext private val context: Context
 ) : Tool {
 
     override val name = "market_day_planner"
