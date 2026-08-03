@@ -70,7 +70,7 @@ class ServiceHistory @Inject constructor(private val context: Context) : Tool {
         cursor.use { if (it.moveToFirst()) { visits = it.getInt(0); totalSpent = it.getDouble(1) } }
 
         return ToolResult.success(name, mapOf("id" to id, "visits" to visits, "total_spent" to totalSpent),
-            "✅ Huduma yamerekodwa: $service — KES $price\n👤 $name: ziara $visit, jumla KES $totalSpent")
+            "✅ Huduma yamerekodwa: $service — KES $price\n👤 $name: ziara $visits, jumla KES $totalSpent")
     }
 
     private fun lookup(params: Map<String, String>): ToolResult {

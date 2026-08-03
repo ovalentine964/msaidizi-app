@@ -353,6 +353,7 @@ class HirePurchaseTracker @Inject constructor(
                 }
             }
 
+            val totalDailyIncomeForData = avgDailyNet + agreement.dailyFee
             ToolResult.success(
                 name,
                 data = mapOf(
@@ -361,7 +362,7 @@ class HirePurchaseTracker @Inject constructor(
                     "days_paid" to daysPaid,
                     "avg_daily_net" to avgDailyNet,
                     "avg_daily_net_after_hire" to avgDailyNetAfterHire,
-                    "hire_percent" to if (totalDailyIncome > 0) (agreement.dailyFee / totalDailyIncome * 100) else 0.0
+                    "hire_percent" to if (totalDailyIncomeForData > 0) (agreement.dailyFee / totalDailyIncomeForData * 100) else 0.0
                 ),
                 message = report
             )

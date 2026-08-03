@@ -377,22 +377,36 @@ jobs:
     needs: build-with-models
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
+      - name: Check secrets availability
+        id: check-secrets
+        run: |
+          if [ -n "${{ secrets.FIREBASE_APP_ID }}" ] && [ -n "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "⚠️ Firebase secrets not configured — skipping distribution"
+          fi
+
       - name: Checkout
+        if: steps.check-secrets.outputs.available == 'true'
         uses: actions/checkout@v4
 
       - name: Download cloud APK
+        if: steps.check-secrets.outputs.available == 'true'
         uses: actions/download-artifact@v4
         with:
           name: msaidizi-cloud-debug
           path: ./artifacts
 
       - name: Set up JDK
+        if: steps.check-secrets.outputs.available == 'true'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
 
       - name: Upload to Firebase App Distribution
+        if: steps.check-secrets.outputs.available == 'true'
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
           appId: ${{ secrets.FIREBASE_APP_ID }}
@@ -403,6 +417,10 @@ jobs:
             Build: ${{ github.sha }}
             Branch: ${{ github.ref_name }}
             Commit: ${{ github.event.head_commit.message }}
+
+      - name: Skip notice
+        if: steps.check-secrets.outputs.available != 'true'
+        run: echo "ℹ️ Firebase distribution skipped — secrets not configured"
 
   # ──────────────────────────────────────────────────────────
   # 7. OTA Model Update Check
@@ -418,9 +436,36 @@ jobs:
 
       - name: Check model versions
         run: |
-          echo "Checking for model updates..."
+          echo "═══ OTA Model Update Check ═══"
+          echo ""
           echo "Current model versions:"
-          cat scripts/model_versions.json 2>/dev/null || echo "No model_versions.json found"
+          if [ -f scripts/model_versions.json ]; then
+            cat scripts/model_versions.json
+            # Validate JSON syntax
+            if python3 -c "import json; json.load(open('scripts/model_versions.json'))" 2>/dev/null; then
+              echo ""
+              echo "✅ model_versions.json is valid JSON"
+            else
+              echo ""
+              echo "❌ model_versions.json has invalid JSON syntax"
+              exit 1
+            fi
+          else
+            echo "⚠️  No model_versions.json found"
+          fi
+          echo ""
+          echo "Model checksums:"
+          if [ -f scripts/model_checksums.sha256 ]; then
+            CHECKSUM_COUNT=$(grep -c '^[a-f0-9]\{64\}' scripts/model_checksums.sha256 2>/dev/null || echo "0")
+            echo "  Entries: $CHECKSUM_COUNT"
+            if [ "$CHECKSUM_COUNT" -eq 0 ]; then
+              echo "  ⚠️  No checksums defined — run ./scripts/download_models.sh --generate-checksums"
+            else
+              echo "  ✅ Checksums present"
+            fi
+          else
+            echo "  ⚠️  No model_checksums.sha256 found"
+          fi
           echo ""
           echo "Model update manifest would be generated here."
           echo "In production, this triggers WorkManager download on client devices."

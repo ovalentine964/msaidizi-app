@@ -451,12 +451,12 @@ class DemandForecaster @Inject constructor(
         val halfP = period / 2; val trend = DoubleArray(data.size)
         for (i in halfP until data.size - halfP) trend[i] = data.subList(i - halfP, i + halfP + 1).average()
         for (i in 0 until halfP) trend[i] = trend[halfP]; for (i in data.size - halfP until data.size) trend[i] = trend[data.size - halfP - 1]
-        val detrended = data.zip(trend).map { (d, t) -> d - t }
+        val detrended = data.zip(trend.toList()).map { p -> p.first - p.second }
         val seasonalAvg = DoubleArray(period); val cnt = IntArray(period)
         for (i in detrended.indices) { seasonalAvg[i % period] += detrended[i]; cnt[i % period]++ }
         for (i in 0 until period) seasonalAvg[i] /= cnt[i].coerceAtLeast(1)
         val sMean = seasonalAvg.average(); for (i in 0 until period) seasonalAvg[i] -= sMean
-        val residual = data.indices.map { data[it] - trend[it] - seasonalAvg[it % period] }
+        val residual = data.indices.map { i -> data[i] - trend[i] - seasonalAvg[i % period] }
         val varD = detrended.map { it * it }.average(); val varR = residual.map { it * it }.average()
         val strength = if (varD > 0) 1 - varR / varD else 0.0
 

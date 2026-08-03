@@ -74,7 +74,7 @@ class CFOReportReview @Inject constructor(
         // Request confirmation for delivery via SensitiveActionGuard
         val confirmationRequest = sensitiveActionGuard.requiresConfirmation(
             actionType = SensitiveActionType.REPORT_DELIVERY,
-            description = "Tuma ripoti ya ${reportType.displayName} kupitia $deliveryChannel",
+            description = "Tuma ripoti ya ${reportType.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() }} kupitia $deliveryChannel",
             metadata = mapOf(
                 "report_type" to reportType.name,
                 "delivery_channel" to deliveryChannel,
@@ -108,7 +108,7 @@ class CFOReportReview @Inject constructor(
         )
 
         val prompt = confirmationRequest?.prompt
-            ?: "Hii ni ripoti yako ya ${reportType.displayName}. Tuma kupitia $deliveryChannel?"
+            ?: "Hii ni ripoti yako ya ${reportType.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() }}. Tuma kupitia $deliveryChannel?"
 
         return ReviewRequest(
             confirmationId = confirmationId,

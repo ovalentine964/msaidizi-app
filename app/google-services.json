@@ -26,9 +26,28 @@
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000001",
+        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000004",
         "android_client_info": {
           "package_name": "com.msaidizi.app.debug"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyPlaceholderKeyForBuildOnly000004"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000001",
+        "android_client_info": {
+          "package_name": "com.msaidizi.app.cloud"
         }
       },
       "oauth_client": [],
@@ -45,26 +64,7 @@
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000002",
-        "android_client_info": {
-          "package_name": "com.msaidizi.app.cloud"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyPlaceholderKeyForBuildOnly000002"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000003",
+        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000005",
         "android_client_info": {
           "package_name": "com.msaidizi.app.cloud.debug"
         }
@@ -72,7 +72,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyPlaceholderKeyForBuildOnly000003"
+          "current_key": "AIzaSyPlaceholderKeyForBuildOnly000005"
         }
       ],
       "services": {

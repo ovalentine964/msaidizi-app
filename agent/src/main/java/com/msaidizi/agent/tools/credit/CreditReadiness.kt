@@ -1783,7 +1783,7 @@ class CreditReadiness @Inject constructor(
      * Detect Fuliza-like usage patterns from transaction history.
      * Fuliza shows as negative M-Pesa balance / overdraft transactions.
      */
-    private fun detectFulizaPattern(summaries: List<com.msaidizi.core.database.DailySummaryEntity>): FulizaPattern {
+    private fun detectFulizaPattern(summaries: List<com.msaidizi.core.model.DailySummaryEntity>): FulizaPattern {
         // Heuristic: count days with expenses > 120% of sales (overdraft indicator)
         val overSpendDays = summaries.count { day ->
             day.totalExpenses > day.totalSales * 1.2 && day.totalSales > 0

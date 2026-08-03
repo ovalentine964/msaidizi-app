@@ -5,6 +5,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import timber.log.Timber
+import kotlin.math.abs
 import javax.inject.Inject
 import javax.inject.Singleton
 import com.msaidizi.agent.tools.core.*

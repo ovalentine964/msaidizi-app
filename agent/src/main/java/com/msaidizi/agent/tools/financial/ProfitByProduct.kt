@@ -729,6 +729,12 @@ class ProfitByProduct @Inject constructor(
 
             val periodLabel = formatPeriodLabel(period)
 
+            val totalCurrentProfit = comparisons.sumOf { it.currentNetProfit }
+            val totalPrevProfit = comparisons.sumOf { it.prevNetProfit }
+            val overallChange = if (totalPrevProfit > 0) {
+                (totalCurrentProfit - totalPrevProfit) / totalPrevProfit * 100
+            } else 0.0
+
             val output = buildString {
                 appendLine("🔄 LINGANISHO — $periodLabel")
                 appendLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -743,13 +749,6 @@ class ProfitByProduct @Inject constructor(
                     appendLine("   Faida: KSh ${"%,.0f".format(comp.currentNetProfit)} ${if (comp.profitChangePct > 0) "+" else ""}${ "%.0f".format(comp.profitChangePct)}% $profArrow")
                     appendLine()
                 }
-
-                // Overall summary
-                val totalCurrentProfit = comparisons.sumOf { it.currentNetProfit }
-                val totalPrevProfit = comparisons.sumOf { it.prevNetProfit }
-                val overallChange = if (totalPrevProfit > 0) {
-                    (totalCurrentProfit - totalPrevProfit) / totalPrevProfit * 100
-                } else 0.0
 
                 appendLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
                 val overallArrow = if (overallChange > 0) "📈" else if (overallChange < 0) "📉" else "➡️"

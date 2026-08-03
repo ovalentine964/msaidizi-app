@@ -444,6 +444,8 @@ class LoanComparison @Inject constructor(
             )
             memoryManager.storeMemory("loan_comparison_amount", amount.toString(), "loan_comparison")
 
+            val best = comparisons.first()
+
             // Build response
             val message = buildString {
                 appendLine("📊 LINGANISHO LA MIKOPO — KES ${formatKes(amount)}")
@@ -515,7 +517,6 @@ class LoanComparison @Inject constructor(
                 }
 
                 // Recommendation
-                val best = comparisons.first()
                 val bestProduct = best.first.first
                 appendLine("🏆 MAPENDEKEZO:")
                 appendLine("   Bora zaidi: ${bestProduct.swahiliName}")

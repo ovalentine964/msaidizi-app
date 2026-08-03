@@ -86,7 +86,7 @@ class CFOEngine @Inject constructor(
             // Return the preview with review request — harness will present to user
             return ToolResult.success(
                 toolName = name,
-                data = result.data + mapOf(
+                data = (result.data as? Map<String, Any> ?: emptyMap()) + mapOf(
                     "review_required" to true,
                     "review_id" to reviewRequest.reviewId,
                     "preview" to reviewRequest.previewText
