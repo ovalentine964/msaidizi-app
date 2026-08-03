@@ -711,7 +711,7 @@ class ProofOfIncome @Inject constructor(
     // DATA AGGREGATION
     // ════════════════════════════════════════════
 
-    internal data class MonthlyFinancial(
+    data class MonthlyFinancial(
         val month: String,     // "Jan 2026"
         val revenue: Double,
         val expenses: Double,

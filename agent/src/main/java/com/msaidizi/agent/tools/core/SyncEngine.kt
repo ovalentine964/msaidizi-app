@@ -10,6 +10,7 @@ import com.msaidizi.core.database.LearnedVocabularyDao
 import com.msaidizi.core.database.SyncStateDao
 import com.msaidizi.core.network.SyncApi
 import com.msaidizi.core.network.SyncPayload
+import retrofit2.Response
 import com.msaidizi.core.security.EncryptionManager
 import com.msaidizi.core.network.AnonymizedTransaction
 import com.msaidizi.core.network.AnonymizedPattern
@@ -213,11 +214,11 @@ class SyncEngine @Inject constructor(
                         }
                     )
                 } else {
-                    lastError = "HTTP ${response.code}: ${response.message()}"
+                    lastError = "HTTP ${response.code()}: ${response.message()}"
                     Timber.w("Sync failed (attempt $attempt): $lastError")
 
                     // Don't retry on client errors (4xx)
-                    if (response.code in 400..499 && response.code != 429) {
+                    if (response.code() in 400..499 && response.code() != 429) {
                         break
                     }
                 }

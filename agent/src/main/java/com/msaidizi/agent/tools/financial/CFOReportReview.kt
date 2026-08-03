@@ -59,7 +59,7 @@ class CFOReportReview @Inject constructor(
             ReportType.SAVINGS_ADVICE -> cfoEngine.getSavingsAdvice()
             ReportType.PROOF_OF_INCOME, ReportType.CREDIT_READINESS -> {
                 com.msaidizi.agent.tools.core.ToolResult.error(
-                    name, "Report type $reportType not yet supported", "UNSUPPORTED"
+                    "cfo_report_review", "Report type $reportType not yet supported", "UNSUPPORTED"
                 )
             }
         }

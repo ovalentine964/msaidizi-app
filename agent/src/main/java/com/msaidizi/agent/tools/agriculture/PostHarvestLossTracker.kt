@@ -190,7 +190,8 @@ class PostHarvestLossTracker @Inject constructor(
         return dbHelper!!.writableDatabase
     }
 
-    internal data class StorageTip(
+    @Suppress("unused")
+    private data class StorageTip(
         val lossType: String,
         val tipSw: String,
         val tipEn: String
