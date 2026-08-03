@@ -183,7 +183,7 @@ class MpesaSmsReconciler @Inject constructor(
 
         val saleId = saleDao.insert(
             SaleEntity(
-                productId = product?.id ?: 0,
+                productId = product?.id ?: 0L,
                 productName = product?.name ?: tx.counterparty.ifEmpty { "M-Pesa Sale" },
                 quantity = 1.0,
                 unitPrice = tx.amount,
@@ -199,7 +199,7 @@ class MpesaSmsReconciler @Inject constructor(
         eventBus.onSaleRecorded(
             sale = SaleEntity(
                 id = saleId,
-                productId = product?.id ?: 0,
+                productId = product?.id ?: 0L,
                 productName = product?.name ?: tx.counterparty,
                 quantity = 1.0,
                 unitPrice = tx.amount,

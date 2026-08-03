@@ -202,7 +202,7 @@ class SyncEngine @Inject constructor(
                         name,
                         mapOf(
                             "synced_count" to count,
-                            "server_timestamp" to (body?.serverTimestamp ?: 0),
+                            "server_timestamp" to (body?.serverTimestamp ?: 0L),
                             "conflicts_resolved" to conflictsResolved,
                             "attempt" to attempt,
                             "conflict_resolution" to if (conflictsResolved > 0) "last_write_wins" else "none"
@@ -257,7 +257,7 @@ class SyncEngine @Inject constructor(
             name,
             mapOf(
                 "pending" to pendingTransactions.size,
-                "last_sync" to (state?.lastSyncTimestamp ?: 0),
+                "last_sync" to (state?.lastSyncTimestamp ?: 0L),
                 "last_status" to (state?.lastSyncStatus ?: "never"),
                 "consecutive_failures" to (state?.consecutiveFailures ?: 0),
                 "wifi_available" to wifiAvailable,

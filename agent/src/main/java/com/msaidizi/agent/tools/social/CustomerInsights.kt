@@ -698,7 +698,7 @@ class CustomerInsights @Inject constructor(
                 val revenuePct = if (totalRevenue > 0) (totalSpend / totalRevenue * 100) else 0.0
 
                 val profile = CustomerProfileEntity(
-                    id = existing?.id ?: 0,
+                    id = existing?.id ?: 0L,
                     workerId = workerId,
                     customerKey = customerKey,
                     customerName = customerKey, // Use key as display name
