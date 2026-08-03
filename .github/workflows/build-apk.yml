@@ -49,12 +49,12 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # ── Model Cache ────────────────────────────────────────
       - name: Cache AI models
         id: model-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .model-cache
           key: ai-models-${{ env.MODEL_CACHE_VERSION }}-${{ hashFiles('scripts/download_models.sh') }}-${{ hashFiles('scripts/model_checksums.sha256') }}
@@ -95,12 +95,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # ── Native Dependencies Cache ──────────────────────────
       - name: Cache native dependencies
         id: native-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: voice/src/main/cpp/third_party
           key: native-deps-${{ hashFiles('scripts/setup_native_deps.sh') }}
@@ -117,7 +117,7 @@ jobs:
 
       # ── Restore model cache ────────────────────────────────
       - name: Restore model cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .model-cache
           key: ai-models-${{ env.MODEL_CACHE_VERSION }}-${{ hashFiles('scripts/download_models.sh') }}-${{ hashFiles('scripts/model_checksums.sha256') }}
@@ -137,13 +137,13 @@ jobs:
           echo "LLM model removed — cloud flavor will use Groq API"
 
       - name: Set up JDK ${{ env.JAVA_VERSION }}
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6.2.0
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
@@ -178,7 +178,7 @@ jobs:
           echo "apk_size=$(du -h "$DEST" | cut -f1)" >> "$GITHUB_OUTPUT"
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: msaidizi-${{ matrix.flavor }}-${{ matrix.build_type }}-apk
           path: ${{ steps.rename.outputs.apk_path }}
@@ -199,28 +199,28 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Download cloud release APK
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: msaidizi-cloud-release-apk
           path: ./artifacts
         continue-on-error: true
 
       - name: Download cloud debug APK
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: msaidizi-cloud-debug-apk
           path: ./artifacts
         continue-on-error: true
 
       - name: Download full release APK
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: msaidizi-full-release-apk
           path: ./artifacts
         continue-on-error: true
 
       - name: Download full debug APK
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: msaidizi-full-debug-apk
           path: ./artifacts
@@ -263,12 +263,12 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout (for changelog)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Download all APKs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: ./release-assets
           merge-multiple: true
@@ -314,7 +314,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.ref_name }}
           name: Msaidizi ${{ github.ref_name }}
