@@ -209,7 +209,7 @@ private fun CustomerItem(
                 )
                 if (customer.phone != null) {
                     Text(
-                        text = customer.phone,
+                        text = customer.phone ?: "",
                         style = MaterialTheme.typography.bodySmall,
                         color = colors.onSurfaceVariant
                     )

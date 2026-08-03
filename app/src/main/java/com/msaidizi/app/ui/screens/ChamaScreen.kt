@@ -17,6 +17,7 @@ import com.msaidizi.core.model.ChamaMemberEntity
 import com.msaidizi.core.model.ChamaContributionEntity
 import com.msaidizi.app.ui.components.*
 import com.msaidizi.app.ui.designsystem.*
+import com.msaidizi.app.ui.designsystem.cards.AdviceCard
 
 // ──────────────────────────────────────────────
 // Chama Screen

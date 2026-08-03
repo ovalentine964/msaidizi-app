@@ -530,7 +530,7 @@ fun MsaidiziBottomBar(
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = colors.primary,
                     selectedTextColor = colors.primary,
-                    selectedIndicatorColor = colors.primaryContainer
+                    indicatorColor = colors.primaryContainer
                 )
             )
         }

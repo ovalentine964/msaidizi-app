@@ -493,25 +493,25 @@ private fun VoiceCalibrationStep(
             colors = CardDefaults.cardColors(containerColor = colors.infoContainer)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("🎤 Sauti", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = colors.onInfoContainer)
-                Text("Voice Setup", style = MaterialTheme.typography.bodySmall, color = colors.onInfoContainer.copy(alpha = 0.7f))
+                Text("🎤 Sauti", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = colors.onSecondaryContainer)
+                Text("Voice Setup", style = MaterialTheme.typography.bodySmall, color = colors.onSecondaryContainer.copy(alpha = 0.7f))
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Msaidizi anaweza kusikia sauti yako. Jaribu kusema:",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = colors.onInfoContainer
+                    color = colors.onSecondaryContainer
                 )
                 Text(
                     text = "Msaidizi can hear your voice. Try saying:",
                     style = MaterialTheme.typography.bodySmall,
-                    color = colors.onInfoContainer.copy(alpha = 0.7f)
+                    color = colors.onSecondaryContainer.copy(alpha = 0.7f)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "\"Habari, mimi ni ${userName.ifBlank { "___" }}\"",
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
-                    color = colors.onInfoContainer
+                    color = colors.onSecondaryContainer
                 )
             }
         }

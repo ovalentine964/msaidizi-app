@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.msaidizi.core.model.*
 import com.msaidizi.app.ui.components.*
 import com.msaidizi.app.ui.designsystem.*
@@ -435,7 +436,7 @@ private fun QuickActionChip(
                 style = MaterialTheme.typography.labelSmall,
                 color = colors.onSurfaceVariant,
                 maxLines = 1,
-                fontSize = androidx.compose.ui.unit.sp(9)
+                fontSize = 9.sp
             )
         }
     }
@@ -446,7 +447,7 @@ private fun QuickActionChip(
 // ──────────────────────────────────────────────
 
 @Composable
-private fun AdviceCard(
+fun AdviceCard(
     iconSw: String,
     titleSw: String,
     titleEn: String,
