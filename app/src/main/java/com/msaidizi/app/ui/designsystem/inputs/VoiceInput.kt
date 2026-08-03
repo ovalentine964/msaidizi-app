@@ -198,7 +198,7 @@ private fun WaveformVisualization(
         infiniteTransition.animateFloat(
             initialValue = 0.15f,
             targetValue = if (isActive) {
-                0.3f + (kotlin.math.sin(index * 0.5) * 0.3f + 0.3f) * 0.4f
+                0.3f + (kotlin.math.sin(index * 0.5f) * 0.3f + 0.3f) * 0.4f
             } else 0.15f,
             animationSpec = infiniteRepeatable(
                 animation = tween(

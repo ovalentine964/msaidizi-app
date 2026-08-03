@@ -148,12 +148,9 @@ fun ChamaScreen(
                     }
                     item {
                         AdviceCard(
-                            iconSw = "📝",
-                            titleSw = "Andaa risiti za mchango",
-                            titleEn = "Prepare contribution receipts",
-                            bodySw = "Kumbuka kuleta risiti za M-Pesa kwa mkutano ujao.",
-                            bodyEn = "Remember to bring M-Pesa receipts to the next meeting.",
-                            severity = AlertSeverity.INFO
+                            adviceText = "Kumbuka kuleta risiti za M-Pesa kwa mkutano ujao. / Remember to bring M-Pesa receipts to the next meeting.",
+                            title = "Andaa risiti za mchango / Prepare contribution receipts",
+                            icon = Icons.Default.EditNote
                         )
                     }
                 }

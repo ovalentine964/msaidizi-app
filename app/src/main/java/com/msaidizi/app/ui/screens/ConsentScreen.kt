@@ -340,7 +340,7 @@ private fun ConsentCard(
     onCheckedChange: (Boolean) -> Unit,
     required: Boolean,
     link: Boolean = false,
-    colors: MsaidiziColorTokens
+    colors: MsaidiziColors
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),

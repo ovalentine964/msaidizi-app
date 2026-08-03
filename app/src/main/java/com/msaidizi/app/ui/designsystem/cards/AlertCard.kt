@@ -92,7 +92,7 @@ fun AlertCard(
             ) {
                 Icon(
                     imageVector = displayIcon,
-                    contentDescription = "$severity alert icon",
+                    contentDescription = "$urgency alert icon",
                     tint = accentColor,
                     modifier = Modifier.size(22.dp)
                 )
