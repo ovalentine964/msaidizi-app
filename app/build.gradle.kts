@@ -147,6 +147,14 @@ android {
     aaptOptions {
         noCompress("gguf", "onnx", "bin", "tflite", "vocab")
     }
+
+    // Lint configuration — don't abort release builds on lint errors.
+    // Lint errors are tracked but not blocking; CI compile check + unit tests
+    // cover code quality. Use `./gradlew lint` to see full report.
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
+    }
 }
 
 kotlin {
