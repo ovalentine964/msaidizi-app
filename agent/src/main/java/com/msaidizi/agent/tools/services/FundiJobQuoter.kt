@@ -127,7 +127,7 @@ class FundiJobQuoter @Inject constructor(private val context: Context) : Tool {
                 }
             }
         }
-        return ToolResult.success(name, mapOf(), msg)
+        return ToolResult.success(name, emptyMap<String, Any>(), msg)
     }
 
     private fun compare(params: Map<String, String>): ToolResult {
@@ -141,6 +141,6 @@ class FundiJobQuoter @Inject constructor(private val context: Context) : Tool {
                     "📊 Wastani wa faida: $avgMargin% ($count kazi)")
             }
         }
-        return ToolResult.success(name, mapOf(), "Hakuna data ya kazi.")
+        return ToolResult.success(name, emptyMap<String, Any>(), "Hakuna data ya kazi.")
     }
 }

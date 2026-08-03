@@ -110,7 +110,7 @@ class MaterialCostCalculator @Inject constructor(private val context: Context) :
                 }
             }
         }
-        return ToolResult.success(name, mapOf(), msg)
+        return ToolResult.success(name, emptyMap<String, Any>(), msg)
     }
 
     private fun priceHistory(params: Map<String, String>): ToolResult {
@@ -128,6 +128,6 @@ class MaterialCostCalculator @Inject constructor(private val context: Context) :
                 }
             }
         }
-        return ToolResult.success(name, mapOf(), msg)
+        return ToolResult.success(name, emptyMap<String, Any>(), msg)
     }
 }

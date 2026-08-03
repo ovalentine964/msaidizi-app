@@ -118,7 +118,7 @@ class FishTripPlanner @Inject constructor(private val context: Context) : Tool {
         val sites = mutableListOf<Triple<String, Double, Int>>()
         cursor.use { while (it.moveToNext()) sites.add(Triple(it.getString(0), it.getDouble(1), it.getInt(2))) }
 
-        if (sites.isEmpty()) return ToolResult.success(name, mapOf(), "Hakuna data ya bei ya $species bandarini.")
+        if (sites.isEmpty()) return ToolResult.success(name, emptyMap<String, Any>(), "Hakuna data ya bei ya $species bandarini.")
 
         val msg = buildString {
             append("💰 Bei ya $species bandarini:\n")
@@ -136,7 +136,7 @@ class FishTripPlanner @Inject constructor(private val context: Context) : Tool {
         val stats = mutableListOf<Triple<String, Double, Int>>()
         cursor.use { while (it.moveToNext()) stats.add(Triple(days[it.getInt(0)], it.getDouble(1), it.getInt(2))) }
 
-        if (stats.isEmpty()) return ToolResult.success(name, mapOf(), "Hakuna data ya kutosha.")
+        if (stats.isEmpty()) return ToolResult.success(name, emptyMap<String, Any>(), "Hakuna data ya kutosha.")
 
         val msg = buildString {
             append("📅 Siku bora za kuvua:\n")

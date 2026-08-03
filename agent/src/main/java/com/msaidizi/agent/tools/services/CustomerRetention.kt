@@ -42,7 +42,7 @@ class CustomerRetention @Inject constructor(private val context: Context) : Tool
     }
 
     private fun loyalty(params: Map<String, String>): ToolResult {
-        return ToolResult.success(name, mapOf(),
+        return ToolResult.success(name, emptyMap<String, Any>(),
             "⭐ Wateja waaminifu: Angalia customer_profiles kwa segment = 'vip' au 'regular'.")
     }
 

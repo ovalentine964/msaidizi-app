@@ -81,7 +81,7 @@ class ServiceHistory @Inject constructor(private val context: Context) : Tool {
         var custName = ""; var visits = 0; var totalSpent = 0.0; var firstVisit = 0L; var lastVisit = 0L
         profileCursor.use { if (it.moveToFirst()) { custName = it.getString(0) ?: ""; visits = it.getInt(1); totalSpent = it.getDouble(2); firstVisit = it.getLong(3); lastVisit = it.getLong(4) } }
 
-        if (visits == 0) return ToolResult.success(name, mapOf(), "Hakuna historia ya mteja huyu.")
+        if (visits == 0) return ToolResult.success(name, emptyMap<String, Any>(), "Hakuna historia ya mteja huyu.")
 
         val historyCursor = d.rawQuery("SELECT service_type, price, recorded_at FROM services WHERE customer_phone = ? ORDER BY recorded_at DESC LIMIT 5", arrayOf(phone))
         val history = mutableListOf<Triple<String, Double, Long>>()
@@ -108,7 +108,7 @@ class ServiceHistory @Inject constructor(private val context: Context) : Tool {
                 }
             }
         }
-        return ToolResult.success(name, mapOf(), msg)
+        return ToolResult.success(name, emptyMap<String, Any>(), msg)
     }
 
     private fun remindDue(params: Map<String, String>): ToolResult {

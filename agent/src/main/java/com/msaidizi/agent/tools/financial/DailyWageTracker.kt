@@ -89,7 +89,7 @@ class DailyWageTracker @Inject constructor(private val context: Context) : Tool 
                     "📅 Leo: ${it.getString(1)} — KES $rate ${if (paid) "✅" else "⏳"}")
             }
         }
-        return ToolResult.success(name, mapOf(), "Hakuna kazi leo.")
+        return ToolResult.success(name, emptyMap<String, Any>(), "Hakuna kazi leo.")
     }
 
     private fun weekly(params: Map<String, String>): ToolResult {
@@ -105,7 +105,7 @@ class DailyWageTracker @Inject constructor(private val context: Context) : Tool 
                     "📊 Wiki hii:\n• Siku za kazi: $days\n• Jumla: KES $total\n• Zilizolipwa: KES $paid\n• Bado: KES ${total - paid}")
             }
         }
-        return ToolResult.success(name, mapOf(), "Hakuna data ya wiki.")
+        return ToolResult.success(name, emptyMap<String, Any>(), "Hakuna data ya wiki.")
     }
 
     private fun unpaid(params: Map<String, String>): ToolResult {
@@ -125,7 +125,7 @@ class DailyWageTracker @Inject constructor(private val context: Context) : Tool 
                 }
             }
         }
-        return ToolResult.success(name, mapOf(), msg)
+        return ToolResult.success(name, emptyMap<String, Any>(), msg)
     }
 
     private fun patterns(params: Map<String, String>): ToolResult {
@@ -145,6 +145,6 @@ class DailyWageTracker @Inject constructor(private val context: Context) : Tool 
                 }
             }
         }
-        return ToolResult.success(name, mapOf(), msg)
+        return ToolResult.success(name, emptyMap<String, Any>(), msg)
     }
 }

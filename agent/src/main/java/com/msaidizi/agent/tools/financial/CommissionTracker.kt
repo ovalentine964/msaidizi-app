@@ -83,7 +83,7 @@ class CommissionTracker @Inject constructor(private val context: Context) : Tool
                     "💰 Kamisheni ($period):\n• Jumla: KES $totalComm\n• Miamala: $count\n• Volume: KES $totalTx")
             }
         }
-        return ToolResult.success(name, mapOf(), "Hakuna data ya kamisheni.")
+        return ToolResult.success(name, emptyMap<String, Any>(), "Hakuna data ya kamisheni.")
     }
 
     private fun byService(params: Map<String, String>): ToolResult {
@@ -99,7 +99,7 @@ class CommissionTracker @Inject constructor(private val context: Context) : Tool
                 }
             }
         }
-        return ToolResult.success(name, mapOf(), msg)
+        return ToolResult.success(name, emptyMap<String, Any>(), msg)
     }
 
     private fun byPeriod(params: Map<String, String>): ToolResult {
@@ -115,6 +115,6 @@ class CommissionTracker @Inject constructor(private val context: Context) : Tool
                 }
             }
         }
-        return ToolResult.success(name, mapOf(), msg)
+        return ToolResult.success(name, emptyMap<String, Any>(), msg)
     }
 }

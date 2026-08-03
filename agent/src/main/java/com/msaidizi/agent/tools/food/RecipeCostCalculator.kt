@@ -122,7 +122,7 @@ class RecipeCostCalculator @Inject constructor(private val context: Context) : T
                 }
             }
         }
-        return ToolResult.success(name, mapOf(), msg)
+        return ToolResult.success(name, emptyMap<String, Any>(), msg)
     }
 
     private fun suggestPrice(params: Map<String, String>): ToolResult {

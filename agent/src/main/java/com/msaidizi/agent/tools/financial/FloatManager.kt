@@ -145,7 +145,7 @@ class FloatManager @Inject constructor(
                     "💰 Kamisheni leo: KES ${formatP(commission)} ($count miamala)")
             }
         }
-        return ToolResult.success(name, mapOf(), "Hakuna kamisheni leo.")
+        return ToolResult.success(name, emptyMap<String, Any>(), "Hakuna kamisheni leo.")
     }
 
     private fun dailySummary(params: Map<String, String>): ToolResult {
@@ -164,7 +164,7 @@ class FloatManager @Inject constructor(
             }
         }
 
-        if (summary.isEmpty()) return ToolResult.success(name, mapOf(), "Hakuna miamala leo.")
+        if (summary.isEmpty()) return ToolResult.success(name, emptyMap<String, Any>(), "Hakuna miamala leo.")
 
         val msg = buildString {
             append("📊 Muhtasari wa leo:\n")
@@ -196,7 +196,7 @@ class FloatManager @Inject constructor(
                     "📈 Float inayohitajika kesho: KES ${formatP(predicted)}")
             }
         }
-        return ToolResult.success(name, mapOf(), "Hakuna data ya kutosha kutabiri.")
+        return ToolResult.success(name, emptyMap<String, Any>(), "Hakuna data ya kutosha kutabiri.")
     }
 
     private fun setAlert(params: Map<String, String>): ToolResult {

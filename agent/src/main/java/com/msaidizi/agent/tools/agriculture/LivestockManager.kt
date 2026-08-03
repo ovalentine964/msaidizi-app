@@ -116,7 +116,7 @@ class LivestockManager @Inject constructor(private val context: Context) : Tool 
             put("cause", params["health_notes"] ?: "unknown"); put("recorded_at", System.currentTimeMillis())
         }
         d.insert("mortality", null, v)
-        return ToolResult.success(name, mapOf(), "⚠️ Kifo kimerikodwa.")
+        return ToolResult.success(name, emptyMap<String, Any>(), "⚠️ Kifo kimerikodwa.")
     }
 
     private fun dailySummary(params: Map<String, String>): ToolResult {
@@ -131,7 +131,7 @@ class LivestockManager @Inject constructor(private val context: Context) : Tool 
         var feedCost = 0.0
         feedCursor.use { if (it.moveToFirst()) feedCost = it.getDouble(0) }
 
-        if (productions.isEmpty() && feedCost == 0.0) return ToolResult.success(name, mapOf(), "Hakuna data leo.")
+        if (productions.isEmpty() && feedCost == 0.0) return ToolResult.success(name, emptyMap<String, Any>(), "Hakuna data leo.")
 
         val totalValue = productions.sumOf { it.third }
         val msg = buildString {
@@ -161,7 +161,7 @@ class LivestockManager @Inject constructor(private val context: Context) : Tool 
                 }
             }
         }
-        return ToolResult.success(name, mapOf(), msg)
+        return ToolResult.success(name, emptyMap<String, Any>(), msg)
     }
 
     private fun feedAnalysis(params: Map<String, String>): ToolResult {
@@ -176,7 +176,7 @@ class LivestockManager @Inject constructor(private val context: Context) : Tool 
                     "🍽️ Gharama ya chakula (mwezi): KES ${fmt(total)} ($count siku)")
             }
         }
-        return ToolResult.success(name, mapOf(), "Hakuna data ya chakula.")
+        return ToolResult.success(name, emptyMap<String, Any>(), "Hakuna data ya chakula.")
     }
 
     private fun profitPerAnimal(params: Map<String, String>): ToolResult {

@@ -813,7 +813,7 @@ class FishingLog @Inject constructor(
             }
         }
 
-        return ToolResult.success(name, mapOf(), "Hakuna data ya mafuta kwa $period.")
+        return ToolResult.success(name, emptyMap<String, Any>(), "Hakuna data ya mafuta kwa $period.")
     }
 
     // ──────────────────────────────────────────────
